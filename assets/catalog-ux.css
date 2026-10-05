@@ -1,0 +1,63 @@
+/* Апостроф ʼ (U+02BC): у IBM Plex Sans і Oswald його немає, браузер брав запасний шрифт і виходило «Кур ʼєр». Підставляємо гліф із системного шрифту лише для цього символу. */
+@font-face{font-family:'IBM Plex Sans';src:local('Arial'),local('Helvetica Neue'),local('Helvetica'),local('Roboto'),local('DejaVu Sans');unicode-range:U+02BC;font-weight:100 900;font-style:normal}
+@font-face{font-family:'Oswald';src:local('Arial Narrow'),local('Arial'),local('Helvetica Neue'),local('Roboto Condensed'),local('DejaVu Sans Condensed');unicode-range:U+02BC;font-weight:100 900;font-style:normal}
+@font-face{font-family:'UAH';src:local('Arial'),local('Helvetica Neue'),local('Helvetica'),local('DejaVu Sans');unicode-range:U+02BC}
+[data-card-name]{font-family:'IBM Plex Sans',sans-serif!important;text-transform:none!important;letter-spacing:0!important;line-height:1.4!important;-webkit-line-clamp:3!important;min-height:4.2em!important}
+[data-card-cta]{display:flex;align-items:center;justify-content:center;min-height:44px;border:1px solid var(--legacy-59664d);color:var(--legacy-edefea);text-decoration:none;font-size:13px;margin-top:10px;background:var(--legacy-1d251b);border-radius:4px}
+[data-card-cta]:hover{border-color:var(--link);color:var(--link)}
+.area-control{display:flex;flex-direction:column;gap:8px;color:var(--legacy-c7cec3);margin-bottom:12px}.area-control input{padding:14px;border:1px solid var(--legacy-59664d);background:var(--legacy-141815);color:var(--legacy-edefea);font-size:18px;max-width:180px;border-radius:4px}.area-summary{padding:12px;background:var(--legacy-1d251b);border:1px solid var(--legacy-3f4e36);color:var(--legacy-edefea);font-size:15px;border-radius:4px}
+.full-description{margin-bottom:18px;color:var(--legacy-a9b3a6);font-size:14px;line-height:1.6}.full-description summary{color:var(--link);cursor:pointer;min-height:36px}
+.kit-colors{display:flex;gap:6px;flex-wrap:wrap;padding-top:8px}.kit-colors button{min-height:36px;color:var(--legacy-edefea);border:1px solid var(--legacy-3a423b);background:var(--legacy-141815);padding:8px 10px;cursor:pointer}.pending-size{color:var(--legacy-e8dfbf);font-size:13px}
+[data-top5-title]{overflow-wrap:normal!important;word-break:normal!important;font-size:clamp(15px,1.5vw,21px)!important}
+@media(min-width:861px){[data-cat-grid]{grid-template-columns:repeat(4,minmax(0,1fr))!important}[data-header-row]{flex-wrap:nowrap!important;gap:12px!important}header nav{gap:12px!important}header nav a{white-space:nowrap}header [data-search]{min-width:120px!important}}
+@media(max-width:860px){[data-cat-grid]{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}[data-card-name]{font-size:14px!important}[data-top5]{display:flex!important;overflow-x:auto;gap:10px!important;scroll-snap-type:x mandatory}[data-top5-tile]{flex:0 0 39%!important;scroll-snap-align:start}[data-category-banner]{aspect-ratio:4/5!important}[data-category-banner] img{object-position:center 44%}[data-category-all]{min-height:0!important;aspect-ratio:4/5!important}}
+
+@media(min-width:861px){[data-header-inner]{flex-wrap:nowrap!important;gap:12px!important}[data-header-actions]{flex:0 0 auto!important}[data-header-brand]{flex-shrink:0!important}header [data-header-actions]>div{padding:10px 8px!important}header nav{gap:8px!important}header input{min-width:0!important}}@media(min-width:861px) and (max-width:1150px){[data-header-label]{display:none!important}[data-header-tagline]{display:none!important}}
+
+input[aria-invalid="true"]{border-color:var(--legacy-d9542b)!important;box-shadow:0 0 0 1px var(--legacy-d9542b)}
+@media(min-width:861px){[data-mainnav]{flex-wrap:nowrap!important;flex-shrink:0!important;font-size:13px!important;gap:2px!important}[data-mainnav]>div{padding:9px 6px!important;white-space:nowrap}[data-swrap]{min-width:120px!important;flex:1 1 160px!important}}
+
+
+/* ===== Каталог v3 (макет «Каталог спорядження», 05.10.2026). Працює в обох темах через змінні theme.css ===== */
+/* Категорії: 2 ряди з горизонтальним гортанням, наступна колонка трохи видна */
+html body [data-catalog-sections]{display:grid!important;grid-template-columns:none!important;grid-template-rows:repeat(2,auto);grid-auto-flow:column;grid-auto-columns:calc((100% - 48px)/5);gap:10px 12px!important;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;padding-bottom:4px;margin-bottom:26px!important}
+html body [data-catalog-sections]::-webkit-scrollbar{display:none}
+html body [data-catalog-section]{position:relative;scroll-snap-align:start;height:96px;padding:0 42px 0 0!important;gap:14px!important;border:1px solid var(--border)!important;background:var(--surface)!important;color:var(--text)!important;border-radius:8px;overflow:hidden}
+html body [data-catalog-section]>div:first-child{width:38%!important;height:100%!important;flex:0 0 38%!important;background:var(--photo-bg,var(--legacy-0f120f))!important}
+html body [data-catalog-section]>div:first-child img{object-fit:cover!important}
+html body [data-catalog-section]>div:last-child{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:3px}
+html body [data-catalog-section]>div:last-child>div{margin:0!important;line-height:1.3!important}
+html body [data-catalog-section]>div:last-child>div:first-child{font-family:'IBM Plex Sans',sans-serif!important;text-transform:none!important;font-size:14.5px!important;font-weight:500;overflow-wrap:break-word;hyphens:manual}
+html body [data-catalog-section]::after{content:"";position:absolute;right:12px;top:50%;width:24px;height:24px;margin-top:-12px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23F2A33C' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 12h15M13 6l6 6-6 6'/%3E%3C/svg%3E") no-repeat center/contain}
+html body [data-catalog-section]:hover{border-color:var(--accent)!important}
+html body [data-catalog-all]{display:flex!important;align-items:center;justify-content:center;gap:8px;height:96px;box-sizing:border-box;border:1px solid var(--accent);border-radius:8px;font-weight:700;font-size:15px;text-decoration:none;scroll-snap-align:start}
+@media(max-width:1100px){html body [data-catalog-sections]{grid-auto-columns:calc((100% - 24px)/3)}}
+@media(max-width:860px){html body [data-catalog-sections]{grid-auto-columns:calc((100% - 10px)/2.15)}html body [data-catalog-section],html body [data-catalog-all]{height:108px}}
+
+/* Фільтри */
+html body [data-cat-aside]{border-radius:8px;border-color:var(--border)!important;background:var(--surface)!important}
+html body [data-cat-aside] input[type="range"]{height:28px}
+html body [data-desk-sort]{background:transparent!important;border:none!important;padding:0!important;justify-content:flex-end}
+
+/* Картки товарів: фото зліва, темна панель справа — однаково в світлій і темній темі */
+html body [data-cat-grid]{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px 12px!important}
+@media(min-width:861px){html body [data-cat-grid]{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:860px){html body [data-cat-grid]{grid-template-columns:minmax(0,1fr)!important;gap:10px!important}}
+@media(min-width:861px) and (max-width:1050px){html body [data-cat-grid]{grid-template-columns:minmax(0,1fr)!important}}
+html body [data-cat-grid] [data-tile]{display:grid!important;grid-template-columns:46% minmax(0,1fr);grid-template-rows:100%;height:172px!important;border:none!important;border-radius:8px;overflow:hidden;background:#1B201B!important;transition:box-shadow .15s}
+html body [data-cat-grid] [data-tile]:hover{box-shadow:0 8px 22px rgba(0,0,0,.22)}
+html body [data-cat-grid] [data-tile]>div:first-child{aspect-ratio:auto!important;height:100%!important;border-radius:0!important;box-shadow:none!important}
+html body [data-cat-grid] [data-qv]{display:none!important}
+html body [data-cat-grid] [data-card-info]{position:relative;justify-content:center;gap:8px!important;padding:16px 52px 16px 20px!important;background:#1B201B;color:#FFFFFF;min-width:0}
+html body [data-cat-grid] [data-card-name]{color:#FFFFFF!important;font-size:clamp(16px,1.5vw,19px)!important;font-weight:600;-webkit-line-clamp:3!important;min-height:0!important;overflow-wrap:anywhere;hyphens:auto}
+html body [data-cat-grid] [data-card-name]+div{display:none!important}
+html body [data-cat-grid] [data-card-price]{font-family:'IBM Plex Sans',sans-serif!important;font-weight:700;font-size:clamp(20px,2vw,26px)!important;color:#FFFFFF;letter-spacing:-.01em}
+html body [data-cat-grid] [data-card-availability]{color:#B8C2B3!important;font-size:12.5px!important}
+html body [data-cat-grid] [data-card-info]>div:has(>[data-card-size]){display:none!important}
+html body [data-cat-grid] [data-card-cta]{position:absolute!important;inset:0;margin:0!important;min-height:0!important;border:none!important;background:transparent!important;font-size:0!important;color:transparent!important;z-index:1}
+html body [data-cat-grid] [data-card-cta]::after{content:"";position:absolute;right:18px;bottom:20px;width:30px;height:30px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23F2A33C' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 12h15M13 6l6 6-6 6'/%3E%3C/svg%3E") no-repeat center/contain}
+html body [data-cat-grid] [data-card-name]{position:relative;z-index:2}
+@media(max-width:860px){html body [data-cat-grid] [data-tile]{height:176px!important}}
+html body [data-price-chips]>div{white-space:nowrap}
+/* Перемикач теми на телефоні (theme.css ховав його на ≤860px) */
+@media(max-width:860px){html body [data-desktop-theme]{display:inline-flex!important;align-items:center;justify-content:center;width:44px;min-width:44px;height:44px;padding:0!important;font-size:18px;line-height:1;flex:0 0 auto}}

@@ -1,0 +1,27 @@
+User-agent: *
+Disallow: /auth/
+Disallow: /shop/
+Allow: /shop/catalog.php
+Allow: /shop/analytics.php
+Disallow: /api/
+Allow: /kit/$
+Disallow: /kit/
+
+# ІІ-пошуковики: ті самі правила, що й для всіх (блок хостингу adm.tools знімається окремо в панелі)
+User-agent: GPTBot
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: ClaudeBot
+User-agent: Claude-User
+User-agent: Claude-SearchBot
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+Disallow: /auth/
+Disallow: /shop/
+Allow: /shop/catalog.php
+Allow: /shop/analytics.php
+Disallow: /api/
+Allow: /kit/$
+Disallow: /kit/
+
+Sitemap: https://rubizh.shop/sitemap.xml

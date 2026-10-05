@@ -1,0 +1,3 @@
+<FilesMatch "^(catalog-lib|store-lib|pricing|units|kit-data|np-lib|np-fulfillment|np-check|np-worker|notifications|notification-worker|mono-lib|mono-worker|seller)\.php$|\.(json|log|sql)$">
+  Require all denied
+</FilesMatch>

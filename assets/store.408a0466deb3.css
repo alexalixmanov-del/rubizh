@@ -1,0 +1,8 @@
+
+[data-home-support-mobile] { display:none; }
+[data-manager-choice] summary::-webkit-details-marker { display:none; }
+@media (max-width:860px) {
+  [data-hero-aside] { display:none !important; }
+  [data-home-support-mobile] { display:block; }
+  [data-mobile-support] { min-width:0 !important; }
+}

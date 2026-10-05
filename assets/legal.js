@@ -1,0 +1,1 @@
+document.querySelectorAll('[data-copy]').forEach(button=>button.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(button.dataset.copy);button.textContent='Скопійовано ✓'}catch(e){button.textContent='Виділіть IBAN та скопіюйте вручну'}}));

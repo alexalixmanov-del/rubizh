@@ -1,0 +1,14 @@
+# Все запросы к /api/... обрабатывает index.php
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^ index.php [QSA,L]
+# Секреты и служебные файлы снаружи не читаются
+<FilesMatch "^(config|lib|schema|np-private|mono-private|seller|photo-status)\.php$|\.sql$|\.log$">
+  Require all denied
+</FilesMatch>
+# PIM шлёт ключ в заголовке Authorization — передаём его PHP
+SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+
+<FilesMatch "^site-settings\.(json|lock)$|^settings-">
+  Require all denied
+</FilesMatch>

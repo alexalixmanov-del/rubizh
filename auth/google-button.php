@@ -1,0 +1,2 @@
+<?php if (!defined('RUBIZH_AUTH')) { http_response_code(404); exit; } ?>
+<form method="post" action="/auth/google.php" class="google-form"><input type="hidden" name="csrf" value="<?=esc($_SESSION['csrf'])?>"><input type="hidden" name="mode" value="<?=$authed ? 'link' : 'login'?>"><button class="google-button" type="submit"><img src="/auth/google-g.png" width="20" height="20" alt=""><span><?=$authed ? 'Прив’язати Google' : 'Продовжити з Google'?></span></button></form>

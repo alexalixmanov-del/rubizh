@@ -1,0 +1,32 @@
+# RUBIZH static delivery. Authentication has its own no-store PHP headers.
+DirectoryIndex storefront.php index.php index.html
+Options -Indexes
+RewriteEngine On
+# Development tooling is local-only.
+RewriteRule ^(?:dev|tests|docs)(?:/|$) - [F,L]
+<FilesMatch "^(?:package(?:-lock)?\.json|README\.md|\.env.*)$">
+  Require all denied
+</FilesMatch>
+RewriteCond %{HTTP_HOST} ^www\.rubizh\.shop$ [NC]
+RewriteRule ^ https://rubizh.shop%{REQUEST_URI} [R=301,L]
+RewriteCond %{HTTPS} !=on
+RewriteCond %{HTTP:X-Forwarded-Proto} !https [NC]
+RewriteRule ^ https://rubizh.shop%{REQUEST_URI} [R=301,L]
+RewriteRule ^(offer|privacy)\.html$ /$1 [R=301,L]
+RewriteRule ^katalog/vsi/?$ /catalog [R=301,L]
+RewriteRule ^katalog/(.*)$ /catalog/$1 [R=301,L]
+RewriteRule ^tovar/(.*)$ /product/$1 [R=301,L]
+RewriteRule ^(?:product|catalog|kit|categories|porady)(?:/.*)?$ storefront.php [QSA,L]
+RewriteRule ^(?:offer|privacy)/?$ storefront.php [QSA,L]
+RewriteRule ^sitemap\.xml$ sitemap.php [L]
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript application/json image/svg+xml
+</IfModule>
+<IfModule mod_headers.c>
+  <FilesMatch "\.[a-f0-9]{12}\.(webp|woff2|js|css)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+  <FilesMatch "^index\.html$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>

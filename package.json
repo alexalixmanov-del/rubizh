@@ -1,0 +1,13 @@
+{
+  "name": "rubizh-storefront",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Development preview and browser checks for the RUBIZH PHP storefront",
+  "type": "module",
+  "scripts": {
+    "preview": "node dev/preview.mjs",
+    "test": "node --test tests/storefront.test.mjs"
+  },
+  "engines": { "node": ">=22" },
+  "devDependencies": { "playwright": "1.62.1" }
+}

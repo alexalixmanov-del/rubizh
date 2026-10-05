@@ -1,0 +1,86 @@
+/* Меню «Каталог» (ТЗ від 05.10.2026). Одна розмітка, дві палітри: тема береться з html[data-theme] (assets/theme.js). Усі селектори — лише [data-cm-*]. */
+[data-cm-theme]{--cm-bg:#171E16;--cm-text:#F1F1E9;--cm-muted:#AEB8A9;--cm-line:#2F3B2D;--cm-card:#1B231A;--cm-card-hover:#222C21;--cm-field:#111710;--cm-accent:#F5A332;--cm-on-accent:#171B17;--cm-focus:#F5A332;--cm-shade:rgba(11,15,12,.74);--cm-ico:#DCE1D6}
+html[data-theme="light"] [data-cm-theme]{--cm-bg:#FFFFFF;--cm-text:#1A1A17;--cm-muted:#4E524B;--cm-line:#8E928A;--cm-card:#FFFFFF;--cm-card-hover:#F1EEE7;--cm-field:#FFFFFF;--cm-focus:#8A5200;--cm-shade:rgba(247,246,241,.8);--cm-ico:#262B25}
+
+/* Кнопка «Каталог» у шапці — справжня кнопка */
+[data-cm-trigger]{border:0;font:inherit;letter-spacing:inherit;text-transform:inherit;white-space:nowrap}
+@media(min-width:861px){[data-mainnav]>[data-cm-trigger]{padding:9px 6px!important}}
+[data-cm-trigger]:focus-visible,[data-burger]:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+
+/* Спільні елементи */
+[data-cm-theme] a{text-decoration:none;color:inherit}
+[data-cm-theme] :is(a,button,input,select,[role="button"]):focus-visible{outline:2px solid var(--cm-focus);outline-offset:2px}
+[data-cm-theme] button{font:inherit;color:inherit;background:transparent;border:0;cursor:pointer}
+[data-cm-chev]{flex:0 0 auto;color:var(--cm-muted)}
+[data-cm-search]{display:flex;align-items:center;gap:12px;margin:0;min-height:52px;padding:0 8px 0 16px;border:1px solid var(--cm-line);border-radius:8px;background:var(--cm-field);color:var(--cm-muted);box-sizing:border-box}
+[data-cm-search]:focus-within{border-color:var(--cm-accent);box-shadow:0 0 0 1px var(--cm-accent)}
+[data-cm-search] input{flex:1;min-width:0;min-height:44px;border:0;outline:0;background:transparent;color:var(--cm-text);font:400 16px/1.3 'IBM Plex Sans',system-ui,sans-serif;-webkit-appearance:none;appearance:none}
+[data-cm-search] input::placeholder{color:var(--cm-muted);opacity:1}
+[data-cm-search] input::-webkit-search-cancel-button{display:none}
+[data-cm-clear]{width:44px;height:44px;display:grid;place-items:center;color:var(--cm-muted)!important;border-radius:6px}
+[data-cm-ico]{flex:0 0 auto;display:grid;place-items:center;color:var(--cm-ico)}
+[data-cm-name]{flex:1;min-width:0;line-height:1.3;overflow-wrap:break-word}
+[data-cm-quick]{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+[data-cm-chip]{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:56px;padding:6px 14px 6px 18px;border:1px solid var(--cm-line);border-radius:6px;background:var(--cm-card);font-size:15px;line-height:1.3;box-sizing:border-box}
+[data-cm-chip]:hover,[data-cm-card]:hover{border-color:var(--cm-accent);background:var(--cm-card-hover)}
+[data-cm-all]{display:flex;align-items:center;justify-content:center;gap:10px;min-height:52px;padding:0 20px;border-radius:6px;background:var(--cm-accent);color:var(--cm-on-accent)!important;font:600 17px/1.2 'IBM Plex Sans',system-ui,sans-serif;box-sizing:border-box}
+[data-cm-t]{flex:0 1 auto;min-width:0}[data-cm-all] [data-cm-t]{white-space:nowrap}[data-cm-all] svg,[data-cm-allres] svg{flex:0 0 auto}
+[data-cm-all]:hover{background:#FFB24A}
+[data-cm-state]{padding:14px 2px;color:var(--cm-muted);font-size:15px}
+[data-cm-results]{display:flex;flex-direction:column}
+[data-cm-res]{display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 2px;border-bottom:1px solid var(--cm-line)}
+[data-cm-res]:hover [data-cm-res-name]{color:var(--cm-accent)}
+html[data-theme="light"] [data-cm-res]:hover [data-cm-res-name]{color:var(--cm-focus)}
+[data-cm-res-text]{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+[data-cm-res-name]{font-size:16px;line-height:1.3}
+[data-cm-res-trail]{font-size:13px;line-height:1.35;color:var(--cm-muted)}
+[data-cm-allres]{display:flex;align-items:center;gap:8px;min-height:48px;padding:8px 2px;text-align:left;font-size:15px!important;font-weight:600!important;color:var(--cm-text)!important}
+[data-cm-none]{display:flex;flex-direction:column;gap:8px;padding:8px 0}
+[data-cm-none-title]{font-size:17px;font-weight:600}
+[data-cm-none-links]{display:flex;flex-wrap:wrap;gap:4px 24px;align-items:center}
+[data-cm-none-links]>a{display:flex;align-items:center;min-height:48px;text-decoration:underline!important;text-underline-offset:3px}
+
+/* ПК, від 861 px: центральна панель під шапкою */
+[data-cm-backdrop]{position:fixed;left:0;right:0;bottom:0;top:var(--cm-top,0px);z-index:38;background:var(--cm-shade);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+[data-cm-panel]{position:fixed;z-index:39;top:calc(var(--cm-top,72px) + 12px);left:50%;transform:translateX(-50%);width:min(860px,calc(100vw - 32px));max-height:calc(100vh - var(--cm-top,72px) - 24px);max-height:calc(100dvh - var(--cm-top,72px) - 24px);overflow:auto;overscroll-behavior:contain;box-sizing:border-box;padding:44px 40px 32px;display:flex;flex-direction:column;gap:20px;background:var(--cm-bg);color:var(--cm-text);border:1px solid var(--cm-line);border-radius:10px;box-shadow:0 24px 64px rgba(0,0,0,.3);font-family:'IBM Plex Sans',system-ui,sans-serif;text-transform:none;letter-spacing:0}
+html[data-theme="light"] [data-cm-panel]{box-shadow:0 24px 64px rgba(40,36,24,.16)}
+[data-cm-close]{position:absolute;top:6px;right:6px;width:44px;height:44px;display:grid;place-items:center;border-radius:6px}
+[data-cm-close]:hover{background:var(--cm-card-hover)}
+[data-cm-head]{display:flex;align-items:center;gap:16px;margin:4px 0 -6px;font-size:17px;font-weight:600;line-height:1.3}
+[data-cm-head]::after{content:"";flex:1;height:1px;background:var(--cm-line)}
+[data-cm-grid]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+[data-cm-card]{display:flex;align-items:center;gap:20px;min-height:88px;padding:10px 20px 10px 24px;border:1px solid var(--cm-line);border-radius:6px;background:var(--cm-card);font-size:17px;font-weight:500;box-sizing:border-box}
+[data-cm-panel] [data-cm-ico]{width:48px;height:48px}
+@media(min-width:861px) and (max-width:1024px){[data-cm-panel]{padding:44px 24px 24px}[data-cm-quick]{grid-template-columns:repeat(2,minmax(0,1fr))}[data-cm-card]{gap:14px;padding:10px 14px 10px 16px;font-size:16px}}
+@media(max-width:860px){[data-cm-root]{display:none!important}}
+@media(prefers-reduced-motion:no-preference){[data-cm-panel]{animation:cm-in .14s ease-out}[data-cm-backdrop]{animation:cm-fade .14s ease-out}}
+@keyframes cm-in{from{opacity:0;transform:translate(-50%,-6px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes cm-fade{from{opacity:0}to{opacity:1}}
+
+/* Телефон, до 860 px: повноекранний каталог у мобільному меню */
+[data-cm-mob]{position:fixed;top:0;left:0;right:0;bottom:0;z-index:96;display:flex!important;flex-direction:column;overflow:hidden!important;padding:0!important;background:var(--cm-bg)!important;color:var(--cm-text);font-family:'IBM Plex Sans',system-ui,sans-serif;text-transform:none;letter-spacing:0}
+[data-cm-mob]>[data-cm-mhead]{flex:0 0 auto;display:flex;align-items:center;gap:4px;padding:calc(8px + env(safe-area-inset-top)) 8px 4px 16px!important;background:var(--cm-bg)}
+[data-cm-mtitle]{flex:1;min-width:0;margin:0;font-size:26px;font-weight:700;line-height:1.2;overflow-wrap:break-word}
+[data-cm-back]+[data-cm-mtitle]{font-size:20px}
+[data-cm-iconbtn]{flex:0 0 auto;width:44px;height:44px;display:grid;place-items:center;border-radius:6px}
+[data-cm-back]{margin-left:-10px}
+[data-cm-mbody]{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:8px 16px 20px}
+[data-cm-mbody] [data-cm-search]{min-height:48px}
+[data-cm-label]{margin:20px 0 2px;font-size:15px;color:var(--cm-muted)}
+[data-cm-list]{display:flex;flex-direction:column}
+[data-cm-row],[data-cm-sub]{display:flex;align-items:center;gap:14px;min-height:56px;padding:6px 0;border-bottom:1px solid var(--cm-line);font-size:17px}
+[data-cm-row]:last-child{border-bottom:0}
+[data-cm-row] [data-cm-ico]{width:36px;height:36px}
+[data-cm-sub]{min-height:52px;font-size:16px}
+[data-cm-sub="group"]{font-weight:600;margin-top:6px}
+[data-cm-sub="leaf"]{padding-left:14px;font-size:15px}
+[data-cm-mbody] [data-cm-results]{margin-top:8px}
+[data-cm-mbody] [data-cm-state]{margin-top:8px}
+[data-cm-mbody] [data-cm-quick]{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:6px}
+[data-cm-mbody] [data-cm-chip]{min-height:52px;padding:6px 10px 6px 14px}
+[data-cm-more]{display:flex;flex-direction:column}
+[data-cm-more]>div,[data-cm-more]>label{display:flex;align-items:center;gap:12px;min-height:48px;padding:4px 0;border-bottom:1px solid var(--cm-line);font-size:15px;cursor:pointer}
+[data-cm-more]>[data-cm-page]{color:var(--cm-muted);font-size:14px}
+[data-cm-theme-row]{justify-content:space-between;cursor:default!important}
+[data-cm-theme-row] select{min-height:44px;padding:0 10px;border:1px solid var(--cm-line);border-radius:6px;background:var(--cm-field);color:var(--cm-text);font:inherit}
+[data-cm-mfoot]{flex:0 0 auto;padding:10px 16px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--cm-line);background:var(--cm-bg)}

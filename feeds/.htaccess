@@ -1,0 +1,7 @@
+Options -Indexes
+RewriteEngine On
+RewriteRule ^google\.xml$ google.php [L]
+RewriteRule ^meta\.csv$ meta.php [L]
+<Files "feed.php">
+ Require all denied
+</Files>

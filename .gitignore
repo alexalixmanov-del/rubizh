@@ -1,0 +1,14 @@
+node_modules/
+test-results/
+playwright-report/
+api/config.php
+api/site-settings.json
+api/site-settings.lock
+auth/config.php
+.env
+.env.*
+!.env.example
+cache/*
+!cache/.htaccess
+media/
+*.log
