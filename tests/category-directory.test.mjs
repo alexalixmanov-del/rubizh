@@ -1,6 +1,6 @@
 import {test,before,after} from 'node:test';
 import assert from 'node:assert/strict';
-import {existsSync} from 'node:fs';
+import {existsSync,readFileSync} from 'node:fs';
 import {chromium} from 'playwright';
 import {startPreview} from '../dev/preview.mjs';
 import {slug} from '../dev/fixtures.mjs';
@@ -24,6 +24,8 @@ async function pageRun(fn,viewport={width:1440,height:1000}){
 async function load(page,path='/categories'){await page.goto(base+path);await page.locator('.rz-directory-card, [data-catalog-section]').first().waitFor();}
 test('Long branches keep equal compact cards; native dialog scrolls and closes with keyboard',()=>pageRun(async page=>{
  await load(page);assert.equal(await page.locator('.rz-directory-card').count(),18);
+ const banners=await page.locator('.rz-directory-card>a img').evaluateAll(images=>images.map(image=>image.getAttribute('src')));assert.equal(banners.length,18);assert.equal(new Set(banners).size,18);
+ await page.locator('.rz-directory-card').last().scrollIntoViewIfNeeded();await page.waitForFunction(()=>[...document.querySelectorAll('.rz-directory-card>a img')].every(image=>image.complete&&image.naturalWidth>0));
  const heights=await page.locator('.rz-directory-card').evaluateAll(cards=>cards.map(card=>card.getBoundingClientRect().height));assert.ok(Math.max(...heights)-Math.min(...heights)<1);assert.ok(Math.max(...heights)<150);
  const clothing=page.locator('.rz-directory-card').filter({has:page.locator('.rz-directory-name',{hasText:'Одяг та форма'})});
  const open=clothing.locator('.rz-directory-expand');await open.click();const dialog=page.locator('dialog[open]');await dialog.waitFor();assert.equal(await dialog.locator('.rz-directory-subcategory').count(),60);
@@ -37,7 +39,7 @@ test('Long branches keep equal compact cards; native dialog scrolls and closes w
 test('Catalog category pages have two short rows, correct arrows, and no generic glove fallback',()=>pageRun(async page=>{
  await load(page,'/catalog');assert.equal(await page.locator('[data-catalog-section]').count(),10);assert.equal(await page.getByRole('button',{name:'Попередні категорії'}).isDisabled(),true);
  assert.equal(await page.locator('[data-catalog-section]').filter({hasText:'Одяг та форма'}).locator('img').count(),1);
- assert.equal(await page.locator('[data-catalog-section]').filter({hasText:'Шоломи та захист голови'}).locator('img').count(),0);
+ assert.equal(await page.locator('[data-catalog-section]').filter({hasText:'Шоломи та захист голови'}).locator('img').count(),1);
  assert.equal(await page.locator('[data-catalog-section] img[src*=category-accessories]').count(),0);
  await page.getByRole('button',{name:'Наступні категорії'}).click();assert.equal(await page.locator('[data-catalog-section]').count(),8);assert.equal(await page.getByRole('button',{name:'Наступні категорії'}).isDisabled(),true);
  await page.getByRole('button',{name:'Попередні категорії'}).click();assert.equal(await page.locator('[data-catalog-section]').count(),10);
@@ -52,7 +54,13 @@ test('Directory and product grid fit narrow and wide screens in both themes',()=
   await page.addInitScript(theme=>localStorage.setItem('rubizh.theme',theme),theme);await page.setViewportSize({width,height:900});
   for(const path of ['/categories','/catalog']){await load(page,path);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,theme+' '+width+' '+path);
    if(path==='/categories'){await page.locator('.rz-directory-expand').first().click();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.keyboard.press('Escape');}
-   else{const info=await page.locator('[data-card-info]').first().evaluate(e=>({bg:getComputedStyle(e).backgroundColor,text:getComputedStyle(e.querySelector('[data-card-name]')).color}));assert.equal(info.bg,'rgb(23, 32, 21)');assert.equal(info.text,'rgb(245, 246, 239)');}
+   else{if(width===1440){const sort=await page.locator('[data-desk-sort]').evaluate(e=>({background:getComputedStyle(e).backgroundColor,display:getComputedStyle(e).display}));assert.equal(sort.background,'rgba(0, 0, 0, 0)');assert.equal(sort.display,'flex');}if(width<700){assert.equal(await page.locator('[data-catalog-section] img').first().evaluate(e=>getComputedStyle(e).objectFit),'contain');}const info=await page.locator('[data-card-info]').first().evaluate(e=>({bg:getComputedStyle(e).backgroundColor,text:getComputedStyle(e.querySelector('[data-card-name]')).color}));assert.equal(info.bg,'rgb(23, 32, 21)');assert.equal(info.text,'rgb(245, 246, 239)');}
   }
  }
 }));
+
+test('All supplied banners have optimized assets and exact category assignments',()=>{
+ const manifest=JSON.parse(readFileSync(new URL('../docs/category-banners.json',import.meta.url)));assert.equal(manifest.length,21);assert.equal(new Set(manifest.map(row=>row.asset)).size,21);
+ for(const row of manifest){assert.ok(existsSync(new URL('..'+row.asset,import.meta.url)));assert.ok(row.bytes<150000);}
+ for(const name of roots)assert.equal(manifest.filter(row=>row.category===name).length,1);
+});

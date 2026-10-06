@@ -1,0 +1,213 @@
+[
+  {
+    "category": "Одяг та форма",
+    "asset": "/assets/category-clothing.b7a37481bb06.webp",
+    "original": "db0c96b8-3417-4b46-be76-2844a40f0d74.png",
+    "drive_file_id": "1TN5IoWApqyzuxlE4TxR29-9mC_U2gZ1A",
+    "width": 768,
+    "height": 960,
+    "bytes": 81506,
+    "active": true
+  },
+  {
+    "category": "Взуття",
+    "asset": "/assets/category-footwear.6a8bd09a2528.webp",
+    "original": "cf1fcbfc-ff18-4ee4-9261-c206826dd34c.png",
+    "drive_file_id": "1Jt6NtzgeAXjUQdyfQjUAXpDqBzBMoYEA",
+    "width": 768,
+    "height": 960,
+    "bytes": 133524,
+    "active": true
+  },
+  {
+    "category": "Бронезахист",
+    "asset": "/assets/category-armor.8d7b42242386.webp",
+    "original": "df71ff23-103a-4d1e-9aa3-997652021d33.png",
+    "drive_file_id": "1MFBkfuQ09ZASzAT1_mGEYHA5J4dYNbQR",
+    "width": 768,
+    "height": 960,
+    "bytes": 112414,
+    "active": true
+  },
+  {
+    "category": "Шоломи та захист голови",
+    "asset": "/assets/category-helmets.54eeb057cd4f.webp",
+    "original": "26dd6006-ca89-428c-828f-e708a76aacd3.png",
+    "drive_file_id": "1JnyV5AhQAEQqcvbusQhV5vJXu-sVgXP2",
+    "width": 720,
+    "height": 960,
+    "bytes": 84324,
+    "active": true
+  },
+  {
+    "category": "Тактичний зв'язок та слух",
+    "asset": "/assets/category-communications.ab4d258f71e1.webp",
+    "original": "278dd54c-7e24-4d90-993f-e7ab6eee1dd7.png",
+    "drive_file_id": "1RTv0tsLUr9_wxxsCwbR8f_eZ0Dkw7KWn",
+    "width": 720,
+    "height": 960,
+    "bytes": 51586,
+    "active": true
+  },
+  {
+    "category": "Рюкзаки, сумки та баули",
+    "asset": "/assets/category-backpacks.3ab1ce8d263c.webp",
+    "original": "3c68d34a-1f6d-4921-83fc-d0acf55c99e1.png",
+    "drive_file_id": "1XMkMLzl4qijK11ZUiZCf3yoc3_17shYX",
+    "width": 768,
+    "height": 960,
+    "bytes": 86326,
+    "active": true
+  },
+  {
+    "category": "Підсумки",
+    "asset": "/assets/category-pouches.c73384bcd877.webp",
+    "original": "95e7b7f9-023c-42f2-b1ec-603830bfe072.png",
+    "drive_file_id": "1b01VEqMGVYYQWAUjhOnXdkwppI6NP2mM",
+    "width": 720,
+    "height": 960,
+    "bytes": 116616,
+    "active": true
+  },
+  {
+    "category": "РПС та розвантаження",
+    "asset": "/assets/category-load-bearing.cc84a5111499.webp",
+    "original": "794843d9-5ec5-4c49-b282-184e574cc67a.png",
+    "drive_file_id": "1xAcSZoec59ODaaJ4LA7KMafetlXCerSM",
+    "width": 720,
+    "height": 960,
+    "bytes": 66084,
+    "active": true
+  },
+  {
+    "category": "Захист колін та ліктів",
+    "asset": "/assets/category-knee-elbow.f9ebb4dcd78c.webp",
+    "original": "5d52b65e-c3f6-4a1b-9b16-c62f987257f8.png",
+    "drive_file_id": "1ANyONMSCiu-Wu8CPzvXzMJMLrTvtLC2l",
+    "width": 720,
+    "height": 960,
+    "bytes": 56888,
+    "active": true
+  },
+  {
+    "category": "Тактична медицина",
+    "asset": "/assets/category-medical.b31954343e29.webp",
+    "original": "e2bbc804-e261-4b9c-b067-d264775ca1c2.png",
+    "drive_file_id": "1KErARZWvDd1o8yzpkwWjNTaUHATbuxf0",
+    "width": 768,
+    "height": 960,
+    "bytes": 125086,
+    "active": true
+  },
+  {
+    "category": "Маскування",
+    "asset": "/assets/category-camouflage.bf6b4c5b3b74.webp",
+    "original": "7c42b60f-35d4-4779-b44b-418d9d678e5a.png",
+    "drive_file_id": "18NJX64p_VqpM2e0ZEmZzqpKKwe3VPysz",
+    "width": 768,
+    "height": 960,
+    "bytes": 127714,
+    "active": true
+  },
+  {
+    "category": "Туризм та польове спорядження",
+    "asset": "/assets/category-camping.de832d8a5040.webp",
+    "original": "4f748222-e729-4831-b16a-9b2a5e0f24a9.png",
+    "drive_file_id": "1R-ozRgBz6RygA5dSzRgyRunL1EjhGq2E",
+    "width": 720,
+    "height": 960,
+    "bytes": 68886,
+    "active": true
+  },
+  {
+    "category": "Електроніка та спостереження",
+    "asset": "/assets/category-electronics.87be0a7693db.webp",
+    "original": "83e6d99c-b3f8-467f-b763-dac716f01a70.png",
+    "drive_file_id": "16FOrwvViCysvLVjckrf-S-rPoQdrwy2R",
+    "width": 720,
+    "height": 960,
+    "bytes": 79162,
+    "active": true
+  },
+  {
+    "category": "Освітлення",
+    "asset": "/assets/category-lighting.79895340d867.webp",
+    "original": "14743901-e408-4b82-a37c-e134366a2eb4.png",
+    "drive_file_id": "1-K5SVJ7jqQdiuIVCGWaDc2Bw8D3Z0exN",
+    "width": 720,
+    "height": 960,
+    "bytes": 76050,
+    "active": true
+  },
+  {
+    "category": "Автономне живлення",
+    "asset": "/assets/category-power.df14c79e24fc.webp",
+    "original": "fd7f58ce-6689-4d0f-b96a-1da3ef8f9207.png",
+    "drive_file_id": "1fkQTkqmMdMy56sjaa2-OUCB5NSS_hUiT",
+    "width": 720,
+    "height": 960,
+    "bytes": 56354,
+    "active": true
+  },
+  {
+    "category": "Збройові аксесуари",
+    "asset": "/assets/category-weapon-accessories.5f4d864bec89.webp",
+    "original": "5c57935c-c789-4346-bcc3-802cdc61d575.png",
+    "drive_file_id": "13LeI6vD7GNe6Vc_Xp-l9vAuCjCWdsNX9",
+    "width": 720,
+    "height": 960,
+    "bytes": 66162,
+    "active": true
+  },
+  {
+    "category": "Захист очей та обличчя",
+    "asset": "/assets/category-eye-protection.ec76fd300361.webp",
+    "original": "e15eb639-3010-4d6c-a371-4efabbba46a0.png",
+    "drive_file_id": "1cN8J9kOdgrrqDr-RPXIieAkpPgtq8oby",
+    "width": 720,
+    "height": 960,
+    "bytes": 72658,
+    "active": true
+  },
+  {
+    "category": "Інструменти та ножі",
+    "asset": "/assets/category-tools.4d8d4be93985.webp",
+    "original": "cd2e257c-8875-429a-9222-0212e0aedc11.png",
+    "drive_file_id": "1rlt1SYzwvUTK7sz309831dO8iHpgIhOH",
+    "width": 720,
+    "height": 960,
+    "bytes": 66764,
+    "active": true
+  },
+  {
+    "category": "Формені комплекти та костюми",
+    "asset": "/assets/category-uniforms.5f699a831579.webp",
+    "original": "2801dfe7-4913-414e-9378-c3cccc777ada.png",
+    "drive_file_id": "1oscJ30B4LPgGc80XEvfuwq2OsG1ZaUEn",
+    "width": 768,
+    "height": 960,
+    "bytes": 49294,
+    "active": true
+  },
+  {
+    "category": "Тактичні рукавички",
+    "asset": "/assets/category-gloves.39fac99cf3ba.webp",
+    "original": "c7973066-2b8f-4508-b9c7-ec07904e5e3f.png",
+    "drive_file_id": "13eR9oTT3sdNUd4HaJ75-JCP5qZX4ifen",
+    "width": 768,
+    "height": 960,
+    "bytes": 129584,
+    "active": true
+  },
+  {
+    "category": "Пончо та дощовики",
+    "asset": "/assets/category-ponchos.0930cacaacc9.webp",
+    "original": "8e77fbd3-63c9-4492-b33b-4cd43d331ab9.png",
+    "drive_file_id": "1T2lAxlavr0JW4cwv7WKUoFjVJjwgX6ZD",
+    "width": 768,
+    "height": 960,
+    "bytes": 66540,
+    "active": false,
+    "catalog_category_present": false
+  }
+]
