@@ -20,14 +20,18 @@ function shopProduct(PDO $db, array $row, array $photos=[],?array $variantRows=n
     $variantRows ??= shopVariantRows($db,[$row['id']])[$row['id']] ?? [];
     $variants=[];
     foreach ($variantRows as $v) {
-        $extra=json_decode((string)$v['data'],true) ?: [];
+        $extra=json_decode((string)$v['data'],true) ?: [];$unconfirmed=shopVariantSizeUnconfirmed($v,(string)$row['name'],(string)$row['category_path']);
+        $display=trim(preg_replace('/^\s*:\s*/u','',(string)($extra['size_display']??'')));
+        $native=trim(preg_replace('/^\s*:\s*/u','',(string)($extra['size_native']??'')));
+        $stored=trim(preg_replace('/^\s*:\s*/u','',(string)$v['size']));
+        $display=$display?:($native?:$stored);$native=$native?:$display;
         $variants[]=['sku'=>$v['sku'],'variant_id'=>(string)($extra['variant_id'] ?? $v['sku']),
-            'size_display'=>preg_replace('/^\s*:\s*/u','',(string)($extra['size_display'] ?? $v['size'])),'size_native'=>preg_replace('/^\s*:\s*/u','',(string)($extra['size_native'] ?? $v['size'])),
+            'size_display'=>$display,'size_native'=>$native,
             'size_type'=>$extra['size_type'] ?? ($data['size_scale'] ?? 'other'),'color'=>shopColor($v['color']),
             'price'=>$v['price']===null ? null : (int)$v['price'],'kit_price'=>$v['kit_price']===null ? null : (int)$v['kit_price'],
             'kit_discount_pct'=>$extra['kit_discount_pct'] ?? $data['kit_discount_pct'] ?? null,
-            'size_unconfirmed'=>(bool)($extra['size_unconfirmed']??false),'stock'=>isset($extra['stock'])&&is_numeric($extra['stock']) ? max(0,(float)$extra['stock']) : null,
-            'availability'=>shopVariantCanBuy($v)?$v['availability']:'out','lead_time'=>$v['lead_time']?:(!empty($extra['availability_date'])?'Очікується '.$extra['availability_date']:''), 'availability_date'=>$extra['availability_date']??null];
+            'size_unconfirmed'=>$unconfirmed,'stock'=>isset($extra['stock'])&&is_numeric($extra['stock']) ? max(0,(float)$extra['stock']) : null,
+            'availability'=>!$unconfirmed&&shopVariantCanBuy($v)?$v['availability']:'out','lead_time'=>$v['lead_time']?:(!empty($extra['availability_date'])?'Очікується '.$extra['availability_date']:''), 'availability_date'=>$extra['availability_date']??null];
     }
     return ['id'=>$row['id'],'slug'=>$row['slug'],'name'=>$row['name'],'brand'=>shopBrand($row['brand']),'category'=>$row['category_path'],
         'sale_unit'=>shopSaleUnit($data+['name'=>$row['name']]),'description'=>shopDescription((string)($data['description']??$row['description'])),'attributes'=>shopDescriptionAttributes((string)($data['description']??$row['description']),array_replace(is_array($data['attributes']??null)?$data['attributes']:[],json_decode((string)$row['attributes'],true) ?: [])),

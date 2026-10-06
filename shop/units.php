@@ -29,9 +29,17 @@ function shopBrandAliases(string $s): array {
  foreach([['Kiborg','KIBORG','Kiborg(ННВ)','Kiborg (ННВ)'],['Militex','Militex(НЕ АКЦІЯ)','Militex (НЕ АКЦІЯ)'],['UKR-TEC','Ukr-Tec','UKR TEC'],['M-TAC','M Tac','M.Tac'],['M-WIN','M WIN']] as $group)foreach($group as $a)if(mb_strtolower(trim($s))===mb_strtolower($a))return $group;return [trim($s)];
 }
 function shopBrand(string $s): string {$s=trim($s);if(preg_match('/^(no.?brand|none|n\/a|без бренд[ау]|невідомий|не вказан[оий]+|власне виробництво|-)$/iu',$s))return '';return shopBrandAliases($s)[0];}
+function shopVariantSizeUnconfirmed(array $v,string $name='',string $category=''): bool {
+ $extra=json_decode((string)($v['data']??''),true)?:[];
+ if(!empty($v['size_unconfirmed'])||!empty($extra['size_unconfirmed']))return true;
+ $name=$name?:($v['name']??'');$category=$category?:($v['category_path']??'');
+ if(!in_array(shopSlot(['name'=>$name,'category_path'=>$category]),['body','legs','boots'],true)||preg_match('/пончо|бахіл|костюм.*маскув/iu',$name))return false;
+ foreach([$extra['size_display']??'',$extra['size_native']??'',$v['size_display']??'',$v['size_native']??'',$v['size']??''] as $size)if(trim(preg_replace('/^\s*:\s*/u','',(string)$size))!=='')return false;
+ return true;
+}
 function shopVariantCanBuy(array $v): bool {
  $extra=json_decode((string)($v['data']??''),true)?:[];$stock=$v['stock']??$extra['stock']??null;
- return (float)($v['price']??0)>0&&!($v['size_unconfirmed']??$extra['size_unconfirmed']??false)&&(($v['availability']??'')==='in'&&($stock===null||is_numeric($stock)&&(float)$stock>0)||($v['availability']??'')==='order'&&(trim((string)($v['lead_time']??''))!==''||preg_match('/^\d{4}-\d{2}-\d{2}$/D',(string)($extra['availability_date']??''))&&$extra['availability_date']>=gmdate('Y-m-d')));
+ return (float)($v['price']??0)>0&&!shopVariantSizeUnconfirmed($v)&&(($v['availability']??'')==='in'&&($stock===null||is_numeric($stock)&&(float)$stock>0)||($v['availability']??'')==='order'&&(trim((string)($v['lead_time']??''))!==''||preg_match('/^\d{4}-\d{2}-\d{2}$/D',(string)($extra['availability_date']??''))&&$extra['availability_date']>=gmdate('Y-m-d')));
 }
 function shopBuyableSql(string $a): string {
  if(!preg_match('/^[a-z]+$/D',$a))throw new InvalidArgumentException('alias');$j="CASE WHEN JSON_VALID($a.data) THEN $a.data ELSE '{}' END";
