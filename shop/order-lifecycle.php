@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__.'/donation-target.php';
 function shopWorkdayDeadline(string $utc,int $days): string {
  $d=new DateTimeImmutable($utc,new DateTimeZone('UTC'));$d=$d->setTimezone(new DateTimeZone('Europe/Kyiv'));$holidays=function_exists('cfg')?(cfg('bank_holidays')??[]):[];if(!is_array($holidays))$holidays=[];
  while($days>0){$d=$d->modify('+1 day');if((int)$d->format('N')<6&&!in_array($d->format('Y-m-d'),$holidays,true))$days--;}
@@ -33,7 +34,7 @@ function shopRecordPaid(PDO $db,int $id): void {
  if(!in_array($o['status'],['cancelled','returned'],true)){$db->prepare('INSERT IGNORE INTO rubizh_order_donations(order_id,amount,paid_at,due_at) VALUES(?,?,?,?)')->execute([$id,shopDonationAmount((float)$o['total']),$t['paid_at'],shopWorkdayDeadline($t['paid_at'],3)]);shopQueueBuyerMail($db,$id,'paid');}
  // A late bank payment on a cancelled order remains visible to the manager; no donation is accrued.
 }
-function shopDonationText(int $amount,bool $paid): string {return ($paid?'':'Після оплати '.$amount.' ₴ підуть на 47 ОМБр «Магура». ').'Протягом 3 робочих днів після оплати надішлемо скрін переказу на 47 ОМБр «Магура» у Viber або Telegram. Ваш внесок — '.$amount.' ₴.';}
+function shopDonationText(int $amount,bool $paid,string $brigade=''): string {$brigade=shopDonationTarget($brigade);return ($paid?'':'Після оплати '.$amount.' ₴ підуть на '.$brigade.'. ').'Протягом 3 робочих днів після оплати надішлемо скрін переказу на '.$brigade.' у Viber або Telegram. Ваш внесок — '.$amount.' ₴.';}
 function shopDonationForOrder(PDO $db,int $id): ?array {
  $q=$db->prepare("SELECT d.*,b.transferred_at,b.reference FROM rubizh_order_donations d LEFT JOIN rubizh_donation_batches b ON b.id=d.batch_id JOIN rubizh_customer_orders o ON o.id=d.order_id WHERE d.order_id=? AND o.payment_status='paid' AND o.status NOT IN ('cancelled','returned')");$q->execute([$id]);$d=$q->fetch(PDO::FETCH_ASSOC);if(!$d)return null;return ['amount'=>(int)$d['amount'],'due_at'=>$d['due_at'],'sent_at'=>$d['sent_at'],'transferred_at'=>$d['transferred_at'],'proof_url'=>$d['batch_id']?'/shop/donation-proof.php?order='.$id:''];
 }
@@ -41,7 +42,7 @@ function shopOrderReceipt(PDO $db,int $id): array {
  $o=npOrder($db,$id);$t=shopEnsureTiming($db,$o);if($o['payment_status']==='paid')shopRecordPaid($db,$id);$stage=shopReceiptStage($o);
  require_once __DIR__.'/../api/seller.php';$s=rubizhSeller();$c=$o['contact'];$due=new DateTimeImmutable($t['payment_due'],new DateTimeZone('UTC'));
  return ['id'=>$id,'number'=>$o['order_number'],'total'=>(float)$o['total'],'items'=>$o['items'],'lines'=>$o['items'],'delivery'=>$o['delivery_label'],'status'=>$o['status'],'payment_status'=>$o['payment_status'],'payment_method'=>$c['payment']??'invoice','was_paid'=>!empty($t['paid_at'])||in_array($o['payment_status'],['paid','refunded'],true),'stage'=>$stage,'title'=>['pending'=>'Майже готово — залишилась оплата','paid'=>'Замовлення оформлено','cancelled'=>'Скасовано'][$stage],
- 'payment_due'=>$due->format('c'),'payment_due_label'=>$due->setTimezone(new DateTimeZone('Europe/Kyiv'))->format('d.m.Y H:i'),'payment_url'=>'/shop/payment-return.php?order='.$id,'seller'=>$s,'donation_amount'=>shopDonationAmount((float)$o['total']),'donation_text'=>$stage==='cancelled'?'Внесок за скасованим або поверненим замовленням не нараховується.':shopDonationText(shopDonationAmount((float)$o['total']),$stage==='paid'),'donation'=>shopDonationForOrder($db,$id),'donation_channel'=>$c['donation_channel']??'viber'];
+ 'payment_due'=>$due->format('c'),'payment_due_label'=>$due->setTimezone(new DateTimeZone('Europe/Kyiv'))->format('d.m.Y H:i'),'payment_url'=>'/shop/payment-return.php?order='.$id,'seller'=>$s,'brigade'=>shopDonationBrigade($c),'donation_amount'=>shopDonationAmount((float)$o['total']),'donation_text'=>$stage==='cancelled'?'Внесок за скасованим або поверненим замовленням не нараховується.':shopDonationText(shopDonationAmount((float)$o['total']),$stage==='paid',shopDonationBrigade($c)),'donation'=>shopDonationForOrder($db,$id),'donation_channel'=>$c['donation_channel']??'viber'];
 }
 function shopLifecycleTick(PDO $db,int $limit=30): void {
  $rows=$db->query("SELECT o.* FROM rubizh_customer_orders o LEFT JOIN rubizh_order_timing t ON t.order_id=o.id WHERE t.order_id IS NULL AND o.status IN ('new','confirmed','processing') ORDER BY o.id DESC LIMIT ".max(1,min(100,$limit)))->fetchAll(PDO::FETCH_ASSOC);foreach($rows as $o)shopEnsureTiming($db,$o);

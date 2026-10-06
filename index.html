@@ -9,7 +9,7 @@
 <script defer src="/assets/react.5e73fabcd0d0.js"></script>
 <script defer src="/assets/react-dom.c5c970a9cf36.js"></script>
 <script defer src="/assets/category-directory.2026100605.js"></script>
-<script defer src="/assets/shop-client.2026100605.js"></script>
+<script defer src="/assets/shop-client.2026100607.js"></script>
 <script defer src="/assets/store-runtime.4b6bbf46ca4c.js"></script>
 
 <link rel="icon" href="/favicon.ico?v=2" sizes="any">
@@ -1080,12 +1080,16 @@
           </div>
 
           <sc-if value="{{ donationEnabled }}">
-          <div style="border:1px solid var(--legacy-4c5a36);background:linear-gradient(160deg,var(--legacy-1e2618),var(--legacy-141815));padding:18px">
+          <div data-donation-block style="border:1px solid var(--legacy-4c5a36);background:linear-gradient(160deg,var(--legacy-1e2618),var(--legacy-141815));padding:18px">
+            <label for="donation-brigade" style="display:block;color:var(--legacy-edefea);font-size:16px;font-weight:600;margin-bottom:18px">Яку бригаду підтримати?
+              <input id="donation-brigade" type="text" name="brigade" maxlength="160" autocomplete="off" placeholder="Вкажіть номер або назву бригади" aria-describedby="donation-brigade-help" value="{{ donationBrigade }}" sc-camel-on-input="{{ onDonationBrigade }}" style="display:block;width:100%;box-sizing:border-box;margin-top:8px;background:var(--legacy-0f120f);border:1px solid var(--legacy-4c5a36);border-left:3px solid var(--legacy-f2a33c);padding:13px;color:var(--legacy-edefea);font-size:16px">
+              <span id="donation-brigade-help" style="display:block;color:var(--legacy-99a398);font-size:13px;font-weight:400;line-height:1.5;margin-top:7px">Якщо не вкажете — підтримаємо 47 ОМБр «Магура».</span>
+            </label>
             <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:space-between;align-items:baseline;margin-bottom:6px">
               <div style="font-family:'UAH','Oswald',sans-serif;font-size:13.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--legacy-c6d3a8)">{{ donWhereLabel }}</div>
               <div style="color:var(--legacy-99a398);font-size:12.5px">Підтримка з коштів магазину, без доплати покупця</div>
             </div>
-            <p style="color:var(--legacy-c3ccbe);font-size:14px;line-height:1.6">3% від суми товарів після оплати підуть на 47 ОМБр «Магура». Протягом 3 робочих днів після оплати надішлемо скрін переказу.</p>
+            <p style="color:var(--legacy-c3ccbe);font-size:14px;line-height:1.6">3% від суми товарів після оплати підуть на {{ brigadeName }}. Протягом 3 робочих днів після оплати надішлемо скрін переказу.</p>
             <label style="display:block;color:var(--legacy-edefea);margin-top:14px">Куди надіслати скрін донату</label>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><sc-for list="{{ donationChannels }}" as="channel"><button type="button" sc-camel-on-click="{{ channel.pick }}" style="{{ channel.style }}"><span style="{{ channel.dotStyle }}"></span>{{ channel.name }}</button></sc-for></div>
             <label style="display:block;color:var(--legacy-99a398);font-size:13px;margin-top:12px">Номер у Viber або Telegram (за замовчуванням — телефон замовлення)<input type="tel" name="donation_phone" autocomplete="tel" value="{{ donationPhone }}" sc-camel-on-input="{{ onDonationPhone }}" style="width:100%;box-sizing:border-box;margin-top:6px;background:var(--legacy-0f120f);border:1px solid var(--legacy-4c5a36);padding:13px;color:var(--legacy-edefea);font-size:14px"></label>
@@ -2015,7 +2019,7 @@
     <sc-if value="{{ doneReady }}"><article class="receipt-card" style="{{ doneCardStyle }}"><div class="receipt-icon" aria-hidden="true">{{ doneIcon }}</div><span class="status-chip" style="{{ doneChipStyle }}">{{ doneBadge }}</span><h1>{{ doneTitle }}</h1><p class="receipt-intro">{{ doneNote }}</p><div class="receipt-summary"><div class="receipt-summary-row"><div><small>Номер замовлення</small><strong>{{ doneNumber }}</strong></div><button type="button" class="copy-button" data-copy="{{ doneNumber }}">Копіювати</button></div><div class="receipt-summary-row"><small>{{ doneAmountLabel }}</small><strong class="receipt-total">{{ doneTotal }}</strong></div></div><button class="receipt-main" sc-camel-on-click="{{ doneMain }}">{{ doneMainLabel }}</button><p role="alert">{{ doneActionError }} {{ doneErrorNote }}</p>
     <sc-if value="{{ donePending }}"><p class="payment-deadline">Оплатіть до {{ doneDeadline }} (Київ) — після цього резерв знімається. Нагадаємо через добу.</p></sc-if>
     <sc-if value="{{ doneRequisites }}"><section class="receipt-requisites"><h2>Реквізити для оплати</h2><p>{{ doneSeller.name }}<button type="button" class="copy-button" data-copy="{{ doneSeller.name }}">Копіювати</button></p><p>IBAN: {{ doneSeller.iban }}<button type="button" class="copy-button" data-copy="{{ doneSeller.iban }}">Копіювати</button></p><p>ІПН: {{ doneSeller.tax_id }}<button type="button" class="copy-button" data-copy="{{ doneSeller.tax_id }}">Копіювати</button></p><p>Сума: {{ doneTotal }}<button type="button" class="copy-button" data-copy="{{ doneTotal }}">Копіювати</button></p><p>Призначення: оплата замовлення {{ doneNumber }}<button type="button" class="copy-button" data-copy="оплата замовлення {{ doneNumber }}">Копіювати</button></p><p>{{ doneSeller.bank }}. Дочекайтеся підтвердження наявності менеджером.</p></section></sc-if>
-    <section class="receipt-next"><h2>◷ Що далі</h2><p>{{ doneNext }}</p></section><sc-if value="{{ doneDonVisible }}"><section class="receipt-donation"><h2>3% на 47 ОМБр «Магура»</h2><p>{{ doneDonTitle }}</p><sc-if value="{{ doneHasProof }}"><a sc-camel-href="{{ doneProofUrl }}" target="_blank" rel="noopener">Переглянути скрін переказу →</a></sc-if></section></sc-if>
+    <section class="receipt-next"><h2>◷ Що далі</h2><p>{{ doneNext }}</p></section><sc-if value="{{ doneDonVisible }}"><section class="receipt-donation"><h2>3% на {{ doneBrigade }}</h2><p>{{ doneDonTitle }}</p><sc-if value="{{ doneHasProof }}"><a sc-camel-href="{{ doneProofUrl }}" target="_blank" rel="noopener">Переглянути скрін переказу →</a></sc-if></section></sc-if>
     <details class="receipt-details"><summary>Деталі замовлення ▾</summary><sc-for list="{{ orderLines }}" as="o"><div class="receipt-line"><strong>{{ o.name }}</strong><small>{{ o.meta }} · {{ o.sku }}</small>{{ o.qtyPrice }}</div></sc-for><p>{{ doneDelivery }}</p><p>Доставка оплачується окремо за тарифом НП.</p><p>{{ doneDonationDetails }}</p></details><p><a href="/auth/?tab=orders">Мої замовлення →</a> · <a href="/catalog">До магазину →</a></p></article></sc-if>
   </section></sc-if>
 

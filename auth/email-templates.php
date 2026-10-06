@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__.'/../shop/donation-target.php';
 if (!defined('RUBIZH_AUTH')) { http_response_code(404); exit; }
 
 require_once __DIR__.'/../api/seller.php';
@@ -62,7 +63,8 @@ function rubizhOrderEmail(array $order): array {
     if(($order['mail_event']??'')==='shipped'&&$stage!=='cancelled')$title='Передано Новій пошті';
     if(($order['mail_event']??'')==='reminder'&&$stage==='pending')$title='Нагадування: залишилась оплата';
     $donation=(int)round((float)$order['total']*.03,0,PHP_ROUND_HALF_UP);
-    $donationText=$stage==='cancelled'?'Внесок за скасованим або поверненим замовленням не нараховується.':($stage==='pending'?'Після оплати '.$donation.' ₴ підуть на 47 ОМБр «Магура». ':'').'Протягом 3 робочих днів після оплати надішлемо скрін переказу на 47 ОМБр «Магура» у Viber або Telegram. Ваш внесок — '.$donation.' ₴.';
+    $brigade=shopDonationBrigade($order['contact']??[]);
+    $donationText=$stage==='cancelled'?'Внесок за скасованим або поверненим замовленням не нараховується.':($stage==='pending'?'Після оплати '.$donation.' ₴ підуть на '.$brigade.'. ':'').'Протягом 3 робочих днів після оплати надішлемо скрін переказу на '.$brigade.' у Viber або Telegram. Ваш внесок — '.$donation.' ₴.';
     $deadline='';if($stage==='pending'&&($order['payment_status']??'')!=='cod'&&!empty($order['payment_due'])){$deadline='Резерв до '.(new DateTimeImmutable($order['payment_due'],new DateTimeZone('UTC')))->setTimezone(new DateTimeZone('Europe/Kyiv'))->format('d.m.Y H:i').' (2 банківські дні). Після закінчення строку неоплачене замовлення скасуємо, якщо банк підтвердить відсутність оплати.';}
 
     $rows=''; $plainLines=[];
