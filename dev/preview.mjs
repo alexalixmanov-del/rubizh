@@ -2,6 +2,8 @@ import http from 'node:http';
 import {readFile,realpath} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {spawnSync} from 'node:child_process';
+import {existsSync} from 'node:fs';
 import {categories,products,catalog} from './fixtures.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const types={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.webp':'image/webp','.png':'image/png','.ico':'image/x-icon','.woff2':'font/woff2','.woff':'font/woff'};
@@ -26,6 +28,21 @@ export function startPreview(port=4173) {
       if(name==='/shop/customer.php')return json({ok:true,csrf:'preview-only',authed:false,customer_id:null,profile:null,favorites:[],items:[],mono_enabled:false,np_enabled:false,np_cod_enabled:false});
       if(name==='/shop/preferences.php')return json({ok:true,csrf:'preview-only',authed:false,preferences:{theme:'dark'}});
       if(name==='/shop/analytics.php')return json({ok:true,ga4:'',meta:'',settings:{donation:{enabled:false,percent:0}}});
+      if(name==='/auth/'||name==='/auth') {
+        // Render the real anonymous PHP login template. No query tokens, cookies or POSTs are forwarded.
+        const retained='/workspace/php-runtime/root/usr/bin/php8.4';
+        const php=process.env.PHP_PATH||(existsSync(retained)?retained:'php');
+        const source="$_SERVER['REQUEST_METHOD']='GET'; $_SERVER['REMOTE_ADDR']='127.0.0.1'; require "+JSON.stringify(path.join(root,'auth/index.php'))+';';
+        const result=spawnSync(php,['-n','-d','session.save_path=/tmp','-r',source],{encoding:'utf8',timeout:5000,maxBuffer:1024*1024,env:{...process.env,LD_LIBRARY_PATH:process.env.LD_LIBRARY_PATH||'/workspace/php-runtime/root/usr/lib/x86_64-linux-gnu'}});
+        if(result.error||result.status!==0||!result.stdout.includes('auth-shell'))return json({ok:false,error:'Для перегляду сторінки входу потрібен PHP. Вкажіть PHP_PATH.'},503);
+        const html=result.stdout.replace('<body class="login-page">','<body class="login-page"><div class="rz-preview-notice" style="position:relative;z-index:5;background:#f0a144;color:#16190f;padding:8px 16px;text-align:center;font:600 11px/1.5 system-ui">ПЕРЕГЛЯД ДИЗАЙНУ · ВХІД ТА НАДСИЛАННЯ ЛИСТІВ ВИМКНЕНІ</div>');
+        res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});return res.end(req.method==='HEAD'?undefined:html);
+      }
+      const authAssets=new Set(['/auth/account.css','/auth/login-refresh.css','/auth/account-ui.js','/auth/login.js','/auth/google-g.png']);
+      if(authAssets.has(name)) {
+        const file=path.join(root,name.slice(1));const data=await readFile(file);
+        res.writeHead(200,{'Content-Type':types[path.extname(file)]||'image/svg+xml'});return res.end(req.method==='HEAD'?undefined:data);
+      }
       if(name.startsWith('/shop/')||name.startsWith('/api/')||name.startsWith('/auth/'))return json({ok:false,error:'Для цього сервісу потрібні PHP та конфігурація магазину. Демо-режим.'},503);
       if(name.startsWith('/assets/')||name==='/favicon.ico') {
         const file=path.resolve(root,'.'+name);

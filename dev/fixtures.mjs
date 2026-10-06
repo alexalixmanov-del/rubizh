@@ -14,7 +14,7 @@ export const products = rows.map(([id, name, category, price, photo, sizes, slot
   id:'demo-'+id,slug:'demo-'+id,name,category,slot,brand:'Демонстраційний товар',description:'Демонстраційна картка для перевірки дизайну. Ціна, залишки та характеристики є прикладами. Замовлення та оплата в цьому режимі вимкнені.',
   price_min:price,availability:'in',has_docs:false,docs_note:'',attributes:{'Сезон':'Демісезон','Країна':'Демо'},
   photos:[{url:'/assets/'+photo,thumb:'/assets/'+photo,width:800,height:1000}],
-  variants:sizes.map((size,i)=>({sku:'DEMO-'+id.toUpperCase()+'-'+size,variant_id:'demo-'+id+'-'+i,size_display:size,size_native:size,size_type:slot==='boots'?'footwear':sizes.length>1?'clothing':'other',color:slot==='body'||slot==='legs'?'Піксель':'Олива',price,kit_price:slot==='armor'?price:Math.round(price*.87),kit_discount_pct:slot==='armor'?0:13,stock:5,availability:'in',lead_time:''}))
+  variants:sizes.map((size,i)=>({sku:'DEMO-'+id.toUpperCase()+'-'+size,variant_id:'demo-'+id+'-'+i,size_display:size,size_native:size,size_type:slot==='boots'?'shoes':sizes.length>1?'clothing_letter':'other',color:slot==='body'||slot==='legs'?'Піксель':'Олива',price,kit_price:slot==='armor'?price:Math.round(price*.87),kit_discount_pct:slot==='armor'?0:13,stock:5,availability:'in',lead_time:''}))
 }));
 const paths = [...new Set(products.flatMap(p => [p.category.split(' / ')[0],p.category]))];
 export const categories = paths.map(path => ({path,name:path.split(' / ').at(-1),url_path:path.split(' / ').map(slug).join('/'),product_count:products.filter(p=>p.category===path||p.category.startsWith(path+' / ')).length}));
