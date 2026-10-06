@@ -311,3 +311,34 @@ test('Compact mobile login keeps email, phone and SMS confirmation actions in th
     }
   }
 }));
+
+test('Kit recommendations filter before limiting, prioritise proper clothing and avoid eight facet requests',()=>withPage(async page=>{
+  const {products}=await import('../dev/fixtures.mjs');
+  const clone=(id,name,category,sizes=['L'],attributes={Сезон:'Демісезон'})=>({...structuredClone(products[0]),id,slug:id,name,category,price_min:1000,attributes,variants:sizes.map((size,index)=>({...products[0].variants[0],sku:id+'-'+index,variant_id:id+'-'+index,size_display:size,size_native:size,price:1000}))});
+  const variants=[
+    ...[1,2,3].map(n=>clone('winter-cap-'+n,'Зимова шапка '+n,'Одяг та форма / Шапки',['Один розмір'],{Сезон:'Зима'})),
+    clone('valid-head','Кепка тактична','Одяг та форма / Кепки',['Один розмір']),
+    clone('missing-legs','Штани джогери без розміру','Маскування',['Один розмір']),
+    clone('valid-legs','Тактичні штани із розміром','Одяг та форма / Штани',['M','L']),
+    clone('tshirt','Футболка','Одяг та форма / Футболки',['M','L']),
+    clone('ubacs','Убакс бойовий','Одяг та форма / Убакси',['M','L']),
+    clone('armor-ready','Плитоноска','Бронезахист / Плитоноски',['Один розмір']),
+    clone('gear-ready','Рюкзак з клапаном для шолома','Рюкзаки / Рюкзаки',['Один розмір']),
+    clone('med-ready','Турнікет','Тактична медицина / Турнікети',['Один розмір']),
+  ];
+  const requests=[];page.on('request',request=>{if(request.url().includes('/shop/catalog.php'))requests.push(new URL(request.url()));});
+  await page.route('**/shop/catalog.php?action=storefront',route=>route.fulfill({contentType:'application/json',body:JSON.stringify({ok:true,kits:[],products:variants})}));
+  await loaded(page,'/kit');await kitSlot(page,'Голова').getByText('Кепка тактична',{exact:true}).waitFor();
+  assert.equal(await kitSlot(page,'Голова').getByText(/Зимова шапка/).count(),0);
+  assert.equal(await kitSlot(page,'Ноги').getByText('Штани джогери без розміру',{exact:true}).count(),0);
+  assert.match(await kitSlot(page,'Ноги').innerText(),/Тактичні штани із розміром/);
+  assert.equal(await kitSlot(page,'Тіло').locator('.rz-kit-rec-name').first().innerText(),'Убакс бойовий');
+  assert.match(await kitSlot(page,'Бронезахист').innerText(),/Плитоноска/);
+  assert.match(await kitSlot(page,'Спорядження').innerText(),/Рюкзак з клапаном/);
+  assert.match(await kitSlot(page,'Медицина').innerText(),/Турнікет/);
+  for(const text of await page.locator('.rz-kit-rec>div').all())assert.ok((await text.boundingBox()).width>=100,'Recommendation copy must have enough width to avoid word-by-word wrapping');
+  assert.equal(requests.filter(url=>url.searchParams.has('slot')).length,0);
+  await kitSlot(page,'Голова').getByRole('button',{name:'Додати Кепка тактична',exact:true}).click();
+  await kitSlot(page,'Голова').locator('.rz-kit-item').waitFor();
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+},{width:390,height:844}));

@@ -3,13 +3,9 @@ declare(strict_types=1);
 require __DIR__.'/shop/catalog-lib.php';require_once __DIR__.'/shop/theme-bootstrap.php';$themeMarkup=shopThemeMarkup();require_once __DIR__.'/api/seller.php';
 $uri=parse_url($_SERVER['REQUEST_URI'] ?? '/',PHP_URL_PATH) ?: '/';
 if(in_array($uri,['/offer','/offer/','/privacy','/privacy/'],true)){echo str_replace('<head>','<head>'.$themeMarkup,rubizhSellerHtml(file_get_contents(__DIR__.($uri[1]==='o'?'/offer.html':'/privacy.html'))));exit;}
-// Кеш готового HTML (без персональних даних: кошик, вхід і обране підвантажуються в браузері; тема профілю додається після кешу).
+// Public datasets are cached with background refresh. Render the inexpensive HTML shell
+// per request so settings, metadata and theme never come from a stale full-page snapshot.
 require_once __DIR__.'/shop/settings-lib.php';
-$pageKey='page-'.md5($uri.'?'.($_SERVER['QUERY_STRING'] ?? ''));$pageExtra='';
-if(($_SERVER['REQUEST_METHOD'] ?? 'GET')==='GET'){try{
-    $pageExtra=json_encode(shopPublicSettings(),JSON_UNESCAPED_UNICODE).'|'.@filemtime(__DIR__.'/index.html');$cachedHtml=shopCacheGet($pageKey,$pageExtra);
-    if(is_string($cachedHtml)&&$cachedHtml!==''){http_response_code(200);header('Content-Type: text/html; charset=utf-8');header('Cache-Control: no-cache');header('X-Content-Type-Options: nosniff');shopEtag($pageKey.$pageExtra.$themeMarkup);echo str_replace('<head>','<head>'.$themeMarkup,$cachedHtml);exit;}
-}catch(Throwable $e){error_log('rubizh page cache: '.$e->getMessage());}}
 $boot=['kitSlots'=>shopKitSlotPatterns()];$head='';$fallback='';$status=200;
 function storefrontEsc(string $s): string{return htmlspecialchars($s,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');}
 try{
@@ -62,6 +58,4 @@ $html=rubizhSellerHtml(file_get_contents(__DIR__.'/index.html'));
 if(str_contains($head,'<title>'))$html=preg_replace('~<title>.*?</title>~s','',$html,1);
 $html=str_replace('</head>',$head.'<script>window.RUBIZH_BOOT='.json_encode($boot,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT).';</script></head>',$html);
 $html=str_replace('<body>','<body><noscript><div style="padding:24px;background:#0B0D0B;color:#EDEFEA">'.$fallback.'<p>Для оформлення замовлення увімкніть JavaScript або <a href="tel:+380976867892">зателефонуйте менеджеру</a>.</p></div></noscript>',$html);
-if($status===200&&$pageExtra!==''&&empty($boot['error']))shopCachePut($pageKey,$html,$pageExtra);
-shopEtag($pageKey.$pageExtra.$themeMarkup);
 echo str_replace('<head>','<head>'.$themeMarkup,$html);

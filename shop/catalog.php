@@ -6,7 +6,7 @@ try {
     if (($_SERVER['REQUEST_METHOD'] ?? 'GET')!=='GET') shopJson(['ok'=>false,'error'=>'Тільки читання.'],405);
     header('Cache-Control: public, max-age=30');
     $db=db();if(($_GET['action'] ?? '')==='promo'){try{shopJson(['ok'=>true,'percent'=>shopPromoPercent(trim((string)($_GET['code'] ?? '')))]);}catch(RuntimeException $e){shopJson(['ok'=>false,'error'=>$e->getMessage()],400);}}$action=$_GET['action'] ?? '';
-    shopEtag('catalog.php?'.($_SERVER['QUERY_STRING'] ?? ''));
+    // Short HTTP freshness; a stale snapshot must not receive the new version's ETag.
     if($action==='storefront'){require_once __DIR__.'/kit-data.php';shopJson(shopStorefront($db));}
     if($action==='product') {
         $slug=(string)($_GET['slug'] ?? '');$id=(string)($_GET['id'] ?? '');

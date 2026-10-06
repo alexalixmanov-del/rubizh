@@ -3,7 +3,7 @@ window.rubizhCreateComponent = function(t, e) {
 function storeApplySettings(vm,settings){const seller=settings.seller||{},defaults={name:'ФОП Мєшалкін Андрій Леонідович',tax_id:'2837300592',iban:'UA943220010000026004380084907',bank:'УНІВЕРСАЛ БАНК',mfo:'322001',bank_tax_id:'21133352',address:'Україна, 18007, м. Черкаси, вул. Смілянська, 23/1',email:'info@rubizh.shop',phone:'+380976867892',phone_label:'+380 97 686 78 92'};const pairs=Object.entries(defaults).filter(([k,v])=>seller[k]&&seller[k]!==v).map(([k,v])=>[v,String(seller[k])]);const seen=new WeakMap();function replace(x){if(typeof x==='string'){for(const [a,b] of pairs)x=x.split(a).join(b);return x;}if(!x||typeof x!=='object'||e.isValidElement(x))return x;const proto=Object.getPrototypeOf(x);if(!Array.isArray(x)&&proto!==Object.prototype&&proto!==null)return x;if(seen.has(x))return seen.get(x);const out=Array.isArray(x)?[]:{};seen.set(x,out);for(const [k,v]of Object.entries(x))out[k]=replace(v);return out;}const d={enabled:false,percent:0,...(settings.donation||{})};vm.donationEnabled=d.enabled===true;vm.cartDonShow=d.enabled===true;vm.donationReportUrl=d.report_url||'';vm.hasDonationReport=!!d.report_url;vm.donationSchedule=d.enabled?(d.schedule||'Інформацію про підтримку та звіти уточнюйте у менеджера'):'';vm.donPct=d.enabled?d.percent:0;vm.donRuleText=d.enabled?d.percent+'% з коштів магазину':'';vm.itemDonText=d.enabled?'Підтримка війська з коштів магазину. Для вас ціна не змінюється.':'';vm.donWhereLabel=vm.itemDonText;vm.isReports=vm.isReports&&d.enabled===true;vm.donShow=vm.donationEnabled;if(d.enabled){vm.donationFmt=storeMoney(Math.round((vm.storeTotal||0)*Number(d.percent||0)/100));}return pairs.length?replace(vm):vm;}
 
 // Один список слотів конструктора: сервер передає його в RUBIZH_BOOT.kitSlots (shop/catalog-lib.php · shopKitSlotPatterns)
-const STORE_SLOT_NAMES=(Array.isArray(window.RUBIZH_BOOT?.kitSlots)&&window.RUBIZH_BOOT.kitSlots.length?window.RUBIZH_BOOT.kitSlots:[['gear','^(?:підсум|чохол|сумк|футляр|холдер|тримач)'],['med','аптеч|турнікет|джгут|гемостат|бандаж|ifak'],['small','шкарпет|рукавич|рукавиц|наколін|налокіт'],['head','шолом|каск|шапк|кепк|панам|бейсбол|балаклав|навушник|баф|окуляр'],['boots','берц|черевик|кросів|взутт|бахіл'],['armor','плитоноск|бронежилет|бронеплит|бронепакет|балістичн.*пакет'],['legs','штани|штанів|брюки'],['gear','рюкзак|підсум|баул|розвантаж|рпс|сумк|гідратор|бойовий пояс'],['small','пояс|ремінь'],['body','курт|убакс|ubacs|сороч|футбол|поло|термобілиз|термобель|фліс|флис|кофта|худі|софтшел|пончо|костюм']]).map(([s,p])=>[s,new RegExp(p,'i')]);
+const STORE_SLOT_NAMES=(Array.isArray(window.RUBIZH_BOOT?.kitSlots)&&window.RUBIZH_BOOT.kitSlots.length?window.RUBIZH_BOOT.kitSlots:[['gear','^(?:підсум|чохол|сумк|футляр|холдер|тримач)|рюкзак|баул|розвантаж|рпс|гідратор|бойовий пояс'],['med','аптеч|турнікет|джгут|гемостат|бандаж|ifak'],['small','шкарпет|рукавич|рукавиц|наколін|налокіт'],['head','шолом|каск|шапк|кепк|панам|бейсбол|балаклав|навушник|баф|окуляр'],['boots','берц|черевик|кросів|взутт|бахіл'],['armor','плитоноск|бронежилет|бронеплит|бронепакет|балістичн.*пакет'],['legs','штани|штанів|брюки|джогер|шорти'],['small','пояс|ремінь'],['body','курт|убакс|ubacs|сороч|футбол|поло|термобілиз|термобель|фліс|флис|кофта|худі|софтшел|пончо|костюм']]).map(([s,p])=>[s,new RegExp(p,'i')]);
 function storeSlot(p){for(const [slot,re] of STORE_SLOT_NAMES)if(re.test(p.name||''))return slot;const path=(p.path||String(p.category||'').split(' / ')).join(' / ');for(const [slot,re] of [['med',/медицин|медицина/i],['head',/голов|шолом/i],['armor',/бронезахист/i],['boots',/взуття/i],['legs',/штани/i],['small',/рукавич|аксесуари одягу/i],['gear',/рюкзак|підсум|рпс|спорядження/i],['body',/одяг|форма/i]])if(re.test(path))return slot;return 'small';}
 function storeMoney(n){return new Intl.NumberFormat('uk-UA',{maximumFractionDigits:2}).format(Math.round(Number(n||0)*100)/100)+'\u00a0₴';}
 function storeQty(n){return Math.round(Number(String(n).replace(',','.'))*100)/100;}
@@ -14,7 +14,9 @@ function storePalette(c){const n=String(c||'').trim().toLowerCase();if(/^(?:пі
 function storeHasPlates(p){const a=p.attributes||p.attrs||Object.fromEntries(p.specs||[]),n=(p.name||'')+' '+(a['Комплектація']||a['Комплектация']||'');return !/без\s+(?:броне)?плит|плити.{0,30}не\s+вход|лише\s+плитоноск/i.test(n)&&/(?:з|із|зі|с)\s+(?:броне)?плит|плити\s+(?:в комплекті|входять)/i.test(n);}
 function storeRole(p){const n=(p.name||'').toLowerCase();if(/^(підсум|чохол|футляр|сумк)/.test(n))return /підсум.*магазин/.test(n)?'magazine':'';if(/шапк|балаклав|кепк|баф|шолом|каск|термоковдр|балістичн.*пакет|ремінь.*плитоноск/.test(n))return '';if(/рукавич|рукавиц/.test(n))return 'gloves';if(/аптеч|ifak/.test(n))return /порожн|без наповнення|підсум|сумк|чохол/.test(n)?'':'ifak';for(const [r,re] of [['protection',/плитоноск|бронежилет/],['plate',/бронеплит/],['thermal',/термобілиз|термобель/]])if(re.test(n))return r;if(/убакс|ubacs|бойова сороч/.test(n))return /комплект|костюм/.test(n)?'':'ubacs';if(/штани|брюки/.test(n))return 'pants';if(/рюкзак/.test(n))return /дрон|бпла|гвинтів|рушниц|чохол/.test(n)?'':'backpack';if(/фліс|флис|флісов/.test(n)&&/фліс|флис|кофт|куртк|худі|джемпер/.test(n))return 'fleece';if(/курт|пончо/.test(n))return 'outer';return '';}
 function storeSizeMissing(p){return ['body','legs','boots'].includes(storeSlot(p))&&!/пончо|бахіл|костюм.*маскув/i.test(p.name||'')&&Object.values(p.variants||{}).every(v=>v.size_unconfirmed||/^(?:Один розмір|OS|універсальний|)$/i.test(v.size_display||v.size_native||''));}
-function storeKitEligible(p){return p.storeReady&&p.price>0&&p.photos?.length&&!storeSizeMissing(p)&&storeAreaUnit(p)!=='m2'&&!/патрон|боєприпас|глушник|реб|репліка|страйкбол/i.test(p.name||'');}
+function storeKitVariantOK(p,v){const size=v.size_display||v.size_native||'';return v.price>0&&!v.size_unconfirmed&&['in_stock','preorder'].includes(v.availability)&&(v.availability!=='in_stock'||v.stock==null||v.stock>0)&&(!['body','legs','boots'].includes(storeSlot(p))||/пончо|бахіл|костюм.*маскув/i.test(p.name||'')||! /^(?:Один розмір|OS|універсальний|)$/i.test(size));}
+function storeKitEligible(p){return p.storeReady&&p.price>0&&p.photos?.length&&!storeSizeMissing(p)&&Object.values(p.variants||{}).some(v=>storeKitVariantOK(p,v))&&storeAreaUnit(p)!=='m2'&&!/патрон|боєприпас|глушник|реб|репліка|страйкбол/i.test(p.name||'');}
+function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fleece:2,thermal:3,pants:0,backpack:0,protection:0,plate:1,ifak:0})[role]??(/шолом|каск/i.test(p.name)?0:10);}
 
     const i = t => ({
         track: {
@@ -42,7 +44,7 @@ function storeKitEligible(p){return p.storeReady&&p.price>0&&p.photos?.length&&!
         offer: [ "Публічна оферта", [ "Цей документ є офіційною пропозицією укласти договір купівлі-продажу товарів дистанційним способом. Оформлення замовлення означає повну згоду з умовами.", "Продавець: ФОП Мєшалкін Андрій Леонідович, РНОКПП 2837300592. Адреса: Україна, 18007, м. Черкаси, вул. Смілянська, 23/1. IBAN: UA943220010000026004380084907, АТ «УНІВЕРСАЛ БАНК», МФО 322001, ЄДРПОУ банку 21133352. Товари постачаються згідно з описом на сайті; зовнішній вигляд може незначно відрізнятися від фото.", "Ціна товару визначається на момент оформлення замовлення. Продавець має право змінити ціну до моменту підтвердження замовлення менеджером.", "Продавець не реалізує зброю, боєприпаси та товари, обіг яких обмежено законодавством України.", "Спори вирішуються шляхом переговорів, а в разі недосягнення згоди — у судовому порядку за законодавством України." ] ],
         privacy: [ "Політика конфіденційності", [ "Ми збираємо мінімум даних, потрібних для виконання замовлення: імʼя, номер телефону, адресу доставки, e-mail та збережені розміри.", "Дані використовуються для входу в особистий кабінет, оформлення, доставки та підтримки замовлення. Для цих дій використовуються сервіси підтвердження входу Google, надсилання SMS TurboSMS, служба доставки та платіжний провайдер — у межах відповідної функції.", "Службові повідомлення (підтвердження, ТТН, документи) надсилаються завжди. Маркетингові листи можна вимкнути в кабінеті або за посиланням у листі.", "Ви маєте право запросити копію своїх даних або їх видалення — напишіть на пошту магазину.", "Сайт використовує файли cookie для роботи кошика та аналітики.", "Якщо ви обираєте вхід через Google, ми отримуємо ідентифікатор вашого Google-акаунта, підтвердження email та, за наявності, імʼя. Пароль Google, листи, контакти й файли не отримуємо. Телефон підтверджується окремим кодом SMS. Привʼязані способи входу відкривають один особистий кабінет.", "Коди SMS та посилання для входу одноразові. Для захисту від зловживань зберігаються технічні дані спроб входу. З питань персональних даних звертайтеся до менеджера за номером +380 97 686 78 92." ] ],
         about: [ "Про нас", [ "«Рубіж» — магазин тактичного спорядження. Ми не виробник і не посередник наосліп: кожну позицію перед додаванням у каталог перевіряємо самі.", "Наша робота — щоб замовлення дійшло швидко, а розмір підійшов з першого разу. Тому підтверджуємо наявність до оплати, тримаємо розмірні сітки та міняємо розмір без суперечок.", "Плануємо спрямовувати частину прибутку на підтримку війська. Підтверджені перекази публікуватимемо у звітах після фактичної передачі коштів.", "Ми не продаємо зброю та боєприпаси." ] ],
-        contacts: [ "Контакти", [ "Телефон: +380 97 686 78 92, щодня 10:00–20:00.", "Месенджери: Signal, Telegram, WhatsApp, Viber — на цей самий номер.", "Звʼязок із продавцем: +380 97 686 78 92", "Для підрозділів і фондів: рахунок на безготівкову оплату, документи в день заявки. Пишіть з позначкою «опт».", "ФОП Мєшалкін Андрій Леонідович Відправка по всій Україні Новою Поштою." ] ]
+        contacts: [ "Контакти", [ "Телефон: +380 97 686 78 92, щодня 10:00–20:00.", "Email: info@rubizh.shop", "Месенджери: Signal, Telegram, WhatsApp, Viber — на цей самий номер.", "Звʼязок із продавцем: +380 97 686 78 92", "Для підрозділів і фондів: рахунок на безготівкову оплату, документи в день заявки. Пишіть з позначкою «опт».", "ФОП Мєшалкін Андрій Леонідович Відправка по всій Україні Новою Поштою." ] ]
     }, v = {
         "а": "a",
         "б": "b",
@@ -1720,14 +1722,14 @@ function storeKitEligible(p){return p.storeReady&&p.price>0&&p.photos?.length&&!
             qty: 1
         });
         pickSize=t => {
-            const e = Object.keys(t.variants), i = e.filter(e => "out" !== this.avail(t, e)), s = t.size_scale, o = this.state.kitPar || {};
+            const e = Object.keys(t.variants).filter(k=>storeKitVariantOK(t,t.variants[k])), i = e.filter(e => "out" !== this.avail(t, e)), s = t.size_scale, o = this.state.kitPar || {};
             if (1 === e.length || !i.length) return {
                 z: e[0],
                 note: ""
             };
             const a = "clothing_letter" === s ? o.cloth : "shoes" === s ? o.shoe : null;
             if (!a) return {
-                z: this.defSize(t),
+                z: i.find(k=>k===this.defSize(t))||i[0],
                 note: ""
             };
             const r = e => t.variants[e].size_display, n = e.find(t => r(t) === a);
@@ -2182,7 +2184,7 @@ function storeKitEligible(p){return p.storeReady&&p.price>0&&p.photos?.length&&!
                             kitLimit: !1
                         }))
                     };
-                }), n = r.length ? [] : xt(e).map(t => Z.find(e => e.id === t)).filter(t => t && !g(t.id) && Object.keys(t.variants).some(e => "out" !== this.avail(t, e))).sort((t, e) => d ? (e.camo === d) - (t.camo === d) : 0).slice(0, 3).map(t => {
+                }), n = r.length ? [] : xt(e).map(t => Z.find(e => e.id === t)).filter(p => p && !g(p.id) && storeKitEligible(p) && storeSeasonOK(p,t.kitSeason||t.pk?.season||t.pick?.season||'Демісезон')).sort((a,b) => storeKitPriority(a)-storeKitPriority(b)||(d?(b.camo===d)-(a.camo===d):0)||a.price-b.price).slice(0, 3).map(t => {
                     const i = this.pickSize(t), s = 1 === Object.keys(t.variants).length;
                     return {
                         name: t.name,
@@ -6079,13 +6081,8 @@ function storeKitEligible(p){return p.storeReady&&p.price>0&&p.photos?.length&&!
             (this._related ||= {})[t.id] = this.storeCache(t.related).map(t => t.id);
         };
         storePreloadKitSlots=async () => {
-            const t = [ ...new Set(STORE_SLOT_NAMES.map(t => t[0])) ];
-            await Promise.all(t.map(async t => {
-                try {
-                    const e = await this.storeRequest("/shop/catalog.php?" + new URLSearchParams({ slot: t, page: "1", availability: "available" }));
-                    this.storeCache(e.items || []);
-                } catch (t) {}
-            }));
+            // One lightweight response for all slots; full facets load only when a slot is opened.
+            await this.storeLoadRecommendations();
             this.customerUnmounted || this.forceUpdate();
         };
         storeLoadProduct=async (t, e) => {

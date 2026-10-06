@@ -8,7 +8,7 @@
 <script defer src="/assets/image-slot.df1039e4aec7.js"></script>
 <script defer src="/assets/react.5e73fabcd0d0.js"></script>
 <script defer src="/assets/react-dom.c5c970a9cf36.js"></script>
-<script defer src="/assets/shop-client.2026100602.js"></script>
+<script defer src="/assets/shop-client.2026100603.js"></script>
 <script defer src="/assets/store-runtime.4b6bbf46ca4c.js"></script>
 
 <link rel="icon" href="/favicon.ico?v=2" sizes="any">
@@ -32,7 +32,7 @@
 <script src="/assets/analytics.js" defer></script><link rel="stylesheet" href="/assets/theme.css?v=5"><meta name="description" content="РУБІЖ — тактичний одяг та спорядження. Форма, берці, бронезахист і комплекти під вашу задачу. Допомога з розміром та доставка Новою поштою по Україні.">
 <link rel="stylesheet" href="/assets/experience.css?v=1">
 <script defer src="/assets/experience.js?v=1"></script>
-<link rel="stylesheet" href="/assets/storefront-refresh.css?v=1">
+<link rel="stylesheet" href="/assets/storefront-refresh.css?v=2">
 </head>
 <body>
 <a class="rz-skip" href="#main-content">Перейти до вмісту</a>
@@ -1791,6 +1791,15 @@
                   <div class="rz-kit-empty">
                     <img sc-camel-src="{{ sl.art }}" alt="" loading="lazy" decoding="async" width="120" height="140">
                     <div><p>{{ sl.description }}</p><button class="rz-slot-select" type="button" sc-camel-on-click="{{ sl.open }}">Обрати спорядження <span aria-hidden="true">+</span></button></div>
+                  </div>
+                  <div class="rz-kit-recommendations" aria-label="Рекомендовані товари для слоту">
+                    <sc-for list="{{ sl.recs }}" as="rec">
+                      <div class="rz-kit-rec">
+                        <sc-if value="{{ rec.hasThumb }}"><img sc-camel-src="{{ rec.thumb }}" alt="" loading="lazy" decoding="async" width="48" height="56"></sc-if>
+                        <div><span class="rz-kit-rec-name">{{ rec.name }}</span><span class="rz-kit-rec-meta">{{ rec.meta }}</span><sc-if value="{{ rec.note }}"><span class="rz-kit-rec-note">{{ rec.note }}</span></sc-if></div>
+                        <button type="button" sc-camel-on-click="{{ rec.add }}" aria-label="Додати {{ rec.name }}">+</button>
+                      </div>
+                    </sc-for>
                   </div>
                   <sc-if value="{{ sl.miss }}"><p class="rz-slot-missing">Немає готового варіанта під ваші параметри. Перевірте інші розміри або кольори.</p></sc-if>
                 </sc-if>

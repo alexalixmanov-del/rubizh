@@ -14,7 +14,12 @@ $c=authConfig();
 $file=$root.'/api/config.php';
 $saved=is_file($file) ? require $file : [];
 $api=is_array($saved) ? $saved : [];
-foreach (['np-private.php','mono-private.php'] as $name) { $path=$root.'/api/'.$name;if(is_file($path))$api=array_replace($api,require $path); }
+foreach (['np-private.php','mono-private.php'] as $name) {
+    $path=$root.'/api/'.$name;if(!is_file($path))continue;$override=require $path;
+    // Older blank deployment stubs must not hide credentials in the main private config.
+    foreach(['mono_token','nova_poshta_api_key'] as $key)if(isset($override[$key])&&trim((string)$override[$key])==='')unset($override[$key]);
+    $api=array_replace($api,$override);
+}
 $mono=trim((string)($api['mono_token'] ?? ''));
 $np=trim((string)($api['nova_poshta_api_key'] ?? ''));
 $required=['pdo_mysql','curl','mbstring','openssl','gd','fileinfo'];

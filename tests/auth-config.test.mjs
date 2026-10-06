@@ -53,3 +53,21 @@ test('Hosting secret initializer preserves settings, uses private permissions an
     assert.match(repeated.stdout,/no changes made/);
   }finally{rmSync(dir,{recursive:true,force:true});}
 });
+
+test('Private hosting credential merge preserves the database and supplier settings and guards activation',()=>{
+ const parent=mkdtempSync(path.join(tmpdir(),'rubizh-hosting-'));
+ const root=path.join(parent,'www');mkdirSync(path.join(root,'dev'),{recursive:true});mkdirSync(path.join(root,'api'));mkdirSync(path.join(root,'auth'));
+ copyFileSync(path.join(import.meta.dirname,'../dev/configure-services.php'),path.join(root,'dev/configure-services.php'));
+ const api=path.join(root,'api/config.php'),auth=path.join(root,'auth/config.php'),source=path.join(parent,'credentials.json');
+ writeFileSync(api,"<?php return ['db_host'=>'localhost','db_name'=>'fixture-db','db_pass'=>'fixture-db-password','supplier_contacts'=>['fixture'=>'preserved'],'mono_activation_confirmed'=>false];");
+ writeFileSync(auth,"<?php return ['noreply_password'=>'existing-mail','auth_secret'=>str_repeat('x',48),'sms_enabled'=>false];");
+ writeFileSync(source,JSON.stringify({mono_token:'fixture-mono',nova_poshta_api_key:'fixture-np',google_client_id:'fixture-id',google_client_secret:'fixture-secret'}));
+ const run=args=>spawnSync(php,['-n',path.join(root,'dev/configure-services.php'),'--file='+source,...args],{encoding:'utf8',env:{...process.env,LD_LIBRARY_PATH:'/workspace/php-runtime/root/usr/lib/x86_64-linux-gnu'}});
+ try{
+  const failed=run(['--enable-auth']);assert.notEqual(failed.status,0);assert.equal(readFileSync(api,'utf8').includes('fixture-mono'),false);
+  const result=run([]);assert.equal(result.status,0,result.stderr);assert.equal(result.stdout.includes('fixture-secret'),false);assert.equal(statSync(auth).mode&0o777,0o600);
+  const saved=spawnSync(php,['-n','-r',`echo json_encode([require '${api}',require '${auth}']);`],{encoding:'utf8',env:{...process.env,LD_LIBRARY_PATH:'/workspace/php-runtime/root/usr/lib/x86_64-linux-gnu'}});const [a,b]=JSON.parse(saved.stdout);
+  assert.equal(a.db_pass,'fixture-db-password');assert.deepEqual(a.supplier_contacts,{fixture:'preserved'});assert.equal(a.mono_token,'fixture-mono');assert.equal(a.mono_activation_confirmed,false);assert.equal(b.noreply_password,'existing-mail');assert.equal(b.sms_enabled,false);assert.equal(b.auth_secret,'x'.repeat(48));
+  writeFileSync(source,JSON.stringify({turbosms_token:'fixture-sms',turbosms_sender:'RUBIZH'}));assert.equal(run(['--enable-auth']).status,0);
+ }finally{rmSync(parent,{recursive:true,force:true});}
+});

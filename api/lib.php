@@ -5,6 +5,8 @@ declare(strict_types=1);
 const API_VERSION = '1.3.0';
 const SCHEMA_VERSION = 3;
 require_once __DIR__ . '/perf.php';
+require_once __DIR__.'/../shop/units.php';
+require_once __DIR__.'/../shop/normalization.php';
 
 function cfg(string $k = null) {
   static $c = null;
@@ -162,9 +164,14 @@ function recount_categories(PDO $pdo): void {
   $pdo->exec("UPDATE categories SET product_count=0");
   $rows = $pdo->query("SELECT category_path, COUNT(*) n FROM products WHERE visible=1 GROUP BY category_path")->fetchAll();
   $add = [];
+  $create=$pdo->prepare("INSERT IGNORE INTO categories(id,path,name,slug,url_path,parent_id,depth,sort,product_count,updated_at) VALUES(?,?,?,?,?,?,?,9999,0,?)");
   foreach ($rows as $r) {
     $parts = array_values(array_filter(explode(' / ', (string)$r['category_path']), 'strlen'));
-    for ($i = 1; $i <= count($parts); $i++) { $k = sha1(implode(' / ', array_slice($parts, 0, $i))); $add[$k] = ($add[$k] ?? 0) + (int)$r['n']; }
+    for ($i = 1; $i <= count($parts); $i++) {
+      $branch=array_slice($parts,0,$i);$path=implode(' / ',$branch);$k=sha1($path);
+      if(!isset($add[$k]))$create->execute([$k,$path,end($branch),slugify(end($branch)),implode('/',array_map('slugify',$branch)),$i>1?sha1(implode(' / ',array_slice($branch,0,-1))):null,$i,now()]);
+      $add[$k] = ($add[$k] ?? 0) + (int)$r['n'];
+    }
   }
   $st = $pdo->prepare("UPDATE categories SET product_count=? WHERE id=?");
   foreach ($add as $id => $n) $st->execute([$n, $id]);
@@ -226,6 +233,8 @@ function save_product(PDO $pdo, array $p): array {
   unset($p['fulfillment_supplier'], $p['supplier_code'], $p['supplier'], $p['suppliers'], $p['cost'], $p['docs'], $p['documents']);
   $p['variants'] = $vars;
   $p = catalog_public_data($p); $vars=$p['variants'];
+  $p['attributes']=shopDescriptionAttributes((string)($p['description']??''),is_array($p['attributes']??null)?$p['attributes']:[]);
+  $p['category']=shopCorrectCategory($name,(string)($p['category']??''));
 
   $hash = sha1(json_encode($p, JSON_UNESCAPED_UNICODE));
   $old = $pdo->prepare("SELECT hash, visible FROM products WHERE id=?"); $old->execute([$id]); $o = $old->fetch();
