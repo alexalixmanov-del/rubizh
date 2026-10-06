@@ -5,13 +5,16 @@ if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 ini_set('display_errors','0');
 define('RUBIZH_AUTH',true);
 define('RUBIZH_PRIVATE_CONFIG',true);
-require __DIR__.'/../auth/identities.php';
-require __DIR__.'/../auth/http.php';
+$root=dirname(__DIR__);
+foreach($argv as $argument)if(str_starts_with($argument,'--root='))$root=rtrim(substr($argument,7),'/');
+if(!is_file($root.'/auth/identities.php')||!is_file($root.'/auth/http.php')){fwrite(STDERR,"Папку магазину не знайдено.\n");exit(2);}
+require $root.'/auth/identities.php';
+require $root.'/auth/http.php';
 $c=authConfig();
-$file=__DIR__.'/../api/config.php';
+$file=$root.'/api/config.php';
 $saved=is_file($file) ? require $file : [];
 $api=is_array($saved) ? $saved : [];
-foreach (['np-private.php','mono-private.php'] as $name) { $api=array_replace($api,require __DIR__.'/../api/'.$name); }
+foreach (['np-private.php','mono-private.php'] as $name) { $path=$root.'/api/'.$name;if(is_file($path))$api=array_replace($api,require $path); }
 $mono=trim((string)($api['mono_token'] ?? ''));
 $np=trim((string)($api['nova_poshta_api_key'] ?? ''));
 $required=['pdo_mysql','curl','mbstring','openssl','gd','fileinfo'];
