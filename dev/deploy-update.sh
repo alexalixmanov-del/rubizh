@@ -31,6 +31,7 @@ while IFS= read -r RUBIZH_RELATIVE; do
  fi
 done < "$RUBIZH_LIST"
 # Preserve old hard-coded provider files in the main private config before replacing stubs.
+mkdir -p "$RUBIZH_BACKUP/api"
 cp -a "$RUBIZH_SITE_ROOT/api/config.php" "$RUBIZH_BACKUP/api/config.php"
 php -r '$r=$argv[1];define("RUBIZH_PRIVATE_CONFIG",true);$c=require $r."/api/config.php";foreach(["mono-private.php","np-private.php"] as $f){if(!is_file($r."/api/".$f))continue;$a=require $r."/api/".$f;foreach(["mono_token","nova_poshta_api_key"] as $k)if(isset($a[$k])&&trim((string)$a[$k])!=="")$c[$k]=$a[$k];}$m=umask(0077);$f=$r."/api/config.php";$t=$f.".deploy.tmp";if(file_put_contents($t,"<?php\nreturn ".var_export($c,true).";\n")===false||!rename($t,$f))exit(2);chmod($f,0600);umask($m);' "$RUBIZH_SITE_ROOT"
 RUBIZH_SUCCESS=false
