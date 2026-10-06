@@ -3,6 +3,7 @@ declare(strict_types=1);
 // Included by protected server scripts only; no secret appears in browser requests.
 class NpUnknownResult extends RuntimeException {}
 class NpRejected extends RuntimeException {}
+class NpRateLimited extends NpRejected {}
 function npConfigured(): bool {return trim((string)(getenv('RUBIZH_NP_API_KEY')?:cfg('nova_poshta_api_key')))!=='';}
 function npOrigins(): array {
     $origins=[
@@ -43,6 +44,33 @@ function npSupplierCode(string $sku,string $productId,string $name=''): string {
     return $names[npNormalize($name)]??'';
 }
 function npApiCall(string $model,string $method,array $properties=[]): array {
+    $setupRead=PHP_SAPI==='cli' && defined('RUBIZH_NP_SETUP_READS') && RUBIZH_NP_SETUP_READS===true && in_array($model.'.'.$method,['Counterparty.getCounterparties','Counterparty.getCounterpartyContactPersons','Address.getCities','Address.getWarehouses'],true);
+    if(!$setupRead)return npApiCallOnce($model,$method,$properties);
+    static $cache=[],$next=0.0,$deadline=null;
+    $deadline??=microtime(true)+150;
+    $key=json_encode([$model,$method,$properties],JSON_THROW_ON_ERROR);
+    if(isset($cache[$key]))return $cache[$key];
+    for($attempt=0;$attempt<4;$attempt++){
+      $pause=max(0,$next-microtime(true));
+      if(microtime(true)+$pause>$deadline)throw new NpRateLimited('Ліміт НП ще діє. Повторіть налаштування пізніше.');
+      npSetupReadPause($pause);$next=microtime(true)+3;
+      try{return $cache[$key]=npApiCallOnce($model,$method,$properties);}
+      catch(NpRateLimited $error){
+        if($attempt===3)throw $error;
+        $wait=10*(2**$attempt);
+        if(microtime(true)+$wait>$deadline)throw $error;
+        fwrite(STDOUT,'Ліміт запитів НП: повтор читання через '.$wait." с.\n");
+        npSetupReadPause($wait);
+      }
+    }
+    throw new LogicException('Unexpected read retry state');
+}
+function npSetupReadPause(float $seconds): void {
+    if($seconds<=0)return;
+    if(defined('RUBIZH_NP_TESTS') && isset($GLOBALS['np_setup_test_pause'])){($GLOBALS['np_setup_test_pause'])($seconds);return;}
+    usleep((int)ceil($seconds*1000000));
+}
+function npApiCallOnce(string $model,string $method,array $properties=[]): array {
     if(!preg_match('/^[A-Za-z]+$/D',$model.$method))throw new InvalidArgumentException('Невірний метод НП.');
     // Only a PHP test process can supply a fixture transport; never a query parameter.
     if(defined('RUBIZH_NP_TESTS') && isset($GLOBALS['np_test_transport']))return ($GLOBALS['np_test_transport'])($model,$method,$properties);
@@ -53,11 +81,12 @@ function npApiCall(string $model,string $method,array $properties=[]): array {
     try{curl_setopt_array($c,[CURLOPT_POST=>true,CURLOPT_POSTFIELDS=>json_encode(['apiKey'=>$key,'modelName'=>$model,'calledMethod'=>$method,'methodProperties'=>$properties],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),CURLOPT_HTTPHEADER=>['Content-Type: application/json'],CURLOPT_RETURNTRANSFER=>true,CURLOPT_CONNECTTIMEOUT=>5,CURLOPT_TIMEOUT=>25,CURLOPT_FOLLOWLOCATION=>false,CURLOPT_SSL_VERIFYPEER=>true,CURLOPT_SSL_VERIFYHOST=>2]);
       $response=curl_exec($c);$status=(int)curl_getinfo($c,CURLINFO_HTTP_CODE);
     }finally{curl_close($c);}
+    if($status===429)throw new NpRateLimited('Too many requests');
     // A timeout, 5xx or broken body can follow a successful remote save. Never retry a save.
     if(!is_string($response)||$status!==200||strlen($response)>8*1024*1024)throw new NpUnknownResult('НП не підтвердила результат. Потрібна звірка, повторний випуск заблоковано.');
     try{$r=json_decode($response,true,64,JSON_THROW_ON_ERROR);}catch(Throwable $e){throw new NpUnknownResult('НП повернула неповну відповідь. Потрібна звірка.');}
     if(!is_array($r)||!array_key_exists('success',$r)||!is_array($r['data']??null))throw new NpUnknownResult('Неповна відповідь НП. Потрібна звірка.');
-    if($r['success']!==true){$errors=array_filter(is_array($r['errors']??null)?$r['errors']:[],'is_string');$message=mb_substr(str_replace($key,'[приховано]',implode('; ',array_slice($errors,0,3))),0,300);throw new NpRejected('НП відхилила запит'.($message!==''?': '.$message:'.'));}
+    if($r['success']!==true){$errors=array_filter(is_array($r['errors']??null)?$r['errors']:[],'is_string');$message=mb_substr(str_replace($key,'[приховано]',implode('; ',array_slice($errors,0,3))),0,300);if(preg_match('/too many requests|rate limit/i',$message))throw new NpRateLimited('НП відхилила запит: '.$message);throw new NpRejected('НП відхилила запит'.($message!==''?': '.$message:'.'));}
     return $r['data'];
 }
 function npCached(PDO $db,string $model,string $method,array $properties,int $ttl=86400): array {

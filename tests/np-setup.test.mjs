@@ -20,6 +20,7 @@ function fixture(mode='normal'){
  const transport=path.join(parent,'transport.php');
  writeFileSync(transport,`<?php
  define('RUBIZH_NP_TESTS',true);
+ $GLOBALS['np_setup_test_pause']=function($seconds){};
  function fixtureRef($n){return sprintf('00000000-0000-0000-0000-%012d',$n);}
  $GLOBALS['np_test_transport']=function($model,$method,$properties){
   if($model==='Counterparty'&&$method==='getCounterparties')return [['Ref'=>fixtureRef(1),'Description'=>'Fixture sender']];
@@ -74,4 +75,19 @@ test('Kiborg shipment payload uses branch 9 through 30 kg and branch 36 above 30
  echo json_encode(['shipments'=>$results,'missing_cargo_blocked'=>$blocked,'supplier'=>npSupplierCode('sku','product','Кіборг')]);`;
  const r=spawnSync(php,[...options,'-r',source],{env,encoding:'utf8',timeout:8000});assert.equal(r.status,0,r.stderr||r.stdout);const result=JSON.parse(r.stdout);
  assert.deepEqual(result.shipments.map(s=>s.branch),['9','9','36']);assert.deepEqual(result.shipments.map(s=>s.type),['Parcel','Parcel','Cargo']);assert.equal(result.shipments[2].sender_address.endsWith('005036'),true);assert.ok(result.shipments.every(s=>!s.cod));assert.equal(result.missing_cargo_blocked,true);assert.equal(result.supplier,'kiborg');
+});
+test('NP setup retries bounded rate-limited reads, caches duplicate lookups, and never retries document writes or other rejections',()=>{
+ const source=`
+ define('RUBIZH_NP_TESTS',true);define('RUBIZH_NP_SETUP_READS',true);require '${root}/shop/np-lib.php';
+ $calls=[];$pauses=[];$GLOBALS['np_setup_test_pause']=function($s)use(&$pauses){$pauses[]=$s;};
+ $GLOBALS['np_test_transport']=function($model,$method,$p)use(&$calls){$key=$model.'.'.$method;$calls[$key]=($calls[$key]??0)+1;
+  if($key==='Address.getCities'){if($calls[$key]<3)throw new NpRateLimited('Too many requests');return [['Ref'=>'city-fixture']];}
+  if($key==='Address.getWarehouses'||$key==='InternetDocument.save')throw new NpRateLimited('Too many requests');
+  throw new NpRejected('Invalid sender');
+ };
+ $first=npApiCall('Address','getCities',['FindByString'=>'fixture']);$cached=npApiCall('Address','getCities',['FindByString'=>'fixture']);
+ foreach([['Address','getWarehouses'],['InternetDocument','save'],['Counterparty','getCounterparties']] as [$model,$method]){try{npApiCall($model,$method);}catch(NpRejected $e){}}
+ echo json_encode(['calls'=>$calls,'cached'=>$first===$cached,'backoff'=>array_values(array_filter($pauses,fn($s)=>$s>=10))]);`;
+ const r=spawnSync(php,[...options,'-r',source],{env,encoding:'utf8',timeout:8000});assert.equal(r.status,0,r.stderr||r.stdout);const result=JSON.parse(r.stdout.trim().split('\n').at(-1));
+ assert.equal(result.calls['Address.getCities'],3);assert.equal(result.cached,true);assert.equal(result.calls['Address.getWarehouses'],4);assert.equal(result.calls['InternetDocument.save'],1);assert.equal(result.calls['Counterparty.getCounterparties'],1);assert.deepEqual(result.backoff,[10,20,10,20,40]);
 });

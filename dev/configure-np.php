@@ -2,6 +2,7 @@
 declare(strict_types=1);
 // CLI-only setup: reads NP directories and saves configuration; never creates a waybill.
 if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
+define('RUBIZH_NP_SETUP_READS', true);
 $root = dirname(__DIR__); $manager = '';
 foreach ($argv as $argument) {
     if (str_starts_with($argument, '--root=')) $root = rtrim(substr($argument, 7), '/');
