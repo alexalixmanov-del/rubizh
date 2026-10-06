@@ -13,3 +13,5 @@
 [Комплект с выбранными вещами на телефоне](Rubizh-kit-filled-mobile.png).
 
 Светлая тема после исправления хедера: [главная на ПК](Rubizh-home-light.png) · [каталог на телефоне](Rubizh-catalog-light.png) · [конструктор на ПК](Rubizh-kit-light.png) · [вход на телефоне](Rubizh-login-light.png).
+
+Компактный вход: [SMS и Google](Rubizh-login-mobile.png) · [ввод кода](Rubizh-login-code-mobile.png) · [email](Rubizh-login-email-mobile.png). Это демонстрация оформления, реальные SMS и письма не отправлялись.

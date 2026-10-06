@@ -4,8 +4,27 @@ if (!defined('RUBIZH_AUTH')) { http_response_code(404); exit; }
 
 function authConfig(): array {
     static $config;
-    if ($config === null) { $config = is_file(__DIR__.'/config.php') ? (require __DIR__.'/config.php') : []; }
-    return is_array($config) ? $config : [];
+    if ($config === null) {
+        $saved = is_file(__DIR__.'/config.php') ? (require __DIR__.'/config.php') : [];
+        $config = is_array($saved) ? $saved : [];
+        // Existing private hosting settings remain valid. Explicit environment values override them.
+        foreach ([
+            'RUBIZH_TURBOSMS_TOKEN'=>'turbosms_token',
+            'RUBIZH_TURBOSMS_SENDER'=>'turbosms_sender',
+            'RUBIZH_AUTH_SECRET'=>'auth_secret',
+            'RUBIZH_GOOGLE_CLIENT_ID'=>'google_client_id',
+            'RUBIZH_GOOGLE_CLIENT_SECRET'=>'google_client_secret',
+            'RUBIZH_NOREPLY_PASSWORD'=>'noreply_password',
+        ] as $name=>$field) {
+            $value = getenv($name);
+            if ($value !== false) { $config[$field] = $field==='noreply_password' ? $value : trim($value); }
+        }
+        foreach (['RUBIZH_SMS_ENABLED'=>'sms_enabled','RUBIZH_GOOGLE_ENABLED'=>'google_enabled'] as $name=>$field) {
+            $value = getenv($name);
+            if ($value !== false) { $config[$field] = filter_var($value,FILTER_VALIDATE_BOOLEAN); }
+        }
+    }
+    return $config;
 }
 function smsEnabled(): bool {
     $c = authConfig();

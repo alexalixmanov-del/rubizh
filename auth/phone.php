@@ -31,7 +31,9 @@ function phoneCodeHash(string $id, string $phone, string $code): string {
 }
 function turboSmsAccepted(array $response, string $phone): bool {
     if (!in_array($response['response_code'] ?? null,[0,800,801,802,803,507],true)) { return false; }
-    foreach (($response['response_result'] ?? []) as $item) {
+    $items = $response['response_result'] ?? null;
+    if (!is_array($items)) { return false; }
+    foreach ($items as $item) {
         if (is_array($item) && (string)($item['phone'] ?? '')===ltrim($phone,'+')
             && ($item['response_code'] ?? null)===0 && is_string($item['message_id'] ?? null) && $item['message_id']!=='') { return true; }
     } return false;

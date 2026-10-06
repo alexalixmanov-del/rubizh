@@ -1,6 +1,6 @@
 <?php if (!defined('RUBIZH_AUTH')) { http_response_code(404); exit; } ?>
-<section class="auth-shell" aria-labelledby="auth-title">
-<div class="auth-intro"><div class="auth-intro-kicker">РУБІЖ · СПОРЯДЖЕННЯ ДЛЯ СВОЇХ</div><h1>Твій простір.<br><em>Твій Рубіж.</em></h1><p class="auth-intro-description">Усе потрібне — в одному місці. Твої замовлення, обране та дані для наступної покупки.</p><div class="auth-benefits"><span><b>✓</b> Історія замовлень</span><span><b>✓</b> Обране спорядження</span><span><b>✓</b> Збережені дані</span></div></div>
+<section class="auth-shell" aria-labelledby="auth-title" data-auth-state="<?=($phoneView || $pending || $linkSent) ? 'confirmation' : 'entry'?>">
+<div class="auth-intro"><picture class="login-art" aria-hidden="true"><source media="(max-width:980px)" srcset="/assets/hero-mobile.2026100602.webp"><img class="login-backdrop" src="/assets/hero-desktop.2026100602.webp" width="1900" height="828" alt="" fetchpriority="high" decoding="async"></picture><div class="auth-intro-kicker">РУБІЖ · СПОРЯДЖЕННЯ ДЛЯ СВОЇХ</div><h1>Твій простір.<br><em>Твій Рубіж.</em></h1><p class="auth-intro-description">Усе потрібне — в одному місці. Твої замовлення, обране та дані для наступної покупки.</p><div class="auth-benefits"><span><b>✓</b> Історія замовлень</span><span><b>✓</b> Обране спорядження</span><span><b>✓</b> Збережені дані</span></div></div>
 <div class="auth-card">
 <?php if ($phoneView): ?>
 <?php require __DIR__.'/phone-view.php'; ?>

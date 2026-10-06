@@ -282,3 +282,32 @@ test('Light theme keeps header text, icons and the logo readable across storefro
     }
   }
 }));
+
+test('Compact mobile login keeps email, phone and SMS confirmation actions in the first screen',()=>withPage(async page=>{
+  for(const theme of ['dark','light'])for(const width of [320,390,430])for(const demo of ['','phone','code','email-google']){
+    await page.setViewportSize({width,height:667});
+    await page.goto(base+'/auth/'+(demo?'?preview='+demo:''));
+    await page.locator('.auth-card').waitFor();
+    await page.evaluate(theme=>window.rubizhTheme.apply(theme),theme);
+    const issues=await page.evaluate(()=>{
+      const problems=[];const card=document.querySelector('.auth-card');const primary=card.querySelector('.auth-submit');const input=card.querySelector('.auth-form input:not([type=hidden])');
+      if(primary.getBoundingClientRect().bottom>innerHeight-20)problems.push('Primary action is below the first screen');
+      if(input&&parseFloat(getComputedStyle(input).fontSize)<16)problems.push('Input text can trigger phone zoom');
+      if(primary.getBoundingClientRect().height<44)problems.push('Primary action touch target is too small');
+      if(document.querySelector('.auth-intro').getBoundingClientRect().height>125)problems.push('Photo introduction is too tall');
+      if(document.documentElement.scrollWidth>innerWidth)problems.push('Horizontal overflow');
+      for(const element of card.querySelectorAll('input:not([type=hidden]),button,a')){
+        const box=element.getBoundingClientRect(),parent=card.getBoundingClientRect();
+        if(box.width&&(box.left<parent.left-1||box.right>parent.right+1))problems.push('A control exceeds the card');
+      }
+      return problems;
+    });
+    assert.deepEqual(issues,[],`${demo||'email'} ${theme} at ${width}px`);
+    assert.ok(await page.locator('input[name="csrf"]').first().getAttribute('value'));
+    if(demo==='code'){
+      assert.equal(await page.getByLabel('Код підтвердження').getAttribute('autocomplete'),'one-time-code');
+      await page.waitForFunction(()=>document.querySelector('[data-resend-after]')?.disabled===true);
+      assert.match(await page.locator('[data-resend-label]').innerText(),/\d+ с/);
+    }
+  }
+}));

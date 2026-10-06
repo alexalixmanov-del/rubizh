@@ -32,8 +32,10 @@ export function startPreview(port=4173) {
         // Render the real anonymous PHP login template. No query tokens, cookies or POSTs are forwarded.
         const retained='/workspace/php-runtime/root/usr/bin/php8.4';
         const php=process.env.PHP_PATH||(existsSync(retained)?retained:'php');
-        const source="$_SERVER['REQUEST_METHOD']='GET'; $_SERVER['REMOTE_ADDR']='127.0.0.1'; require "+JSON.stringify(path.join(root,'auth/index.php'))+';';
-        const result=spawnSync(php,['-n','-d','session.save_path=/tmp','-r',source],{encoding:'utf8',timeout:5000,maxBuffer:1024*1024,env:{...process.env,LD_LIBRARY_PATH:process.env.LD_LIBRARY_PATH||'/workspace/php-runtime/root/usr/lib/x86_64-linux-gnu'}});
+        const demo=['phone','code','email-google'].includes(url.searchParams.get('preview'))?url.searchParams.get('preview'):'';
+        const enabled=demo!=='';
+        const authEnv={RUBIZH_SMS_ENABLED:enabled?'true':'false',RUBIZH_GOOGLE_ENABLED:enabled?'true':'false',RUBIZH_TURBOSMS_TOKEN:'design-preview-only',RUBIZH_TURBOSMS_SENDER:'RUBIZH',RUBIZH_AUTH_SECRET:'design-preview-only-secret-not-for-production-0000000000',RUBIZH_GOOGLE_CLIENT_ID:'123456789-designpreview.apps.googleusercontent.com',RUBIZH_GOOGLE_CLIENT_SECRET:'design-preview-only'};
+        const result=spawnSync(php,['-n','-d','session.save_path=/tmp',path.join(root,'dev/render-login.php'),demo],{encoding:'utf8',timeout:5000,maxBuffer:1024*1024,env:{...process.env,...authEnv,LD_LIBRARY_PATH:process.env.LD_LIBRARY_PATH||'/workspace/php-runtime/root/usr/lib/x86_64-linux-gnu'}});
         if(result.error||result.status!==0||!result.stdout.includes('auth-shell'))return json({ok:false,error:'Для перегляду сторінки входу потрібен PHP. Вкажіть PHP_PATH.'},503);
         const html=result.stdout.replace('<body class="login-page">','<body class="login-page"><div class="rz-preview-notice" style="position:relative;z-index:5;background:#f0a144;color:#16190f;padding:8px 16px;text-align:center;font:600 11px/1.5 system-ui">ПЕРЕГЛЯД ДИЗАЙНУ · ВХІД ТА НАДСИЛАННЯ ЛИСТІВ ВИМКНЕНІ</div>');
         res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});return res.end(req.method==='HEAD'?undefined:html);

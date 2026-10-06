@@ -7,22 +7,22 @@ html[data-theme=light] .login-page .account-header{background:var(--surface)!imp
 html[data-theme=light] .login-page .brand-logo,html[data-theme=light] .login-page .auth-footer-brand img{background:#20251c;padding:4px;border-radius:5px}
 html[data-theme=light] .login-page .back-shop{color:var(--text)}
 .login-page *{box-sizing:border-box}
-.login-page .login-art{position:absolute;top:85px;bottom:0;left:0;width:52%;pointer-events:none;overflow:hidden;z-index:-1;background:#13180f}
+.login-page .login-art{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:hidden;z-index:-1;background:#13180f}
 .login-page .login-art:after{content:'';position:absolute;inset:0;background:linear-gradient(0deg,#0b110de6 0%,#0b110d33 60%,#0b110d11)}
 .login-page .login-backdrop{display:block;width:100%;height:100%;object-fit:cover;object-position:76% center;max-width:none;filter:saturate(.8)}
 .login-page .account-header{padding:20px 40px!important;min-height:85px;max-width:none!important;margin:0;border-bottom:1px solid var(--border);background:var(--bg)!important;position:relative;z-index:2}
 .login-page .account-header-inner{max-width:1440px;margin:auto;display:flex;align-items:center;justify-content:space-between;width:100%;gap:16px}
-.login-page .brand{display:inline-flex;align-items:center;gap:10px;color:var(--text)}
+.login-page .brand{display:inline-flex;align-items:center;gap:10px;color:var(--text);margin-inline:0}
 .login-page .brand-logo{width:38px;height:38px}
 .login-page .brand-word{font-family:'RZ Display','Arial Narrow',sans-serif;font-size:27px;letter-spacing:.12em;line-height:1.1;font-weight:600;color:var(--text)}
 .login-page .brand-word small{display:block;font:400 7px/1.5 system-ui,sans-serif;letter-spacing:.14em;margin-top:5px;color:var(--muted)}
 .login-page .header-account-name,.login-page .mobile-account-menu{display:none!important}
 .login-page .back-shop{display:inline-flex;min-height:40px;align-items:center;font-size:12px;letter-spacing:0;color:var(--muted)}
 .login-page .account-toggle-row{gap:16px}
-.login-page [data-theme-toggle]{width:38px;height:38px;border-radius:5px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:16px}
+.login-page [data-theme-toggle]{width:44px;height:44px;padding:0;margin:0;line-height:1;border-radius:5px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:16px}
 .login-page .auth-main{max-width:1440px!important;margin:0 auto;padding:0!important}
 .login-page .auth-shell{display:grid;grid-template-columns:52% 48%;gap:0;align-items:center;max-width:none;min-height:calc(100svh - 155px)}
-.login-page .auth-intro{padding:90px 56px 64px;min-width:0;align-self:stretch;display:flex;flex-direction:column;justify-content:flex-end;color:#f1f0e7}
+.login-page .auth-intro{padding:90px 56px 64px;min-width:0;align-self:stretch;display:flex;flex-direction:column;justify-content:flex-end;color:#f1f0e7;position:relative;isolation:isolate;overflow:hidden}
 .auth-intro-kicker{font:500 10px/1.5 system-ui,sans-serif;letter-spacing:.2em;color:#c6d0b4;display:flex;align-items:center;gap:10px;margin-bottom:22px}
 .auth-intro-kicker:before{content:'';width:6px;height:6px;background:#f0a144;border-radius:50%}
 .login-page .auth-intro h1{font-family:'RZ Display','Arial Narrow',sans-serif;font-size:clamp(42px,5.2vw,74px);font-weight:600;letter-spacing:-.035em;line-height:1.08;margin:0 0 22px;color:#f1f0e7;max-width:10ch;text-shadow:0 2px 25px #0003}
@@ -58,15 +58,19 @@ html[data-theme=light] .login-page .back-shop{color:var(--text)}
 .login-page .auth-cancel button{width:100%;background:none;border:0;color:var(--muted);font-family:inherit;font-size:12px;min-height:44px;cursor:pointer}
 .login-page a:focus-visible,.login-page button:focus-visible,.login-page input:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
 @media(max-width:980px){
- .login-page .account-header{padding:16px 20px!important;min-height:72px}.login-page .brand-logo{width:32px;height:32px}.login-page .brand-word{font-size:23px}.login-page .brand-word small{display:none}
+ .login-page .account-header{padding:10px 16px!important;min-height:64px}.login-page .brand-logo{width:30px;height:30px}.login-page .brand-word{font-size:23px}.login-page .brand-word small{display:none}
  .login-page .account-toggle-row{gap:10px}.login-page .back-shop{font-size:11px}
- .login-page .login-art{top:72px;bottom:auto;width:100%;height:260px}.login-page .login-backdrop{object-position:center 12%}.login-page .login-art:after{background:linear-gradient(90deg,#0b110dbb,#0b110d11),linear-gradient(0deg,#0b110dcc,transparent)}
- .login-page .auth-shell{display:flex;flex-direction:column;min-height:0;align-items:stretch}.login-page .auth-intro{min-height:236px;padding:36px 24px 46px;justify-content:center;align-self:stretch}
- .auth-intro-kicker{font-size:8px;margin-bottom:14px}.login-page .auth-intro h1{font-size:38px;max-width:none;margin:0;line-height:1.12}.auth-intro-description,.auth-benefits{display:none}
+ .login-page .login-backdrop{object-position:center 28%}.login-page .login-art:after{background:linear-gradient(90deg,#0b110dcc,#0b110d44),linear-gradient(0deg,#0b110d66,transparent)}
+ .login-page .auth-shell{display:flex;flex-direction:column;min-height:0;align-items:stretch}.login-page .auth-intro{min-height:116px;padding:16px 20px;justify-content:center;align-self:stretch}
+ .auth-intro-kicker{display:none}.login-page .auth-intro h1{font-size:28px;max-width:none;margin:0;line-height:1.1}.auth-intro-description,.auth-benefits{display:none}
  .login-page .auth-intro h1 br{display:initial!important}
- .login-page .auth-card{position:relative;align-self:center;width:calc(100% - 32px);max-width:480px;border:1px solid var(--border)!important;border-radius:10px;background:var(--bg)!important;padding:28px 24px;margin:-24px 0 24px}
- .login-page .auth-card h2{font-size:27px;line-height:1.25}.login-page .auth-step{font-size:9px;margin-bottom:14px}.login-page .auth-description{font-size:13px;margin-bottom:22px}
- .login-page .auth-footer{padding:16px 20px;gap:10px 16px;font-size:10px;justify-content:center}.login-page .auth-footer-brand{margin-right:0;width:100%;justify-content:center}.login-page .auth-trust{margin-top:22px;padding-top:18px}
+ .login-page .auth-shell[data-auth-state="confirmation"] .auth-intro{display:none}
+ .login-page .auth-card{position:relative;align-self:center;width:calc(100% - 24px);max-width:480px;border:1px solid var(--border)!important;border-radius:10px;background:var(--surface)!important;padding:20px;margin:12px 0 16px}
+ .login-page .auth-card h2{font-size:25px;line-height:1.2;margin-bottom:12px}.login-page .auth-heading{margin-bottom:12px}.login-page .auth-heading h2{margin:0}.login-page .auth-step{font-size:9px;margin-bottom:8px}.login-page .auth-description{font-size:13px;line-height:1.5;margin-bottom:16px}
+ .login-page .auth-form label{margin-bottom:6px}.login-page .auth-form input{min-height:48px;padding:11px 12px;margin-bottom:12px}.login-page .auth-card .auth-submit,.login-page .google-button{min-height:48px;padding:11px 14px}
+ .login-page .auth-footnote,.login-page .auth-sms-hint,.login-page .auth-link-note{margin-top:10px;line-height:1.5}.login-page .auth-divider{margin:14px 0}.login-page .auth-text-link{margin-top:4px}.login-page .auth-trust{margin-top:16px;padding-top:12px}
+ .login-page .auth-icon{width:36px;height:36px;margin-bottom:12px}.login-page .auth-icon svg{width:22px;height:22px}.login-page .auth-email{padding:10px 12px;margin-bottom:14px}.login-page .auth-steps{gap:12px;margin:14px 0}.login-page .sms-resend{margin-top:12px}
+ .login-page .auth-footer{padding:12px 16px;gap:6px 12px;font-size:10px;justify-content:center;min-height:0}.login-page .auth-footer-brand{margin-right:0;width:auto;justify-content:center}.login-page .auth-footer>span{display:none}
 }
-@media(max-width:360px){.login-page .account-header{padding:14px!important}.login-page .brand-word{font-size:20px}.login-page .back-shop{font-size:10px}.login-page .brand{gap:6px}.login-page .account-toggle-row{gap:6px}.login-page .auth-intro{padding-left:20px}.login-page .auth-card{padding:24px 18px}.login-page .auth-card h2{font-size:25px}}
+@media(max-width:360px){.login-page .account-header{padding:10px 12px!important}.login-page .brand-word{font-size:20px}.login-page .back-shop{font-size:10px}.login-page .brand{gap:6px}.login-page .account-toggle-row{gap:6px}.login-page .auth-intro{padding-left:16px}.login-page .auth-card{padding:18px 16px}.login-page .auth-card h2{font-size:24px}}
 @media(prefers-reduced-motion:reduce){.login-page input,.login-page .auth-submit{transition:none}}
