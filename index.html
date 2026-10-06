@@ -35,6 +35,7 @@
 <script defer src="/assets/experience.js?v=1"></script>
 <link rel="stylesheet" href="/assets/storefront-refresh.css?v=2">
 <link rel="stylesheet" href="/assets/catalog-redesign.2026100605.css">
+<link rel="stylesheet" href="/assets/kit-parameters.2026100606.css">
 </head>
 <body>
 <a class="rz-skip" href="#main-content">Перейти до вмісту</a>
@@ -1765,8 +1766,8 @@
       <sc-if value="{{ parOpen }}" hint-placeholder-val="{{ true }}">
         <div class="rz-kit-parameters" style="border:1px solid var(--legacy-2a322b);background:var(--legacy-141815);padding:14px 16px;margin-bottom:14px;display:flex;flex-direction:column;gap:12px">
           <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
-            <div style="min-width:0"><div style="font-family:'UAH','Oswald',sans-serif;font-size:15px;letter-spacing:.08em;text-transform:uppercase">Мої параметри</div><div style="color:var(--legacy-99a398);font-size:13px;margin-top:2px">Підставимо в кожну позицію. Розмір окремої речі можна змінити вручну.</div></div>
-            <div tabindex="0" role="button" sc-camel-on-click="{{ parClose }}" style="min-height:40px;padding:0 14px;display:flex;align-items:center;border:1px solid var(--legacy-2a322b);color:var(--legacy-c7cec3);font-size:13px;cursor:pointer" style-hover="border-color:var(--link);color:var(--link)">Згорнути</div>
+            <div class="rz-parameters-intro"><div class="rz-parameters-title-row"><span class="rz-parameters-step">Крок 01</span><h2>Мої параметри</h2></div><p>Почни з розміру та камуфляжу — застосуємо їх до комплекту. Для окремої речі можна обрати інші.</p></div>
+            <button class="rz-parameters-toggle" type="button" sc-camel-on-click="{{ parClose }}">Згорнути</button>
           </div>
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="color:var(--legacy-c7cec3);font-size:13.5px;width:116px">Розмір одягу</span><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ parCloth }}" as="o" hint-placeholder-count="6"><div tabindex="0" role="button" sc-camel-on-click="{{ o.pick }}" style="{{ o.style }}">{{ o.t }}</div></sc-for></div></div>
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="color:var(--legacy-c7cec3);font-size:13.5px;width:116px">Розмір взуття</span>
@@ -1777,8 +1778,8 @@
       </sc-if>
       <sc-if value="{{ parCollapsed }}" hint-placeholder-val="{{ false }}">
         <div class="rz-kit-parameters-collapsed" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;border:1px solid var(--legacy-2a322b);background:var(--legacy-141815);padding:10px 14px;margin-bottom:14px;min-height:44px">
-          <span style="color:var(--legacy-99a398);font-size:13.5px">Мої параметри:</span><span style="font-size:14px;color:var(--legacy-edefea)">{{ parLine }}</span>
-          <span tabindex="0" role="button" sc-camel-on-click="{{ parOpenFn }}" style="color:var(--link);font-size:13.5px;cursor:pointer">змінити</span>
+          <span class="rz-parameters-step">01</span><div class="rz-parameters-summary"><strong>Мої параметри</strong><span>{{ parLine }}</span></div>
+          <button class="rz-parameters-edit" type="button" sc-camel-on-click="{{ parOpenFn }}">змінити <span aria-hidden="true">→</span></button>
         </div>
       </sc-if>
 

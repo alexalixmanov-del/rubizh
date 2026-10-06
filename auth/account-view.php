@@ -1,17 +1,20 @@
 <?php
 if (!defined('RUBIZH_AUTH')) { http_response_code(404); exit; }
+require_once __DIR__.'/account-icons.php';
 $labels = ['orders'=>'Замовлення','favorites'=>'Обране','delivery'=>'Доставка','profile'=>'Профіль','donations'=>'Внесок на ЗСУ'];
 $deliveryLabels = ['branch'=>'Відділення Нової пошти','postomat'=>'Поштомат Нової пошти','courier'=>'Курʼєр Нової пошти'];
+$showAccountSummary=$accountReady && $tab==='orders' && !$orders && !$order;
 $activeOrders = (int)$orderStats['active'];
 $verifiedPhone=$accountReady ? customerVerifiedPhone(customerId()) : ''; $identities=$accountReady ? customerIdentities(customerId()) : [];
 $googleIdentity=null; foreach ($identities as $i) { if ($i['provider']==='google') { $googleIdentity=$i; } }
 ?>
 <div class="account-intro" hidden><div><p class="eyebrow">ВАШ ПРОСТІР У РУБІЖ</p><h1>Особистий кабінет</h1><p class="account-email"><?=esc((string)($profile['email'] ?? $verifiedPhone ?: 'Ваш кабінет'))?></p></div><span class="verified"><span aria-hidden="true">✓</span> <?=$verifiedPhone!=='' ? 'Телефон підтверджено' : 'Email підтверджено'?></span></div>
-<div class="account-layout <?=$tab==='orders'?'orders-layout':''?>">
+<div class="account-layout <?=$tab==='orders'?'orders-layout':''?> <?=$showAccountSummary?'account-home-layout':''?>">
 <aside class="account-sidebar"><nav aria-label="Розділи кабінету">
-<?php foreach ($labels as $key=>$label): ?><a href="/auth/?tab=<?=$key?>" class="nav-item <?=$tab===$key ? 'active' : ''?>" <?=$tab===$key ? 'aria-current="page"' : ''?>><span><?=esc($label)?></span><span aria-hidden="true">→</span></a><?php endforeach; ?>
-</nav><form method="post" action="/auth/" class="logout-form"><input type="hidden" name="csrf" value="<?=esc($_SESSION['csrf'])?>"><button class="logout" name="action" value="logout">Вийти з акаунта</button></form></aside>
-<section class="account-content" aria-label="<?=esc($labels[$tab])?>">
+<?php foreach ($labels as $key=>$label): ?><a href="/auth/?tab=<?=$key?>" class="nav-item <?=$tab===$key ? 'active' : ''?>" <?=$tab===$key ? 'aria-current="page"' : ''?>><?=rubizhAccountIcon($key)?><span><?=esc($label)?></span></a><?php endforeach; ?>
+</nav><form method="post" action="/auth/" class="logout-form"><input type="hidden" name="csrf" value="<?=esc($_SESSION['csrf'])?>"><button class="logout" name="action" value="logout"><?=rubizhAccountIcon('logout')?>Вийти з акаунта</button></form></aside>
+<section class="account-content" aria-label="<?=esc($labels[$tab] ?? 'Особистий кабінет')?>">
+<p class="eyebrow account-section-eyebrow">ВАШ ПРОСТІР У РУБІЖ</p>
 <?php if (!$accountReady): ?><div class="account-card"><h2>Кабінет тимчасово недоступний</h2><p>Ваш вхід збережено. Спробуйте оновити сторінку.</p><a class="button" href="/auth/">Спробувати ще раз</a></div>
 <?php elseif ($tab==='overview'): ?>
 <div class="account-card welcome"><p class="eyebrow">РАДІ ВАС БАЧИТИ</p><h2><?= $profile['first_name'] !== '' ? 'Вітаємо, '.esc($profile['first_name']).'!' : 'Вітаємо у РУБІЖ!' ?></h2><p>Збережіть контактні дані та адресу доставки, щоб усе потрібне було під рукою.</p><a class="button inline-button" href="/auth/?tab=profile">Заповнити профіль →</a></div>
@@ -26,7 +29,7 @@ $googleIdentity=null; foreach ($identities as $i) { if ($i['provider']==='google
 <label for="verified-email">Email</label><input id="verified-email" value="<?=esc((string)($profile['email'] ?? ''))?>" type="email" readonly aria-describedby="email-help"><p id="email-help" class="field-help">Email — додатковий спосіб входу. Прив’язати його до цього кабінету можна в розділі «Вхід і безпека».</p>
 <label for="profile-theme">Тема оформлення</label><select id="profile-theme" name="theme" data-theme-select><option value="system" <?=$preferences['theme']==='system'?'selected':''?>>Як у системі</option><option value="light" <?=$preferences['theme']==='light'?'selected':''?>>Світла</option><option value="dark" <?=$preferences['theme']==='dark'?'selected':''?>>Темна</option></select><label for="profile-messenger">Куди надіслати скрін донату</label><select id="profile-messenger" name="donation_channel"><option value="viber" <?=$preferences['donation_channel']==='viber'?'selected':''?>>Viber</option><option value="telegram" <?=$preferences['donation_channel']==='telegram'?'selected':''?>>Telegram</option></select><label for="profile-donation-phone">Номер для скріна (або телефон замовлення)</label><input id="profile-donation-phone" name="donation_phone" type="tel" value="<?=esc($preferences['donation_phone'])?>" placeholder="+380…"><button type="submit" class="inline-button">Зберегти дані</button></form></div>
 
-<div class="account-card"><h2>Вхід і безпека</h2><p>Телефон, Google та підтверджений email відкривають один кабінет. Основний спосіб — номер телефону.</p>
+<div class="account-card" id="account-security"><h2>Вхід і безпека</h2><p>Телефон, Google та підтверджений email відкривають один кабінет. Основний спосіб — номер телефону.</p>
 <div class="detail-row"><span>Телефон для входу</span><strong><?=esc($verifiedPhone ?: 'Не підтверджено')?></strong></div>
 <?php if ($smsReady): ?><a class="button inline-button secondary" href="/auth/?phone=1">Підтвердити / змінити телефон →</a><?php else: ?><p class="field-help">SMS-вхід ще підключаємо. Ваш email-вхід продовжує працювати.</p><?php endif; ?>
 <div class="detail-row"><span>Google</span><strong><?=esc($googleIdentity ? ($googleIdentity['contact_email'] ?: 'Прив’язано') : 'Не прив’язано')?></strong></div>
@@ -34,7 +37,7 @@ $googleIdentity=null; foreach ($identities as $i) { if ($i['provider']==='google
 <div class="detail-row"><span>Email для входу</span><strong><?=esc((string)($profile['email'] ?? 'Не прив’язано'))?></strong></div>
 <?php if ($profile['email']===null): ?><form method="post" action="/auth/" class="account-form"><input type="hidden" name="csrf" value="<?=esc($_SESSION['csrf'])?>"><label for="link-email">Додатковий email</label><input id="link-email" name="email" type="email" maxlength="254" autocomplete="email" required><button class="inline-button secondary" name="action" value="link_email">Підтвердити email →</button></form><?php endif; ?>
 <div class="detail-row"><span>Поточний вхід</span><strong><?=esc(['google'=>'Google','phone'=>'SMS','email'=>'Email'][$_SESSION['login_method'] ?? 'email'] ?? 'Email')?></strong></div>
-<p>Пароль не потрібен. Сесія діє до 24 годин.</p><form method="post" action="/auth/"><input type="hidden" name="csrf" value="<?=esc($_SESSION['csrf'])?>"><button class="secondary inline-button" name="action" value="logout">Вийти на цьому пристрої</button></form></div>
+<p>Пароль не потрібен. Сесія діє до 24 годин.</p><p><a href="/auth/?tab=donations">Внесок на ЗСУ →</a></p><form method="post" action="/auth/"><input type="hidden" name="csrf" value="<?=esc($_SESSION['csrf'])?>"><button class="secondary inline-button" name="action" value="logout">Вийти на цьому пристрої</button></form></div>
 <?php elseif ($tab==='favorites'): ?>
 <div class="account-card"><h2>Обране</h2><p>Збережені товари доступні на всіх ваших пристроях після входу.</p>
 <?php $favorites=shopProductsByIds(shopStoreDatabase(),shopFavoriteIds(shopStoreDatabase(),customerId())); if(!$favorites): ?>
@@ -48,8 +51,18 @@ $googleIdentity=null; foreach ($identities as $i) { if ($i['provider']==='google
 <?php elseif ($tab==='donations'):require __DIR__.'/donation-view.php';?>
 <?php elseif ($tab==='orders'): ?>
 <div class="account-orders <?=$orderExplicit?'detail-open':''?>"><section class="order-list-pane"><h1>Замовлення</h1><nav class="order-tabs"><a href="/auth/?tab=orders&amp;view=active" <?=$orderView==='active'?'aria-current="page"':''?>>Активні</a><a href="/auth/?tab=orders&amp;view=history" <?=$orderView==='history'?'aria-current="page"':''?>>Історія</a></nav>
-<?php if(!$orders):?><div class="empty-state empty-orders"><span aria-hidden="true" class="empty-symbol">▧</span><h3><?=$orderView==='history'?'Історія порожня':'Активних замовлень немає'?></h3><p><?=$orderView==='history'?'Тут будуть відображатися ваші завершені замовлення':'Після оформлення замовлення воно зʼявиться тут'?></p><a class="button inline-button" href="/catalog">До каталогу →</a></div><?php else:require __DIR__.'/order-cards.php';endif;?>
-<?php if($ordersPages>1):?><nav class="orders-pagination"><?php if($ordersPage>1):?><a href="?tab=orders&amp;view=<?=esc($orderView)?>&amp;page=<?=$ordersPage-1?>">← Назад</a><?php endif;?><span><?=$ordersPage?> / <?=$ordersPages?></span><?php if($ordersPage<$ordersPages):?><a href="?tab=orders&amp;view=<?=esc($orderView)?>&amp;page=<?=$ordersPage+1?>">Далі →</a><?php endif;?></nav><?php endif;?></section><section class="order-detail-pane"><?php if($order):require __DIR__.'/order-detail.php';else:?><div class="account-card empty-state"><h2>Оберіть замовлення</h2></div><?php endif;?></section></div>
+<?php if(!$orders):?><div class="empty-state empty-orders"><img class="account-empty-art" src="/auth/empty-orders.2026100606.svg" width="560" height="190" alt=""><h3><?=$orderView==='history'?'Історія порожня':'Активних замовлень немає'?></h3><p><?=$orderView==='history'?'Тут будуть відображатися ваші завершені замовлення':'Після оформлення замовлення воно зʼявиться тут'?></p><a class="button inline-button" href="/catalog">До каталогу →</a></div><?php else:require __DIR__.'/order-cards.php';endif;?>
+<?php if($ordersPages>1):?><nav class="orders-pagination"><?php if($ordersPage>1):?><a href="?tab=orders&amp;view=<?=esc($orderView)?>&amp;page=<?=$ordersPage-1?>">← Назад</a><?php endif;?><span><?=$ordersPage?> / <?=$ordersPages?></span><?php if($ordersPage<$ordersPages):?><a href="?tab=orders&amp;view=<?=esc($orderView)?>&amp;page=<?=$ordersPage+1?>">Далі →</a><?php endif;?></nav><?php endif;?></section><section class="order-detail-pane" <?=$showAccountSummary?'hidden':''?>><?php if($order):require __DIR__.'/order-detail.php';else:?><div class="account-card empty-state"><h2>Оберіть замовлення</h2></div><?php endif;?></section></div>
 <?php endif; ?>
+<?php if($accountReady && $tab==='orders' && !$orderExplicit): ?>
+<section class="account-quick"><h2>Швидкі дії</h2><div><a href="/auth/?tab=favorites"><?=rubizhAccountIcon('favorites')?><span><strong>Обране</strong><small>Збережені товари</small></span><span aria-hidden="true">→</span></a><a href="/auth/?tab=delivery"><?=rubizhAccountIcon('delivery')?><span><strong>Доставка</strong><small>Адреса отримання</small></span><span aria-hidden="true">→</span></a></div></section>
+<?php if($verifiedPhone!==''):?><p class="account-mobile-verified"><span aria-hidden="true">✓</span> Телефон підтверджено</p><?php endif;?>
+<?php endif;?>
 <div class="account-help"><span>Потрібна допомога?</span><a href="tel:+380976867892">Зателефонувати · +380 97 686 78 92</a></div>
-</section></div><nav class="account-bottom" aria-label="Розділи кабінету"><?php foreach($labels as $key=>$label):?><a href="/auth/?tab=<?=$key?>" <?=$tab===$key?'aria-current="page"':''?>><span aria-hidden="true"><?= ['orders'=>'▧','favorites'=>'♡','delivery'=>'▱','profile'=>'○','donations'=>'♥'][$key]?></span><span><?=esc($label)?></span></a><?php endforeach;?></nav>
+</section>
+<?php if($showAccountSummary): ?><aside class="account-support" aria-label="Профіль і допомога">
+<section class="account-card account-profile-summary"><div class="account-support-title"><span class="account-icon-circle"><?=rubizhAccountIcon('profile')?></span><h2>Профіль</h2></div><p class="account-profile-contact"><?=esc($verifiedPhone ?: (string)($profile['email'] ?: $profile['phone'] ?: 'Додайте контакти'))?></p>
+<?php if($verifiedPhone!==''):?><p class="account-verification"><span aria-hidden="true">✓</span> Телефон підтверджено</p><?php endif;?>
+<nav><a href="/auth/?tab=profile">Переглянути профіль <span aria-hidden="true">→</span></a><a href="/auth/?tab=profile#account-security">Вхід і безпека <span aria-hidden="true">→</span></a><a href="/auth/?tab=donations">Внесок на ЗСУ <span aria-hidden="true">→</span></a></nav></section>
+<section class="account-card account-support-card"><div class="account-support-title"><span class="account-icon-circle"><?=rubizhAccountIcon('support')?></span><h2>Звʼязатися з нами</h2></div><p>Питання щодо замовлення, доставки чи товару? Допоможемо розібратися.</p><a class="account-support-phone" href="tel:+380976867892"><?=rubizhAccountIcon('phone')?><span><strong>Зателефонувати</strong><small>+380 97 686 78 92</small></span><span aria-hidden="true">→</span></a></section></aside><?php endif;?>
+</div><nav class="account-bottom" aria-label="Розділи кабінету"><?php foreach(array_diff_key($labels,['donations'=>true]) as $key=>$label):?><a href="/auth/?tab=<?=$key?>" <?=$tab===$key?'aria-current="page"':''?>><?=rubizhAccountIcon($key)?><span><?=esc($label)?></span></a><?php endforeach;?></nav>

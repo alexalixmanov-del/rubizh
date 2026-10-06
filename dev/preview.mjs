@@ -6,7 +6,7 @@ import {spawnSync} from 'node:child_process';
 import {existsSync} from 'node:fs';
 import {categories,products,catalog} from './fixtures.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
-const types={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.webp':'image/webp','.png':'image/png','.ico':'image/x-icon','.woff2':'font/woff2','.woff':'font/woff'};
+const types={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.webp':'image/webp','.png':'image/png','.svg':'image/svg+xml','.ico':'image/x-icon','.woff2':'font/woff2','.woff':'font/woff'};
 export function startPreview(port=4173) {
   const server=http.createServer(async(req,res)=>{
     res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Cache-Control','no-store');
@@ -28,6 +28,11 @@ export function startPreview(port=4173) {
       if(name==='/shop/customer.php')return json({ok:true,csrf:'preview-only',authed:false,customer_id:null,profile:null,favorites:[],items:[],mono_enabled:false,np_enabled:false,np_cod_enabled:false});
       if(name==='/shop/preferences.php')return json({ok:true,csrf:'preview-only',authed:false,preferences:{theme:'dark'}});
       if(name==='/shop/analytics.php')return json({ok:true,ga4:'',meta:'',settings:{donation:{enabled:false,percent:0}}});
+      if(name==='/auth/preview-account') {
+        const retained='/workspace/php-runtime/root/usr/bin/php8.4';const php=process.env.PHP_PATH||(existsSync(retained)?retained:'php');
+        const result=spawnSync(php,['-n',path.join(root,'dev/render-account.php'),url.searchParams.get('tab')||'orders',url.searchParams.get('mode')||''],{encoding:'utf8',timeout:5000,maxBuffer:1024*1024,env:{...process.env,LD_LIBRARY_PATH:process.env.LD_LIBRARY_PATH||'/workspace/php-runtime/root/usr/lib/x86_64-linux-gnu'}});
+        if(result.status!==0)throw new Error('Account preview failed');res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});res.end(result.stdout);return;
+      }
       if(name==='/auth/'||name==='/auth') {
         // Render the real anonymous PHP login template. No query tokens, cookies or POSTs are forwarded.
         const retained='/workspace/php-runtime/root/usr/bin/php8.4';
@@ -40,7 +45,7 @@ export function startPreview(port=4173) {
         const html=result.stdout.replace('<body class="login-page">','<body class="login-page"><div class="rz-preview-notice" style="position:relative;z-index:5;background:#f0a144;color:#16190f;padding:8px 16px;text-align:center;font:600 11px/1.5 system-ui">ПЕРЕГЛЯД ДИЗАЙНУ · ВХІД ТА НАДСИЛАННЯ ЛИСТІВ ВИМКНЕНІ</div>');
         res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});return res.end(req.method==='HEAD'?undefined:html);
       }
-      const authAssets=new Set(['/auth/account.css','/auth/login-refresh.css','/auth/account-ui.js','/auth/login.js','/auth/google-g.png']);
+      const authAssets=new Set(['/auth/account.css','/auth/account-refresh.2026100606.css','/auth/empty-orders.2026100606.svg','/auth/login-refresh.css','/auth/account-ui.js','/auth/login.js','/auth/google-g.png']);
       if(authAssets.has(name)) {
         const file=path.join(root,name.slice(1));const data=await readFile(file);
         res.writeHead(200,{'Content-Type':types[path.extname(file)]||'image/svg+xml'});return res.end(req.method==='HEAD'?undefined:data);

@@ -1,0 +1,22 @@
+/* Make the first step visible in both themes, including the collapsed mobile state. */
+html:root body .rz-kit-parameters,html:root body .rz-kit-parameters-collapsed{--parameters-bg:#20291b;--parameters-text:#f3f5ed;--parameters-muted:#bdc7b2;--parameters-control:#11180f;--parameters-border:#657252;background:var(--parameters-bg)!important;border:1px solid #b1792e!important;border-left:5px solid #f2a33c!important;color:var(--parameters-text);box-shadow:0 5px 18px #00000012}
+html:root[data-theme="light"] body .rz-kit-parameters,html:root[data-theme="light"] body .rz-kit-parameters-collapsed{--parameters-bg:#fff5e5;--parameters-text:#26301e;--parameters-muted:#59624e;--parameters-control:#fffefa;--parameters-border:#a7af9a;border-color:#d6aa68!important;border-left-color:#e99925!important}
+html body .rz-kit-parameters .rz-parameters-intro{min-width:0;flex:1}
+html body .rz-kit-parameters .rz-parameters-title-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+html body .rz-kit-parameters .rz-parameters-title-row h2{margin:0;font:600 23px/1.2 'IBM Plex Sans',sans-serif;letter-spacing:-.025em;color:var(--parameters-text)}
+html body .rz-parameters-step{display:inline-flex;align-items:center;justify-content:center;flex:none;min-height:28px;box-sizing:border-box;padding:5px 9px;border-radius:4px;background:#f2a33c;color:#241c10;font:600 11px/1.2 'IBM Plex Sans',sans-serif;letter-spacing:.07em;text-transform:uppercase}
+html body .rz-kit-parameters .rz-parameters-intro p{margin:9px 0 0;font:400 13px/1.5 'IBM Plex Sans',sans-serif;color:var(--parameters-muted);max-width:76ch}
+html body .rz-kit-parameters>div:not(:first-child)>span{font-size:12px!important;font-weight:600;color:var(--parameters-text)!important}
+html body .rz-kit-parameters>div:not(:first-child) [role=button],html body .rz-kit-parameters select{min-height:44px!important;border-color:var(--parameters-border)!important;color:var(--parameters-text)!important;background:var(--parameters-control)!important;font-size:13px!important}
+html body .rz-kit-parameters>div:not(:first-child) [role=button]:hover,html body .rz-kit-parameters select:hover{border-color:#f2a33c!important}
+html body .rz-kit-parameters>div:not(:first-child) [role=button][style*="--legacy-f2a33c"]{border-color:#f2a33c!important;background:#f2a33c!important;color:#241c10!important;font-weight:600}
+html body .rz-parameters-toggle{flex:none;min-height:40px;padding:8px 14px;border:1px solid var(--parameters-border);border-radius:5px;background:var(--parameters-control);color:var(--parameters-text);font:400 12px/1.2 'IBM Plex Sans',sans-serif;cursor:pointer}
+html body .rz-parameters-toggle:hover{border-color:#f2a33c}
+html body .rz-kit-parameters-collapsed{flex-wrap:nowrap!important;gap:12px!important;padding:14px 18px!important}
+html body .rz-parameters-summary{min-width:0;flex:1;display:flex;flex-direction:column;gap:4px}
+html body .rz-parameters-summary strong{font:600 16px/1.2 'IBM Plex Sans',sans-serif;color:var(--parameters-text)}
+html body .rz-parameters-summary>span{color:var(--parameters-muted);font-size:12px;line-height:1.4;overflow-wrap:anywhere}
+html body .rz-parameters-edit{display:inline-flex;gap:10px;align-items:center;justify-content:center;flex:none;min-height:44px;padding:10px 14px;border:1px solid #f2a33c;border-radius:5px;background:#f2a33c;color:#241c10;font:600 12px/1.2 'IBM Plex Sans',sans-serif;text-transform:capitalize;cursor:pointer}
+html body .rz-parameters-edit:hover{background:#ffb64e;border-color:#ffb64e}
+@media(max-width:699px){html body .rz-kit-parameters{padding:18px 14px!important;gap:18px!important}html body .rz-kit-parameters>div:first-child{gap:10px;align-items:flex-start}html body .rz-kit-parameters .rz-parameters-title-row{gap:8px}html body .rz-kit-parameters .rz-parameters-title-row h2{font-size:20px}html body .rz-kit-parameters .rz-parameters-intro p{font-size:12px}html body .rz-parameters-toggle{min-height:36px;padding:7px 9px;font-size:11px}html body .rz-kit-parameters-collapsed{gap:9px!important;padding:12px!important}html body .rz-parameters-edit{gap:6px;padding:9px 10px;font-size:11px}html body .rz-parameters-summary strong{font-size:15px}}
+@media(max-width:360px){html body .rz-kit-parameters-collapsed>.rz-parameters-step{display:none}html body .rz-kit-parameters .rz-parameters-title-row{align-items:flex-start;flex-direction:column}}
