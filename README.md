@@ -2,7 +2,7 @@
 
 ## Скачать готовый сайт
 
-**Последнее обновление — комплект, данные и фоновые кеши:** [готовый архив](https://github.com/alexalixmanov-del/rubizh/raw/refs/heads/main/downloads/Rubizh-redesign.zip), [инструкция установки](docs/LAUNCH-UPDATE-20261006.md).
+**Последнее обновление — ТТН с пяти складов, комплект, данные и фоновые кеши:** [готовый архив](https://github.com/alexalixmanov-del/rubizh/raw/refs/heads/main/downloads/Rubizh-redesign.zip), [инструкция установки](docs/LAUNCH-UPDATE-20261006.md), [настройка ТТН](docs/NP-DROPSHIPPING-20261006.md). Для Кіборга: Вінниця, №9 до 30 кг включительно и №36 свыше 30 кг. Наложенного платежа нет; настройки сохраняются отдельной CLI-командой с резервной копией.
 
 **Компактный вход и подготовка подключений:** [скачать обновление](https://github.com/alexalixmanov-del/rubizh/raw/refs/heads/main/downloads/Rubizh-login-and-integrations-20261006.zip). [Установка и настройки сервисов](docs/AUTH-UPDATE-20261006.md).
 

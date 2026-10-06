@@ -10,22 +10,34 @@ function npOrigins(): array {
       'ukr_tek'=>['name'=>'Укр Тек','city'=>'Хмельницький','region'=>'Хмельницька','branch'=>'8','address'=>'Князя Святослава Хороброго, 5'],
       'armoline'=>['name'=>'Армолайн','city'=>'Чернівці','region'=>'Чернівецька','branch'=>'32','address'=>''],
       'tactical_belt'=>['name'=>'Тактикал белт','city'=>'Березань','region'=>'','branch'=>'2','address'=>''],
+      'kiborg'=>['name'=>'Кіборг','city'=>'Вінниця','region'=>'Вінницька','branch'=>'9','cargo_branch'=>'36','address'=>''],
     ];
-    $customOrigins=function_exists('cfg')?cfg('np_custom_origins'):null;if(is_array($customOrigins))foreach($customOrigins as $code=>$o)if(preg_match('/^[a-z][a-z0-9_]{1,31}$/D',(string)$code)&&is_array($o)&&trim((string)($o['city']??''))!==''&&trim((string)($o['branch']??''))!==''&&!isset($origins[$code]))$origins[$code]=array_intersect_key($o,array_flip(['name','city','region','branch','address']))+['name'=>$code,'region'=>'','address'=>''];
+    $customOrigins=function_exists('cfg')?cfg('np_custom_origins'):null;if(is_array($customOrigins))foreach($customOrigins as $code=>$o)if(preg_match('/^[a-z][a-z0-9_]{1,31}$/D',(string)$code)&&is_array($o)&&trim((string)($o['city']??''))!==''&&trim((string)($o['branch']??''))!==''&&!isset($origins[$code]))$origins[$code]=array_intersect_key($o,array_flip(['name','city','region','branch','cargo_branch','address']))+['name'=>$code,'region'=>'','address'=>''];
     $refs=function_exists('cfg')?cfg('np_origin_refs'):null;
     if(is_array($refs))foreach($origins as $code=>&$o){$r=$refs[$code]??[];if(!is_array($r))continue;
-      foreach(['city_ref','warehouse_ref'] as $f)if(npRef($r[$f]??''))$o[$f]=strtolower($r[$f]);
+      foreach(['city_ref','warehouse_ref','cargo_warehouse_ref'] as $f)if(npRef($r[$f]??''))$o[$f]=strtolower($r[$f]);
       $o['confirmed']=($r['confirmed']??false)===true;
+      $o['cargo_confirmed']=($r['cargo_confirmed']??false)===true;
       if(is_string($r['expected_area']??null)&&trim($r['expected_area'])!=='')$o['region']=trim($r['expected_area']);
     }unset($o);return $origins;
 }
 function npRef(mixed $v): bool {return is_string($v)&&preg_match('/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/Di',$v)===1;}
 function npNormalize(string $s): string {return mb_strtolower(trim(preg_replace('/\s+/u',' ',$s)),'UTF-8');}
+function npOriginCityMatches(string $actual,string $expected): bool {return npNormalize(preg_replace('/\s+\([^()]+\)\s*$/u','',$actual))===npNormalize(preg_replace('/\s+\([^()]+\)\s*$/u','',$expected));}
+function npContactPhones(mixed $input): array {
+    $phones=[];
+    foreach(preg_split('/[,;\r\n]+/',(string)$input) as $number){
+      $phone=preg_replace('/\D/','',$number);
+      if(preg_match('/^0\d{9}$/D',$phone))$phone='38'.$phone;
+      if(preg_match('/^380\d{9}$/D',$phone))$phones[$phone]=$phone;
+    }
+    return array_values($phones);
+}
 function npSupplierCode(string $sku,string $productId,string $name=''): string {
     $s=function_exists('cfg')?cfg('np_supplier_by_sku'):[];$p=function_exists('cfg')?cfg('np_supplier_by_product'):[];
     $value=(is_array($s)?($s[$sku]??null):null)??(is_array($p)?($p[$productId]??null):null);
     if($value!==null)return is_string($value)&&isset(npOrigins()[$value])?$value:'';
-    $names=['м він'=>'m_vin','м вин'=>'m_vin','м-він'=>'m_vin','м-вин'=>'m_vin','укр тек'=>'ukr_tek','укр-тек'=>'ukr_tek','укртек'=>'ukr_tek','ukr-tec'=>'ukr_tek','армолайн'=>'armoline','armoline'=>'armoline','тактикал белт'=>'tactical_belt','tactical belt'=>'tactical_belt'];
+    $names=['м він'=>'m_vin','м вин'=>'m_vin','м-він'=>'m_vin','м-вин'=>'m_vin','укр тек'=>'ukr_tek','укр-тек'=>'ukr_tek','укртек'=>'ukr_tek','ukr-tec'=>'ukr_tek','армолайн'=>'armoline','armoline'=>'armoline','тактикал белт'=>'tactical_belt','tactical belt'=>'tactical_belt','кіборг'=>'kiborg','киборг'=>'kiborg','kiborg'=>'kiborg'];
     $custom=function_exists('cfg')?cfg('np_supplier_names'):[];
     if(is_array($custom))foreach($custom as $n=>$c)if(is_string($n)&&is_string($c)&&isset(npOrigins()[$c]))$names[npNormalize($n)]=$c;
     return $names[npNormalize($name)]??'';
@@ -86,17 +98,25 @@ function npValidateDelivery(PDO $db,array $contact,string $type): array {
 }
 function npOriginWarehouseCandidates(array $origin): array {
     $result=[];
-    for($page=1;$page<=4;$page++){
-      $rows=npApiCall('Address','getWarehouses',['CityName'=>$origin['city'],'Page'=>(string)$page,'Limit'=>'500']);
-      foreach($rows as $r)if((string)($r['Number']??'')===(string)$origin['branch'])$result[]=['description'=>$r['Description']??'','city'=>$r['CityDescription']??'','area'=>$r['SettlementAreaDescription']??'','region'=>$r['SettlementRegionDescription']??'','city_ref'=>$r['CityRef']??'','warehouse_ref'=>$r['Ref']??''];
-      if(count($rows)<500)break;
+    $cities=npApiCall('Address','getCities',['FindByString'=>$origin['city'],'Limit'=>'100']);
+    foreach($cities as $city){
+      if(!npRef($city['Ref']??'') || !npOriginCityMatches((string)($city['Description']??''),$origin['city']) || (!empty($origin['region']) && !str_contains(npNormalize((string)($city['AreaDescription']??'')),npNormalize($origin['region']))))continue;
+      for($page=1;$page<=4;$page++){
+        $rows=npApiCall('Address','getWarehouses',['CityRef'=>$city['Ref'],'Page'=>(string)$page,'Limit'=>'500']);
+        foreach($rows as $r)if(($r['CityRef']??'')===$city['Ref'] && (string)($r['Number']??'')===(string)$origin['branch'] && (!isset($r['WarehouseStatus'])||$r['WarehouseStatus']==='Working'))$result[]=['description'=>$r['Description']??'','city'=>$r['CityDescription']??'','area'=>$r['SettlementAreaDescription']??'','region'=>$r['SettlementRegionDescription']??'','city_ref'=>$r['CityRef']??'','warehouse_ref'=>$r['Ref']??''];
+        if(count($rows)<500)break;
+      }
     }return $result;
 }
-function npVerifiedOrigin(PDO $db,string $code): array {
+function npVerifiedOrigin(PDO $db,string $code,?float $weight=null): array {
     $o=npOrigins()[$code]??null;
     if(!$o || empty($o['confirmed']) || empty($o['region']) || !npRef($o['city_ref']??'') || !npRef($o['warehouse_ref']??''))throw new RuntimeException('Місце відправки не підтверджено: '.$code);
+    if(!empty($o['cargo_branch']) && $weight!==null && $weight>30){
+      if(empty($o['cargo_confirmed']) || !npRef($o['cargo_warehouse_ref']??''))throw new RuntimeException('Вантажне відділення понад 30 кг не підтверджено: '.$code);
+      $o['branch']=$o['cargo_branch'];$o['warehouse_ref']=$o['cargo_warehouse_ref'];
+    }
     $w=npWarehouse($db,$o['city_ref'],$o['warehouse_ref']);
-    if((string)($w['Number']??'')!==$o['branch'] || npNormalize((string)($w['CityDescription']??''))!==npNormalize($o['city']) || !str_contains(npNormalize((string)($w['SettlementAreaDescription']??'')),npNormalize($o['region'])))throw new RuntimeException('Місто, область або номер відправного відділення не збігаються.');
+    if((string)($w['Number']??'')!==$o['branch'] || !npOriginCityMatches((string)($w['CityDescription']??''),$o['city']) || !str_contains(npNormalize((string)($w['SettlementAreaDescription']??'')),npNormalize($o['region'])))throw new RuntimeException('Місто, область або номер відправного відділення не збігаються.');
     // The owner confirms the actual street in diagnostics before setting confirmed=true.
     return $o+['label'=>$w['CityDescription'].' · '.$w['Description'],'directory'=>$w];
 }
@@ -106,7 +126,7 @@ function npVerifiedSender(PDO $db): array {
     for($p=1;$p<=10;$p++){ $rows=npApiCall('Counterparty','getCounterparties',['CounterpartyProperty'=>'Sender','Page'=>(string)$p]);foreach($rows as $r)if(($r['Ref']??'')===$s['ref'])$found=true;if(count($rows)<100||$found)break; }
     if(!$found)throw new RuntimeException('Відправник не належить цьому бізнес-ключу НП.');
     $phone=preg_replace('/\D/','',$s['phone']);
-    foreach(npApiCall('Counterparty','getCounterpartyContactPersons',['Ref'=>$s['ref']]) as $r)if(($r['Ref']??'')===$s['contact_ref'] && str_contains(preg_replace('/\D/','',(string)($r['Phones']??'')),$phone))return $s;
+    foreach(npApiCall('Counterparty','getCounterpartyContactPersons',['Ref'=>$s['ref']]) as $r)if(($r['Ref']??'')===$s['contact_ref'] && in_array($phone,npContactPhones($r['Phones']??''),true))return $s;
     throw new RuntimeException('Контакт або телефон відправника не підтверджено в НП.');
 }
 function npStatusLabel(string $s): string {return ['draft'=>'Дані уточнюються','creating'=>'Створюється','unknown'=>'Потрібна звірка','error'=>'Помилка НП','created'=>'Накладна створена','sent'=>'У дорозі','delivered'=>'Отримано','cancelled'=>'Скасовано','returned'=>'Повернення','manual'=>'Уточнюється'][$s]??'Уточнюється';}

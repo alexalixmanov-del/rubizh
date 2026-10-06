@@ -145,7 +145,7 @@ function npCreate(PDO $db,int $order,int $id,string $actor): array {
       $o=npOrder($db,$order);$q=$db->prepare('SELECT * FROM rubizh_np_order_confirmations WHERE order_id=?');$q->execute([$order]);$confirmation=$q->fetch(PDO::FETCH_ASSOC)?:[];
       npAssertReady($o,$confirmation,npLines($db,$order),npShipments($db,$order),$s);
       // All read-only checks run before recording an attempted remote mutation.
-      $delivery=npValidateDelivery($db,['np_delivery'=>$o['contact']['np_delivery']],$o['contact']['delivery_type']);$origin=npVerifiedOrigin($db,$s['supplier_code']);$sender=npVerifiedSender($db);
+      $delivery=npValidateDelivery($db,['np_delivery'=>$o['contact']['np_delivery']],$o['contact']['delivery_type']);$package=npPackage(json_decode((string)$s['package_json'],true)?:[]);$origin=npVerifiedOrigin($db,$s['supplier_code'],$package['weight']);$sender=npVerifiedSender($db);
       $db->prepare("UPDATE rubizh_order_shipments SET status='creating',attempted_at=UTC_TIMESTAMP(),origin_json=?,origin_label=?,error='',updated_at=UTC_TIMESTAMP() WHERE id=? AND status='draft'")->execute([json_encode($origin,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),mb_substr($origin['label'],0,200),$id]);npAudit($db,$actor,'shipment_create_attempt',$order,$id);
       try{
         $recipient=npRecipient($o['contact'],$delivery);$props=npSaveProperties($s,$origin,$sender,$delivery,$o['contact'],$recipient['ref'],$recipient['contact_ref'],$recipient['address_ref']);
