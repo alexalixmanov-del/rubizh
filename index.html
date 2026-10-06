@@ -38,6 +38,7 @@
 <link rel="stylesheet" href="/assets/cart-reminder.2026100701.css">
 <link rel="stylesheet" href="/assets/catalog-redesign.2026100605.css">
 <link rel="stylesheet" href="/assets/kit-parameters.2026100606.css">
+<link rel="stylesheet" href="/assets/mobile-polish.2026100702.css">
 </head>
 <body>
 <a class="rz-skip" href="#main-content">Перейти до вмісту</a>
@@ -393,7 +394,7 @@
               </sc-for>
             </div>
             <sc-if value="{{ b2bSent }}" hint-placeholder-val="{{ false }}"><div style="border:1px solid var(--legacy-35502f);background:var(--legacy-17241a);padding:12px;color:var(--legacy-c6d3a8);font-size:13.5px;line-height:1.5">{{ b2bSentText }}</div></sc-if>
-            <sc-if value="{{ b2bNotSent }}" hint-placeholder-val="{{ true }}"><div tabindex="0" role="button" sc-camel-on-click="{{ sendB2B }}" style="padding:15px;background:var(--legacy-f2a33c);color:var(--button-text);text-align:center;font-family:'UAH','Oswald',sans-serif;letter-spacing:.1em;text-transform:uppercase;font-weight:600;cursor:pointer" style-hover="background:var(--legacy-ffc36b)">Підготувати лист менеджеру</div></sc-if>
+            <sc-if value="{{ b2bNotSent }}" hint-placeholder-val="{{ true }}"><div tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ sendB2B }}" style="padding:15px;background:var(--legacy-f2a33c);color:var(--button-text);text-align:center;font-family:'UAH','Oswald',sans-serif;letter-spacing:.1em;text-transform:uppercase;font-weight:600;cursor:pointer" style-hover="background:var(--legacy-ffc36b)">Підготувати лист менеджеру</div></sc-if>
           </div>
         </div>
       </section>
@@ -421,9 +422,9 @@
           <h2>Категорії</h2>
           <a href="/categories" sc-camel-on-click="{{ catalogAllGo }}">Усі категорії <span aria-hidden="true">→</span></a>
           <sc-if value="{{ sectionsPager }}"><div class="rz-sections-pager" aria-label="Сторінки категорій">
-            <button type="button" aria-label="Попередні категорії" disabled="{{ sectionsPrevDisabled }}" sc-camel-on-click="{{ sectionsPrev }}">‹</button>
+            <button type="button" aria-label="Попередні категорії" disabled="{{ sectionsPrevDisabled }}" sc-camel-on-click="{{ sectionsPrev }}"><svg width="20" height="20" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="14 6 8 12 14 18"></polyline></svg></button>
             <span aria-live="polite">{{ sectionsPageLabel }}</span>
-            <button type="button" aria-label="Наступні категорії" disabled="{{ sectionsNextDisabled }}" sc-camel-on-click="{{ sectionsNext }}">›</button>
+            <button type="button" aria-label="Наступні категорії" disabled="{{ sectionsNextDisabled }}" sc-camel-on-click="{{ sectionsNext }}"><svg width="20" height="20" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="10 6 16 12 10 18"></polyline></svg></button>
           </div></sc-if>
         </div>
         <div data-catalog-sections="1" aria-label="Розділи каталогу">
@@ -440,8 +441,8 @@
 
       <div class="rz-catalog-layout" style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
         <div data-mob-bar="1" style="display:none;gap:8px;flex:1 1 100%">
-          <div tabindex="0" role="button" sc-camel-on-click="{{ openSheet }}" style="flex:1;padding:13px;text-align:center;border:1px solid var(--legacy-f2a33c);color:var(--link);font-family:'UAH','Oswald',sans-serif;font-size:13.5px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer">{{ filtersLabel }}</div>
-          <div aria-label="{{ mobileSortAria }}" tabindex="0" role="button" sc-camel-on-click="{{ toggleSortSheet }}" style="flex:1;padding:13px;text-align:center;border:1px solid var(--legacy-2a322b);color:var(--legacy-edefea);font-family:'UAH','Oswald',sans-serif;font-size:13.5px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer">{{ mobileSortLabel }} ↕</div>
+          <div tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ openSheet }}" style="flex:1;padding:13px;text-align:center;border:1px solid var(--legacy-f2a33c);color:var(--link);font-family:'UAH','Oswald',sans-serif;font-size:13.5px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer">{{ filtersLabel }}</div>
+          <div aria-label="{{ mobileSortAria }}" tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ toggleSortSheet }}" style="flex:1;padding:13px;text-align:center;border:1px solid var(--legacy-2a322b);color:var(--legacy-edefea);font-family:'UAH','Oswald',sans-serif;font-size:13.5px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer"><span>{{ mobileSortLabel }}</span><svg width="16" height="16" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 20V4m-4 4 4-4 4 4M16 4v16m-4-4 4 4 4-4"></path></svg></div>
         </div>
         <aside data-mobile-dialog="filters" aria-label="Фільтри товарів" data-cat-aside="1" data-open="{{ sheetOpen }}" style="flex:0 0 248px;min-width:230px;max-width:320px;border:1px solid var(--legacy-2a322b);background:var(--legacy-141815);padding:18px;display:flex;flex-direction:column;gap:20px">
           <div class="rz-filter-title">Фільтри <span>Знайди своє</span></div>
@@ -544,10 +545,10 @@
               </div>
             </sc-if>
           </div>
-          <div tabindex="0" role="button" data-desk-reset="1" sc-camel-on-click="{{ resetFilters }}" style="text-align:center;padding:11px;border:1px solid var(--legacy-2a322b);color:var(--legacy-99a398);font-family:'UAH','Oswald',sans-serif;font-size:13.5px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer;font-size:13px" style-hover="border-color:var(--link);color:var(--link)">Скинути фільтри</div>
+          <div tabindex="0" role="button" data-ui-button="center" data-desk-reset="1" sc-camel-on-click="{{ resetFilters }}" style="text-align:center;padding:11px;border:1px solid var(--legacy-2a322b);color:var(--legacy-99a398);font-family:'UAH','Oswald',sans-serif;font-size:13.5px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer;font-size:13px" style-hover="border-color:var(--link);color:var(--link)">Скинути фільтри</div>
           <div data-sheet-foot="1" style="display:none;gap:8px;position:sticky;bottom:0;background:var(--legacy-141815);padding:12px 0 4px;border-top:1px solid var(--legacy-2a322b)">
-            <div tabindex="0" role="button" sc-camel-on-click="{{ resetFilters }}" style="flex:1;padding:14px;text-align:center;border:1px solid var(--legacy-6f7a6d);color:var(--legacy-edefea);font-family:'UAH','Oswald',sans-serif;font-size:13.5px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer">Скинути</div>
-            <div tabindex="0" role="button" sc-camel-on-click="{{ closeSheet }}" style="flex:2;padding:14px;text-align:center;background:var(--legacy-f2a33c);color:var(--button-text);font-weight:600;font-family:'UAH','Oswald',sans-serif;font-size:13.5px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer">{{ showLabel }}</div>
+            <div tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ resetFilters }}" style="flex:1;padding:14px;text-align:center;border:1px solid var(--legacy-6f7a6d);color:var(--legacy-edefea);font-family:'UAH','Oswald',sans-serif;font-size:13.5px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer">Скинути</div>
+            <div tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ closeSheet }}" style="flex:2;padding:14px;text-align:center;background:var(--legacy-f2a33c);color:var(--button-text);font-weight:600;font-family:'UAH','Oswald',sans-serif;font-size:13.5px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer">{{ showLabel }}</div>
           </div>
         </aside>
 
@@ -597,7 +598,7 @@
                   <span style="{{ p.badge.style }}">{{ p.badge.t }}</span>
                 </sc-if>
                 <button type="button" data-fav="{{ p.favAttr }}" aria-label="{{ p.favLabel }}" aria-pressed="{{ p.favPressed }}" sc-camel-on-click="{{ p.toggleFav }}" style="{{ p.favStyle }}">{{ p.favMark }}</button>
-                <div tabindex="0" role="button" data-qv="1" sc-camel-on-click="{{ p.quick }}" style="position:absolute;left:6px;right:6px;bottom:6px;z-index:2;padding:8px 6px;text-align:center;background:rgba(11,13,11,.88);color:#FFFFFF;font-family:'UAH','Oswald',sans-serif;font-size:12px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;border-radius:3px" style-hover="color:var(--link)">Швидкий перегляд</div>
+                <div tabindex="0" role="button" data-ui-button="center" data-qv="1" sc-camel-on-click="{{ p.quick }}" style="position:absolute;left:6px;right:6px;bottom:6px;z-index:2;padding:8px 6px;text-align:center;background:rgba(11,13,11,.88);color:#FFFFFF;font-family:'UAH','Oswald',sans-serif;font-size:12px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;border-radius:3px" style-hover="color:var(--link)">Швидкий перегляд</div>
               </div>
               <div data-card-info="1" style="padding:10px 10px 12px;display:flex;flex-direction:column;gap:5px;flex:1;min-width:0">
                 <div data-card-name="1" tabindex="0" role="button" sc-camel-on-click="{{ p.open }}" title="{{ p.name }}" style="font-family:'UAH','Oswald',sans-serif;font-size:15px;line-height:1.25;text-transform:uppercase;cursor:pointer;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.5em">{{ p.name }}</div>
@@ -636,7 +637,7 @@
                   <span style="{{ p.badge.style }}">{{ p.badge.t }}</span>
                 </sc-if>
                 <button type="button" data-fav="{{ p.favAttr }}" aria-label="{{ p.favLabel }}" aria-pressed="{{ p.favPressed }}" sc-camel-on-click="{{ p.toggleFav }}" style="{{ p.favStyle }}">{{ p.favMark }}</button>
-                <div tabindex="0" role="button" data-qv="1" sc-camel-on-click="{{ p.quick }}" style="position:absolute;left:6px;right:6px;bottom:6px;z-index:2;padding:8px 6px;text-align:center;background:rgba(11,13,11,.88);color:#FFFFFF;font-family:'UAH','Oswald',sans-serif;font-size:12px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;border-radius:3px" style-hover="color:var(--link)">Швидкий перегляд</div>
+                <div tabindex="0" role="button" data-ui-button="center" data-qv="1" sc-camel-on-click="{{ p.quick }}" style="position:absolute;left:6px;right:6px;bottom:6px;z-index:2;padding:8px 6px;text-align:center;background:rgba(11,13,11,.88);color:#FFFFFF;font-family:'UAH','Oswald',sans-serif;font-size:12px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;border-radius:3px" style-hover="color:var(--link)">Швидкий перегляд</div>
               </div>
               <div data-card-info="1" style="padding:10px 10px 12px;display:flex;flex-direction:column;gap:5px;flex:1;min-width:0">
                 <div data-card-name="1" tabindex="0" role="button" sc-camel-on-click="{{ p.open }}" title="{{ p.name }}" style="font-family:'UAH','Oswald',sans-serif;font-size:15px;line-height:1.25;text-transform:uppercase;cursor:pointer;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.5em">{{ p.name }}</div>
@@ -663,7 +664,7 @@
 
           <sc-if value="{{ hasPages }}" hint-placeholder-val="{{ false }}">
             <div style="display:flex;flex-direction:column;gap:12px;align-items:center;margin-top:20px">
-              <sc-if value="{{ hasMore }}">              <div tabindex="0" role="button" sc-camel-on-click="{{ showMore }}" style="width:100%;max-width:360px;padding:13px;text-align:center;border:1px solid var(--legacy-6f7a6d);color:var(--legacy-edefea);cursor:pointer;font-family:'UAH','Oswald',sans-serif;font-size:13px;letter-spacing:.09em;text-transform:uppercase;text-decoration:none" style-hover="border-color:var(--link);color:var(--link)">{{ moreLabel }}</div></sc-if>
+              <sc-if value="{{ hasMore }}">              <div tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ showMore }}" style="width:100%;max-width:360px;padding:13px;text-align:center;border:1px solid var(--legacy-6f7a6d);color:var(--legacy-edefea);cursor:pointer;font-family:'UAH','Oswald',sans-serif;font-size:13px;letter-spacing:.09em;text-transform:uppercase;text-decoration:none" style-hover="border-color:var(--link);color:var(--link)">{{ moreLabel }}</div></sc-if>
               <nav style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:center">
                 <a href="{{ prevHref }}" sc-camel-on-click="{{ prevPg }}" style="padding:9px 12px;border:1px solid var(--legacy-2a322b);color:var(--legacy-99a398);font-family:'UAH','Oswald',sans-serif;font-size:13px;letter-spacing:.09em;text-transform:uppercase;text-decoration:none">←</a>
                 <sc-for list="{{ pagesList }}" as="n" hint-placeholder-count="4">
@@ -736,12 +737,12 @@
           <div style="font-family:'UAH','Oswald',sans-serif;font-size:22px;line-height:1.1">{{ item.priceFmt }}</div>
           <div style="color:var(--legacy-c7cec3);font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ mobSizeLabel }}</div>
         </div>
-        <div tabindex="0" role="button" sc-camel-on-click="{{ mobBuy }}" style="width:100%;min-height:50px;display:grid;place-items:center;background:var(--legacy-f2a33c);color:var(--button-text);font-weight:600;font-family:'UAH','Oswald',sans-serif;font-size:15px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer">{{ mobBuyLabel }}</div>
+        <div tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ mobBuy }}" style="width:100%;min-height:50px;display:grid;place-items:center;background:var(--legacy-f2a33c);color:var(--button-text);font-weight:600;font-family:'UAH','Oswald',sans-serif;font-size:15px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer">{{ mobBuyLabel }}</div>
       </div>
       <sc-if value="{{ kitReturnShow }}" hint-placeholder-val="{{ false }}">
         <div style="position:sticky;top:0;z-index:30;display:flex;gap:12px;align-items:center;flex-wrap:wrap;border:1px solid var(--legacy-4c5a36);background:var(--legacy-1e2618);padding:10px 14px;margin-bottom:12px">
           <div style="flex:1 1 200px;min-width:0;color:var(--legacy-edefea);font-size:14px">{{ kitReturnLabel }}</div>
-          <div tabindex="0" role="button" sc-camel-on-click="{{ backToKit }}" style="padding:10px 14px;border:1px solid var(--legacy-f2a33c);color:var(--link);font-family:'UAH','Oswald',sans-serif;font-size:13px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer;white-space:nowrap" style-hover="background:var(--legacy-f2a33c);color:var(--button-text)">← Повернутися до комплекту</div>
+          <div tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ backToKit }}" style="padding:10px 14px;border:1px solid var(--legacy-f2a33c);color:var(--link);font-family:'UAH','Oswald',sans-serif;font-size:13px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer;white-space:nowrap" style-hover="background:var(--legacy-f2a33c);color:var(--button-text)">← Повернутися до комплекту</div>
         </div>
       </sc-if>
       <div data-mobile-product-path="1">
@@ -861,12 +862,12 @@
 
           <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:stretch;margin-bottom:18px">
             <div style="display:flex;align-items:center;border:1px solid var(--legacy-2a322b);background:var(--legacy-141815)">
-              <div tabindex="0" role="button" sc-camel-on-click="{{ decQty }}" style="padding:0 16px;cursor:pointer;font-size:20px;color:var(--legacy-99a398);line-height:50px" style-hover="color:var(--link)">−</div>
+              <div tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ decQty }}" style="padding:0 16px;cursor:pointer;font-size:20px;color:var(--legacy-99a398);line-height:50px" style-hover="color:var(--link)">−</div>
               <div style="width:44px;text-align:center;font-family:'UAH','Oswald',sans-serif;font-size:18px">{{ qty }}</div>
-              <div tabindex="0" role="button" sc-camel-on-click="{{ incQty }}" style="padding:0 16px;cursor:pointer;font-size:20px;color:var(--legacy-99a398);line-height:50px" style-hover="color:var(--link)">+</div>
+              <div tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ incQty }}" style="padding:0 16px;cursor:pointer;font-size:20px;color:var(--legacy-99a398);line-height:50px" style-hover="color:var(--link)">+</div>
             </div>
             <sc-if value="{{ buyOn }}" hint-placeholder-val="{{ true }}">
-              <div tabindex="0" role="button" sc-camel-on-click="{{ addProduct }}" style="flex:1 1 220px;min-height:50px;display:grid;place-items:center;background:var(--legacy-f2a33c);color:var(--button-text);font-family:'UAH','Oswald',sans-serif;font-size:16px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;cursor:pointer" style-hover="background:var(--legacy-ffc36b)">{{ addLabel }}</div>
+              <div tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ addProduct }}" style="flex:1 1 220px;min-height:50px;display:grid;place-items:center;background:var(--legacy-f2a33c);color:var(--button-text);font-family:'UAH','Oswald',sans-serif;font-size:16px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;cursor:pointer" style-hover="background:var(--legacy-ffc36b)">{{ addLabel }}</div>
             </sc-if>
             <sc-if value="{{ buyOff }}" hint-placeholder-val="{{ false }}">
               <div aria-disabled="true" style="flex:1 1 220px;min-height:50px;display:grid;place-items:center;background:var(--legacy-1c221d);border:1px solid var(--legacy-2a322b);color:var(--legacy-5c6659);font-family:'UAH','Oswald',sans-serif;font-size:16px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;cursor:not-allowed">Немає в наявності</div>
@@ -880,10 +881,10 @@
 
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px">
             <sc-if value="{{ buyOn }}" hint-placeholder-val="{{ true }}">
-              <div tabindex="0" role="button" sc-camel-on-click="{{ oneClick }}" style="flex:1 1 200px;padding:14px;text-align:center;border:1px solid var(--legacy-6f7a6d);color:var(--legacy-edefea);font-family:'UAH','Oswald',sans-serif;font-size:14px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer" style-hover="border-color:var(--link);color:var(--link)">Купити в один клік</div>
+              <div tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ oneClick }}" style="flex:1 1 200px;padding:14px;text-align:center;border:1px solid var(--legacy-6f7a6d);color:var(--legacy-edefea);font-family:'UAH','Oswald',sans-serif;font-size:14px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer" style-hover="border-color:var(--link);color:var(--link)">Купити в один клік</div>
             </sc-if>
-            <div tabindex="0" role="button" sc-camel-on-click="{{ item.toggleFav }}" style="flex:1 1 200px;padding:14px;text-align:center;border:1px solid var(--legacy-2a322b);color:var(--legacy-c7cec3);font-family:'UAH','Oswald',sans-serif;font-size:14px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer" style-hover="border-color:var(--link);color:var(--link)">{{ item.favMark }}</div>
-            <div tabindex="0" role="button" sc-camel-on-click="{{ toggleCmpItem }}" style="flex:1 1 200px;padding:14px;text-align:center;border:1px solid var(--legacy-2a322b);color:var(--legacy-c7cec3);font-family:'UAH','Oswald',sans-serif;font-size:14px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer" style-hover="border-color:var(--link);color:var(--link)">{{ cmpLabel }}</div>
+            <div tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ item.toggleFav }}" style="flex:1 1 200px;padding:14px;text-align:center;border:1px solid var(--legacy-2a322b);color:var(--legacy-c7cec3);font-family:'UAH','Oswald',sans-serif;font-size:14px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer" style-hover="border-color:var(--link);color:var(--link)">{{ item.favMark }}</div>
+            <div tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ toggleCmpItem }}" style="flex:1 1 200px;padding:14px;text-align:center;border:1px solid var(--legacy-2a322b);color:var(--legacy-c7cec3);font-family:'UAH','Oswald',sans-serif;font-size:14px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer" style-hover="border-color:var(--link);color:var(--link)">{{ cmpLabel }}</div>
           </div>
 
           <sc-if value="{{ item.soldOut }}" hint-placeholder-val="{{ false }}">
@@ -895,7 +896,7 @@
               <sc-if value="{{ notifyOpen }}" hint-placeholder-val="{{ false }}">
                 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
                   <input value="{{ notifyEmail }}" sc-camel-on-input="{{ onNotifyEmail }}" type="email" placeholder="Ваш email" style="flex:1 1 200px;min-width:0;background:var(--legacy-0f120f);border:1px solid var(--legacy-4a2c21);padding:12px;color:var(--legacy-edefea);outline:none;font-size:14px;font-family:'IBM Plex Sans',sans-serif">
-                  <div tabindex="0" role="button" sc-camel-on-click="{{ sendNotify }}" style="padding:12px 16px;background:var(--legacy-f2a33c);color:var(--button-text);font-family:'UAH','Oswald',sans-serif;font-size:13px;letter-spacing:.09em;text-transform:uppercase;font-weight:600;cursor:pointer" style-hover="background:var(--legacy-ffc36b)">Підготувати лист менеджеру</div>
+                  <div tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ sendNotify }}" style="padding:12px 16px;background:var(--legacy-f2a33c);color:var(--button-text);font-family:'UAH','Oswald',sans-serif;font-size:13px;letter-spacing:.09em;text-transform:uppercase;font-weight:600;cursor:pointer" style-hover="background:var(--legacy-ffc36b)">Підготувати лист менеджеру</div>
                 </div>
               </sc-if>
               <div tabindex="0" role="button" sc-camel-on-click="{{ openNotify }}" style="margin-top:10px;color:var(--link);font-family:'UAH','Oswald',sans-serif;font-size:13px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer">Уточнити надходження →</div>
@@ -1004,9 +1005,9 @@
                   </sc-if>
                 </div>
                 <div style="display:flex;align-items:center;border:1px solid var(--legacy-2a322b)">
-                  <div tabindex="0" role="button" sc-camel-on-click="{{ l.dec }}" style="padding:6px 12px;cursor:pointer;color:var(--legacy-99a398)" style-hover="color:var(--link)">−</div>
+                  <div tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ l.dec }}" style="padding:6px 12px;cursor:pointer;color:var(--legacy-99a398)" style-hover="color:var(--link)">−</div>
                   <sc-if value="{{ !l.isArea }}"><div style="width:34px;text-align:center;font-family:UAH,Oswald,sans-serif">{{ l.qty }}</div></sc-if><sc-if value="{{ l.isArea }}"><input type="number" min="0.01" max="10000" step="0.01" value="{{ l.areaQty }}" sc-camel-on-change="{{ l.onAreaQty }}" aria-label="Площа, м²" style="width:72px;padding:8px 4px;text-align:center;background:var(--legacy-141815);border:0;color:var(--legacy-edefea);font-size:16px"><span style="font-size:12px;padding-right:8px">м²</span></sc-if>
-                  <div tabindex="0" role="button" sc-camel-on-click="{{ l.inc }}" style="padding:6px 12px;cursor:pointer;color:var(--legacy-99a398)" style-hover="color:var(--link)">+</div>
+                  <div tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ l.inc }}" style="padding:6px 12px;cursor:pointer;color:var(--legacy-99a398)" style-hover="color:var(--link)">+</div>
                 </div>
                 <div style="font-family:'UAH','Oswald',sans-serif;font-size:19px;min-width:96px;text-align:right">{{ l.sumFmt }}</div>
                 <div tabindex="0" role="button" sc-camel-on-click="{{ l.remove }}" style="color:var(--legacy-8a9487);cursor:pointer;font-size:18px;padding:0 4px" style-hover="color:var(--legacy-d9542b)">✕</div>
@@ -1132,7 +1133,7 @@
           <div style="display:flex;justify-content:space-between;font-size:14px;color:var(--legacy-d3d9cf)"><span>Доставка</span><span>{{ shippingFmt }}</span></div>
           <div style="display:flex;gap:6px;margin-top:2px">
             <input value="{{ promoInput }}" sc-camel-on-input="{{ onPromo }}" placeholder="Промокод" style="flex:1;min-width:0;background:var(--legacy-0f120f);border:1px solid var(--legacy-2a322b);padding:11px;color:var(--legacy-edefea);outline:none;font-size:13.5px;font-family:'IBM Plex Sans',sans-serif">
-            <div tabindex="0" role="button" sc-camel-on-click="{{ applyPromo }}" style="padding:11px 14px;border:1px solid var(--legacy-2a322b);color:var(--legacy-c7cec3);font-family:'UAH','Oswald',sans-serif;font-size:12.5px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer" style-hover="border-color:var(--link);color:var(--link)">Ок</div>
+            <div tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ applyPromo }}" style="padding:11px 14px;border:1px solid var(--legacy-2a322b);color:var(--legacy-c7cec3);font-family:'UAH','Oswald',sans-serif;font-size:12.5px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer" style-hover="border-color:var(--link);color:var(--link)">Ок</div>
           </div>
           <sc-if value="{{ promoBad }}" hint-placeholder-val="{{ false }}">
             <div style="color:var(--legacy-d9542b);font-size:12.5px">Такого промокоду немає або він уже використаний.</div>
@@ -1144,7 +1145,7 @@
           </sc-if>
           <div style="display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid var(--legacy-2a322b);padding-top:12px"><span style="font-family:'UAH','Oswald',sans-serif;text-transform:uppercase;letter-spacing:.1em;font-size:15px">До сплати</span><span style="font-family:'UAH','Oswald',sans-serif;font-size:30px">{{ totalFmt }}</span></div>
           <p style="font-size:12px;color:var(--legacy-99a398);line-height:1.5;margin:0">Натискаючи кнопку, ви приймаєте <a href="/offer" target="_blank" rel="noopener" style="color:var(--legacy-c7cec3)">публічну оферту</a>. Обробка даних для замовлення описана в <a href="/privacy" target="_blank" rel="noopener" style="color:var(--legacy-c7cec3)">політиці конфіденційності</a>.</p>
-          <div tabindex="0" role="button" aria-disabled="{{ orderSending }}" sc-camel-on-click="{{ placeOrder }}" style="padding:16px;background:var(--legacy-f2a33c);color:var(--button-text);text-align:center;font-family:'UAH','Oswald',sans-serif;letter-spacing:.1em;text-transform:uppercase;font-weight:600;font-size:16px;cursor:pointer" style-hover="background:var(--legacy-ffc36b)">{{ orderButtonLabel }}</div>
+          <div tabindex="0" role="button" data-ui-button="center" aria-disabled="{{ orderSending }}" sc-camel-on-click="{{ placeOrder }}" style="padding:16px;background:var(--legacy-f2a33c);color:var(--button-text);text-align:center;font-family:'UAH','Oswald',sans-serif;letter-spacing:.1em;text-transform:uppercase;font-weight:600;font-size:16px;cursor:pointer" style-hover="background:var(--legacy-ffc36b)">{{ orderButtonLabel }}</div>
           
           <div style="color:var(--legacy-8a9487);font-size:12px;line-height:1.5">Менеджер звʼяжеться з вами, щоб підтвердити наявність, розміри та строк відправлення. Оплачуйте після підтвердження замовлення.</div>
         </aside>
@@ -1168,8 +1169,8 @@
           <div style="font-family:'UAH','Oswald',sans-serif;font-size:18px">{{ mini.priceFmt }}</div>
         </div>
         <div style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap">
-          <div tabindex="0" role="button" sc-camel-on-click="{{ closeMini }}" style="flex:1 1 150px;padding:13px;text-align:center;border:1px solid var(--legacy-6f7a6d);color:var(--legacy-edefea);font-family:'UAH','Oswald',sans-serif;font-size:13.5px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer" style-hover="border-color:var(--link);color:var(--link)">Продовжити</div>
-          <div tabindex="0" role="button" sc-camel-on-click="{{ miniToCart }}" style="flex:1 1 150px;padding:13px;text-align:center;background:var(--legacy-f2a33c);color:var(--button-text);font-family:'UAH','Oswald',sans-serif;font-size:13.5px;letter-spacing:.09em;text-transform:uppercase;font-weight:600;cursor:pointer" style-hover="background:var(--legacy-ffc36b)">Оформити</div>
+          <div tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ closeMini }}" style="flex:1 1 150px;padding:13px;text-align:center;border:1px solid var(--legacy-6f7a6d);color:var(--legacy-edefea);font-family:'UAH','Oswald',sans-serif;font-size:13.5px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer" style-hover="border-color:var(--link);color:var(--link)">Продовжити</div>
+          <div tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ miniToCart }}" style="flex:1 1 150px;padding:13px;text-align:center;background:var(--legacy-f2a33c);color:var(--button-text);font-family:'UAH','Oswald',sans-serif;font-size:13.5px;letter-spacing:.09em;text-transform:uppercase;font-weight:600;cursor:pointer" style-hover="background:var(--legacy-ffc36b)">Оформити</div>
         </div>
       </div>
     </div>
@@ -1342,11 +1343,11 @@
         <div style="color:var(--legacy-a9b3a6);font-size:13.5px;line-height:1.55;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">{{ qvP.desc }}</div>
         <div style="font-family:'UAH','Oswald',sans-serif;font-size:13.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--legacy-99a398)">Розмір</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <sc-for list="{{ qvP.sizes }}" as="z" hint-placeholder-count="5"><div tabindex="0" role="button" sc-camel-on-click="{{ z.pick }}" style="{{ z.style }}">{{ z.z }}</div></sc-for>
+          <sc-for list="{{ qvP.sizes }}" as="z" hint-placeholder-count="5"><div tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ z.pick }}" style="{{ z.style }}">{{ z.z }}</div></sc-for>
         </div>
         <div style="{{ qvP.noteStyle }}">{{ qvP.note }}</div>
-        <div tabindex="0" role="button" sc-camel-on-click="{{ qvP.addQ }}" style="margin-top:auto;padding:14px;text-align:center;background:var(--legacy-f2a33c);color:var(--button-text);font-weight:600;font-family:'UAH','Oswald',sans-serif;font-size:13px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer;font-size:14px" style-hover="background:var(--legacy-ffc36b)">{{ qvP.addLabel }}</div>
-        <div tabindex="0" role="button" sc-camel-on-click="{{ qvP.more }}" style="text-align:center;color:var(--link);font-family:'UAH','Oswald',sans-serif;font-size:13px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer">Детальніше про товар →</div>
+        <div tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ qvP.addQ }}" style="margin-top:auto;padding:14px;text-align:center;background:var(--legacy-f2a33c);color:var(--button-text);font-weight:600;font-family:'UAH','Oswald',sans-serif;font-size:13px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer;font-size:14px" style-hover="background:var(--legacy-ffc36b)">{{ qvP.addLabel }}</div>
+        <div tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ qvP.more }}" style="text-align:center;color:var(--link);font-family:'UAH','Oswald',sans-serif;font-size:13px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer">Детальніше про товар →</div>
       </div>
     </div>
   </sc-if>
@@ -1382,7 +1383,7 @@
                 <div tabindex="0" role="button" sc-camel-on-click="{{ h.open }}" style="height:140px;overflow:hidden;background:var(--legacy-0f120f);cursor:pointer"><image-slot id="{{ h.slot }}" shape="rect" fit="cover" placeholder="Фото" data-thumb="1"></image-slot></div>
                 <div tabindex="0" role="button" sc-camel-on-click="{{ h.open }}" style="font-family:'UAH','Oswald',sans-serif;font-size:15px;text-transform:uppercase;line-height:1.2;cursor:pointer">{{ h.name }}</div>
                 <div style="display:flex;gap:6px;margin-top:auto">
-                  <div tabindex="0" role="button" sc-camel-on-click="{{ h.add }}" style="flex:1;padding:9px;text-align:center;border:1px solid var(--legacy-f2a33c);color:var(--link);font-family:'UAH','Oswald',sans-serif;font-size:13px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer;font-size:12px" style-hover="background:var(--legacy-f2a33c);color:var(--button-text)">В кошик</div>
+                  <div tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ h.add }}" style="flex:1;padding:9px;text-align:center;border:1px solid var(--legacy-f2a33c);color:var(--link);font-family:'UAH','Oswald',sans-serif;font-size:13px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer;font-size:12px" style-hover="background:var(--legacy-f2a33c);color:var(--button-text)">В кошик</div>
                   <div tabindex="0" role="button" sc-camel-on-click="{{ h.remove }}" style="padding:9px 11px;border:1px solid var(--legacy-2a322b);color:var(--legacy-8a9487);cursor:pointer" style-hover="border-color:var(--legacy-d9542b);color:var(--legacy-d9542b)">✕</div>
                 </div>
               </div>
@@ -1724,7 +1725,7 @@
         </div>
         <div data-pq-active="{{ pq.final.active }}" style="border:1px solid var(--legacy-4c5a36);background:var(--legacy-1e2618);padding:clamp(16px,2vw,22px);display:flex;gap:14px;align-items:center;flex-wrap:wrap">
           <div style="flex:1 1 260px;min-width:0;color:var(--legacy-edefea);font-size:14.5px;line-height:1.5">Зберемо комплект у конструкторі з актуальною наявністю. Там видно ціну й вигоду по кожній позиції.</div>
-          <div tabindex="0" role="button" sc-camel-on-click="{{ pkBuild }}" style="flex:0 1 auto;padding:15px 22px;background:var(--legacy-f2a33c);color:var(--button-text);font-family:'UAH','Oswald',sans-serif;font-size:15px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;cursor:pointer;text-align:center" style-hover="background:var(--legacy-ffc36b)">Зібрати комплект →</div>
+          <div tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ pkBuild }}" style="flex:0 1 auto;padding:15px 22px;background:var(--legacy-f2a33c);color:var(--button-text);font-family:'UAH','Oswald',sans-serif;font-size:15px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;cursor:pointer;text-align:center" style-hover="background:var(--legacy-ffc36b)">Зібрати комплект →</div>
         </div>
       </div>
     </section>
@@ -1777,11 +1778,11 @@
             <div class="rz-parameters-intro"><div class="rz-parameters-title-row"><span class="rz-parameters-step">Крок 01</span><h2>Мої параметри</h2></div><p>Почни з розміру та камуфляжу — застосуємо їх до комплекту. Для окремої речі можна обрати інші.</p></div>
             <button class="rz-parameters-toggle" type="button" sc-camel-on-click="{{ parClose }}">Згорнути</button>
           </div>
-          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="color:var(--legacy-c7cec3);font-size:13.5px;width:116px">Розмір одягу</span><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ parCloth }}" as="o" hint-placeholder-count="6"><div tabindex="0" role="button" sc-camel-on-click="{{ o.pick }}" style="{{ o.style }}">{{ o.t }}</div></sc-for></div></div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="color:var(--legacy-c7cec3);font-size:13.5px;width:116px">Розмір одягу</span><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ parCloth }}" as="o" hint-placeholder-count="6"><div tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ o.pick }}" style="{{ o.style }}">{{ o.t }}</div></sc-for></div></div>
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="color:var(--legacy-c7cec3);font-size:13.5px;width:116px">Розмір взуття</span>
             <sc-raw-select value="{{ parShoe }}" sc-camel-on-change="{{ onParShoe }}" aria-label="Розмір взуття" style="background:var(--legacy-0f120f);border:1px solid var(--legacy-2a322b);color:var(--legacy-edefea);padding:0 12px;min-height:44px;min-width:110px;font-size:15px;font-family:'IBM Plex Sans',sans-serif"><sc-for list="{{ parShoeOpts }}" as="o" hint-placeholder-count="13"><option value="{{ o.v }}">{{ o.t }}</option></sc-for></sc-raw-select>
           </div>
-          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="color:var(--legacy-c7cec3);font-size:13.5px;width:116px">Камуфляж</span><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ parCamo }}" as="o" hint-placeholder-count="6"><div tabindex="0" role="button" sc-camel-on-click="{{ o.pick }}" style="{{ o.style }}">{{ o.t }}</div></sc-for></div></div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="color:var(--legacy-c7cec3);font-size:13.5px;width:116px">Камуфляж</span><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ parCamo }}" as="o" hint-placeholder-count="6"><div tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ o.pick }}" style="{{ o.style }}">{{ o.t }}</div></sc-for></div></div>
         </div>
       </sc-if>
       <sc-if value="{{ parCollapsed }}" hint-placeholder-val="{{ false }}">
@@ -1900,7 +1901,7 @@
           <sc-if value="{{ donationEnabled }}"><div style="color:var(--legacy-c6d3a8);font-size:13px;line-height:1.45">{{ kitDonText }}</div></sc-if>
           <sc-if value="{{ hasKitWeight }}" hint-placeholder-val="{{ false }}"><div style="color:var(--legacy-c7cec3);font-size:13px">{{ kitWeight }}</div></sc-if>
           <sc-if value="{{ kitCanCart }}" hint-placeholder-val="{{ false }}">
-            <div class="rz-kit-cart" tabindex="0" role="button" sc-camel-on-click="{{ kitToCart }}" style="padding:15px 22px;background:var(--legacy-f2a33c);color:var(--button-text);font-family:'UAH','Oswald',sans-serif;font-size:15px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;cursor:pointer;text-align:center" style-hover="background:var(--legacy-ffc36b)">Додати комплект у кошик</div>
+            <div class="rz-kit-cart" tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ kitToCart }}" style="padding:15px 22px;background:var(--legacy-f2a33c);color:var(--button-text);font-family:'UAH','Oswald',sans-serif;font-size:15px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;cursor:pointer;text-align:center" style-hover="background:var(--legacy-ffc36b)">Додати комплект у кошик</div>
           </sc-if>
           <sc-if value="{{ kitCantCart }}" hint-placeholder-val="{{ true }}">
             <div style="padding:15px;text-align:center;background:var(--legacy-1c221d);border:1px solid var(--legacy-2a322b);color:var(--muted);font-family:'UAH','Oswald',sans-serif;font-size:14px;letter-spacing:.1em;text-transform:uppercase;cursor:not-allowed">{{ kitCantLabel }}</div>
@@ -1942,10 +1943,10 @@
                     <div style="display:flex;gap:6px"><sc-for list="{{ invTypes }}" as="t" hint-placeholder-count="2"><div tabindex="0" role="button" sc-camel-on-click="{{ t.pick }}" style="{{ t.style }}">{{ t.t }}</div></sc-for></div>
                     <input value="{{ invoiceTax }}" sc-camel-on-input="{{ onInvoiceTax }}" placeholder="ЄДРПОУ або ІПН" aria-label="ЄДРПОУ або ІПН" inputmode="numeric" style="background:var(--legacy-0f120f);border:1px solid var(--legacy-2a322b);padding:12px;color:var(--legacy-edefea);outline:none;font-family:'IBM Plex Sans',sans-serif">
                     <input value="{{ invoiceEmail }}" sc-camel-on-input="{{ onInvoiceEmail }}" placeholder="Пошта для рахунку" type="email" style="background:var(--legacy-0f120f);border:1px solid var(--legacy-2a322b);padding:12px;color:var(--legacy-edefea);outline:none;font-family:'IBM Plex Sans',sans-serif">
-                    <div tabindex="0" role="button" sc-camel-on-click="{{ sendInvoice }}" style="padding:15px 22px;background:var(--legacy-f2a33c);color:var(--button-text);font-family:'UAH','Oswald',sans-serif;font-size:15px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;cursor:pointer;text-align:center" style-hover="background:var(--legacy-ffc36b)">Підготувати лист менеджеру</div>
+                    <div tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ sendInvoice }}" style="padding:15px 22px;background:var(--legacy-f2a33c);color:var(--button-text);font-family:'UAH','Oswald',sans-serif;font-size:15px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;cursor:pointer;text-align:center" style-hover="background:var(--legacy-ffc36b)">Підготувати лист менеджеру</div>
                   </div>
                 </sc-if>
-                <div tabindex="0" role="button" sc-camel-on-click="{{ openInvoice }}" style="padding:13px;text-align:center;border:1px solid var(--legacy-f2a33c);color:var(--link);font-family:'UAH','Oswald',sans-serif;font-size:14px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer" style-hover="background:var(--legacy-f2a33c);color:var(--button-text)">Отримати прорахунок</div>
+                <div tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ openInvoice }}" style="padding:13px;text-align:center;border:1px solid var(--legacy-f2a33c);color:var(--link);font-family:'UAH','Oswald',sans-serif;font-size:14px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer" style-hover="background:var(--legacy-f2a33c);color:var(--button-text)">Отримати прорахунок</div>
               </div>
             </sc-if>
           </div>
@@ -1954,7 +1955,7 @@
 
       <div data-kit-bar="1" style="position:fixed;left:0;right:0;bottom:0;z-index:80;background:var(--legacy-141815);border-top:1px solid var(--legacy-2a322b);padding:10px 14px calc(10px + env(safe-area-inset-bottom));gap:12px;align-items:center">
         <div style="flex:1;min-width:0"><div style="font-family:'UAH','Oswald',sans-serif;font-size:21px;line-height:1.1">{{ kitBarTotal }}</div><div style="color:var(--legacy-7eb356);font-size:12.5px;margin-top:2px">{{ kitBarSave }}</div></div>
-        <sc-if value="{{ kitCanCart }}" hint-placeholder-val="{{ false }}"><div class="rz-kit-cart" tabindex="0" role="button" sc-camel-on-click="{{ kitToCart }}" style="padding:15px 18px;background:var(--legacy-f2a33c);color:var(--button-text);font-family:'UAH','Oswald',sans-serif;font-size:14px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;cursor:pointer;min-height:48px;display:grid;place-items:center">У кошик</div></sc-if>
+        <sc-if value="{{ kitCanCart }}" hint-placeholder-val="{{ false }}"><div class="rz-kit-cart" tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ kitToCart }}" style="padding:15px 18px;background:var(--legacy-f2a33c);color:var(--button-text);font-family:'UAH','Oswald',sans-serif;font-size:14px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;cursor:pointer;min-height:48px;display:grid;place-items:center">У кошик</div></sc-if>
       </div>
     </section>
   </sc-if>
@@ -1989,7 +1990,7 @@
                 <a href="{{ p.href }}" target="_blank" rel="noopener" sc-camel-on-click="{{ p.view }}" style="color:var(--legacy-99a398);font-size:12px;text-decoration:none" style-hover="color:var(--link)">Відкрити картку ↗</a>
                 <sc-if value="{{ p.muted }}" hint-placeholder-val="{{ false }}"><div style="color:var(--legacy-a3ab9f);font-size:12px">{{ p.mutedNote }}</div></sc-if>
                 <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:auto;padding-top:4px">
-                  <sc-for list="{{ p.sizes }}" as="z" hint-placeholder-count="0"><div tabindex="0" role="button" sc-camel-on-click="{{ z.pick }}" style="{{ z.style }}">{{ z.z }}</div></sc-for>
+                  <sc-for list="{{ p.sizes }}" as="z" hint-placeholder-count="0"><div tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ z.pick }}" style="{{ z.style }}">{{ z.z }}</div></sc-for>
                   <sc-if value="{{ p.one }}" hint-placeholder-val="{{ false }}"><div tabindex="0" role="button" sc-camel-on-click="{{ p.addOne }}" style="flex:1;min-height:36px;display:grid;place-items:center;border:1px solid var(--legacy-f2a33c);color:var(--link);font-family:'UAH','Oswald',sans-serif;font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer">{{ p.cta }}</div></sc-if>
                 </div>
               </div>
