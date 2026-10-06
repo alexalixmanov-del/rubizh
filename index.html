@@ -8,7 +8,8 @@
 <script defer src="/assets/image-slot.df1039e4aec7.js"></script>
 <script defer src="/assets/react.5e73fabcd0d0.js"></script>
 <script defer src="/assets/react-dom.c5c970a9cf36.js"></script>
-<script defer src="/assets/shop-client.2026100603.js"></script>
+<script defer src="/assets/category-directory.2026100604.js"></script>
+<script defer src="/assets/shop-client.2026100604.js"></script>
 <script defer src="/assets/store-runtime.4b6bbf46ca4c.js"></script>
 
 <link rel="icon" href="/favicon.ico?v=2" sizes="any">
@@ -33,6 +34,7 @@
 <link rel="stylesheet" href="/assets/experience.css?v=1">
 <script defer src="/assets/experience.js?v=1"></script>
 <link rel="stylesheet" href="/assets/storefront-refresh.css?v=2">
+<link rel="stylesheet" href="/assets/catalog-redesign.2026100604.css">
 </head>
 <body>
 <a class="rz-skip" href="#main-content">Перейти до вмісту</a>
@@ -412,19 +414,26 @@
       </div>
 
       <sc-if value="{{ hasSubTiles }}" hint-placeholder-val="{{ false }}">
-        <div data-catalog-sections="1" aria-label="Розділи каталогу" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:10px;margin-bottom:18px">
+        <div class="rz-sections-heading">
+          <h2>Категорії</h2>
+          <a href="/categories" sc-camel-on-click="{{ catalogAllGo }}">Усі категорії <span aria-hidden="true">→</span></a>
+          <sc-if value="{{ sectionsPager }}"><div class="rz-sections-pager" aria-label="Сторінки категорій">
+            <button type="button" aria-label="Попередні категорії" disabled="{{ sectionsPrevDisabled }}" sc-camel-on-click="{{ sectionsPrev }}">‹</button>
+            <span aria-live="polite">{{ sectionsPageLabel }}</span>
+            <button type="button" aria-label="Наступні категорії" disabled="{{ sectionsNextDisabled }}" sc-camel-on-click="{{ sectionsNext }}">›</button>
+          </div></sc-if>
+        </div>
+        <div data-catalog-sections="1" aria-label="Розділи каталогу">
           <sc-for list="{{ subTiles }}" as="t" hint-placeholder-count="4">
-            <a data-catalog-section="1" href="{{ t.href }}" sc-camel-on-click="{{ t.open }}" style="display:flex;gap:10px;align-items:center;min-width:0;border:1px solid var(--legacy-2a322b);background:var(--legacy-141815);padding:8px;text-decoration:none;color:var(--legacy-edefea)" style-hover="border-color:var(--link)">
-              <div style="width:52px;height:52px;flex:0 0 auto;overflow:hidden;background:var(--legacy-0f120f);pointer-events:none"><sc-if value="{{ t.hasSrc }}"><img sc-camel-src="{{ t.src }}" alt="Фото товару" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:contain"></sc-if><sc-if value="{{ !t.hasSrc }}"><image-slot id="{{ t.slot }}" shape="rect" fit="cover" placeholder="Фото" data-thumb="1"></image-slot></sc-if></div>
-              <div style="min-width:0">
-                <div style="font-family:'UAH','Oswald',sans-serif;font-size:14px;text-transform:uppercase;line-height:1.2">{{ t.name }}</div>
-                <div style="color:var(--legacy-8a9487);font-size:12px;margin-top:3px">{{ t.count }}</div>
-              </div>
+            <a data-catalog-section="1" href="{{ t.href }}" sc-camel-on-click="{{ t.open }}" title="{{ t.name }}">
+              <span class="rz-section-art"><sc-if value="{{ t.hasSrc }}"><img sc-camel-src="{{ t.src }}" alt="" loading="lazy" decoding="async" width="160" height="160"></sc-if><sc-if value="{{ !t.hasSrc }}"><span class="rz-section-number" aria-hidden="true">{{ t.number }}</span></sc-if></span>
+              <span class="rz-section-name">{{ t.name }}</span>
+              <span class="rz-section-arrow" aria-hidden="true">→</span>
             </a>
           </sc-for>
-          <a data-catalog-all="1" href="/#allcats" sc-camel-on-click="{{ catalogAllGo }}" style="display:none;color:var(--link)">Усі розділи →</a>
         </div>
       </sc-if>
+      <h2 class="rz-products-heading">Товари</h2>
 
       <div class="rz-catalog-layout" style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
         <div data-mob-bar="1" style="display:none;gap:8px;flex:1 1 100%">
@@ -540,12 +549,7 @@
         </aside>
 
         <div class="rz-catalog-products" style="flex:3 1 460px;min-width:280px">
-          <div data-desk-sort="1" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;border:1px solid var(--legacy-2a322b);background:var(--legacy-141815);padding:10px 12px;margin-bottom:12px">
-            <span style="color:var(--legacy-99a398);font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;font-family:'UAH','Oswald',sans-serif">Сортувати</span>
-            <sc-for list="{{ sorts }}" as="s" hint-placeholder-count="3">
-              <div tabindex="0" role="button" sc-camel-on-click="{{ s.pick }}" style="{{ s.style }}">{{ s.name }}</div>
-            </sc-for>
-          </div>
+          <div data-desk-sort="1"><select class="rz-catalog-sort" aria-label="Сортування товарів" value="{{ catalogSortValue }}" sc-camel-on-change="{{ onCatalogSort }}"><sc-for list="{{ catalogSortOptions }}" as="option"><option value="{{ option.value }}">{{ option.name }}</option></sc-for></select></div>
 
           <sc-if value="{{ hasActive }}" hint-placeholder-val="{{ false }}">
             <div data-active-filters="1" aria-label="Обрані фільтри" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
@@ -2036,26 +2040,34 @@
   <sc-if value="{{ isAllCats }}" hint-placeholder-val="{{ false }}">
     <section id="main-content" tabindex="-1" class="rz-category-directory" style="max-width:1440px;margin:0 auto;padding:clamp(18px,2.6vw,34px) clamp(16px,4vw,40px) 0">
       <nav class="rz-breadcrumbs" style="display:flex;gap:6px;flex-wrap:wrap;color:var(--legacy-8a9487);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px"><span tabindex="0" role="button" sc-camel-on-click="{{ goHome }}" style="cursor:pointer">Головна</span><span>/</span><span tabindex="0" role="button" sc-camel-on-click="{{ goCatalog }}" style="cursor:pointer">Каталог</span><span>/</span><span style="color:var(--legacy-c7cec3)">Усі категорії</span></nav>
-      <h1 class="rz-page-title" style="font-family:'UAH','Oswald',sans-serif;font-weight:600;font-size:clamp(26px,3.4vw,40px);text-transform:uppercase;letter-spacing:.03em;margin:0 0 6px;line-height:1.15">Усі категорії</h1>
-      <p style="margin:0 0 14px;color:var(--legacy-99a398);font-size:14.5px">{{ acSummary }}</p>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px">
-        <sc-for list="{{ acJump }}" as="j" hint-placeholder-count="16"><div tabindex="0" role="button" sc-camel-on-click="{{ j.go }}" style="padding:7px 11px;border:1px solid var(--legacy-2a322b);color:var(--legacy-c7cec3);font-size:13px;cursor:pointer;min-height:36px;display:flex;align-items:center" style-hover="border-color:var(--link);color:var(--link)">{{ j.name }}</div></sc-for>
+      <div class="rz-directory-heading">
+        <div><h1 class="rz-page-title">Усі категорії</h1><p>{{ acSummary }}</p></div>
+        <label class="rz-directory-search"><svg width="19" height="19" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m16 16 4.5 4.5"></path></svg><input type="search" value="{{ acQuery }}" sc-camel-on-input="{{ onAcQuery }}" aria-label="Знайти категорію" placeholder="Знайти категорію"></label>
       </div>
-      <div class="rz-directory-grid" style="columns:300px auto;column-gap:12px">
+      <div class="rz-directory-grid">
         <sc-for list="{{ acSecs }}" as="sec" hint-placeholder-count="8">
-          <div class="rz-directory-card" id="{{ sec.id }}" style="break-inside:avoid;margin-bottom:12px;border:1px solid var(--legacy-2a322b);background:var(--legacy-141815);padding:16px 16px 12px;scroll-margin-top:90px">
-            <a href="{{ sec.href }}" sc-camel-on-click="{{ sec.open }}" style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;font-family:'UAH','Oswald',sans-serif;font-size:17px;letter-spacing:.04em;text-transform:uppercase;color:var(--legacy-edefea);text-decoration:none;padding-bottom:10px;border-bottom:1px solid var(--legacy-2a322b)" style-hover="color:var(--link)"><img sc-camel-src="{{ sec.art }}" alt="" width="56" height="66" loading="lazy" decoding="async"><span style="min-width:0">{{ sec.name }}</span><span style="color:var(--legacy-8a9487);font-size:13px;font-family:'IBM Plex Sans',sans-serif;letter-spacing:0">{{ sec.count }}</span></a>
-            <sc-for list="{{ sec.subs }}" as="sub" hint-placeholder-count="3">
-              <div style="margin-top:10px">
-                <a href="{{ sub.href }}" sc-camel-on-click="{{ sub.open }}" style="display:flex;justify-content:space-between;gap:10px;font-size:14px;color:var(--legacy-edefea);text-decoration:none;font-weight:600" style-hover="color:var(--link)"><span style="min-width:0">{{ sub.name }}</span><span style="color:var(--legacy-8a9487);font-size:12.5px;font-weight:400">{{ sub.count }}</span></a>
-                <div style="display:flex;flex-direction:column;padding-left:12px;border-left:1px solid var(--legacy-2a322b);margin-top:4px">
-                  <sc-for list="{{ sub.leaves }}" as="i" hint-placeholder-count="0"><a href="{{ i.href }}" sc-camel-on-click="{{ i.open }}" style="{{ i.style }}" style-hover="color:var(--link)"><span style="min-width:0">{{ i.name }}</span><span style="color:var(--legacy-8a9487);font-size:12px">{{ i.count }}</span></a></sc-for>
-                </div>
+          <article class="rz-directory-card" id="{{ sec.id }}">
+            <a class="rz-directory-link" href="{{ sec.href }}" sc-camel-on-click="{{ sec.open }}" title="{{ sec.name }}">
+              <span class="rz-directory-art"><sc-if value="{{ sec.hasArt }}"><img sc-camel-src="{{ sec.art }}" alt="" width="160" height="160" loading="lazy" decoding="async"></sc-if><sc-if value="{{ !sec.hasArt }}"><span class="rz-section-number" aria-hidden="true">{{ sec.number }}</span></sc-if></span>
+              <span class="rz-directory-label"><span class="rz-directory-name">{{ sec.name }}</span><small>{{ sec.countLabel }}</small></span>
+              <span class="rz-section-arrow" aria-hidden="true">→</span>
+            </a>
+            <sc-if value="{{ sec.hasSubs }}"><button class="rz-directory-expand" type="button" aria-haspopup="dialog" aria-controls="{{ sec.dialogId }}" sc-camel-on-click="{{ sec.expand }}">{{ sec.subCount }} <span class="rz-directory-plus" aria-hidden="true">+</span></button></sc-if>
+            <dialog class="rz-directory-dialog" id="{{ sec.dialogId }}" aria-labelledby="{{ sec.headingId }}" sc-camel-on-click="{{ sec.backdrop }}">
+              <div class="rz-directory-dialog-head"><div><small>Категорії розділу</small><h2 id="{{ sec.headingId }}">{{ sec.name }}</h2></div><button type="button" aria-label="Закрити підкатегорії" sc-camel-on-click="{{ sec.close }}" autofocus="autofocus">×</button></div>
+              <div class="rz-directory-subcategories">
+                <sc-for list="{{ sec.subs }}" as="sub" hint-placeholder-count="3">
+                  <section><a class="rz-directory-subcategory" href="{{ sub.href }}" sc-camel-on-click="{{ sub.open }}"><span>{{ sub.name }}</span><small>{{ sub.count }}</small><span aria-hidden="true">→</span></a>
+                    <div class="rz-directory-leaves"><sc-for list="{{ sub.leaves }}" as="i" hint-placeholder-count="0"><a href="{{ i.href }}" sc-camel-on-click="{{ i.open }}"><span>{{ i.name }}</span><small>{{ i.count }}</small></a></sc-for></div>
+                  </section>
+                </sc-for>
               </div>
-            </sc-for>
-          </div>
+              <div class="rz-directory-dialog-foot"><a href="{{ sec.href }}" sc-camel-on-click="{{ sec.open }}">Усі товари розділу <span aria-hidden="true">→</span></a></div>
+            </dialog>
+          </article>
         </sc-for>
       </div>
+      <sc-if value="{{ acEmpty }}"><div class="rz-directory-empty"><h2>Такої категорії не знайшли</h2><p>Спробуй іншу назву або переглянь усі розділи.</p><button type="button" sc-camel-on-click="{{ acClear }}">Показати всі категорії</button></div></sc-if>
     </section>
   </sc-if>
 
