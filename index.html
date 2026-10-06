@@ -9,7 +9,7 @@
 <script defer src="/assets/react.5e73fabcd0d0.js"></script>
 <script defer src="/assets/react-dom.c5c970a9cf36.js"></script>
 <script defer src="/assets/category-directory.2026100605.js"></script>
-<script defer src="/assets/shop-client.2026100608.js"></script>
+<script defer src="/assets/shop-client.2026100701.js"></script>
 <script defer src="/assets/store-runtime.4b6bbf46ca4c.js"></script>
 
 <link rel="icon" href="/favicon.ico?v=2" sizes="any">
@@ -35,6 +35,7 @@
 <script defer src="/assets/experience.js?v=1"></script>
 <link rel="stylesheet" href="/assets/storefront-refresh.css?v=2">
 <link rel="stylesheet" href="/assets/hero-theme.2026100608.css">
+<link rel="stylesheet" href="/assets/cart-reminder.2026100701.css">
 <link rel="stylesheet" href="/assets/catalog-redesign.2026100605.css">
 <link rel="stylesheet" href="/assets/kit-parameters.2026100606.css">
 </head>
@@ -1024,6 +1025,8 @@
               <input name="email" aria-label="Email (необовʼязково)" autocomplete="email" value="{{ checkoutEmail }}" sc-camel-on-input="{{ onCheckoutEmail }}" placeholder="Email (необовʼязково)" type="email" style="min-width:0;background:var(--legacy-0f120f);border:1px solid var(--legacy-2a322b);padding:13px;color:var(--legacy-edefea);outline:none;font-size:14px;font-family:'IBM Plex Sans',sans-serif">
               <input name="recipient" value="{{ checkoutRecipient }}" sc-camel-on-input="{{ onCheckoutRecipient }}" placeholder="Отримувач інший? Вкажіть його ПІБ" style="min-width:0;background:var(--legacy-0f120f);border:1px solid var(--legacy-2a322b);padding:13px;color:var(--legacy-edefea);outline:none;font-size:14px;font-family:'IBM Plex Sans',sans-serif">
             </div>
+            <sc-if value="{{ cartReminderAvailable }}"><div class="cart-reminder" data-cart-reminder="1"><label><input type="checkbox" checked="{{ cartReminderActive }}" sc-camel-on-change="{{ onCartReminderToggle }}">Нагадати про кошик на цей email, якщо не оформлю замовлення</label><small>Один лист через 24 години після останньої зміни кошика.</small></div></sc-if>
+            <sc-if value="{{ cartReminderNotice }}"><p class="cart-reminder-note" role="status" data-cart-reminder-note="1">{{ cartReminderNotice }}</p></sc-if>
             <div style="color:var(--legacy-8a9487);font-size:12.5px;margin-top:8px;line-height:1.5">На цю адресу надійде підтвердження замовлення та посилання до особистого кабінету.</div>
             <textarea name="comment" value="{{ checkoutComment }}" sc-camel-on-input="{{ onCheckoutComment }}" placeholder="Коментар до замовлення: розміри, побажання, що уточнити" rows="2" style="width:100%;margin-top:10px;background:var(--legacy-0f120f);border:1px solid var(--legacy-2a322b);padding:13px;color:var(--legacy-edefea);outline:none;font-size:14px;font-family:'IBM Plex Sans',sans-serif;resize:vertical"></textarea>
             <div style="margin-top:12px;padding:13px;border:1px solid var(--legacy-2a322b);background:var(--legacy-0f120f);color:var(--legacy-99a398);font-size:12.5px;line-height:1.55">На email надішлемо підтвердження замовлення. Дані використовуємо для його оформлення, доставки та звʼязку з вами.</div>

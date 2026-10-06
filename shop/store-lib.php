@@ -9,9 +9,10 @@ require_once __DIR__.'/settings-lib.php';
 require_once __DIR__.'/supplier-notifications.php';
 require_once __DIR__.'/order-lifecycle.php';
 require_once __DIR__.'/customer-ui.php';
+require_once __DIR__.'/cart-reminders-lib.php';
 
 function shopStoreDatabase(): PDO {
-    customerDatabase();$db=identityDatabase();shopNotificationMigrate($db);monoMigrate($db);shopLifecycleMigrate($db);shopUiMigrate($db);static $ready=false;
+    customerDatabase();$db=identityDatabase();shopNotificationMigrate($db);monoMigrate($db);shopLifecycleMigrate($db);shopUiMigrate($db);shopCartReminderMigrate($db);static $ready=false;
     if(!$ready){migrate($db);npMigrate($db);supplierMigrate($db);
         if((int)$db->query("SELECT v FROM meta WHERE k='rubizh_shop_schema'")->fetchColumn()>=1){$ready=true;return $db;}
         $db->exec("CREATE TABLE IF NOT EXISTS rubizh_favorites(customer_id CHAR(32) NOT NULL,product_id VARCHAR(64) NOT NULL,created_at DATETIME NOT NULL,PRIMARY KEY(customer_id,product_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
@@ -71,9 +72,9 @@ function shopResolvedLines(PDO $db,array $input,bool $lock=false): array {
         // Without an explicit manufacturer allowance, kit_price is the allowed floor.
         if($pct===null)$pct=$v['kit_price']!==null && (int)$v['kit_price']<(int)$v['price'] ? 100 : 0;
         if(preg_match('/бронезахист|шоломи/ui',(string)$v['category_path']))$pct=0;
-        $group=customerField($line,'kit_group',64);
+        $group=customerField($line,'kit_group',64);$size=trim((string)($extra['size_display']??''))?:trim((string)($extra['size_native']??''));$size=$size?:trim((string)$v['size']);$size=preg_replace('/^\s*:\s*/u','',$size);
         $resolved[]=['product_id'=>$productId,'sku'=>$sku,'variant_id'=>(string)($extra['variant_id'] ?? $sku),'name'=>$v['name'],'slug'=>$v['slug'],
-            'has_docs'=>!empty($v['has_docs']),'docs_note'=>!empty($v['has_docs'])?'Протокол випробувань додається до замовлення; до покупки надаємо за запитом':'','size'=>$v['size'],'color'=>shopColor($v['color']),'variant'=>trim($v['size'].' · '.$v['color'],' ·'),
+            'has_docs'=>!empty($v['has_docs']),'docs_note'=>!empty($v['has_docs'])?'Протокол випробувань додається до замовлення; до покупки надаємо за запитом':'','size'=>$size,'color'=>shopColor($v['color']),'variant'=>trim($size.' · '.$v['color'],' ·'),
             'qty'=>$qty,'sale_unit'=>$unit,'qty_label'=>$qty.($unit==='m2'?' м²':' шт.'),'price'=>(int)$v['price'],'kit_price'=>$v['kit_price']===null?(int)$v['price']:(int)$v['kit_price'],
             'kit_discount_pct'=>$pct,'kit_group'=>$group,'availability'=>$v['availability'],'fulfillment_supplier'=>npSupplierCode($sku,$productId,(string)($v['fulfillment_supplier_name']??''))];
     }
@@ -84,8 +85,8 @@ function shopSendOrderMail(PDO $db,int $orderId): string {
     if($claim->rowCount()===0){$q=$db->prepare('SELECT status FROM rubizh_order_mail WHERE order_id=?');$q->execute([$orderId]);return (string)$q->fetchColumn();}
     try{
         $q=$db->prepare('SELECT o.*,m.recipient,d.subtotal,d.discount_amount,d.shipping_amount FROM rubizh_customer_orders o JOIN rubizh_order_mail m ON m.order_id=o.id LEFT JOIN rubizh_order_details d ON d.order_id=o.id WHERE o.id=?');$q->execute([$orderId]);$order=$q->fetch(PDO::FETCH_ASSOC);
-        $d=$db->prepare('SELECT contact_json FROM rubizh_order_details WHERE order_id=?');$d->execute([$orderId]);$contact=json_decode((string)$d->fetchColumn(),true)?:[];$order['shipping_paid_to_carrier']=!empty($contact['shipping_paid_to_carrier']);$order['payment_method']=$contact['payment']??'';
-        $timing=shopEnsureTiming($db,$order);$order['payment_due']=$timing['payment_due'];$order['donation_amount']=shopDonationAmount((float)$order['total']);if($order['payment_status']==='paid'){shopRecordPaid($db,$orderId);$db->prepare("UPDATE rubizh_order_mail SET status='skipped',locked_at=NULL,error='',updated_at=UTC_TIMESTAMP() WHERE order_id=?")->execute([$orderId]);return 'skipped';}
+        $d=$db->prepare('SELECT contact_json FROM rubizh_order_details WHERE order_id=?');$d->execute([$orderId]);$contact=json_decode((string)$d->fetchColumn(),true)?:[];$order['contact']=$contact;$order['shipping_paid_to_carrier']=!empty($contact['shipping_paid_to_carrier']);$order['payment_method']=$contact['payment']??'';
+        $timing=shopEnsureTiming($db,$order);$order['payment_due']=$timing['payment_due'];$order['donation_amount']=shopDonationAmount((float)$order['total']);if(shopReceiptStage($order)==='cancelled'){shopQueueBuyerMail($db,$orderId,'cancelled');$db->prepare("UPDATE rubizh_order_mail SET status='skipped',locked_at=NULL,error='',updated_at=UTC_TIMESTAMP() WHERE order_id=?")->execute([$orderId]);return 'skipped';}if($order['payment_status']==='paid'){shopRecordPaid($db,$orderId);$db->prepare("UPDATE rubizh_order_mail SET status='skipped',locked_at=NULL,error='',updated_at=UTC_TIMESTAMP() WHERE order_id=?")->execute([$orderId]);return 'skipped';}
         $cfg=authConfig();$password=(string)($cfg['noreply_password'] ?? '');if($password==='')throw new RuntimeException('Пошта не налаштована.');
         require_once __DIR__.'/../auth/mailer.php';rubizhSendOrder($order['recipient'],$password,$order);
         $db->prepare("UPDATE rubizh_order_mail SET status='sent',locked_at=NULL,error='',updated_at=UTC_TIMESTAMP() WHERE order_id=?")->execute([$orderId]);return 'sent';

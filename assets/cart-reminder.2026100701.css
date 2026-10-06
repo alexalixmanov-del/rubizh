@@ -1,0 +1,5 @@
+.cart-reminder{margin-top:16px;padding-top:14px;border-top:1px solid var(--legacy-2a322b)}
+.cart-reminder label{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.6;cursor:pointer;color:var(--legacy-edefea)}
+.cart-reminder input[type="checkbox"]{appearance:auto;accent-color:var(--accent);width:18px;height:18px;min-width:18px;margin:2px 0 0;flex-shrink:0;cursor:pointer}
+.cart-reminder small{display:block;margin:7px 0 0 28px;font-size:12px;line-height:1.6;color:var(--legacy-99a398)}
+.cart-reminder-note{font-size:13px;line-height:1.6;margin:12px 0 0;color:var(--legacy-c7cec3);overflow-wrap:anywhere}

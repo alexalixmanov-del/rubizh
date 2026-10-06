@@ -1,0 +1,44 @@
+<?php
+declare(strict_types=1);
+// Read-only: checks SMTP authentication, queue counts and scheduler heartbeats. Never sends mail.
+if(PHP_SAPI!=='cli'){http_response_code(404);exit;}
+define('RUBIZH_AUTH',true);
+require __DIR__.'/../auth/identities.php';
+function launchSmtpReply($socket): int {
+ $code=0;for($i=0;$i<40;$i++){$line=fgets($socket,1024);if($line===false||!preg_match('/^(\d{3})([ -])/',$line,$m))throw new RuntimeException('SMTP reply unavailable');$code=(int)$m[1];if($m[2]===' ')return $code;}throw new RuntimeException('SMTP reply too long');
+}
+function launchSmtpAuth(string $password): string {
+ if($password==='')return 'not_configured';
+ $socket=null;
+ try{
+  $context=stream_context_create(['ssl'=>['verify_peer'=>true,'verify_peer_name'=>true,'peer_name'=>'mail.adm.tools','SNI_enabled'=>true]]);
+  $socket=@stream_socket_client('ssl://mail.adm.tools:465',$errno,$error,8,STREAM_CLIENT_CONNECT,$context);if(!$socket)throw new RuntimeException('SMTP unavailable');stream_set_timeout($socket,8);
+  if(launchSmtpReply($socket)!==220)throw new RuntimeException('SMTP greeting rejected');
+  fwrite($socket,"EHLO rubizh.shop\r\n");if(launchSmtpReply($socket)!==250)throw new RuntimeException('SMTP EHLO rejected');
+  fwrite($socket,"AUTH LOGIN\r\n");if(launchSmtpReply($socket)!==334)throw new RuntimeException('SMTP auth unavailable');
+  fwrite($socket,base64_encode('noreply@rubizh.shop')."\r\n");if(launchSmtpReply($socket)!==334)throw new RuntimeException('SMTP username rejected');
+  fwrite($socket,base64_encode($password)."\r\n");$ok=launchSmtpReply($socket)===235;
+  fwrite($socket,"QUIT\r\n");return $ok?'verified':'failed';
+ }catch(Throwable $e){return 'failed';}finally{if(is_resource($socket))fclose($socket);}
+}
+$root=dirname(__DIR__);$private=dirname($root).'/rubizh-automation';$report=['smtp_auth'=>in_array('--smtp',$argv,true)?launchSmtpAuth((string)(authConfig()['noreply_password']??'')):'not_checked','inbox_delivery'=>'real_checkout_test_required','workers'=>[],'mail_queues'=>[]];$failed=false;
+foreach(['cache'=>180,'notifications'=>300,'payments'=>600,'delivery'=>1800,'photos'=>900] as $name=>$maxAge){
+ $raw=is_file($private.'/'.$name.'.state')?trim((string)file_get_contents($private.'/'.$name.'.state')):'';$values=explode(' ',$raw);
+ $valid=count($values)===3&&preg_match('/^\d+$/D',$values[0])&&preg_match('/^-?\d+$/D',$values[1])&&preg_match('/^\d+$/D',$values[2]);$success=$valid?(int)$values[2]:0;$age=$success?max(0,time()-$success):null;
+ $state=!$valid?'not_seen':((int)$values[1]>0?'failed':($age!==null&&$age<=$maxAge?'verified':((int)$values[1]===-1&&time()-(int)$values[0]<300?'running':'stale')));
+ $report['workers'][$name]=['status'=>$state,'last_success_age_seconds'=>$age];$failed=$failed||!in_array($state,['verified','running'],true);
+}
+try{
+ $c=require $root.'/api/config.php';$host=(string)($c['db_host']??'');$name=(string)($c['db_name']??'');if($host===''||$name===''||preg_match('/[;\r\n]/',$host.$name))throw new RuntimeException('Database config invalid');
+ $db=new PDO('mysql:host='.$host.';dbname='.$name.';charset=utf8mb4',(string)$c['db_user'],(string)$c['db_pass'],[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_EMULATE_PREPARES=>false]);
+ foreach(['rubizh_order_mail','rubizh_buyer_mail','rubizh_cart_reminders'] as $table){
+  $q=$db->prepare('SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=?');$q->execute([$table]);
+  if(!$q->fetchColumn()){$report['mail_queues'][$table]=['status'=>'not_prepared'];$failed=true;continue;}
+  $counts=$db->query('SELECT status,COUNT(*) AS count FROM '.$table.' GROUP BY status')->fetchAll(PDO::FETCH_KEY_PAIR);
+  $due=(int)$db->query("SELECT COUNT(*) FROM ".$table." WHERE status='pending' AND next_at<UTC_TIMESTAMP()-INTERVAL 10 MINUTE")->fetchColumn();
+  $report['mail_queues'][$table]=['counts'=>$counts,'overdue'=>$due];$failed=$failed||($counts['failed']??0)>0||$due>0;
+ }
+ $report['database']='verified';
+}catch(Throwable $e){$report['database']='failed';$failed=true;}
+$failed=$failed||in_array($report['smtp_auth'],['failed','not_configured'],true);
+echo json_encode($report,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR)."\n";exit($failed?2:0);
