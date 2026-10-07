@@ -233,3 +233,16 @@ html body .rz-kit-modal-card{border-radius:8px!important;overflow:hidden;border-
  html body .rz-kit-item{flex-direction:row!important;padding:14px!important;gap:12px!important}
  html body .rz-kit-item>a{width:72px!important;height:90px!important;aspect-ratio:auto!important}
 }
+
+/* The builder's instructions and primary action must remain visible in both themes. */
+html body .rz-kit-intro>.rz-kit-instructions{max-width:76ch!important;margin:0 0 24px!important;padding:18px 22px;border:1px solid var(--border);border-left:4px solid #ffad33;border-radius:8px;background:var(--surface);color:var(--text);font-size:clamp(15px,1.4vw,18px)!important;line-height:1.65;font-weight:500}
+.rz-kit-instructions strong{font-weight:700}
+html body .rz-slot-select{justify-content:center;min-height:48px;border:1px solid #ffad33;background:#ffad33;color:#171b12;font-size:13px!important;font-weight:700;cursor:pointer;box-shadow:0 3px 12px #ffad331f}
+html body .rz-slot-select span{color:inherit;font-size:23px}
+html body .rz-slot-select:hover{background:#ffc266;border-color:#ffc266}
+html body .rz-slot-select:focus-visible{outline:3px solid var(--text);outline-offset:3px}
+.rz-kit-load-status,.rz-kit-load-error{padding:16px;color:var(--text);background:var(--surface);border-bottom:1px solid var(--border);font-size:14px}
+.rz-kit-load-error{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.rz-kit-load-error button,.rz-kit-reset-filters{min-height:44px;padding:10px 16px;border:1px solid var(--accent);border-radius:5px;background:var(--accent);color:var(--button-text);font:inherit;font-weight:600;cursor:pointer}
+.rz-kit-reset-filters{display:block;margin:16px auto 0}
+@media(max-width:699px){html body .rz-kit-intro>.rz-kit-instructions{padding:14px 16px}html body .rz-slot-select{padding:10px 8px;font-size:12px!important}}

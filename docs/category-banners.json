@@ -7,7 +7,8 @@
     "width": 768,
     "height": 960,
     "bytes": 81506,
-    "active": true
+    "active": true,
+    "category_id": "clothing"
   },
   {
     "category": "Взуття",
@@ -17,7 +18,8 @@
     "width": 768,
     "height": 960,
     "bytes": 133524,
-    "active": true
+    "active": true,
+    "category_id": "footwear"
   },
   {
     "category": "Бронезахист",
@@ -27,7 +29,8 @@
     "width": 768,
     "height": 960,
     "bytes": 112414,
-    "active": true
+    "active": true,
+    "category_id": "armor"
   },
   {
     "category": "Шоломи та захист голови",
@@ -37,7 +40,8 @@
     "width": 720,
     "height": 960,
     "bytes": 84324,
-    "active": true
+    "active": true,
+    "category_id": "helmets"
   },
   {
     "category": "Тактичний зв'язок та слух",
@@ -47,7 +51,8 @@
     "width": 720,
     "height": 960,
     "bytes": 51586,
-    "active": true
+    "active": true,
+    "category_id": "communications"
   },
   {
     "category": "Рюкзаки, сумки та баули",
@@ -57,7 +62,8 @@
     "width": 768,
     "height": 960,
     "bytes": 86326,
-    "active": true
+    "active": true,
+    "category_id": "bags"
   },
   {
     "category": "Підсумки",
@@ -67,7 +73,8 @@
     "width": 720,
     "height": 960,
     "bytes": 116616,
-    "active": true
+    "active": true,
+    "category_id": "pouches"
   },
   {
     "category": "РПС та розвантаження",
@@ -77,7 +84,8 @@
     "width": 720,
     "height": 960,
     "bytes": 66084,
-    "active": true
+    "active": true,
+    "category_id": "load_bearing"
   },
   {
     "category": "Захист колін та ліктів",
@@ -87,7 +95,8 @@
     "width": 720,
     "height": 960,
     "bytes": 56888,
-    "active": true
+    "active": true,
+    "category_id": "limb_protection"
   },
   {
     "category": "Тактична медицина",
@@ -97,7 +106,8 @@
     "width": 768,
     "height": 960,
     "bytes": 125086,
-    "active": true
+    "active": true,
+    "category_id": "medical"
   },
   {
     "category": "Маскування",
@@ -107,7 +117,8 @@
     "width": 768,
     "height": 960,
     "bytes": 127714,
-    "active": true
+    "active": true,
+    "category_id": "camouflage"
   },
   {
     "category": "Туризм та польове спорядження",
@@ -117,7 +128,8 @@
     "width": 720,
     "height": 960,
     "bytes": 68886,
-    "active": true
+    "active": true,
+    "category_id": "field"
   },
   {
     "category": "Електроніка та спостереження",
@@ -127,7 +139,8 @@
     "width": 720,
     "height": 960,
     "bytes": 79162,
-    "active": true
+    "active": true,
+    "category_id": "electronics"
   },
   {
     "category": "Освітлення",
@@ -137,7 +150,8 @@
     "width": 720,
     "height": 960,
     "bytes": 76050,
-    "active": true
+    "active": true,
+    "category_id": "lighting"
   },
   {
     "category": "Автономне живлення",
@@ -147,7 +161,8 @@
     "width": 720,
     "height": 960,
     "bytes": 56354,
-    "active": true
+    "active": true,
+    "category_id": "power"
   },
   {
     "category": "Збройові аксесуари",
@@ -157,7 +172,8 @@
     "width": 720,
     "height": 960,
     "bytes": 66162,
-    "active": true
+    "active": true,
+    "category_id": "weapon_accessories"
   },
   {
     "category": "Захист очей та обличчя",
@@ -167,7 +183,8 @@
     "width": 720,
     "height": 960,
     "bytes": 72658,
-    "active": true
+    "active": true,
+    "category_id": "eye_protection"
   },
   {
     "category": "Інструменти та ножі",
@@ -177,7 +194,8 @@
     "width": 720,
     "height": 960,
     "bytes": 66764,
-    "active": true
+    "active": true,
+    "category_id": "tools"
   },
   {
     "category": "Формені комплекти та костюми",
@@ -187,7 +205,8 @@
     "width": 768,
     "height": 960,
     "bytes": 49294,
-    "active": true
+    "active": true,
+    "category_id": "clothing_costumes"
   },
   {
     "category": "Тактичні рукавички",
@@ -197,7 +216,8 @@
     "width": 768,
     "height": 960,
     "bytes": 129584,
-    "active": true
+    "active": true,
+    "category_id": "clothing_gloves"
   },
   {
     "category": "Пончо та дощовики",
@@ -208,6 +228,7 @@
     "height": 960,
     "bytes": 66540,
     "active": false,
-    "catalog_category_present": false
+    "catalog_category_present": false,
+    "category_id": "clothing_rainwear"
   }
 ]

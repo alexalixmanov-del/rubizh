@@ -588,7 +588,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
         return i;
     }, Q = [];
     K.forEach(t => t.kids.forEach(t => t.kids.forEach(t => Q.push(t))));
-    const X = t => "/catalog" + (t.length ? "/" + t.map(w).join("/") : ""), V = (t, e) => e.every((e, i) => t.path[i] === e), W = {
+    const X = t => "/catalog" + (t.length ? "/" + (window.RUBIZH_CATEGORY_URLS?.[t.join(" / ")] || t.map(w).join("/")) : ""), V = (t, e) => e.every((e, i) => t.path[i] === e), W = {
         "Одяг та форма": 0,
         "Бронезахист": 1,
         "Взуття": 2,
@@ -1033,6 +1033,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
             kit_price: a.price
         }), a;
     }, EMPTY_PRODUCT={...Nt({id:'__loading__',slug:'',name:'',brand:'',category:'',description:'',price_min:null,availability:'out',photos:[],attributes:{},variants:[]}),storeReady:false}, Kt = t => {
+        window.RUBIZH_CATEGORY_URLS=Object.fromEntries(t.map(c=>[c.path,c.url_path]));
         K.splice(0, K.length), Q.splice(0, Q.length);
         for (const e of t) {
             const t = e.path.split(" / ");
@@ -1599,7 +1600,10 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                     const e = JSON.stringify([ this.state.kitModal, this.state.kmQ, this.state.kmCat, this.state.kmSize, this.state.kmColor, this.state.kmStock ]);
                     this._kitQueryKey !== e && (this._kitQueryKey = e, clearTimeout(this._kitSearchTimer), 
                     this._kitRequests?.abort(), this.setState({
-                        storeKitIds: [],
+                        storeKitIds: this.storeKitInitialIds(),
+                        kitCatalogError: "",
+                        kitCatalogPage: 1,
+                        kitCatalogPages: 1,
                         kitCatalogLoading: !0
                     }), this._kitSearchTimer = setTimeout(() => this.storeLoadKitProducts(1), t.kmQ !== this.state.kmQ ? 250 : 0));
                 } else clearTimeout(this._kitSearchTimer), this._kitRequests?.abort(), this._kitQueryKey = null;
@@ -1799,7 +1803,9 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
             kmCat: "",
             kmColor: "",
             kmStock: !1,
-            kmSize: this.state.kmSize
+            kmSize: "",
+            kitCatalogError: "",
+            kitCatalogLoading: !0
         });
         kitToCart=() => {
             const t = this.kitLines();
@@ -2356,7 +2362,12 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                     toggleStock: () => this.setState(t => ({
                         kmStock: !t.kmStock
                     })),
-                    empty: 0 === p.length,
+                    empty: !t.kitCatalogLoading && !t.kitCatalogError && 0 === p.length,
+                    loading: !!t.kitCatalogLoading,
+                    hasError: !!t.kitCatalogError,
+                    error: t.kitCatalogError || "",
+                    retry: () => this.storeLoadKitProducts(1),
+                    reset: () => this.setState({kmQ:"",kmCat:"",kmSize:"",kmColor:"",kmStock:false}),
                     cards: p.slice(0, this._kitModalLimit || 24).map(e => {
                         const i = Object.keys(e.variants).filter(i => !t.kmColor || e.variants[i].color === t.kmColor), s = 1 === i.length, o = e.variants[i[0]], a = !(!t.kmSize || s || i.some(i => e.variants[i].size_display === t.kmSize && "out" !== this.avail(e, i))), r = i.every(t => "out" === this.avail(e, t)), n = o.kit_discount_pct ? Math.min(c, o.kit_discount_pct) : 0;
                         return {
@@ -3612,7 +3623,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                 letterSpacing: "0",
                 fontSize: "15px",
                 color: t ? "var(--legacy-8a9487)" : "var(--legacy-d3d9cf)"
-            }), r = this.visibleNodes(K), n = t.mobSec ? H([ t.mobSec ]) : null, c = this.nodeCount([]), l = K.reduce((t, e) => t + e.kids.reduce((t, e) => t + e.kids.filter(t => this.nodeCount(t.path) > 0).length, 0), 0);
+            }), r = this.visibleNodes(K), n = t.mobSec ? H([ t.mobSec ]) : null, c = this.nodeCount([]), l = (this._storeCategories||[]).filter(c=>c.path.includes(' / ')).length||K.reduce((t,e)=>t+e.kids.length,0);
             return {
                 megaCols: o,
                 goNew: () => this.goQuick("new"),
@@ -3654,6 +3665,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                     }
                 })),
                 acSecs: r.map(t => ({
+                    path: t.path,
                     id: "ac-" + w(t.name),
                     name: t.name,
                     count: this.nodeCount(t.path),
@@ -4052,6 +4064,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                 };
             });
             const Nt = "rubizh.shop" + Ut[Ut.length - 1].href + (t.catPg > 1 ? "?page=" + t.catPg : ""), Kt = this.visibleNodes(Rt ? Rt.kids : K), Ht = Rt ? this.visibleNodes(1 === t.cpath.length ? K : H(t.cpath.slice(0, -1)).kids).filter(t => t.name !== Rt.name) : [], Qt = t => ({
+                path: t.path,
                 name: t.name,
                 n: this.nodeCount(t.path),
                 count: x(this.nodeCount(t.path), "товар", "товари", "товарів"),
@@ -5848,41 +5861,43 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                 }), c || document.head.appendChild(t);
             }
         };
-        storeLoadKitProducts=async t => {
-            const e = this._kitQueryKey, i = this.state.kitModal;
-            if (i) {
-                this.setState({
-                    kitCatalogLoading: !0
-                });
-                try {
-                    const s = new URLSearchParams({
-                        slot: i,
-                        page: String(t),
-                        q: this.state.kmQ || ""
-                    });
-                    this.state.kmCat && s.set("leaf", this.state.kmCat), this.state.kmSize && s.set("sizes", this.state.kmSize), 
-                    this.state.kmColor && s.set("camo", this.state.kmColor), this.state.kmStock && s.set("availability", "in");
-                    const o = await this.storeRequest("/shop/catalog.php?" + s, null, "_kitRequests");
-                    if (e !== this._kitQueryKey || i !== this.state.kitModal || this.customerUnmounted) return;
-                    this._kitFacetsSlot !== i && (this._kitFacetsSlot = i, this._kitFacets = {
-                        leaves: [],
-                        sizes: [],
-                        camo: []
-                    });
-                    for (const t of [ "leaves", "sizes", "camo" ]) this._kitFacets[t] = Array.from(new Set(this._kitFacets[t].concat(o.facets?.[t] || [])));
-                    const a = this.storeCache(o.items).map(t => t.id);
-                    this._kitModalLimit = 24 * t, this.setState({
-                        storeKitIds: 1 === t ? a : Array.from(new Set((this.state.storeKitIds || []).concat(a))),
-                        kitCatalogPage: t,
-                        kitCatalogPages: o.pages,
-                        kitCatalogLoading: !1
-                    });
-                } catch (t) {
-                    e !== this._kitQueryKey || this.customerUnmounted || "AbortError" === t.name || this.setState({
-                        kitCatalogLoading: !1,
-                        storeError: t.message
-                    });
-                }
+        storeKitQuery=(page=1) => {
+            const s=new URLSearchParams({slot:this.state.kitModal,page:String(page),q:this.state.kmQ||""});
+            if(this.state.kmCat)s.set("leaf",this.state.kmCat);
+            if(this.state.kmSize)s.set("sizes",this.state.kmSize);
+            if(this.state.kmColor)s.set("camo",this.state.kmColor);
+            if(this.state.kmStock)s.set("availability","in");
+            return s.toString();
+        };
+        storeKitInitialIds=() => {
+            const cached=this._kitResponses?.get(this.storeKitQuery());
+            if(cached&&Date.now()-cached.at<30000)return this.storeCache(cached.data.items).map(p=>p.id);
+            const s=this.state;
+            if(s.kmQ||s.kmCat||s.kmSize||s.kmColor||s.kmStock)return [];
+            return Z.filter(p=>p.storeReady&&storeSlot(p)===s.kitModal&&storeKitEligible(p)).slice(0,24).map(p=>p.id);
+        };
+        storeApplyKitResponse=(o,page,slot) => {
+            if(this._kitFacetsSlot!==slot){this._kitFacetsSlot=slot;this._kitFacets={leaves:[],sizes:[],camo:[]};}
+            for(const key of ["leaves","sizes","camo"])this._kitFacets[key]=Array.from(new Set(this._kitFacets[key].concat(o.facets?.[key]||[])));
+            const ids=this.storeCache(o.items).map(p=>p.id);
+            this._kitModalLimit=24*page;
+            this.setState({storeKitIds:page===1?ids:Array.from(new Set((this.state.storeKitIds||[]).concat(ids))),kitCatalogPage:page,kitCatalogPages:o.pages,kitCatalogLoading:false,kitCatalogError:""});
+        };
+        storeLoadKitProducts=async page => {
+            const key=this._kitQueryKey,slot=this.state.kitModal;
+            if(!slot)return;
+            const query=this.storeKitQuery(page),cached=this._kitResponses?.get(query);
+            if(cached&&Date.now()-cached.at<30000){this.storeApplyKitResponse(cached.data,page,slot);return;}
+            this.setState({kitCatalogLoading:true,kitCatalogError:""});
+            try {
+                const data=await this.storeRequest("/shop/catalog.php?"+query,null,"_kitRequests");
+                if(key!==this._kitQueryKey||slot!==this.state.kitModal||this.customerUnmounted)return;
+                (this._kitResponses ||= new Map).set(query,{at:Date.now(),data});
+                if(this._kitResponses.size>32)this._kitResponses.delete(this._kitResponses.keys().next().value);
+                this.storeApplyKitResponse(data,page,slot);
+            } catch(error) {
+                if(key!==this._kitQueryKey||this.customerUnmounted||error.name==="AbortError")return;
+                this.setState({kitCatalogLoading:false,kitCatalogError:"Не вдалося завантажити список спорядження. Спробуйте ще раз."});
             }
         };
         _catalogSeq=0;
@@ -5974,7 +5989,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
             const e = new URLSearchParams({
                 page: String(t.catPg || 1),
                 sort: t.sort || "pop"
-            }), i = t.cpath.map(w).join("/");
+            }), i = window.RUBIZH_CATEGORY_URLS?.[t.cpath.join(" / ")] || t.cpath.map(w).join("/");
             return i && e.set("category", i), t.sq && e.set("q", t.sq), t.priceFrom && e.set("price_from", t.priceFrom), 
             t.priceTo && e.set("price_to", t.priceTo), t.brands.length && e.set("brands", t.brands.join("|")), 
             t.camo.length && e.set("camo", t.camo.join("|")), t.sizes.length && e.set("sizes", t.sizes.map(t => t.replace("|",":")).join("|")), 
@@ -6046,6 +6061,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
             }
             const t = window.RUBIZH_BOOT || {};
             if(t.settings)this.setState({storeSettings:t.settings});else this.storeRequest('/shop/analytics.php').then(j=>this.setState({storeSettings:j.settings||{}})).catch(()=>{});
+            if(["home","kit","picker"].includes(this.state.screen))this.storeLoadRecommendations();
             t.product && (this.storeRelated(t.product), this.storeCache([ t.product ]), this.setState({
                 current: t.product.id
             })), t.catalog && (this._storeFacets = t.catalog.facets, this._facetsKey = JSON.stringify([ this.state.cpath, this.state.sq, this.state.roots ]), 
@@ -6054,7 +6070,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                 storePageItems: t.catalog.items.map(t => t.id),
                 storeLoaded: !0
             }, this.rememberCatalog), this._storeQuery = this.storeQuery()), this._storeInitializing = !1, 
-            "product" === this.state.screen ? t.product && this.state.current === t.product.id ? this._storeProduct = t.product.id : await this.storeLoadProduct(this.state.current, t.slug) : t.catalog || await this.storeLoadCatalog(), 
+            "product" === this.state.screen ? t.product && this.state.current === t.product.id ? this._storeProduct = t.product.id : await this.storeLoadProduct(this.state.current, t.slug) : ["home","catalog"].includes(this.state.screen) && !t.catalog && await this.storeLoadCatalog(),
             t.kitCode && await this.storeOpenKit(t.kitCode);
             try {
                 const t = Array.from(new Set([ ...this.state.cart || [], ...this.state.kit || [], ...(this.state.seen||[]).map(id=>({id})),...(this.state.compare||[]).map(id=>({id})) ].map(t => t.id)));
@@ -6423,7 +6439,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                 for (const i of [ "sort", "quick", "priceFrom", "priceTo" ]) t[i] && e.set(i, t[i]);
                 for (const i of [ "camo", "sizes", "brands", "attrs", "roots" ]) t[i]?.length && e.set(i, JSON.stringify(t[i]));
                 t.inStock && e.set("inStock", "1"), !1 === t.withOrder && e.set("withOrder", "0");
-                return "/catalog" + (t.cpath?.length ? "/" + t.cpath.map(w).join("/") : "") + (e.size ? "?" + e : "");
+                return X(t.cpath||[]) + (e.size ? "?" + e : "");
             }
             if(t.screen==='allcats')return '/categories';if(t.screen==='guides')return '/porady';if(t.screen==='guide')return '/porady/'+w((A.find(g=>g.key===t.guide)||A[0]).title);
             return "kit" === t.screen && /^https:\/\/rubizh\.shop\/kit\/[a-f0-9]{32}$/.test(this.state.kitLink || "") ? new URL(this.state.kitLink).pathname : "kit" === t.screen ? "/kit/" : "page" === t.screen && [ "offer", "privacy" ].includes(t.page) ? "/" + t.page : ("page" === t.screen && e.set("id", t.page), 
@@ -6501,10 +6517,10 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                     { icon: "comms", paths: [ [ "Тактичний звʼязок та слух" ] ] }
                 ],
                 quick: c.quick || [
-                    { name: "Тактичні штани", paths: [ [ "Одяг та форма", "Чоловічий одяг", "Тактичні штани" ], [ "Одяг та форма", "Жіночий одяг", "Тактичні штани" ] ] },
+                    { name: "Штани", paths: [ ["Одяг та форма", "Штани"], [ "Одяг та форма", "Чоловічий одяг", "Тактичні штани" ], [ "Одяг та форма", "Жіночий одяг", "Тактичні штани" ] ] },
                     { name: "Плитоноски", paths: [ [ "Бронезахист", "Плитоноски" ] ] },
-                    { name: "Шоломи FAST", paths: [ [ "Шоломи та захист голови", "Шоломи", "FAST" ] ] },
-                    { name: "Аптечки IFAK", paths: [ [ "Підсумки", "Медичні підсумки", "Аптечки IFAK" ], [ "Тактична медицина" ] ] }
+                    { name: "Балістичні шоломи", paths: [ ["Шоломи та захист голови", "Балістичні шоломи"], [ "Шоломи та захист голови", "Шоломи", "FAST" ] ] },
+                    { name: "Аптечки IFAK", paths: [ ["Підсумки", "Медичні / IFAK"], [ "Підсумки", "Медичні підсумки", "Аптечки IFAK" ], [ "Тактична медицина" ] ] }
                 ],
                 quickTitle: c.quickTitle || "Швидкий перехід"
             };
@@ -6700,7 +6716,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                 this.goAllCats());
             };
             const r = s.path || [];
-            t.productCategoryHref = "/catalog" + (r.length ? "/" + r.map(w).join("/") : ""), 
+            t.productCategoryHref = X(r),
             t.productCategoryGo = t => {
                 t && (t.metaKey || t.ctrlKey || t.shiftKey || t.altKey || t.button > 0) || (t?.preventDefault?.(), 
                 this.goPath(r));
@@ -6915,7 +6931,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
             }, {
                 title: "Підтвердження на email",
                 note: "sent" === e.orderEmailStatus ? "Лист із номером і складом замовлення надіслано." : "Замовлення прийняте. Лист у черзі на повторне надсилання."
-            } ], t.medDone = !1, t.hasOrderLines = !!e.lastOrder?.lines?.length, t.kmHasMore = (e.kitCatalogPage || 1) < (e.kitCatalogPages || 1), 
+            } ], t.medDone = !1, t.hasOrderLines = !!e.lastOrder?.lines?.length, t.kmHasMore = !e.kitCatalogLoading && !e.kitCatalogError && (e.kitCatalogPage || 1) < (e.kitCatalogPages || 1),
             t.kmLoadMore = () => this.storeLoadKitProducts((e.kitCatalogPage || 1) + 1), t.kmMoreLabel = e.kitCatalogLoading ? "Завантажуємо…" : "Показати ще 24";
             const g = t => {
                 if (!t) return;
@@ -6931,7 +6947,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
             // Each root uses its own named banner. Never substitute a generic product image.
             const directorySections=t.acSecs||[];
             for(const [index,section] of directorySections.entries()) {
-                section.art=window.rubizhDirectoryArt?.(section.name)||'';
+                section.art=window.rubizhDirectoryArt?.((this._storeCategories||[]).find(c=>c.path===(Array.isArray(section.path)?section.path.join(' / '):section.path))?.category_id||section.name)||'';
                 section.hasArt=!!section.art;
                 section.number=String(index+1).padStart(2,'0');
                 section.dialogId=section.id+'-details';
@@ -6955,7 +6971,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
             t.acFiltered=!!directoryQuery;
             const sectionsSource=!(e.cpath||[]).length&&!(e.roots||[]).length&&!e.sq&&!e.quick?directorySections.map(section=>({...section,src:section.art,hasSrc:section.hasArt})):t.subTiles||[];
             for(const [index,tile] of sectionsSource.entries()){
-                tile.src=window.rubizhDirectoryArt?.(tile.name)||'';
+                tile.src=window.rubizhDirectoryArt?.((this._storeCategories||[]).find(c=>c.path===(Array.isArray(tile.path)?tile.path.join(' / '):tile.path))?.category_id||tile.name)||'';
                 tile.hasSrc=!!tile.src;
                 tile.number=String(index+1).padStart(2,'0');
             }

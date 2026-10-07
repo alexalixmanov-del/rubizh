@@ -8,8 +8,8 @@
 <script defer src="/assets/image-slot.df1039e4aec7.js"></script>
 <script defer src="/assets/react.5e73fabcd0d0.js"></script>
 <script defer src="/assets/react-dom.c5c970a9cf36.js"></script>
-<script defer src="/assets/category-directory.2026100605.js"></script>
-<script defer src="/assets/shop-client.2026100701.js?v=2026100703"></script>
+<script defer src="/assets/category-directory.2026100705.js"></script>
+<script defer src="/assets/shop-client.2026100701.js?v=2026100705"></script>
 <script defer src="/assets/store-runtime.4b6bbf46ca4c.js"></script>
 
 <link rel="icon" href="/favicon.ico?v=2" sizes="any">
@@ -33,7 +33,7 @@
 <script src="/assets/analytics.js" defer></script><link rel="stylesheet" href="/assets/theme.css?v=5"><meta name="description" content="РУБІЖ — тактичний одяг та спорядження. Форма, берці, бронезахист і комплекти під вашу задачу. Допомога з розміром та доставка Новою поштою по Україні.">
 <link rel="stylesheet" href="/assets/experience.css?v=1">
 <script defer src="/assets/experience.js?v=1"></script>
-<link rel="stylesheet" href="/assets/storefront-refresh.css?v=2">
+<link rel="stylesheet" href="/assets/storefront-refresh.css?v=2026100705">
 <link rel="stylesheet" href="/assets/hero-theme.2026100608.css">
 <link rel="stylesheet" href="/assets/cart-reminder.2026100701.css">
 <link rel="stylesheet" href="/assets/catalog-redesign.2026100605.css">
@@ -1751,7 +1751,7 @@
       <nav class="rz-breadcrumbs"><a href="/" sc-camel-on-click="{{ goHome }}">Головна</a><span>/</span><span>Твій комплект</span></nav>
       <div class="rz-kit-intro"><div class="rz-eyebrow">СПОРЯДЖЕННЯ, ЩО ПРАЦЮЄ РАЗОМ</div>
       <h1 class="rz-page-title" style="font-family:'UAH','Oswald',sans-serif;font-weight:600;font-size:clamp(26px,3.4vw,40px);text-transform:uppercase;margin:0 0 6px;letter-spacing:.03em;line-height:1.15">Конструктор комплекту</h1>
-      <p style="margin:0 0 16px;color:var(--legacy-a9b3a6);font-size:14.5px;line-height:1.6;max-width:64ch">Обирай лише те, що потрібно. Задай розміри, додай речі — і одразу побачиш склад, ціну та свою вигоду.</p>
+      <p class="rz-kit-instructions"><strong>Обирай лише те, що потрібно.</strong> Задай розміри, додай речі — і одразу побачиш склад, ціну та свою вигоду.</p>
 <div class="rz-kit-steps"><span><b>01</b> Твої параметри</span><span><b>02</b> Обирай спорядження</span><span><b>03</b> Комплект готовий</span></div></div>
 
       <sc-if value="{{ kitRestoredShow }}" hint-placeholder-val="{{ false }}">
@@ -1982,6 +1982,8 @@
           <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span style="color:var(--legacy-8a9487);font-size:12px;width:52px">Розмір</span><sc-for list="{{ km.sizes }}" as="c" hint-placeholder-count="5"><div tabindex="0" role="button" sc-camel-on-click="{{ c.on }}" style="{{ c.style }}">{{ c.label }}</div></sc-for></div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span style="color:var(--legacy-8a9487);font-size:12px;width:52px">Колір</span><sc-for list="{{ km.colors }}" as="c" hint-placeholder-count="3"><div tabindex="0" role="button" sc-camel-on-click="{{ c.on }}" style="{{ c.style }}">{{ c.label }}</div></sc-for><div tabindex="0" role="button" sc-camel-on-click="{{ km.toggleStock }}" style="margin-left:auto;color:var(--legacy-c7cec3);font-size:13px;cursor:pointer">{{ km.stockLabel }}</div></div>
         </div>
+        <sc-if value="{{ km.loading }}"><div class="rz-kit-load-status" role="status" aria-live="polite">Завантажуємо спорядження…</div></sc-if>
+        <sc-if value="{{ km.hasError }}"><div class="rz-kit-load-error" role="alert"><span>{{ km.error }}</span><button type="button" sc-camel-on-click="{{ km.retry }}">Спробувати ще раз</button></div></sc-if>
         <div class="rz-kit-modal-grid" style="padding:12px 16px 16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr));gap:8px">
           <sc-for list="{{ km.cards }}" as="p" hint-placeholder-count="6">
             <div class="rz-kit-modal-card" style="{{ p.cardStyle }}">
@@ -2000,7 +2002,7 @@
             </div>
           </sc-for>
         </div><sc-if value="{{ kmHasMore }}"><button type="button" sc-camel-on-click="{{ kmLoadMore }}" style="margin:16px auto;padding:12px 18px;border:1px solid var(--legacy-f2a33c);background:transparent;color:var(--link);cursor:pointer">{{ kmMoreLabel }}</button></sc-if>
-        <sc-if value="{{ km.empty }}" hint-placeholder-val="{{ false }}"><div style="padding:30px 16px;text-align:center;color:var(--legacy-99a398)">Нічого не знайшли. Приберіть частину фільтрів.</div></sc-if>
+        <sc-if value="{{ km.empty }}" hint-placeholder-val="{{ false }}"><div style="padding:30px 16px;text-align:center;color:var(--legacy-99a398)">За цими параметрами спорядження не знайдено.<button class="rz-kit-reset-filters" type="button" sc-camel-on-click="{{ km.reset }}">Скинути фільтри</button></div></sc-if>
       </div>
     </div>
   </sc-if>

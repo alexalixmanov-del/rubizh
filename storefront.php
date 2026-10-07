@@ -9,7 +9,10 @@ require_once __DIR__.'/shop/settings-lib.php';
 $boot=['kitSlots'=>shopKitSlotPatterns()];$head='';$fallback='';$status=200;
 function storefrontEsc(string $s): string{return htmlspecialchars($s,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');}
 try{
-    $db=db();$boot['categories']=shopCategories($db);
+    $db=db();
+    if(str_starts_with($uri,'/catalog/')&&($redirect=shopTaxonomyRedirect($db,trim(substr($uri,9),'/'),$_GET))!==null){header('Location: '.$redirect,true,301);exit;}
+    $boot['categories']=shopCategories($db);
+    if(shopTaxonomyActive($db))$boot['taxonomyVersion']=shopTaxonomySpec()['version'];
     if(preg_match('~^/product/([a-z0-9-]{1,191})/?$~',$uri,$m)){
         $q=$db->prepare('SELECT * FROM products WHERE visible=1 AND slug=?');$q->execute([$m[1]]);$row=$q->fetch(PDO::FETCH_ASSOC);
         if(!$row){$status=404;$fallback='<h1>Товар не знайдено</h1><p>Товар знято з публікації або адреса змінилася.</p><a href="/catalog">До каталогу</a>';}
@@ -38,7 +41,7 @@ try{
         if(($_GET['inStock'] ?? '')==='1'||($_GET['quick'] ?? '')==='stock')$args['availability']='in';elseif(($_GET['withOrder'] ?? '')==='0')$args['availability']='available';if(($_GET['quick'] ?? '')==='new')$args['sort']='new';
 $boot['catalog']=shopCatalog($db,$args);
         $boot['categoryPath']=[];foreach($boot['categories'] as $c)if($c['url_path']===$category)$boot['categoryPath']=explode(' / ',$c['path']);
-        if($category!=='' && !$boot['categoryPath'])$status=404;
+        if($category!==''&&!$boot['categoryPath']){ $known=shopTaxonomyTarget($db,$category);if($known)$boot['categoryPath']=explode(' / ',$known['path']);else $status=404;}
         $title=$boot['categoryPath']?end($boot['categoryPath']).' — купити в РУБІЖ':'Каталог тактичного спорядження — РУБІЖ';$canonical='https://rubizh.shop/catalog'.($category!==''?'/'.$category:'');if($boot['catalog']['page']>1)$canonical.='?page='.$boot['catalog']['page'];
         $head='<title>'.storefrontEsc($title).'</title><link rel="canonical" href="'.storefrontEsc($canonical).'"><meta name="description" content="'.storefrontEsc($title.' — ціни, розміри та доставка по Україні.').'">';
         if(count($_GET)>0 && array_diff(array_keys($_GET),['page']))$head.='<meta name="robots" content="noindex,follow">';

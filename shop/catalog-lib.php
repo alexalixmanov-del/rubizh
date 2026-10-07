@@ -34,7 +34,9 @@ function shopProduct(PDO $db, array $row, array $photos=[],?array $variantRows=n
             'size_unconfirmed'=>$unconfirmed,'stock'=>isset($extra['stock'])&&is_numeric($extra['stock']) ? max(0,(float)$extra['stock']) : null,
             'availability'=>!$unconfirmed&&shopVariantCanBuy($v)?$v['availability']:'out','lead_time'=>$v['lead_time']?:(!empty($extra['availability_date'])?'Очікується '.$extra['availability_date']:''), 'availability_date'=>$extra['availability_date']??null];
     }
-    return ['id'=>$row['id'],'slug'=>$row['slug'],'name'=>$row['name'],'brand'=>shopBrand($row['brand']),'category'=>$row['category_path'],
+    $taxonomy=shopTaxonomyProduct($db,$row);
+    $data['attributes']=array_replace($taxonomy['derived_attributes']??[],is_array($data['attributes']??null)?$data['attributes']:[]);
+    return ['canonical_category_id'=>$taxonomy['canonical_category_id']??null,'category_url'=>$taxonomy['category_url']??null,'id'=>$row['id'],'slug'=>$row['slug'],'name'=>$row['name'],'brand'=>shopBrand($row['brand']),'category'=>$taxonomy['category']??$row['category_path'],
         'sale_unit'=>shopSaleUnit($data+['name'=>$row['name']]),'description'=>shopDescription((string)($data['description']??$row['description'])),'attributes'=>shopVariantAttributes(shopDescriptionAttributes((string)($data['description']??$row['description']),array_replace(is_array($data['attributes']??null)?$data['attributes']:[],json_decode((string)$row['attributes'],true) ?: [])),$variants,shopSaleUnit($data+['name'=>$row['name']])),
         'price_min'=>($prices=array_column(array_filter($variants,fn($v)=>$v['availability']!=='out'),'price'))?min($prices):($row['price_min']===null?null:(int)$row['price_min']),'availability'=>count(array_filter($variants,fn($v)=>$v['availability']==='in'))?'in':(count(array_filter($variants,fn($v)=>$v['availability']==='order'))?'order':'out'),
         'has_docs'=>(bool)$row['has_docs'],'docs_note'=>(bool)$row['has_docs']?'Протокол випробувань додається до замовлення; до покупки надаємо за запитом':'','photos'=>$photos[$row['id']] ?? [],'variants'=>$variants];
@@ -49,26 +51,46 @@ function shopProductsByIds(PDO $db,array $ids): array {
 }
 // Кеш за версією каталогу: однакові фільтри = однакова відповідь для всіх відвідувачів.
 function shopCatalog(PDO $db,array $input): array {
-    $norm=[];foreach(['category','roots','slot','leaf','q','brands','availability','sizes','camo','attrs','page','sort','price_from','price_to'] as $k)if(isset($input[$k])&&$input[$k]!==''&&is_scalar($input[$k]))$norm[$k]=(string)$input[$k];ksort($norm);
+    if(in_array((string)($input['slot']??''),array_column(shopKitSlotPatterns(),0),true)){require_once __DIR__.'/kit-catalog.php';return shopKitCatalog($db,$input);}
+    $norm=[];foreach(['category','roots','slot','leaf','q','brands','availability','sizes','camo','attrs','page','limit','sort','price_from','price_to'] as $k)if(isset($input[$k])&&$input[$k]!==''&&is_scalar($input[$k]))$norm[$k]=(string)$input[$k];ksort($norm);
     return shopCached('catalog-'.md5(json_encode($norm,JSON_UNESCAPED_UNICODE)),fn()=>shopCatalogBuild($db,$norm),'',['operation'=>'catalog','input'=>$norm]);
 }
+// Classify each product once in PHP. Repeating the slot REGEXP CASE in every
+// variant subquery was expensive on shared hosting, especially for cold filters.
+function shopSizeRequiredProductSql(PDO $db): string {
+    $ids=shopCached('size-required-products',function()use($db){
+        $ids=[];
+        foreach($db->query('SELECT id,name,category_path FROM products WHERE visible=1')->fetchAll(PDO::FETCH_ASSOC) as $p)
+            if(in_array(shopSlot($p),['body','legs','boots'],true)&&!preg_match('/пончо|бахіл|костюм.*маскув/iu',$p['name']))$ids[]=$p['id'];
+        return $ids;
+    },'picker-v1');
+    return $ids?'p.id IN ('.implode(',',array_map(fn($id)=>$db->quote((string)$id),$ids)).')':'0=1';
+}
 function shopCatalogBuild(PDO $db,array $input): array {
-    $where=['p.visible=1'];$args=[];$buyable=shopBuyableSql('av');if($db->query("SELECT v FROM meta WHERE k='hide_unavailable'")->fetchColumn()!=='0')$where[]="EXISTS(SELECT 1 FROM variants av WHERE av.product_id=p.id AND $buyable)";
+    $taxonomyActive=shopTaxonomyActive($db);$GLOBALS['rubizhTaxonomySqlActive']=$taxonomyActive;
+    $sizeRequired=shopSizeRequiredProductSql($db);
+    $where=['p.visible=1'];$args=[];$buyable=shopBuyableSql('av',$sizeRequired);if($db->query("SELECT v FROM meta WHERE k='hide_unavailable'")->fetchColumn()!=='0')$where[]="EXISTS(SELECT 1 FROM variants av WHERE av.product_id=p.id AND $buyable)";
     $category=trim((string)($input['category'] ?? ''),'/');
     if ($category!=='') {
-        $q=$db->prepare('SELECT path FROM categories WHERE url_path=?');$q->execute([$category]);$path=$q->fetchColumn();
-        if (!$path) return ['ok'=>true,'items'=>[],'total'=>0,'page'=>1,'pages'=>0,'facets'=>[]];
-        $where[]='(p.category_path=? OR p.category_path LIKE ?)';$args[]=$path;$args[]=str_replace(['%','_'],['\\%','\\_'],$path).' / %';
+        if($taxonomyActive){
+            $target=shopTaxonomyTarget($db,$category);$path=$target['path']??null;
+            if($target&&$target['status']==='active'){$where[]=shopTaxonomyPredicate($db,$target);foreach($target['filters'] as $k=>$v){$where[]=shopAttributeSql($k).'=?';$args[]=$v;}}
+        }else{
+            $q=$db->prepare('SELECT path FROM categories WHERE url_path=?');$q->execute([$category]);$path=$q->fetchColumn();
+            if($path){$where[]='(p.category_path=? OR p.category_path LIKE ?)';$args[]=$path;$args[]=str_replace(['%','_'],['\\%','\\_'],$path).' / %';}
+        }
+        if(!$path)return ['ok'=>true,'items'=>[],'total'=>0,'page'=>1,'pages'=>0,'facets'=>[]];
     }
-    $roots=json_decode((string)($input['roots'] ?? '[]'),true);if(is_array($roots)&&$roots){$parts=[];foreach(array_slice($roots,0,10) as $root)if(is_string($root)){$parts[]='(p.category_path=? OR p.category_path LIKE ?)';$args[]=$root;$args[]=str_replace(['%','_'],['\\%','\\_'],$root).' / %';}if($parts)$where[]='('.implode(' OR ',$parts).')';}
+    $roots=json_decode((string)($input['roots'] ?? '[]'),true);if(is_array($roots)&&$roots){$parts=[];foreach(array_slice($roots,0,10) as $root)if(is_string($root)){if($taxonomyActive){foreach(shopTaxonomyDefinitions() as $def)if($def['parent_id']===null&&$def['path']===$root&&$def['status']==='active')$parts[]=shopTaxonomyPredicate($db,$def);}else{$parts[]='(p.category_path=? OR p.category_path LIKE ?)';$args[]=$root;$args[]=str_replace(['%','_'],['\\%','\\_'],$root).' / %';}}if($parts)$where[]='('.implode(' OR ',$parts).')';}
     $slot=(string)($input['slot'] ?? '');$slotList=shopKitSlotPatterns();$patterns=array_fill_keys(array_column($slotList,0),true);$legacyPatterns=['gear'=>'^(підсум|чохол|сумк|футляр|холдер|тримач)','med'=>'аптеч|турнікет|джгут|гемостат|бандаж|ifak','small'=>'шкарпет|рукавич|рукавиц|наколін|налокіт','head'=>'шолом|каск|шапк|кепк|панам|бейсбол|балаклав|навушник|баф|окуляр','boots'=>'берц|черевик|кросів|взутт|бахіл','armor'=>'плитоноск|бронежилет|бронеплит|бронепакет|балістичн.*пакет','legs'=>'штани|штанів|брюки|шорти','body'=>'курт|убакс|ubacs|сороч|футбол|поло|термобілиз|термобель|фліс|флис|кофта|худі|софтшел|пончо|костюм'];
     if(isset($patterns[$slot])){
         $where[]=shopKitSlotSql().'=?';$args[]=$slot;$where[]=shopKitPrimarySql($slot);
         // У конструктор потрапляє лише те, що можна додати в кошик: з фото й хоча б одним розміром у наявності.
         $where[]='EXISTS(SELECT 1 FROM photos sph WHERE sph.product_id=p.id)';
-        $where[]='EXISTS(SELECT 1 FROM variants sv WHERE sv.product_id=p.id AND '.shopBuyableSql('sv').')';
+        $where[]='EXISTS(SELECT 1 FROM variants sv WHERE sv.product_id=p.id AND '.shopBuyableSql('sv',$sizeRequired).')';
     }
-    $leaf=trim((string)($input['leaf'] ?? ''));if($leaf!==''){$where[]="SUBSTRING_INDEX(p.category_path,' / ',-1)=?";$args[]=$leaf;}
+    $leafSql=$taxonomyActive?"COALESCE((SELECT cc.display_name_uk FROM rubizh_product_categories pc JOIN rubizh_canonical_categories cc ON cc.category_id=pc.category_id WHERE pc.product_id=p.id AND cc.status='active'),SUBSTRING_INDEX(p.category_path,' / ',-1))":"SUBSTRING_INDEX(p.category_path,' / ',-1)";
+    $leaf=trim((string)($input['leaf'] ?? ''));if($leaf!==''){$where[]="$leafSql=?";$args[]=$leaf;}
     $words=preg_split('/\s+/u',mb_strtolower(mb_substr(str_replace(['берци','Берци'],['берці','Берці'],trim((string)($input['q'] ?? ''))),0,160))) ?: [];
     foreach (array_slice(array_filter($words),0,6) as $word) {
         $where[]='(LOWER(p.name) LIKE ? OR EXISTS(SELECT 1 FROM variants v WHERE v.product_id=p.id AND v.sku LIKE ?))';
@@ -90,7 +112,7 @@ function shopCatalogBuild(PDO $db,array $input): array {
         if(!$skus)$vp[]='0=1';else{$vp[]='v.sku IN ('.implode(',',array_fill(0,count($skus),'?')).')';array_push($args,...$skus);}
     }
     if($camo){$vp[]='v.color IN ('.implode(',',array_fill(0,count($camo),'?')).')';array_push($args,...$camo);}
-    if($vp)$where[]="EXISTS(SELECT 1 FROM variants v WHERE v.product_id=p.id AND (".shopBuyableSql('v').") AND ".implode(' AND ',$vp).')';
+    if($vp)$where[]="EXISTS(SELECT 1 FROM variants v WHERE v.product_id=p.id AND (".shopBuyableSql('v',$sizeRequired).") AND ".implode(' AND ',$vp).')';
     $attrs=json_decode((string)($input['attrs'] ?? '[]'),true) ?: [];$groups=[];
     foreach (array_slice($attrs,0,20) as $a) if (is_string($a) && str_contains($a,"\1")) {[$key,$value]=explode("\1",$a,2);$groups[$key][]=$value;}
     foreach ($groups as $key=>$values) {
@@ -103,17 +125,17 @@ function shopCatalogBuild(PDO $db,array $input): array {
         $where[]="p.price_min $op ?";$args[]=max(0,(int)$input[$key]);
     }
     $sql=implode(' AND ',$where);$q=$db->prepare("SELECT COUNT(*) FROM products p WHERE $sql");$q->execute($args);$total=(int)$q->fetchColumn();
-    $limit=24;$pages=(int)ceil($total/$limit);$page=min(max(1,(int)($input['page'] ?? 1)),max(1,$pages));
+    $limit=max(1,min(100,(int)($input['limit']??24)));$pages=(int)ceil($total/$limit);$page=min(max(1,(int)($input['page'] ?? 1)),max(1,$pages));
     $sort=['cheap'=>'p.price_min ASC,p.id','exp'=>'p.price_min DESC,p.id','new'=>'p.created_at DESC,p.id','name'=>'p.name,p.id'][$input['sort'] ?? ''] ?? "FIELD(p.availability,'in','order','out'),p.updated_at DESC,p.id";
     $q=$db->prepare("SELECT p.* FROM products p WHERE $sql ORDER BY $sort LIMIT $limit OFFSET ".(($page-1)*$limit));$q->execute($args);$rows=$q->fetchAll(PDO::FETCH_ASSOC);
     $photos=product_photos($db,array_column($rows,'id'));$variants=shopVariantRows($db,array_column($rows,'id'));
     $facets=['brands'=>[],'sizes'=>[],'camo'=>[],'attrs'=>[],'leaves'=>[]];
-    foreach(['brands'=>['p.brand','brand'],'camo'=>['v.color','color'],'leaves'=>["SUBSTRING_INDEX(p.category_path,' / ',-1)",'leaf']] as $key=>[$expression,$field]){
-        $q=$db->prepare("SELECT DISTINCT $expression AS value FROM products p JOIN variants v ON v.product_id=p.id WHERE $sql AND ".shopBuyableSql('v')." AND $expression<>'' ORDER BY value LIMIT 500");$q->execute($args);$facets[$key]=$q->fetchAll(PDO::FETCH_COLUMN);
+    foreach(['brands'=>['p.brand','brand'],'camo'=>['v.color','color'],'leaves'=>[$leafSql,'leaf']] as $key=>[$expression,$field]){
+        $q=$db->prepare("SELECT DISTINCT $expression AS value FROM products p JOIN variants v ON v.product_id=p.id WHERE $sql AND ".shopBuyableSql('v',$sizeRequired)." AND $expression<>'' ORDER BY value LIMIT 500");$q->execute($args);$facets[$key]=$q->fetchAll(PDO::FETCH_COLUMN);
     }
     // Normalize sizes once in PHP instead of repeating a deeply nested REGEXP/JSON CASE
     // for every facet in MySQL. Filter predicates still use the same canonical sizes.
-    $q=$db->prepare("SELECT DISTINCT p.name,p.category_path,v.size,".shopNativeSizeSql()." AS size_native FROM products p JOIN variants v ON v.product_id=p.id WHERE $sql AND ".shopBuyableSql('v'));
+    $q=$db->prepare("SELECT DISTINCT p.name,p.category_path,v.size,".shopNativeSizeSql()." AS size_native FROM products p JOIN variants v ON v.product_id=p.id WHERE $sql AND ".shopBuyableSql('v',$sizeRequired));
     $q->execute($args);$facets=array_replace($facets,shopSizeFacets($q->fetchAll(PDO::FETCH_ASSOC)));
     if($category!==''){foreach(shopFilterKeys((string)($path??$category)) as $key){$expr=shopAttributeSql($key);$q=$db->prepare("SELECT DISTINCT $expr AS value FROM products p WHERE $sql AND $expr<>'' ORDER BY value LIMIT 50");$q->execute($args);$values=$q->fetchAll(PDO::FETCH_COLUMN);$values=array_values(array_unique(array_filter(array_map(fn($v)=>$key==='Матеріал'?shopMaterial((string)$v):($key==='Капюшон'?shopHood((string)$v):(string)$v),$values))));if(count($values)>1)$facets['attrs'][$key]=$values;}}
     $facets['brands']=array_values(array_unique(array_filter(array_map('shopBrand',$facets['brands']))));
@@ -124,8 +146,9 @@ function shopCatalogBuild(PDO $db,array $input): array {
 
 // Було: окремий підзапит COUNT на кожну з ~233 категорій для кожного відвідувача. Тепер — один GROUP BY + кеш.
 function shopCategories(PDO $db): array {
+ if(shopTaxonomyActive($db))return shopCached('canonical-categories',fn()=>shopTaxonomyCategories($db),'',['operation'=>'categories']);
  return shopCached('categories',function()use($db){
-  $filter=$db->query("SELECT v FROM meta WHERE k='hide_unavailable'")->fetchColumn()!=='0'?" AND EXISTS(SELECT 1 FROM variants av WHERE av.product_id=p.id AND ".shopBuyableSql('av').")":'';
+  $filter=$db->query("SELECT v FROM meta WHERE k='hide_unavailable'")->fetchColumn()!=='0'?" AND EXISTS(SELECT 1 FROM variants av WHERE av.product_id=p.id AND ".shopBuyableSql('av',shopSizeRequiredProductSql($db)).")":'';
   $count=[];
   foreach($db->query("SELECT p.category_path AS path,COUNT(*) AS n FROM products p WHERE p.visible=1 $filter GROUP BY p.category_path")->fetchAll(PDO::FETCH_ASSOC) as $r){
    $parts=explode(' / ',(string)$r['path']);for($k=1;$k<=count($parts);$k++){$pp=implode(' / ',array_slice($parts,0,$k));$count[$pp]=($count[$pp]??0)+(int)$r['n'];}

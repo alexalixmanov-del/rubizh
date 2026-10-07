@@ -8,7 +8,8 @@ if(!$lock||!flock($lock,LOCK_EX|LOCK_NB))exit;
 try {
     $db=db();$started=microtime(true);$built=0;$failed=0;
     // Prewarm shared entry points after imports, without any visitor waiting.
-    foreach([['operation'=>'categories'],['operation'=>'storefront'],['operation'=>'catalog','input'=>[]]] as $job)shopCacheQueue('warm-'.$job['operation'],$job);
+    foreach([['operation'=>'categories'],['operation'=>'storefront'],['operation'=>'catalog','input'=>[]],['operation'=>'catalog','input'=>['page'=>'1','sort'=>'pop','availability'=>'available']]] as $job)shopCacheQueue('warm-'.$job['operation'].'-'.md5(json_encode($job)),$job);
+    foreach(array_unique(array_column(shopKitSlotPatterns(),0)) as $slot)shopCacheQueue('warm-kit-'.$slot,['operation'=>'kit-slot','slot'=>$slot]);
     $files=glob(shopCacheDir().'/refresh-*.json')?:[];
     usort($files,fn($a,$b)=>filemtime($a)<=>filemtime($b));
     foreach($files as $file){
@@ -18,6 +19,7 @@ try {
             switch($job['operation']??''){
                 case 'categories':shopCategories($db);break;
                 case 'storefront':shopStorefront($db);break;
+                case 'kit-slot':require_once __DIR__.'/kit-catalog.php';shopKitCatalogBase($db,(string)$job['slot']);break;
                 case 'catalog':shopCatalog($db,is_array($job['input']??null)?$job['input']:[]);break;
                 default:throw new RuntimeException('Unknown cache job');
             }

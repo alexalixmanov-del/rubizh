@@ -77,7 +77,8 @@ test('Catalog API recovers native/database size labels and marks blank clothing 
   $row=['id'=>'fixture','slug'=>'fixture','name'=>'Тактичні штани','brand'=>'','category_path'=>'Одяг та форма / Штани','data'=>'{}','description'=>'','attributes'=>'{}','price_min'=>100,'has_docs'=>0];
   $v=['sku'=>'fixture','size'=>'','color'=>'','price'=>100,'kit_price'=>null,'availability'=>'in','lead_time'=>'','data'=>'{}'];
   $variants=[array_replace($v,['sku'=>'native','data'=>json_encode(['size_display'=>'   ','size_native'=>': L'])]),array_replace($v,['sku'=>'stored','size'=>'M','data'=>json_encode(['size_display'=>'','size_native'=>''])]),array_replace($v,['sku'=>'missing'])];
-  echo json_encode(shopProduct(new FixturePDO,$row,[],$variants)['variants']);`;
+  $db=new FixturePDO;$GLOBALS['rubizhTaxonomyActive'][spl_object_id($db)]=false;
+  echo json_encode(shopProduct($db,$row,[],$variants)['variants']);`;
   const result=spawnSync(php,['-n','-d','error_reporting=24575','-d','extension='+extensions+'pdo.so','-d','extension='+extensions+'mbstring.so','-r',source],{encoding:'utf8',env:{...process.env,LD_LIBRARY_PATH:'/workspace/php-runtime/root/usr/lib/x86_64-linux-gnu'}});
   assert.equal(result.status,0,result.stderr);const [native,stored,missing]=JSON.parse(result.stdout);
   assert.equal(native.size_display,'L');assert.equal(native.size_native,'L');assert.equal(native.availability,'in');

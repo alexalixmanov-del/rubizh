@@ -241,7 +241,7 @@ test('Kit colour filters with no matches remain responsive and all-category link
   await loaded(page,'/kit');await kitSlot(page,'Тіло').getByRole('button',{name:'Обрати спорядження'}).click();
   await page.locator('.rz-kit-modal-card').first().waitFor();
   await page.locator('.rz-kit-modal-head').getByRole('button',{name:'Олива',exact:true}).click();
-  await page.getByText('Нічого не знайшли. Приберіть частину фільтрів.',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Скинути фільтри',exact:true}).waitFor();
   await page.locator('.rz-kit-modal-head>div').last().getByRole('button',{name:'Усі',exact:true}).click();
   await page.locator('.rz-kit-modal-card').first().waitFor();await page.keyboard.press('Escape');
   await loaded(page,'/categories');await page.locator('.rz-directory-card').first().waitFor();

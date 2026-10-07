@@ -1,0 +1,241 @@
+﻿old_path;category_id;decision;direct_products;new_url;filters
+Одяг та форма;clothing;keep;0;/catalog/odiah-ta-forma;[]
+Одяг та форма / Аксесуари одягу;clothing;resolve_products;0;/catalog/odiah-ta-forma;[]
+Одяг та форма / Аксесуари одягу / Головні убори;clothing;split_by_product_type;10;/catalog/odiah-ta-forma;[]
+Одяг та форма / Аксесуари одягу / Тактичні рукавички;clothing_gloves;merge;61;/catalog/odiah-ta-forma/taktychni-rukavychky;[]
+Одяг та форма / Жіночий одяг;clothing;resolve_products;0;/catalog/odiah-ta-forma;"{""Стать"": ""Жіноча""}"
+Одяг та форма / Жіночий одяг / Тактичні штани;clothing_pants;to_filters;1;/catalog/odiah-ta-forma/shtany;"{""Стать"": ""Жіноча""}"
+Одяг та форма / Жіночий одяг / Убакси та бойові сорочки;clothing_combat_shirts;to_filters;1;/catalog/odiah-ta-forma/ubaksy-ta-boiovi-sorochky;"{""Стать"": ""Жіноча""}"
+Одяг та форма / Чоловічий одяг;clothing;resolve_products;0;/catalog/odiah-ta-forma;"{""Стать"": ""Чоловіча""}"
+Одяг та форма / Чоловічий одяг / Куртки та вітровки;clothing;split_by_product_type;56;/catalog/odiah-ta-forma;"{""Стать"": ""Чоловіча""}"
+Одяг та форма / Чоловічий одяг / Тактичні шорти;clothing_shorts;to_filters;14;/catalog/odiah-ta-forma/shorty;"{""Стать"": ""Чоловіча""}"
+Одяг та форма / Чоловічий одяг / Тактичні штани;clothing;split_by_product_type;93;/catalog/odiah-ta-forma;"{""Стать"": ""Чоловіча""}"
+Одяг та форма / Чоловічий одяг / Термобілизна;clothing_thermal;to_filters;13;/catalog/odiah-ta-forma/termobilyzna;"{""Стать"": ""Чоловіча""}"
+Одяг та форма / Чоловічий одяг / Убакси та бойові сорочки;clothing_combat_shirts;to_filters;14;/catalog/odiah-ta-forma/ubaksy-ta-boiovi-sorochky;"{""Стать"": ""Чоловіча""}"
+Одяг та форма / Чоловічий одяг / Фліс, кофти та худі;clothing;split_by_product_type;31;/catalog/odiah-ta-forma;"{""Стать"": ""Чоловіча""}"
+Одяг та форма / Чоловічий одяг / Формені комплекти та костюми;clothing;split_by_product_type;22;/catalog/odiah-ta-forma;"{""Стать"": ""Чоловіча""}"
+Одяг та форма / Чоловічий одяг / Футболки та поло;clothing;split_by_product_type;60;/catalog/odiah-ta-forma;"{""Стать"": ""Чоловіча""}"
+Одяг та форма / Чоловічий одяг / Светри та гольфи;clothing_sweaters;to_filters;2;/catalog/odiah-ta-forma/svetry-ta-holfy;"{""Стать"": ""Чоловіча""}"
+Одяг та форма / Чоловічий одяг / Інший формений одяг;clothing_costumes;to_filters;2;/catalog/odiah-ta-forma/taktychni-kostiumy;"{""Стать"": ""Чоловіча""}"
+Взуття;footwear;keep;0;/catalog/vzuttia;[]
+Взуття / Тактичне взуття;footwear;resolve_products;0;/catalog/vzuttia;[]
+Взуття / Тактичне взуття / Взуття;footwear;split_by_product_type;34;/catalog/vzuttia;[]
+Взуття / Тактичне взуття / Берці;footwear;split_by_product_type;49;/catalog/vzuttia;[]
+Взуття / Шкарпетки та аксесуари;footwear_socks;merge;0;/catalog/vzuttia/shkarpetky;[]
+Взуття / Шкарпетки та аксесуари / Тактичні шкарпетки;footwear_socks;merge;28;/catalog/vzuttia/shkarpetky;[]
+Бронезахист;armor;keep;0;/catalog/bronezakhyst;[]
+Бронезахист / Бронежилети;armor_vests;merge;0;/catalog/bronezakhyst/bronezhylety;[]
+Бронезахист / Бронежилети / Бронежилети;armor;split_by_product_type;21;/catalog/bronezakhyst;[]
+Бронезахист / Бронекомплекти;armor_sets;merge;0;/catalog/bronezakhyst/komplekty-bronezakhystu;[]
+Бронезахист / Бронекомплекти / 1 клас захисту;armor;split_by_product_type;32;/catalog/bronezakhyst;"{""Клас захисту"": ""1""}"
+Бронезахист / Бронекомплекти / 2 клас захисту;armor;split_by_product_type;27;/catalog/bronezakhyst;"{""Клас захисту"": ""2""}"
+Бронезахист / Бронеплити;armor_plates;merge;0;/catalog/bronezakhyst/broneplyty;[]
+Бронезахист / Бронеплити / Бронеплити;armor_plates;merge;30;/catalog/bronezakhyst/broneplyty;[]
+Бронезахист / М'які балістичні пакети;armor_soft;merge;15;/catalog/bronezakhyst/m-iaki-balistychni-pakety;[]
+Бронезахист / М'які балістичні пакети / 1 клас захисту;armor_soft;to_filters;18;/catalog/bronezakhyst/m-iaki-balistychni-pakety;"{""Клас захисту"": ""1""}"
+Бронезахист / М'які балістичні пакети / 2 клас захисту;armor;split_by_product_type;16;/catalog/bronezakhyst;"{""Клас захисту"": ""2""}"
+Бронезахист / Плитоноски;armor_carriers;merge;0;/catalog/bronezakhyst/plytonosky;[]
+Бронезахист / Плитоноски / Комплекти плитоносок;armor;split_by_product_type;16;/catalog/bronezakhyst;[]
+Бронезахист / Плитоноски / Плитоноски;armor;split_by_product_type;28;/catalog/bronezakhyst;[]
+Шоломи та захист голови;helmets;keep;0;/catalog/sholomy-ta-zakhyst-holovy;[]
+Шоломи та захист голови / Аксесуари;helmets_accessories;merge;0;/catalog/sholomy-ta-zakhyst-holovy/aksesuary-dlia-sholomiv;[]
+Шоломи та захист голови / Аксесуари / Інші аксесуари;helmets_ballistic;merge;6;/catalog/sholomy-ta-zakhyst-holovy/balistychni-sholomy;[]
+Шоломи та захист голови / Аксесуари / Кавери на шоломи;helmets_covers;merge;9;/catalog/sholomy-ta-zakhyst-holovy/kavery;[]
+Шоломи та захист голови / Аксесуари / Кріплення для навушників;helmets_mounts;merge;5;/catalog/sholomy-ta-zakhyst-holovy/kriplennia;[]
+Шоломи та захист голови / Аксесуари / Підвісні системи та подушки;helmets;split_by_product_type;8;/catalog/sholomy-ta-zakhyst-holovy;[]
+Шоломи та захист голови / Шоломи;helmets;split_by_product_type;16;/catalog/sholomy-ta-zakhyst-holovy;[]
+Шоломи та захист голови / Шоломи / FAST;helmets;split_by_product_type;17;/catalog/sholomy-ta-zakhyst-holovy;"{""Форм-фактор"": ""FAST""}"
+Шоломи та захист голови / Шоломи / MICH;helmets_ballistic;to_filters;9;/catalog/sholomy-ta-zakhyst-holovy/balistychni-sholomy;"{""Форм-фактор"": ""MICH""}"
+Шоломи та захист голови / Шоломи / Комплекти шоломів;helmets;split_by_product_type;4;/catalog/sholomy-ta-zakhyst-holovy;[]
+Тактичний зв'язок та слух;communications;keep;0;/catalog/taktychnyi-zv-iazok-ta-slukh;[]
+Тактичний зв'язок та слух / Активні навушники;communications;split_by_product_type;14;/catalog/taktychnyi-zv-iazok-ta-slukh;[]
+Тактичний зв'язок та слух / Активні навушники / EARMOR;communications_headphones;to_filters;3;/catalog/taktychnyi-zv-iazok-ta-slukh/aktyvni-navushnyky;"{""Бренд"": ""EARMOR""}"
+Тактичний зв'язок та слух / Активні навушники / Walker's;communications_headphones;to_filters;2;/catalog/taktychnyi-zv-iazok-ta-slukh/aktyvni-navushnyky;"{""Бренд"": ""Walker's""}"
+Тактичний зв'язок та слух / Радіозв'язок;communications_radios;merge;0;/catalog/taktychnyi-zv-iazok-ta-slukh/ratsii;[]
+Тактичний зв'язок та слух / Радіозв'язок / Аксесуари для рацій;communications_accessories;merge;2;/catalog/taktychnyi-zv-iazok-ta-slukh/aksesuary-dlia-ratsii;[]
+Рюкзаки, сумки та баули;bags;keep;0;/catalog/riukzaky-sumky-ta-bauly;[]
+Рюкзаки, сумки та баули / Рюкзаки;bags;split_by_product_type;9;/catalog/riukzaky-sumky-ta-bauly;[]
+Рюкзаки, сумки та баули / Рюкзаки / Гідратори та рюкзаки-гідратори;bags_hydration;merge;4;/catalog/riukzaky-sumky-ta-bauly/hidratory;[]
+Рюкзаки, сумки та баули / Рюкзаки / Тактичні рюкзаки;bags;split_by_product_type;20;/catalog/riukzaky-sumky-ta-bauly;[]
+Рюкзаки, сумки та баули / Рюкзаки / Штурмові рюкзаки;bags_assault;merge;1;/catalog/riukzaky-sumky-ta-bauly/shturmovi-riukzaky;[]
+Рюкзаки, сумки та баули / Сумки;bags;resolve_products;0;/catalog/riukzaky-sumky-ta-bauly;[]
+Рюкзаки, сумки та баули / Сумки / Баули та транспортні сумки;bags;split_by_product_type;9;/catalog/riukzaky-sumky-ta-bauly;[]
+Рюкзаки, сумки та баули / Сумки / Сумки для шоломів;bags_tactical_bags;merge;2;/catalog/riukzaky-sumky-ta-bauly/taktychni-sumky;[]
+Рюкзаки, сумки та баули / Сумки / Через плече та бананки;bags;split_by_product_type;11;/catalog/riukzaky-sumky-ta-bauly;[]
+Підсумки;pouches;keep;0;/catalog/pidsumky;[]
+Підсумки / Бойові підсумки;pouches;resolve_products;0;/catalog/pidsumky;[]
+Підсумки / Бойові підсумки / Для гранат;pouches_grenades;merge;11;/catalog/pidsumky/dlia-hranat;[]
+Підсумки / Бойові підсумки / Для магазинів;pouches_magazines;merge;15;/catalog/pidsumky/dlia-mahazyniv;[]
+Підсумки / Бойові підсумки / Скидання магазинів;pouches_dump;merge;7;/catalog/pidsumky/skydannia-mahazyniv;[]
+Підсумки / Медичні підсумки;pouches_ifak;merge;0;/catalog/pidsumky/medychni-ifak;[]
+Підсумки / Медичні підсумки / Аптечки IFAK;pouches;split_by_product_type;8;/catalog/pidsumky;[]
+Підсумки / Медичні підсумки / Для турнікету;pouches_tourniquets;merge;7;/catalog/pidsumky/dlia-turniketiv;[]
+Підсумки / Нагрудні та напашні;pouches_dangler;merge;0;/catalog/pidsumky/napashni-sumky;[]
+Підсумки / Нагрудні та напашні / Напашні сумки;pouches_dangler;merge;9;/catalog/pidsumky/napashni-sumky;[]
+Підсумки / Панелі та платформи;pouches_panels;merge;0;/catalog/pidsumky/paneli-ta-platformy;[]
+Підсумки / Панелі та платформи / Панелі для плитоносок;pouches_magazines;merge;2;/catalog/pidsumky/dlia-mahazyniv;[]
+Підсумки / Спеціальні підсумки;pouches;resolve_products;0;/catalog/pidsumky;[]
+Підсумки / Спеціальні підсумки / Для навушників;pouches_other;merge;4;/catalog/pidsumky/inshi-pidsumky;[]
+Підсумки / Спеціальні підсумки / Для рацій;pouches_radios;merge;2;/catalog/pidsumky/dlia-ratsii;[]
+Підсумки / Утилітарні;pouches_utility;merge;0;/catalog/pidsumky/utylitarni;[]
+Підсумки / Утилітарні / Утилітарні підсумки;pouches;split_by_product_type;7;/catalog/pidsumky;[]
+Підсумки / Утилітарні / MOLLE-органайзери;pouches_utility;merge;1;/catalog/pidsumky/utylitarni;[]
+РПС та розвантаження;load_bearing;keep;0;/catalog/rps-ta-rozvantazhennia;[]
+РПС та розвантаження / Комплекти;load_bearing;resolve_products;0;/catalog/rps-ta-rozvantazhennia;[]
+РПС та розвантаження / Комплекти / Комплекти РПС;load_bearing_rps;merge;1;/catalog/rps-ta-rozvantazhennia/rps;[]
+РПС та розвантаження / Компоненти;load_bearing_components;merge;0;/catalog/rps-ta-rozvantazhennia/komponenty-ta-aksesuary;[]
+РПС та розвантаження / Компоненти / Пояси;load_bearing_rps;merge;4;/catalog/rps-ta-rozvantazhennia/rps;[]
+РПС та розвантаження / Системи;load_bearing_systems;merge;0;/catalog/rps-ta-rozvantazhennia/rozvantazhuvalni-systemy;[]
+РПС та розвантаження / Системи / Ремінно-плечові системи;load_bearing;split_by_product_type;20;/catalog/rps-ta-rozvantazhennia;[]
+Захист колін та ліктів;limb_protection;keep;0;/catalog/zakhyst-kolin-ta-liktiv;[]
+Захист колін та ліктів / Комплекти;limb_protection_sets;merge;0;/catalog/zakhyst-kolin-ta-liktiv/komplekty;[]
+Захист колін та ліктів / Комплекти / Наколінники + налокітники;limb_protection_sets;merge;3;/catalog/zakhyst-kolin-ta-liktiv/komplekty;[]
+Захист колін та ліктів / Наколінники;limb_protection_knees;merge;0;/catalog/zakhyst-kolin-ta-liktiv/nakolinnyky;[]
+Захист колін та ліктів / Наколінники / Наколінники;limb_protection;split_by_product_type;7;/catalog/zakhyst-kolin-ta-liktiv;[]
+Захист колін та ліктів / Налокітники;limb_protection_elbows;merge;0;/catalog/zakhyst-kolin-ta-liktiv/nalokitnyky;[]
+Захист колін та ліктів / Налокітники / Налокітники;limb_protection_elbows;merge;4;/catalog/zakhyst-kolin-ta-liktiv/nalokitnyky;[]
+Тактична медицина;medical;keep;0;/catalog/taktychna-medytsyna;[]
+Тактична медицина / Кровоспинні засоби;medical;resolve_products;0;/catalog/taktychna-medytsyna;[]
+Тактична медицина / Кровоспинні засоби / Турнікети, джгути та гемостатики;medical;split_by_product_type;6;/catalog/taktychna-medytsyna;[]
+Маскування;camouflage;keep;0;/catalog/maskuvannia;[]
+Маскування / Антидронові сітки;camouflage_antidrone;merge;0;/catalog/maskuvannia/antydronovi-sitky;[]
+Маскування / Антидронові сітки / Для доріг і техніки;camouflage_antidrone;merge;90;/catalog/maskuvannia/antydronovi-sitky;[]
+Маскування / Маскувальні сітки Militex;camouflage_nets;to_filters;0;/catalog/maskuvannia/maskuvalni-sitky;"{""Бренд"": ""Militex""}"
+Маскування / Маскувальні сітки Militex / Альпійська клякса;camouflage_nets;to_filters;17;/catalog/maskuvannia/maskuvalni-sitky;"{""Бренд"": ""Militex"", ""Камуфляж"": ""Альпійська клякса""}"
+Маскування / Маскувальні сітки Militex / Дубове листя;camouflage_nets;to_filters;17;/catalog/maskuvannia/maskuvalni-sitky;"{""Бренд"": ""Militex"", ""Камуфляж"": ""Дубове листя""}"
+Маскування / Маскувальні сітки Militex / З основою зимовий мультикам;camouflage_nets;to_filters;17;/catalog/maskuvannia/maskuvalni-sitky;"{""Сезон"": ""Зима"", ""Бренд"": ""Militex"", ""Камуфляж"": ""зимовий мультикам"", ""Основа сітки"": ""З основою""}"
+Маскування / Маскувальні сітки Militex / З основою мультикам;camouflage_nets;to_filters;17;/catalog/maskuvannia/maskuvalni-sitky;"{""Бренд"": ""Militex"", ""Камуфляж"": ""мультикам"", ""Основа сітки"": ""З основою""}"
+Маскування / Маскувальні сітки Militex / Зимовий мультикам;camouflage_nets;to_filters;17;/catalog/maskuvannia/maskuvalni-sitky;"{""Сезон"": ""Зима"", ""Бренд"": ""Militex"", ""Камуфляж"": ""Зимовий мультикам""}"
+Маскування / Маскувальні сітки Militex / Камуфляж;camouflage_nets;to_filters;5;/catalog/maskuvannia/maskuvalni-sitky;"{""Бренд"": ""Militex"", ""Камуфляж"": ""Камуфляж""}"
+Маскування / Маскувальні сітки Militex / Листя осінь;camouflage_nets;to_filters;17;/catalog/maskuvannia/maskuvalni-sitky;"{""Бренд"": ""Militex"", ""Камуфляж"": ""Листя осінь""}"
+Маскування / Маскувальні сітки Militex / Мультикам;camouflage_nets;to_filters;8;/catalog/maskuvannia/maskuvalni-sitky;"{""Бренд"": ""Militex"", ""Камуфляж"": ""Мультикам""}"
+Маскування / Маскувальні сітки Militex / Мультикам бруд;camouflage_nets;to_filters;17;/catalog/maskuvannia/maskuvalni-sitky;"{""Бренд"": ""Militex"", ""Камуфляж"": ""Мультикам бруд""}"
+Маскування / Маскувальні сітки Militex / Піксель;camouflage_nets;to_filters;7;/catalog/maskuvannia/maskuvalni-sitky;"{""Бренд"": ""Militex"", ""Камуфляж"": ""Піксель""}"
+Туризм та польове спорядження;field;keep;0;/catalog/turyzm-ta-polove-sporiadzhennia;[]
+Туризм та польове спорядження / Інше;field;resolve_products;0;/catalog/turyzm-ta-polove-sporiadzhennia;[]
+Туризм та польове спорядження / Інше / Польове спорядження;field_other;merge;3;/catalog/turyzm-ta-polove-sporiadzhennia/inshe-polove-sporiadzhennia;[]
+Туризм та польове спорядження / Каремати та сидушки;field_mats;merge;0;/catalog/turyzm-ta-polove-sporiadzhennia/karematy;[]
+Туризм та польове спорядження / Каремати та сидушки / Розкладні каремати;field_mats;merge;3;/catalog/turyzm-ta-polove-sporiadzhennia/karematy;[]
+Туризм та польове спорядження / Каремати та сидушки / Тактичні сидушки;field;split_by_product_type;18;/catalog/turyzm-ta-polove-sporiadzhennia;[]
+Туризм та польове спорядження / Каремати та сидушки / Туристичні каремати;field;split_by_product_type;5;/catalog/turyzm-ta-polove-sporiadzhennia;[]
+Туризм та польове спорядження / Сон;field;resolve_products;0;/catalog/turyzm-ta-polove-sporiadzhennia;[]
+Туризм та польове спорядження / Сон / Спальні мішки;field;split_by_product_type;29;/catalog/turyzm-ta-polove-sporiadzhennia;[]
+Електроніка та спостереження;electronics;keep;0;/catalog/elektronika-ta-sposterezhennia;[]
+Електроніка та спостереження / Екшн-камери;electronics_cameras;merge;0;/catalog/elektronika-ta-sposterezhennia/ekshn-kamery;[]
+Електроніка та спостереження / Екшн-камери / Екшн-камери;electronics_cameras;merge;5;/catalog/elektronika-ta-sposterezhennia/ekshn-kamery;[]
+Електроніка та спостереження / Кріплення;electronics_mounts;merge;0;/catalog/elektronika-ta-sposterezhennia/kriplennia;[]
+Електроніка та спостереження / Кріплення / Для ПНБ та тепловізорів;electronics_mounts;merge;20;/catalog/elektronika-ta-sposterezhennia/kriplennia;[]
+Освітлення;lighting;keep;0;/catalog/osvitlennia;[]
+Освітлення / Ліхтарі та аксесуари;lighting_accessories;merge;0;/catalog/osvitlennia/aksesuary-ta-kriplennia;[]
+Освітлення / Ліхтарі та аксесуари / Ліхтарі та аксесуари;lighting;split_by_product_type;5;/catalog/osvitlennia;[]
+Автономне живлення;power;keep;0;/catalog/avtonomne-zhyvlennia;[]
+Автономне живлення / Аксесуари;power_accessories;merge;0;/catalog/avtonomne-zhyvlennia/aksesuary-zhyvlennia;[]
+Автономне живлення / Аксесуари / Аксесуари живлення;power;split_by_product_type;3;/catalog/avtonomne-zhyvlennia;[]
+Автономне живлення / Зарядні станції;power_stations;merge;0;/catalog/avtonomne-zhyvlennia/zariadni-stantsii;[]
+Автономне живлення / Зарядні станції / Портативні зарядні станції;power_stations;merge;6;/catalog/avtonomne-zhyvlennia/zariadni-stantsii;[]
+Автономне живлення / Сонячна енергія;power;resolve_products;0;/catalog/avtonomne-zhyvlennia;[]
+Автономне живлення / Сонячна енергія / Сонячні панелі;power_solar;merge;1;/catalog/avtonomne-zhyvlennia/soniachni-paneli;[]
+Збройові аксесуари;weapon_accessories;keep;0;/catalog/zbroiovi-aksesuary;[]
+Збройові аксесуари / Інше;weapon_accessories;split_by_product_type;2;/catalog/zbroiovi-aksesuary;[]
+Збройові аксесуари / Інше / Інші аксесуари;weapon_accessories_other;merge;6;/catalog/zbroiovi-aksesuary/inshi-aksesuary;[]
+Збройові аксесуари / Догляд;weapon_accessories_cleaning;merge;0;/catalog/zbroiovi-aksesuary/dohliad-ta-chyshchennia;[]
+Збройові аксесуари / Магазини;weapon_accessories_magazines;merge;0;/catalog/zbroiovi-aksesuary/mahazyny;[]
+Збройові аксесуари / Магазини / Для АК та AR-15;weapon_accessories_magazines;merge;7;/catalog/zbroiovi-aksesuary/mahazyny;[]
+Збройові аксесуари / Ремені;weapon_accessories_slings;merge;0;/catalog/zbroiovi-aksesuary/remeni-dlia-zbroi;[]
+Збройові аксесуари / Ремені / Ремені для зброї;weapon_accessories_slings;merge;5;/catalog/zbroiovi-aksesuary/remeni-dlia-zbroi;[]
+Збройові аксесуари / Ремені / Одноточкові ремені;weapon_accessories_slings;merge;4;/catalog/zbroiovi-aksesuary/remeni-dlia-zbroi;[]
+Збройові аксесуари / Ремені / Двоточкові ремені;weapon_accessories_slings;merge;15;/catalog/zbroiovi-aksesuary/remeni-dlia-zbroi;[]
+Збройові аксесуари / Ремені / Трьохточкові ремені;weapon_accessories_slings;merge;5;/catalog/zbroiovi-aksesuary/remeni-dlia-zbroi;[]
+Захист очей та обличчя;eye_protection;keep;0;/catalog/zakhyst-ochei-ta-oblychchia;[]
+Захист очей та обличчя / Окуляри;eye_protection_glasses;merge;0;/catalog/zakhyst-ochei-ta-oblychchia/taktychni-okuliary;[]
+Захист очей та обличчя / Окуляри / Тактичні окуляри;eye_protection_glasses;merge;7;/catalog/zakhyst-ochei-ta-oblychchia/taktychni-okuliary;[]
+Одяг та форма / Чоловічий одяг / Жилети;clothing_vests;to_filters;3;/catalog/odiah-ta-forma/zhylety;"{""Стать"": ""Чоловіча""}"
+Одяг та форма / Аксесуари одягу / Балаклави та бафи;clothing_balaclavas;merge;2;/catalog/odiah-ta-forma/balaklavy-ta-bafy;[]
+Одяг та форма / Аксесуари одягу / Тактичні ремені;clothing_belts;merge;5;/catalog/odiah-ta-forma/remeni;[]
+Одяг та форма / Аксесуари одягу / Ремені та портупеї;clothing_belts;merge;4;/catalog/odiah-ta-forma/remeni;[]
+Взуття / Тактичне взуття / Літнє взуття;footwear_boots;resolve_products;1;/catalog/vzuttia/bertsi;"{""Сезон"": ""Літо""}"
+Взуття / Тактичне взуття / Тактичні кросівки;footwear_sneakers;merge;37;/catalog/vzuttia/taktychni-krosivky;[]
+Взуття / Тактичне взуття / Черевики;footwear_shoes;merge;6;/catalog/vzuttia/taktychni-cherevyky;[]
+Бронезахист / Плитоноски / Аксесуари для плитоносок;armor_accessories;merge;2;/catalog/bronezakhyst/aksesuary-dlia-bronezakhystu;[]
+Шоломи та захист голови / Аксесуари / Рейки та планки;helmets_rails;merge;2;/catalog/sholomy-ta-zakhyst-holovy/reiky-ta-planky;[]
+Тактичний зв'язок та слух / Радіозв'язок / PTT-кнопки;communications_ptt;merge;2;/catalog/taktychnyi-zv-iazok-ta-slukh/ptt;[]
+Тактичний зв'язок та слух / Радіозв'язок / Антени;communications_antennas;merge;1;/catalog/taktychnyi-zv-iazok-ta-slukh/anteny;[]
+Рюкзаки, сумки та баули / Сумки / Органайзери;bags_organizers;merge;2;/catalog/riukzaky-sumky-ta-bauly/orhanaizery;[]
+Рюкзаки, сумки та баули / Сумки / Тактичні сумки;bags;split_by_product_type;5;/catalog/riukzaky-sumky-ta-bauly;[]
+Рюкзаки, сумки та баули / Сумки / Поясні сумки та органайзери;bags;split_by_product_type;3;/catalog/riukzaky-sumky-ta-bauly;[]
+Підсумки / Спеціальні підсумки / Для телефону;pouches_phone;merge;2;/catalog/pidsumky/dlia-telefonu;[]
+Підсумки / Спеціальні підсумки / Для планшетів;pouches_other;merge;3;/catalog/pidsumky/inshi-pidsumky;[]
+РПС та розвантаження / Компоненти / Тактичні та розвантажувальні ремені;load_bearing_belts;merge;5;/catalog/rps-ta-rozvantazhennia/boiovi-poiasy;[]
+Маскування / Маскувальні костюми;camouflage_suits;merge;3;/catalog/maskuvannia/maskuvalni-kostiumy;[]
+Маскування / Маскувальні костюми / Сітчасті та сезонні костюми;camouflage_suits;merge;2;/catalog/maskuvannia/maskuvalni-kostiumy;[]
+Маскування / Маскувальні матеріали;camouflage_materials;merge;0;/catalog/maskuvannia/maskuvalni-materialy;[]
+Маскування / Маскувальні матеріали / Стрічки та тканини;camouflage_materials;merge;1;/catalog/maskuvannia/maskuvalni-materialy;[]
+Туризм та польове спорядження / Сон / Каремати;field;split_by_product_type;6;/catalog/turyzm-ta-polove-sporiadzhennia;[]
+Туризм та польове спорядження / Посуд та харчування;field;resolve_products;0;/catalog/turyzm-ta-polove-sporiadzhennia;[]
+Туризм та польове спорядження / Посуд та харчування / Термоси;field_thermos;merge;1;/catalog/turyzm-ta-polove-sporiadzhennia/termosy;[]
+Туризм та польове спорядження / Посуд та харчування / Польовий посуд;field_cookware;merge;1;/catalog/turyzm-ta-polove-sporiadzhennia/polovyi-posud;[]
+Туризм та польове спорядження / Вогонь та обігрів;field;resolve_products;0;/catalog/turyzm-ta-polove-sporiadzhennia;[]
+Туризм та польове спорядження / Вогонь та обігрів / Пальники;field_burners;merge;2;/catalog/turyzm-ta-polove-sporiadzhennia/palnyky;[]
+Електроніка та спостереження / Оптика;electronics;resolve_products;0;/catalog/elektronika-ta-sposterezhennia;[]
+Електроніка та спостереження / Оптика / Монокуляри;electronics_mounts;merge;1;/catalog/elektronika-ta-sposterezhennia/kriplennia;[]
+Освітлення / Ліхтарі та аксесуари / Ручні ліхтарі;lighting_tactical;merge;1;/catalog/osvitlennia/taktychni-likhtari;[]
+Автономне живлення / Павербанки;power_banks;merge;1;/catalog/avtonomne-zhyvlennia/paverbanky;[]
+Автономне живлення / Акумулятори та батарейки;power;split_by_product_type;9;/catalog/avtonomne-zhyvlennia;[]
+Автономне живлення / Кабелі та перехідники;power_cables;merge;1;/catalog/avtonomne-zhyvlennia/kabeli-ta-perekhidnyky;[]
+Збройові аксесуари / Руків'я та упори;weapon_accessories_grips;merge;6;/catalog/zbroiovi-aksesuary/rukiv-ia-ta-upory;[]
+Збройові аксесуари / Приклади та щоки;weapon_accessories_stocks;merge;6;/catalog/zbroiovi-aksesuary/pryklady-ta-shchoky;[]
+Збройові аксесуари / Сошки;weapon_accessories_grips;merge;2;/catalog/zbroiovi-aksesuary/rukiv-ia-ta-upory;[]
+Збройові аксесуари / Догляд / Набори для чищення;weapon_accessories_cleaning;merge;2;/catalog/zbroiovi-aksesuary/dohliad-ta-chyshchennia;[]
+Одяг та форма / Чоловічий одяг / Спортивні костюми та комплекти;clothing;split_by_product_type;5;/catalog/odiah-ta-forma;"{""Стать"": ""Чоловіча""}"
+Збройові аксесуари / Кобури;weapon_accessories_holsters;merge;0;/catalog/zbroiovi-aksesuary/kobury;[]
+Збройові аксесуари / Кобури / Тактичні кобури;weapon_accessories_holsters;merge;1;/catalog/zbroiovi-aksesuary/kobury;[]
+Одяг та форма / Чоловічий одяг / Зимові костюми та комплекти;clothing;split_by_product_type;15;/catalog/odiah-ta-forma;"{""Стать"": ""Чоловіча"", ""Сезон"": ""Зима""}"
+Одяг та форма / Чоловічий одяг / Костюми Soft Shell;clothing;split_by_product_type;6;/catalog/odiah-ta-forma;"{""Стать"": ""Чоловіча"", ""Матеріал"": ""Софтшел""}"
+Одяг та форма / Чоловічий одяг / Тактичні сорочки;clothing_combat_shirts;to_filters;9;/catalog/odiah-ta-forma/ubaksy-ta-boiovi-sorochky;"{""Стать"": ""Чоловіча""}"
+Одяг та форма / Чоловічий одяг / Термофутболки;clothing_thermal;to_filters;2;/catalog/odiah-ta-forma/termobilyzna;"{""Стать"": ""Чоловіча""}"
+Одяг та форма / Чоловічий одяг / Зимові та утеплені куртки;clothing;split_by_product_type;34;/catalog/odiah-ta-forma;"{""Стать"": ""Чоловіча"", ""Сезон"": ""Зима""}"
+Одяг та форма / Чоловічий одяг / Зимові та утеплені штани;clothing_pants;to_filters;4;/catalog/odiah-ta-forma/shtany;"{""Стать"": ""Чоловіча"", ""Сезон"": ""Зима""}"
+Одяг та форма / Чоловічий одяг / Штани Soft Shell;clothing_pants;to_filters;5;/catalog/odiah-ta-forma/shtany;"{""Стать"": ""Чоловіча"", ""Матеріал"": ""Софтшел""}"
+Одяг та форма / Аксесуари одягу / Шапки та балаклави;clothing;split_by_product_type;32;/catalog/odiah-ta-forma;[]
+Одяг та форма / Аксесуари одягу / Кепки, панами, бейсболки;clothing_headwear;merge;46;/catalog/odiah-ta-forma/holovni-ubory;[]
+Одяг та форма / Аксесуари одягу / Баффи;clothing_balaclavas;merge;3;/catalog/odiah-ta-forma/balaklavy-ta-bafy;[]
+Взуття / Тактичне взуття / Берці зимові;footwear_boots;to_filters;1;/catalog/vzuttia/bertsi;"{""Сезон"": ""Зима""}"
+Взуття / Тактичне взуття / Берці демісезонні;footwear_boots;to_filters;3;/catalog/vzuttia/bertsi;"{""Сезон"": ""Демісезон""}"
+Взуття / Тактичне взуття / Черевики демісезонні;footwear_shoes;to_filters;4;/catalog/vzuttia/taktychni-cherevyky;"{""Сезон"": ""Демісезон""}"
+Взуття / Тактичне взуття / Кросівки літні;footwear_sneakers;to_filters;6;/catalog/vzuttia/taktychni-krosivky;"{""Сезон"": ""Літо""}"
+Взуття / Тактичне взуття / Кросівки демісезонні;footwear_sneakers;to_filters;3;/catalog/vzuttia/taktychni-krosivky;"{""Сезон"": ""Демісезон""}"
+Взуття / Шкарпетки та аксесуари / Термошкарпетки;footwear_socks;merge;9;/catalog/vzuttia/shkarpetky;[]
+Взуття / Шкарпетки та аксесуари / Термостельки;footwear_accessories;merge;1;/catalog/vzuttia/ustilky-ta-aksesuary;[]
+Збройові аксесуари / Магазини / Магазини АК та AR15;weapon_accessories_magazines;merge;7;/catalog/zbroiovi-aksesuary/mahazyny;[]
+Збройові аксесуари / Догляд / Чищення зброї;weapon_accessories_cleaning;merge;1;/catalog/zbroiovi-aksesuary/dohliad-ta-chyshchennia;[]
+Взуття / Аксесуари взуття / Бахіли;footwear_gaiters;merge;4;/catalog/vzuttia/bakhily;[]
+Взуття / Тактичне взуття / Кросівки;footwear_sneakers;merge;4;/catalog/vzuttia/taktychni-krosivky;[]
+Інструменти та ножі;tools;keep;0;/catalog/instrumenty-ta-nozhi;[]
+Інструменти та ножі / Ножі та мультитули;tools;split_by_product_type;9;/catalog/instrumenty-ta-nozhi;[]
+Електроніка та спостереження / Аксесуари;limb_protection_knees;merge;1;/catalog/zakhyst-kolin-ta-liktiv/nakolinnyky;[]
+Електроніка та спостереження / Аксесуари / Карти пам'яті;electronics;split_by_product_type;2;/catalog/elektronika-ta-sposterezhennia;[]
+Туризм та польове спорядження / Гігієна;field;resolve_products;0;/catalog/turyzm-ta-polove-sporiadzhennia;[]
+Туризм та польове спорядження / Гігієна / Засоби гігієни;field_hygiene;merge;3;/catalog/turyzm-ta-polove-sporiadzhennia/zasoby-hihiieny;[]
+Туризм та польове спорядження / Інше / Карабіни та кріплення;field;split_by_product_type;81;/catalog/turyzm-ta-polove-sporiadzhennia;[]
+Туризм та польове спорядження / Інше / Прапори та шеврони;field_other;merge;8;/catalog/turyzm-ta-polove-sporiadzhennia/inshe-polove-sporiadzhennia;[]
+Туризм та польове спорядження / Сон / Термоковдри;field_blankets;merge;14;/catalog/turyzm-ta-polove-sporiadzhennia/termokovdry;[]
+Збройові аксесуари / Чохли для зброї;weapon_accessories_cases;merge;3;/catalog/zbroiovi-aksesuary/chokhly;[]
+Маскування / Маскувальні сітки;camouflage_nets;merge;0;/catalog/maskuvannia/maskuvalni-sitky;[]
+Маскування / Маскувальні сітки / Маскувальні сітки;camouflage_nets;merge;619;/catalog/maskuvannia/maskuvalni-sitky;[]
+Взуття / Аксесуари взуття;footwear_accessories;merge;0;/catalog/vzuttia/ustilky-ta-aksesuary;[]
+Одяг та форма / Чоловічий одяг / Убакси;clothing_combat_shirts;to_filters;3;/catalog/odiah-ta-forma/ubaksy-ta-boiovi-sorochky;"{""Стать"": ""Чоловіча""}"
+Тактична медицина / Навчальні засоби;medical_training;merge;0;/catalog/taktychna-medytsyna/navchalni-zasoby;[]
+Тактична медицина / Медичні аксесуари;medical_other;merge;0;/catalog/taktychna-medytsyna/inshi-medychni-zasoby;[]
+Одяг та форма / Чоловічий одяг / Фліси та кофти;clothing;split_by_product_type;4;/catalog/odiah-ta-forma;"{""Стать"": ""Чоловіча""}"
+Одяг та форма / Чоловічий одяг / Тактичні костюми;clothing_costumes;to_filters;3;/catalog/odiah-ta-forma/taktychni-kostiumy;"{""Стать"": ""Чоловіча""}"
+Одяг та форма / Чоловічий одяг / Тактичні куртки;clothing_jackets;to_filters;13;/catalog/odiah-ta-forma/kurtky;"{""Стать"": ""Чоловіча""}"
+Збройові аксесуари / Платформа AR / Аксесуари;weapon_accessories;split_by_product_type;6;/catalog/zbroiovi-aksesuary;"{""Сумісність"": ""AR""}"
+Одяг та форма / Чоловічий одяг / Майки та тільняшки;clothing_tshirts;resolve_products;3;/catalog/odiah-ta-forma/futbolky-maiky-ta-polo;"{""Стать"": ""Чоловіча""}"
+Збройові аксесуари / Платформа АК / Аксесуари;weapon_accessories;split_by_product_type;2;/catalog/zbroiovi-aksesuary;"{""Сумісність"": ""АК""}"
+Взуття / Шкарпетки та аксесуари / Устілки;footwear_accessories;merge;1;/catalog/vzuttia/ustilky-ta-aksesuary;[]
+Взуття / Тактичне взуття / Черевики зимові;footwear_shoes;to_filters;1;/catalog/vzuttia/taktychni-cherevyky;"{""Сезон"": ""Зима""}"
+Взуття / Догляд та аксесуари / Засоби догляду;footwear_accessories;merge;4;/catalog/vzuttia/ustilky-ta-aksesuary;[]
+Взуття / Тактичне взуття / Лофери та чоловіче взуття;footwear;resolve_products;1;/catalog/vzuttia;[]
+Збройові аксесуари / Платформа AR;weapon_accessories;resolve_products;0;/catalog/zbroiovi-aksesuary;"{""Сумісність"": ""AR""}"
+Збройові аксесуари / Платформа АК;weapon_accessories;resolve_products;0;/catalog/zbroiovi-aksesuary;"{""Сумісність"": ""АК""}"
+Взуття / Догляд та аксесуари;footwear_accessories;merge;0;/catalog/vzuttia/ustilky-ta-aksesuary;[]

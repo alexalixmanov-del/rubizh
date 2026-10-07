@@ -1,0 +1,4071 @@
+{
+  "version": "20261007-v1",
+  "categories": [
+    {
+      "category_id": "clothing",
+      "parent_id": null,
+      "slug": "odiah-ta-forma",
+      "display_name_uk": "Одяг та форма",
+      "status": "active",
+      "sort_order": 0,
+      "path": "Одяг та форма",
+      "url_path": "odiah-ta-forma",
+      "aliases": [
+        "Одяг та форма",
+        "Одяг та форма / Аксесуари одягу",
+        "Одяг та форма / Жіночий одяг",
+        "Одяг та форма / Чоловічий одяг",
+        "Одяг та форма / Аксесуари одягу / Шапки та балаклави",
+        "Одяг та форма / Чоловічий одяг / Майки та тільняшки"
+      ]
+    },
+    {
+      "category_id": "clothing_costumes",
+      "parent_id": "clothing",
+      "slug": "taktychni-kostiumy",
+      "display_name_uk": "Тактичні костюми",
+      "status": "active",
+      "sort_order": 1,
+      "path": "Одяг та форма / Тактичні костюми",
+      "url_path": "odiah-ta-forma/taktychni-kostiumy",
+      "aliases": [
+        "Тактичні костюми",
+        "Одяг та форма / Чоловічий одяг / Формені комплекти та костюми",
+        "Одяг та форма / Чоловічий одяг / Інший формений одяг",
+        "Одяг та форма / Чоловічий одяг / Спортивні костюми та комплекти",
+        "Одяг та форма / Чоловічий одяг / Зимові костюми та комплекти",
+        "Одяг та форма / Чоловічий одяг / Костюми Soft Shell",
+        "Одяг та форма / Чоловічий одяг / Тактичні костюми",
+        "Формені комплекти та костюми"
+      ]
+    },
+    {
+      "category_id": "clothing_combat_shirts",
+      "parent_id": "clothing",
+      "slug": "ubaksy-ta-boiovi-sorochky",
+      "display_name_uk": "Убакси та бойові сорочки",
+      "status": "active",
+      "sort_order": 2,
+      "path": "Одяг та форма / Убакси та бойові сорочки",
+      "url_path": "odiah-ta-forma/ubaksy-ta-boiovi-sorochky",
+      "aliases": [
+        "Убакси та бойові сорочки",
+        "Одяг та форма / Жіночий одяг / Убакси та бойові сорочки",
+        "Одяг та форма / Чоловічий одяг / Убакси та бойові сорочки",
+        "Одяг та форма / Чоловічий одяг / Тактичні сорочки",
+        "Одяг та форма / Чоловічий одяг / Убакси"
+      ]
+    },
+    {
+      "category_id": "clothing_pants",
+      "parent_id": "clothing",
+      "slug": "shtany",
+      "display_name_uk": "Штани",
+      "status": "active",
+      "sort_order": 3,
+      "path": "Одяг та форма / Штани",
+      "url_path": "odiah-ta-forma/shtany",
+      "aliases": [
+        "Штани",
+        "Одяг та форма / Жіночий одяг / Тактичні штани",
+        "Одяг та форма / Чоловічий одяг / Тактичні штани",
+        "Одяг та форма / Чоловічий одяг / Зимові та утеплені штани",
+        "Одяг та форма / Чоловічий одяг / Штани Soft Shell",
+        "тактичні штани",
+        "тактические брюки"
+      ]
+    },
+    {
+      "category_id": "clothing_jackets",
+      "parent_id": "clothing",
+      "slug": "kurtky",
+      "display_name_uk": "Куртки",
+      "status": "active",
+      "sort_order": 4,
+      "path": "Одяг та форма / Куртки",
+      "url_path": "odiah-ta-forma/kurtky",
+      "aliases": [
+        "Куртки",
+        "Одяг та форма / Чоловічий одяг / Куртки та вітровки",
+        "Одяг та форма / Чоловічий одяг / Зимові та утеплені куртки",
+        "Одяг та форма / Чоловічий одяг / Тактичні куртки",
+        "куртка",
+        "тактичні куртки",
+        "тактические куртки",
+        "зимові куртки",
+        "куртки та вітровки"
+      ]
+    },
+    {
+      "category_id": "clothing_fleece",
+      "parent_id": "clothing",
+      "slug": "flisy-kofty-ta-khudi",
+      "display_name_uk": "Фліси, кофти та худі",
+      "status": "active",
+      "sort_order": 5,
+      "path": "Одяг та форма / Фліси, кофти та худі",
+      "url_path": "odiah-ta-forma/flisy-kofty-ta-khudi",
+      "aliases": [
+        "Фліси, кофти та худі",
+        "Одяг та форма / Чоловічий одяг / Фліс, кофти та худі",
+        "Одяг та форма / Чоловічий одяг / Фліси та кофти"
+      ]
+    },
+    {
+      "category_id": "clothing_tshirts",
+      "parent_id": "clothing",
+      "slug": "futbolky-maiky-ta-polo",
+      "display_name_uk": "Футболки, майки та поло",
+      "status": "active",
+      "sort_order": 6,
+      "path": "Одяг та форма / Футболки, майки та поло",
+      "url_path": "odiah-ta-forma/futbolky-maiky-ta-polo",
+      "aliases": [
+        "Футболки, майки та поло",
+        "Одяг та форма / Чоловічий одяг / Футболки та поло",
+        "Одяг та форма / Чоловічий одяг / Термофутболки"
+      ]
+    },
+    {
+      "category_id": "clothing_thermal",
+      "parent_id": "clothing",
+      "slug": "termobilyzna",
+      "display_name_uk": "Термобілизна",
+      "status": "active",
+      "sort_order": 7,
+      "path": "Одяг та форма / Термобілизна",
+      "url_path": "odiah-ta-forma/termobilyzna",
+      "aliases": [
+        "Термобілизна",
+        "Одяг та форма / Чоловічий одяг / Термобілизна"
+      ]
+    },
+    {
+      "category_id": "clothing_shorts",
+      "parent_id": "clothing",
+      "slug": "shorty",
+      "display_name_uk": "Шорти",
+      "status": "active",
+      "sort_order": 8,
+      "path": "Одяг та форма / Шорти",
+      "url_path": "odiah-ta-forma/shorty",
+      "aliases": [
+        "Шорти",
+        "Одяг та форма / Чоловічий одяг / Тактичні шорти"
+      ]
+    },
+    {
+      "category_id": "clothing_rainwear",
+      "parent_id": "clothing",
+      "slug": "poncho-ta-doshchovyky",
+      "display_name_uk": "Пончо та дощовики",
+      "status": "active",
+      "sort_order": 9,
+      "path": "Одяг та форма / Пончо та дощовики",
+      "url_path": "odiah-ta-forma/poncho-ta-doshchovyky",
+      "aliases": [
+        "Пончо та дощовики"
+      ]
+    },
+    {
+      "category_id": "clothing_gloves",
+      "parent_id": "clothing",
+      "slug": "taktychni-rukavychky",
+      "display_name_uk": "Тактичні рукавички",
+      "status": "active",
+      "sort_order": 10,
+      "path": "Одяг та форма / Тактичні рукавички",
+      "url_path": "odiah-ta-forma/taktychni-rukavychky",
+      "aliases": [
+        "Тактичні рукавички",
+        "Одяг та форма / Аксесуари одягу / Тактичні рукавички"
+      ]
+    },
+    {
+      "category_id": "clothing_headwear",
+      "parent_id": "clothing",
+      "slug": "holovni-ubory",
+      "display_name_uk": "Головні убори",
+      "status": "active",
+      "sort_order": 11,
+      "path": "Одяг та форма / Головні убори",
+      "url_path": "odiah-ta-forma/holovni-ubory",
+      "aliases": [
+        "Головні убори",
+        "Одяг та форма / Аксесуари одягу / Головні убори",
+        "Одяг та форма / Аксесуари одягу / Кепки, панами, бейсболки"
+      ]
+    },
+    {
+      "category_id": "clothing_balaclavas",
+      "parent_id": "clothing",
+      "slug": "balaklavy-ta-bafy",
+      "display_name_uk": "Балаклави та бафи",
+      "status": "active",
+      "sort_order": 12,
+      "path": "Одяг та форма / Балаклави та бафи",
+      "url_path": "odiah-ta-forma/balaklavy-ta-bafy",
+      "aliases": [
+        "Балаклави та бафи",
+        "Одяг та форма / Аксесуари одягу / Балаклави та бафи",
+        "Одяг та форма / Аксесуари одягу / Баффи"
+      ]
+    },
+    {
+      "category_id": "clothing_belts",
+      "parent_id": "clothing",
+      "slug": "remeni",
+      "display_name_uk": "Ремені",
+      "status": "active",
+      "sort_order": 13,
+      "path": "Одяг та форма / Ремені",
+      "url_path": "odiah-ta-forma/remeni",
+      "aliases": [
+        "Ремені",
+        "Одяг та форма / Аксесуари одягу / Тактичні ремені",
+        "Одяг та форма / Аксесуари одягу / Ремені та портупеї"
+      ]
+    },
+    {
+      "category_id": "clothing_vests",
+      "parent_id": "clothing",
+      "slug": "zhylety",
+      "display_name_uk": "Жилети",
+      "status": "active",
+      "sort_order": 14,
+      "path": "Одяг та форма / Жилети",
+      "url_path": "odiah-ta-forma/zhylety",
+      "aliases": [
+        "Жилети",
+        "Одяг та форма / Чоловічий одяг / Жилети"
+      ]
+    },
+    {
+      "category_id": "clothing_sweaters",
+      "parent_id": "clothing",
+      "slug": "svetry-ta-holfy",
+      "display_name_uk": "Светри та гольфи",
+      "status": "active",
+      "sort_order": 15,
+      "path": "Одяг та форма / Светри та гольфи",
+      "url_path": "odiah-ta-forma/svetry-ta-holfy",
+      "aliases": [
+        "Светри та гольфи",
+        "Одяг та форма / Чоловічий одяг / Светри та гольфи"
+      ]
+    },
+    {
+      "category_id": "footwear",
+      "parent_id": null,
+      "slug": "vzuttia",
+      "display_name_uk": "Взуття",
+      "status": "active",
+      "sort_order": 100,
+      "path": "Взуття",
+      "url_path": "vzuttia",
+      "aliases": [
+        "Взуття",
+        "Взуття / Тактичне взуття",
+        "Взуття / Тактичне взуття / Взуття",
+        "Взуття / Тактичне взуття / Літнє взуття",
+        "Взуття / Тактичне взуття / Лофери та чоловіче взуття"
+      ]
+    },
+    {
+      "category_id": "footwear_boots",
+      "parent_id": "footwear",
+      "slug": "bertsi",
+      "display_name_uk": "Берці",
+      "status": "active",
+      "sort_order": 101,
+      "path": "Взуття / Берці",
+      "url_path": "vzuttia/bertsi",
+      "aliases": [
+        "Берці",
+        "Взуття / Тактичне взуття / Берці",
+        "Взуття / Тактичне взуття / Берці зимові",
+        "Взуття / Тактичне взуття / Берці демісезонні"
+      ]
+    },
+    {
+      "category_id": "footwear_shoes",
+      "parent_id": "footwear",
+      "slug": "taktychni-cherevyky",
+      "display_name_uk": "Тактичні черевики",
+      "status": "active",
+      "sort_order": 102,
+      "path": "Взуття / Тактичні черевики",
+      "url_path": "vzuttia/taktychni-cherevyky",
+      "aliases": [
+        "Тактичні черевики",
+        "Взуття / Тактичне взуття / Черевики",
+        "Взуття / Тактичне взуття / Черевики демісезонні",
+        "Взуття / Тактичне взуття / Черевики зимові"
+      ]
+    },
+    {
+      "category_id": "footwear_sneakers",
+      "parent_id": "footwear",
+      "slug": "taktychni-krosivky",
+      "display_name_uk": "Тактичні кросівки",
+      "status": "active",
+      "sort_order": 103,
+      "path": "Взуття / Тактичні кросівки",
+      "url_path": "vzuttia/taktychni-krosivky",
+      "aliases": [
+        "Тактичні кросівки",
+        "Взуття / Тактичне взуття / Тактичні кросівки",
+        "Взуття / Тактичне взуття / Кросівки літні",
+        "Взуття / Тактичне взуття / Кросівки демісезонні",
+        "Взуття / Тактичне взуття / Кросівки"
+      ]
+    },
+    {
+      "category_id": "footwear_socks",
+      "parent_id": "footwear",
+      "slug": "shkarpetky",
+      "display_name_uk": "Шкарпетки",
+      "status": "active",
+      "sort_order": 104,
+      "path": "Взуття / Шкарпетки",
+      "url_path": "vzuttia/shkarpetky",
+      "aliases": [
+        "Шкарпетки",
+        "Взуття / Шкарпетки та аксесуари",
+        "Взуття / Шкарпетки та аксесуари / Тактичні шкарпетки",
+        "Взуття / Шкарпетки та аксесуари / Термошкарпетки",
+        "Взуття / Шкарпетки та аксесуари / Термостельки",
+        "Взуття / Шкарпетки та аксесуари / Устілки"
+      ]
+    },
+    {
+      "category_id": "footwear_gaiters",
+      "parent_id": "footwear",
+      "slug": "bakhily",
+      "display_name_uk": "Бахіли",
+      "status": "active",
+      "sort_order": 105,
+      "path": "Взуття / Бахіли",
+      "url_path": "vzuttia/bakhily",
+      "aliases": [
+        "Бахіли",
+        "Взуття / Аксесуари взуття / Бахіли"
+      ]
+    },
+    {
+      "category_id": "footwear_accessories",
+      "parent_id": "footwear",
+      "slug": "ustilky-ta-aksesuary",
+      "display_name_uk": "Устілки та аксесуари",
+      "status": "active",
+      "sort_order": 106,
+      "path": "Взуття / Устілки та аксесуари",
+      "url_path": "vzuttia/ustilky-ta-aksesuary",
+      "aliases": [
+        "Устілки та аксесуари",
+        "Взуття / Аксесуари взуття",
+        "Взуття / Догляд та аксесуари / Засоби догляду",
+        "Взуття / Догляд та аксесуари"
+      ]
+    },
+    {
+      "category_id": "armor",
+      "parent_id": null,
+      "slug": "bronezakhyst",
+      "display_name_uk": "Бронезахист",
+      "status": "active",
+      "sort_order": 200,
+      "path": "Бронезахист",
+      "url_path": "bronezakhyst",
+      "aliases": [
+        "Бронезахист"
+      ]
+    },
+    {
+      "category_id": "armor_carriers",
+      "parent_id": "armor",
+      "slug": "plytonosky",
+      "display_name_uk": "Плитоноски",
+      "status": "active",
+      "sort_order": 201,
+      "path": "Бронезахист / Плитоноски",
+      "url_path": "bronezakhyst/plytonosky",
+      "aliases": [
+        "Плитоноски",
+        "Бронезахист / Плитоноски",
+        "Бронезахист / Плитоноски / Плитоноски"
+      ]
+    },
+    {
+      "category_id": "armor_vests",
+      "parent_id": "armor",
+      "slug": "bronezhylety",
+      "display_name_uk": "Бронежилети",
+      "status": "active",
+      "sort_order": 202,
+      "path": "Бронезахист / Бронежилети",
+      "url_path": "bronezakhyst/bronezhylety",
+      "aliases": [
+        "Бронежилети",
+        "Бронезахист / Бронежилети",
+        "Бронезахист / Бронежилети / Бронежилети"
+      ]
+    },
+    {
+      "category_id": "armor_plates",
+      "parent_id": "armor",
+      "slug": "broneplyty",
+      "display_name_uk": "Бронеплити",
+      "status": "active",
+      "sort_order": 203,
+      "path": "Бронезахист / Бронеплити",
+      "url_path": "bronezakhyst/broneplyty",
+      "aliases": [
+        "Бронеплити",
+        "Бронезахист / Бронеплити",
+        "Бронезахист / Бронеплити / Бронеплити"
+      ]
+    },
+    {
+      "category_id": "armor_soft",
+      "parent_id": "armor",
+      "slug": "m-iaki-balistychni-pakety",
+      "display_name_uk": "М'які балістичні пакети",
+      "status": "active",
+      "sort_order": 204,
+      "path": "Бронезахист / М'які балістичні пакети",
+      "url_path": "bronezakhyst/m-iaki-balistychni-pakety",
+      "aliases": [
+        "М'які балістичні пакети",
+        "Бронезахист / М'які балістичні пакети",
+        "Бронезахист / М'які балістичні пакети / 1 клас захисту",
+        "Бронезахист / М'які балістичні пакети / 2 клас захисту"
+      ]
+    },
+    {
+      "category_id": "armor_sets",
+      "parent_id": "armor",
+      "slug": "komplekty-bronezakhystu",
+      "display_name_uk": "Комплекти бронезахисту",
+      "status": "active",
+      "sort_order": 205,
+      "path": "Бронезахист / Комплекти бронезахисту",
+      "url_path": "bronezakhyst/komplekty-bronezakhystu",
+      "aliases": [
+        "Комплекти бронезахисту",
+        "Бронезахист / Бронекомплекти",
+        "Бронезахист / Бронекомплекти / 1 клас захисту",
+        "Бронезахист / Бронекомплекти / 2 клас захисту",
+        "Бронезахист / Плитоноски / Комплекти плитоносок"
+      ]
+    },
+    {
+      "category_id": "armor_accessories",
+      "parent_id": "armor",
+      "slug": "aksesuary-dlia-bronezakhystu",
+      "display_name_uk": "Аксесуари для бронезахисту",
+      "status": "active",
+      "sort_order": 206,
+      "path": "Бронезахист / Аксесуари для бронезахисту",
+      "url_path": "bronezakhyst/aksesuary-dlia-bronezakhystu",
+      "aliases": [
+        "Аксесуари для бронезахисту",
+        "Бронезахист / Плитоноски / Аксесуари для плитоносок"
+      ]
+    },
+    {
+      "category_id": "helmets",
+      "parent_id": null,
+      "slug": "sholomy-ta-zakhyst-holovy",
+      "display_name_uk": "Шоломи та захист голови",
+      "status": "active",
+      "sort_order": 300,
+      "path": "Шоломи та захист голови",
+      "url_path": "sholomy-ta-zakhyst-holovy",
+      "aliases": [
+        "Шоломи та захист голови"
+      ]
+    },
+    {
+      "category_id": "helmets_ballistic",
+      "parent_id": "helmets",
+      "slug": "balistychni-sholomy",
+      "display_name_uk": "Балістичні шоломи",
+      "status": "active",
+      "sort_order": 301,
+      "path": "Шоломи та захист голови / Балістичні шоломи",
+      "url_path": "sholomy-ta-zakhyst-holovy/balistychni-sholomy",
+      "aliases": [
+        "Балістичні шоломи",
+        "Шоломи та захист голови / Шоломи",
+        "Шоломи та захист голови / Шоломи / FAST",
+        "Шоломи та захист голови / Шоломи / MICH",
+        "Шоломи та захист голови / Шоломи / Комплекти шоломів"
+      ]
+    },
+    {
+      "category_id": "helmets_covers",
+      "parent_id": "helmets",
+      "slug": "kavery",
+      "display_name_uk": "Кавери",
+      "status": "active",
+      "sort_order": 302,
+      "path": "Шоломи та захист голови / Кавери",
+      "url_path": "sholomy-ta-zakhyst-holovy/kavery",
+      "aliases": [
+        "Кавери",
+        "Шоломи та захист голови / Аксесуари / Кавери на шоломи"
+      ]
+    },
+    {
+      "category_id": "helmets_suspension",
+      "parent_id": "helmets",
+      "slug": "pidvisni-systemy-ta-podushky",
+      "display_name_uk": "Підвісні системи та подушки",
+      "status": "active",
+      "sort_order": 303,
+      "path": "Шоломи та захист голови / Підвісні системи та подушки",
+      "url_path": "sholomy-ta-zakhyst-holovy/pidvisni-systemy-ta-podushky",
+      "aliases": [
+        "Підвісні системи та подушки",
+        "Шоломи та захист голови / Аксесуари / Підвісні системи та подушки"
+      ]
+    },
+    {
+      "category_id": "helmets_rails",
+      "parent_id": "helmets",
+      "slug": "reiky-ta-planky",
+      "display_name_uk": "Рейки та планки",
+      "status": "active",
+      "sort_order": 304,
+      "path": "Шоломи та захист голови / Рейки та планки",
+      "url_path": "sholomy-ta-zakhyst-holovy/reiky-ta-planky",
+      "aliases": [
+        "Рейки та планки",
+        "Шоломи та захист голови / Аксесуари / Рейки та планки"
+      ]
+    },
+    {
+      "category_id": "helmets_mounts",
+      "parent_id": "helmets",
+      "slug": "kriplennia",
+      "display_name_uk": "Кріплення",
+      "status": "active",
+      "sort_order": 305,
+      "path": "Шоломи та захист голови / Кріплення",
+      "url_path": "sholomy-ta-zakhyst-holovy/kriplennia",
+      "aliases": [
+        "Кріплення",
+        "Шоломи та захист голови / Аксесуари / Кріплення для навушників"
+      ]
+    },
+    {
+      "category_id": "helmets_accessories",
+      "parent_id": "helmets",
+      "slug": "aksesuary-dlia-sholomiv",
+      "display_name_uk": "Аксесуари для шоломів",
+      "status": "active",
+      "sort_order": 306,
+      "path": "Шоломи та захист голови / Аксесуари для шоломів",
+      "url_path": "sholomy-ta-zakhyst-holovy/aksesuary-dlia-sholomiv",
+      "aliases": [
+        "Аксесуари для шоломів",
+        "Шоломи та захист голови / Аксесуари",
+        "Шоломи та захист голови / Аксесуари / Інші аксесуари"
+      ]
+    },
+    {
+      "category_id": "communications",
+      "parent_id": null,
+      "slug": "taktychnyi-zv-iazok-ta-slukh",
+      "display_name_uk": "Тактичний зв'язок та слух",
+      "status": "active",
+      "sort_order": 400,
+      "path": "Тактичний зв'язок та слух",
+      "url_path": "taktychnyi-zv-iazok-ta-slukh",
+      "aliases": [
+        "Тактичний зв'язок та слух"
+      ]
+    },
+    {
+      "category_id": "communications_headphones",
+      "parent_id": "communications",
+      "slug": "aktyvni-navushnyky",
+      "display_name_uk": "Активні навушники",
+      "status": "active",
+      "sort_order": 401,
+      "path": "Тактичний зв'язок та слух / Активні навушники",
+      "url_path": "taktychnyi-zv-iazok-ta-slukh/aktyvni-navushnyky",
+      "aliases": [
+        "Активні навушники",
+        "Тактичний зв'язок та слух / Активні навушники",
+        "Тактичний зв'язок та слух / Активні навушники / EARMOR",
+        "Тактичний зв'язок та слух / Активні навушники / Walker's"
+      ]
+    },
+    {
+      "category_id": "communications_radios",
+      "parent_id": "communications",
+      "slug": "ratsii",
+      "display_name_uk": "Рації",
+      "status": "active",
+      "sort_order": 402,
+      "path": "Тактичний зв'язок та слух / Рації",
+      "url_path": "taktychnyi-zv-iazok-ta-slukh/ratsii",
+      "aliases": [
+        "Рації",
+        "Тактичний зв'язок та слух / Радіозв'язок"
+      ]
+    },
+    {
+      "category_id": "communications_ptt",
+      "parent_id": "communications",
+      "slug": "ptt",
+      "display_name_uk": "PTT",
+      "status": "active",
+      "sort_order": 403,
+      "path": "Тактичний зв'язок та слух / PTT",
+      "url_path": "taktychnyi-zv-iazok-ta-slukh/ptt",
+      "aliases": [
+        "PTT",
+        "Тактичний зв'язок та слух / Радіозв'язок / PTT-кнопки"
+      ]
+    },
+    {
+      "category_id": "communications_antennas",
+      "parent_id": "communications",
+      "slug": "anteny",
+      "display_name_uk": "Антени",
+      "status": "active",
+      "sort_order": 404,
+      "path": "Тактичний зв'язок та слух / Антени",
+      "url_path": "taktychnyi-zv-iazok-ta-slukh/anteny",
+      "aliases": [
+        "Антени",
+        "Тактичний зв'язок та слух / Радіозв'язок / Антени"
+      ]
+    },
+    {
+      "category_id": "communications_accessories",
+      "parent_id": "communications",
+      "slug": "aksesuary-dlia-ratsii",
+      "display_name_uk": "Аксесуари для рацій",
+      "status": "active",
+      "sort_order": 405,
+      "path": "Тактичний зв'язок та слух / Аксесуари для рацій",
+      "url_path": "taktychnyi-zv-iazok-ta-slukh/aksesuary-dlia-ratsii",
+      "aliases": [
+        "Аксесуари для рацій",
+        "Тактичний зв'язок та слух / Радіозв'язок / Аксесуари для рацій"
+      ]
+    },
+    {
+      "category_id": "bags",
+      "parent_id": null,
+      "slug": "riukzaky-sumky-ta-bauly",
+      "display_name_uk": "Рюкзаки, сумки та баули",
+      "status": "active",
+      "sort_order": 500,
+      "path": "Рюкзаки, сумки та баули",
+      "url_path": "riukzaky-sumky-ta-bauly",
+      "aliases": [
+        "Рюкзаки, сумки та баули",
+        "Рюкзаки, сумки та баули / Рюкзаки",
+        "Рюкзаки, сумки та баули / Сумки"
+      ]
+    },
+    {
+      "category_id": "bags_tactical",
+      "parent_id": "bags",
+      "slug": "taktychni-riukzaky",
+      "display_name_uk": "Тактичні рюкзаки",
+      "status": "active",
+      "sort_order": 501,
+      "path": "Рюкзаки, сумки та баули / Тактичні рюкзаки",
+      "url_path": "riukzaky-sumky-ta-bauly/taktychni-riukzaky",
+      "aliases": [
+        "Тактичні рюкзаки",
+        "Рюкзаки, сумки та баули / Рюкзаки / Тактичні рюкзаки"
+      ]
+    },
+    {
+      "category_id": "bags_assault",
+      "parent_id": "bags",
+      "slug": "shturmovi-riukzaky",
+      "display_name_uk": "Штурмові рюкзаки",
+      "status": "active",
+      "sort_order": 502,
+      "path": "Рюкзаки, сумки та баули / Штурмові рюкзаки",
+      "url_path": "riukzaky-sumky-ta-bauly/shturmovi-riukzaky",
+      "aliases": [
+        "Штурмові рюкзаки",
+        "Рюкзаки, сумки та баули / Рюкзаки / Штурмові рюкзаки"
+      ]
+    },
+    {
+      "category_id": "bags_hydration",
+      "parent_id": "bags",
+      "slug": "hidratory",
+      "display_name_uk": "Гідратори",
+      "status": "active",
+      "sort_order": 503,
+      "path": "Рюкзаки, сумки та баули / Гідратори",
+      "url_path": "riukzaky-sumky-ta-bauly/hidratory",
+      "aliases": [
+        "Гідратори",
+        "Рюкзаки, сумки та баули / Рюкзаки / Гідратори та рюкзаки-гідратори"
+      ]
+    },
+    {
+      "category_id": "bags_duffel",
+      "parent_id": "bags",
+      "slug": "bauly",
+      "display_name_uk": "Баули",
+      "status": "active",
+      "sort_order": 504,
+      "path": "Рюкзаки, сумки та баули / Баули",
+      "url_path": "riukzaky-sumky-ta-bauly/bauly",
+      "aliases": [
+        "Баули",
+        "Рюкзаки, сумки та баули / Сумки / Баули та транспортні сумки"
+      ]
+    },
+    {
+      "category_id": "bags_tactical_bags",
+      "parent_id": "bags",
+      "slug": "taktychni-sumky",
+      "display_name_uk": "Тактичні сумки",
+      "status": "active",
+      "sort_order": 505,
+      "path": "Рюкзаки, сумки та баули / Тактичні сумки",
+      "url_path": "riukzaky-sumky-ta-bauly/taktychni-sumky",
+      "aliases": [
+        "Тактичні сумки",
+        "Рюкзаки, сумки та баули / Сумки / Сумки для шоломів",
+        "Рюкзаки, сумки та баули / Сумки / Тактичні сумки"
+      ]
+    },
+    {
+      "category_id": "bags_waist",
+      "parent_id": "bags",
+      "slug": "poiasni-sumky",
+      "display_name_uk": "Поясні сумки",
+      "status": "active",
+      "sort_order": 506,
+      "path": "Рюкзаки, сумки та баули / Поясні сумки",
+      "url_path": "riukzaky-sumky-ta-bauly/poiasni-sumky",
+      "aliases": [
+        "Поясні сумки",
+        "Рюкзаки, сумки та баули / Сумки / Поясні сумки та органайзери"
+      ]
+    },
+    {
+      "category_id": "bags_shoulder",
+      "parent_id": "bags",
+      "slug": "sumky-cherez-pleche",
+      "display_name_uk": "Сумки через плече",
+      "status": "active",
+      "sort_order": 507,
+      "path": "Рюкзаки, сумки та баули / Сумки через плече",
+      "url_path": "riukzaky-sumky-ta-bauly/sumky-cherez-pleche",
+      "aliases": [
+        "Сумки через плече",
+        "Рюкзаки, сумки та баули / Сумки / Через плече та бананки"
+      ]
+    },
+    {
+      "category_id": "bags_organizers",
+      "parent_id": "bags",
+      "slug": "orhanaizery",
+      "display_name_uk": "Органайзери",
+      "status": "active",
+      "sort_order": 508,
+      "path": "Рюкзаки, сумки та баули / Органайзери",
+      "url_path": "riukzaky-sumky-ta-bauly/orhanaizery",
+      "aliases": [
+        "Органайзери",
+        "Рюкзаки, сумки та баули / Сумки / Органайзери"
+      ]
+    },
+    {
+      "category_id": "pouches",
+      "parent_id": null,
+      "slug": "pidsumky",
+      "display_name_uk": "Підсумки",
+      "status": "active",
+      "sort_order": 600,
+      "path": "Підсумки",
+      "url_path": "pidsumky",
+      "aliases": [
+        "Підсумки",
+        "Підсумки / Бойові підсумки",
+        "Підсумки / Спеціальні підсумки"
+      ]
+    },
+    {
+      "category_id": "pouches_magazines",
+      "parent_id": "pouches",
+      "slug": "dlia-mahazyniv",
+      "display_name_uk": "Для магазинів",
+      "status": "active",
+      "sort_order": 601,
+      "path": "Підсумки / Для магазинів",
+      "url_path": "pidsumky/dlia-mahazyniv",
+      "aliases": [
+        "Для магазинів",
+        "Підсумки / Бойові підсумки / Для магазинів"
+      ]
+    },
+    {
+      "category_id": "pouches_grenades",
+      "parent_id": "pouches",
+      "slug": "dlia-hranat",
+      "display_name_uk": "Для гранат",
+      "status": "active",
+      "sort_order": 602,
+      "path": "Підсумки / Для гранат",
+      "url_path": "pidsumky/dlia-hranat",
+      "aliases": [
+        "Для гранат",
+        "Підсумки / Бойові підсумки / Для гранат"
+      ]
+    },
+    {
+      "category_id": "pouches_tourniquets",
+      "parent_id": "pouches",
+      "slug": "dlia-turniketiv",
+      "display_name_uk": "Для турнікетів",
+      "status": "active",
+      "sort_order": 603,
+      "path": "Підсумки / Для турнікетів",
+      "url_path": "pidsumky/dlia-turniketiv",
+      "aliases": [
+        "Для турнікетів",
+        "Підсумки / Медичні підсумки / Для турнікету"
+      ]
+    },
+    {
+      "category_id": "pouches_ifak",
+      "parent_id": "pouches",
+      "slug": "medychni-ifak",
+      "display_name_uk": "Медичні / IFAK",
+      "status": "active",
+      "sort_order": 604,
+      "path": "Підсумки / Медичні / IFAK",
+      "url_path": "pidsumky/medychni-ifak",
+      "aliases": [
+        "Медичні / IFAK",
+        "Підсумки / Медичні підсумки",
+        "Підсумки / Медичні підсумки / Аптечки IFAK"
+      ]
+    },
+    {
+      "category_id": "pouches_radios",
+      "parent_id": "pouches",
+      "slug": "dlia-ratsii",
+      "display_name_uk": "Для рацій",
+      "status": "active",
+      "sort_order": 605,
+      "path": "Підсумки / Для рацій",
+      "url_path": "pidsumky/dlia-ratsii",
+      "aliases": [
+        "Для рацій",
+        "Підсумки / Спеціальні підсумки / Для рацій"
+      ]
+    },
+    {
+      "category_id": "pouches_phone",
+      "parent_id": "pouches",
+      "slug": "dlia-telefonu",
+      "display_name_uk": "Для телефону",
+      "status": "active",
+      "sort_order": 606,
+      "path": "Підсумки / Для телефону",
+      "url_path": "pidsumky/dlia-telefonu",
+      "aliases": [
+        "Для телефону",
+        "Підсумки / Спеціальні підсумки / Для телефону"
+      ]
+    },
+    {
+      "category_id": "pouches_utility",
+      "parent_id": "pouches",
+      "slug": "utylitarni",
+      "display_name_uk": "Утилітарні",
+      "status": "active",
+      "sort_order": 607,
+      "path": "Підсумки / Утилітарні",
+      "url_path": "pidsumky/utylitarni",
+      "aliases": [
+        "Утилітарні",
+        "Підсумки / Утилітарні",
+        "Підсумки / Утилітарні / Утилітарні підсумки",
+        "Підсумки / Утилітарні / MOLLE-органайзери"
+      ]
+    },
+    {
+      "category_id": "pouches_dump",
+      "parent_id": "pouches",
+      "slug": "skydannia-mahazyniv",
+      "display_name_uk": "Скидання магазинів",
+      "status": "active",
+      "sort_order": 608,
+      "path": "Підсумки / Скидання магазинів",
+      "url_path": "pidsumky/skydannia-mahazyniv",
+      "aliases": [
+        "Скидання магазинів",
+        "Підсумки / Бойові підсумки / Скидання магазинів"
+      ]
+    },
+    {
+      "category_id": "pouches_dangler",
+      "parent_id": "pouches",
+      "slug": "napashni-sumky",
+      "display_name_uk": "Напашні сумки",
+      "status": "active",
+      "sort_order": 609,
+      "path": "Підсумки / Напашні сумки",
+      "url_path": "pidsumky/napashni-sumky",
+      "aliases": [
+        "Напашні сумки",
+        "Підсумки / Нагрудні та напашні",
+        "Підсумки / Нагрудні та напашні / Напашні сумки"
+      ]
+    },
+    {
+      "category_id": "pouches_panels",
+      "parent_id": "pouches",
+      "slug": "paneli-ta-platformy",
+      "display_name_uk": "Панелі та платформи",
+      "status": "active",
+      "sort_order": 610,
+      "path": "Підсумки / Панелі та платформи",
+      "url_path": "pidsumky/paneli-ta-platformy",
+      "aliases": [
+        "Панелі та платформи",
+        "Підсумки / Панелі та платформи",
+        "Підсумки / Панелі та платформи / Панелі для плитоносок"
+      ]
+    },
+    {
+      "category_id": "pouches_other",
+      "parent_id": "pouches",
+      "slug": "inshi-pidsumky",
+      "display_name_uk": "Інші підсумки",
+      "status": "active",
+      "sort_order": 611,
+      "path": "Підсумки / Інші підсумки",
+      "url_path": "pidsumky/inshi-pidsumky",
+      "aliases": [
+        "Інші підсумки",
+        "Підсумки / Спеціальні підсумки / Для навушників",
+        "Підсумки / Спеціальні підсумки / Для планшетів"
+      ]
+    },
+    {
+      "category_id": "load_bearing",
+      "parent_id": null,
+      "slug": "rps-ta-rozvantazhennia",
+      "display_name_uk": "РПС та розвантаження",
+      "status": "active",
+      "sort_order": 700,
+      "path": "РПС та розвантаження",
+      "url_path": "rps-ta-rozvantazhennia",
+      "aliases": [
+        "РПС та розвантаження",
+        "РПС та розвантаження / Комплекти"
+      ]
+    },
+    {
+      "category_id": "load_bearing_rps",
+      "parent_id": "load_bearing",
+      "slug": "rps",
+      "display_name_uk": "РПС",
+      "status": "active",
+      "sort_order": 701,
+      "path": "РПС та розвантаження / РПС",
+      "url_path": "rps-ta-rozvantazhennia/rps",
+      "aliases": [
+        "РПС",
+        "РПС та розвантаження / Комплекти / Комплекти РПС",
+        "РПС та розвантаження / Системи / Ремінно-плечові системи"
+      ]
+    },
+    {
+      "category_id": "load_bearing_belts",
+      "parent_id": "load_bearing",
+      "slug": "boiovi-poiasy",
+      "display_name_uk": "Бойові пояси",
+      "status": "active",
+      "sort_order": 702,
+      "path": "РПС та розвантаження / Бойові пояси",
+      "url_path": "rps-ta-rozvantazhennia/boiovi-poiasy",
+      "aliases": [
+        "Бойові пояси",
+        "РПС та розвантаження / Компоненти / Пояси",
+        "РПС та розвантаження / Компоненти / Тактичні та розвантажувальні ремені"
+      ]
+    },
+    {
+      "category_id": "load_bearing_systems",
+      "parent_id": "load_bearing",
+      "slug": "rozvantazhuvalni-systemy",
+      "display_name_uk": "Розвантажувальні системи",
+      "status": "active",
+      "sort_order": 703,
+      "path": "РПС та розвантаження / Розвантажувальні системи",
+      "url_path": "rps-ta-rozvantazhennia/rozvantazhuvalni-systemy",
+      "aliases": [
+        "Розвантажувальні системи",
+        "РПС та розвантаження / Системи"
+      ]
+    },
+    {
+      "category_id": "load_bearing_shoulder",
+      "parent_id": "load_bearing",
+      "slug": "plechovi-systemy",
+      "display_name_uk": "Плечові системи",
+      "status": "active",
+      "sort_order": 704,
+      "path": "РПС та розвантаження / Плечові системи",
+      "url_path": "rps-ta-rozvantazhennia/plechovi-systemy",
+      "aliases": [
+        "Плечові системи"
+      ]
+    },
+    {
+      "category_id": "load_bearing_components",
+      "parent_id": "load_bearing",
+      "slug": "komponenty-ta-aksesuary",
+      "display_name_uk": "Компоненти та аксесуари",
+      "status": "active",
+      "sort_order": 705,
+      "path": "РПС та розвантаження / Компоненти та аксесуари",
+      "url_path": "rps-ta-rozvantazhennia/komponenty-ta-aksesuary",
+      "aliases": [
+        "Компоненти та аксесуари",
+        "РПС та розвантаження / Компоненти"
+      ]
+    },
+    {
+      "category_id": "limb_protection",
+      "parent_id": null,
+      "slug": "zakhyst-kolin-ta-liktiv",
+      "display_name_uk": "Захист колін та ліктів",
+      "status": "active",
+      "sort_order": 800,
+      "path": "Захист колін та ліктів",
+      "url_path": "zakhyst-kolin-ta-liktiv",
+      "aliases": [
+        "Захист колін та ліктів"
+      ]
+    },
+    {
+      "category_id": "limb_protection_knees",
+      "parent_id": "limb_protection",
+      "slug": "nakolinnyky",
+      "display_name_uk": "Наколінники",
+      "status": "active",
+      "sort_order": 801,
+      "path": "Захист колін та ліктів / Наколінники",
+      "url_path": "zakhyst-kolin-ta-liktiv/nakolinnyky",
+      "aliases": [
+        "Наколінники",
+        "Захист колін та ліктів / Наколінники",
+        "Захист колін та ліктів / Наколінники / Наколінники"
+      ]
+    },
+    {
+      "category_id": "limb_protection_elbows",
+      "parent_id": "limb_protection",
+      "slug": "nalokitnyky",
+      "display_name_uk": "Налокітники",
+      "status": "active",
+      "sort_order": 802,
+      "path": "Захист колін та ліктів / Налокітники",
+      "url_path": "zakhyst-kolin-ta-liktiv/nalokitnyky",
+      "aliases": [
+        "Налокітники",
+        "Захист колін та ліктів / Налокітники",
+        "Захист колін та ліктів / Налокітники / Налокітники"
+      ]
+    },
+    {
+      "category_id": "limb_protection_sets",
+      "parent_id": "limb_protection",
+      "slug": "komplekty",
+      "display_name_uk": "Комплекти",
+      "status": "active",
+      "sort_order": 803,
+      "path": "Захист колін та ліктів / Комплекти",
+      "url_path": "zakhyst-kolin-ta-liktiv/komplekty",
+      "aliases": [
+        "Комплекти",
+        "Захист колін та ліктів / Комплекти",
+        "Захист колін та ліктів / Комплекти / Наколінники + налокітники"
+      ]
+    },
+    {
+      "category_id": "medical",
+      "parent_id": null,
+      "slug": "taktychna-medytsyna",
+      "display_name_uk": "Тактична медицина",
+      "status": "active",
+      "sort_order": 900,
+      "path": "Тактична медицина",
+      "url_path": "taktychna-medytsyna",
+      "aliases": [
+        "Тактична медицина",
+        "Тактична медицина / Кровоспинні засоби",
+        "Тактична медицина / Кровоспинні засоби / Турнікети, джгути та гемостатики"
+      ]
+    },
+    {
+      "category_id": "medical_tourniquets",
+      "parent_id": "medical",
+      "slug": "turnikety-ta-dzhhuty",
+      "display_name_uk": "Турнікети та джгути",
+      "status": "active",
+      "sort_order": 901,
+      "path": "Тактична медицина / Турнікети та джгути",
+      "url_path": "taktychna-medytsyna/turnikety-ta-dzhhuty",
+      "aliases": [
+        "Турнікети та джгути"
+      ]
+    },
+    {
+      "category_id": "medical_hemostatics",
+      "parent_id": "medical",
+      "slug": "hemostatyky",
+      "display_name_uk": "Гемостатики",
+      "status": "active",
+      "sort_order": 902,
+      "path": "Тактична медицина / Гемостатики",
+      "url_path": "taktychna-medytsyna/hemostatyky",
+      "aliases": [
+        "Гемостатики"
+      ]
+    },
+    {
+      "category_id": "medical_bandages",
+      "parent_id": "medical",
+      "slug": "bandazhi",
+      "display_name_uk": "Бандажі",
+      "status": "active",
+      "sort_order": 903,
+      "path": "Тактична медицина / Бандажі",
+      "url_path": "taktychna-medytsyna/bandazhi",
+      "aliases": [
+        "Бандажі"
+      ]
+    },
+    {
+      "category_id": "medical_kits",
+      "parent_id": "medical",
+      "slug": "aptechky",
+      "display_name_uk": "Аптечки",
+      "status": "active",
+      "sort_order": 904,
+      "path": "Тактична медицина / Аптечки",
+      "url_path": "taktychna-medytsyna/aptechky",
+      "aliases": [
+        "Аптечки"
+      ]
+    },
+    {
+      "category_id": "medical_shears",
+      "parent_id": "medical",
+      "slug": "medychni-nozhytsi",
+      "display_name_uk": "Медичні ножиці",
+      "status": "active",
+      "sort_order": 905,
+      "path": "Тактична медицина / Медичні ножиці",
+      "url_path": "taktychna-medytsyna/medychni-nozhytsi",
+      "aliases": [
+        "Медичні ножиці"
+      ]
+    },
+    {
+      "category_id": "medical_occlusive",
+      "parent_id": "medical",
+      "slug": "okliuziini-zasoby",
+      "display_name_uk": "Оклюзійні засоби",
+      "status": "active",
+      "sort_order": 906,
+      "path": "Тактична медицина / Оклюзійні засоби",
+      "url_path": "taktychna-medytsyna/okliuziini-zasoby",
+      "aliases": [
+        "Оклюзійні засоби"
+      ]
+    },
+    {
+      "category_id": "medical_other",
+      "parent_id": "medical",
+      "slug": "inshi-medychni-zasoby",
+      "display_name_uk": "Інші медичні засоби",
+      "status": "active",
+      "sort_order": 907,
+      "path": "Тактична медицина / Інші медичні засоби",
+      "url_path": "taktychna-medytsyna/inshi-medychni-zasoby",
+      "aliases": [
+        "Інші медичні засоби",
+        "Тактична медицина / Медичні аксесуари"
+      ]
+    },
+    {
+      "category_id": "medical_training",
+      "parent_id": "medical",
+      "slug": "navchalni-zasoby",
+      "display_name_uk": "Навчальні засоби",
+      "status": "active",
+      "sort_order": 908,
+      "path": "Тактична медицина / Навчальні засоби",
+      "url_path": "taktychna-medytsyna/navchalni-zasoby",
+      "aliases": [
+        "Навчальні засоби",
+        "Тактична медицина / Навчальні засоби"
+      ]
+    },
+    {
+      "category_id": "camouflage",
+      "parent_id": null,
+      "slug": "maskuvannia",
+      "display_name_uk": "Маскування",
+      "status": "active",
+      "sort_order": 1000,
+      "path": "Маскування",
+      "url_path": "maskuvannia",
+      "aliases": [
+        "Маскування"
+      ]
+    },
+    {
+      "category_id": "camouflage_nets",
+      "parent_id": "camouflage",
+      "slug": "maskuvalni-sitky",
+      "display_name_uk": "Маскувальні сітки",
+      "status": "active",
+      "sort_order": 1001,
+      "path": "Маскування / Маскувальні сітки",
+      "url_path": "maskuvannia/maskuvalni-sitky",
+      "aliases": [
+        "Маскувальні сітки",
+        "Маскування / Маскувальні сітки Militex",
+        "Маскування / Маскувальні сітки Militex / Альпійська клякса",
+        "Маскування / Маскувальні сітки Militex / Дубове листя",
+        "Маскування / Маскувальні сітки Militex / З основою зимовий мультикам",
+        "Маскування / Маскувальні сітки Militex / З основою мультикам",
+        "Маскування / Маскувальні сітки Militex / Зимовий мультикам",
+        "Маскування / Маскувальні сітки Militex / Камуфляж",
+        "Маскування / Маскувальні сітки Militex / Листя осінь",
+        "Маскування / Маскувальні сітки Militex / Мультикам",
+        "Маскування / Маскувальні сітки Militex / Мультикам бруд",
+        "Маскування / Маскувальні сітки Militex / Піксель",
+        "Маскування / Маскувальні сітки",
+        "Маскування / Маскувальні сітки / Маскувальні сітки"
+      ]
+    },
+    {
+      "category_id": "camouflage_antidrone",
+      "parent_id": "camouflage",
+      "slug": "antydronovi-sitky",
+      "display_name_uk": "Антидронові сітки",
+      "status": "active",
+      "sort_order": 1002,
+      "path": "Маскування / Антидронові сітки",
+      "url_path": "maskuvannia/antydronovi-sitky",
+      "aliases": [
+        "Антидронові сітки",
+        "Маскування / Антидронові сітки",
+        "Маскування / Антидронові сітки / Для доріг і техніки"
+      ]
+    },
+    {
+      "category_id": "camouflage_suits",
+      "parent_id": "camouflage",
+      "slug": "maskuvalni-kostiumy",
+      "display_name_uk": "Маскувальні костюми",
+      "status": "active",
+      "sort_order": 1003,
+      "path": "Маскування / Маскувальні костюми",
+      "url_path": "maskuvannia/maskuvalni-kostiumy",
+      "aliases": [
+        "Маскувальні костюми",
+        "Маскування / Маскувальні костюми",
+        "Маскування / Маскувальні костюми / Сітчасті та сезонні костюми"
+      ]
+    },
+    {
+      "category_id": "camouflage_materials",
+      "parent_id": "camouflage",
+      "slug": "maskuvalni-materialy",
+      "display_name_uk": "Маскувальні матеріали",
+      "status": "active",
+      "sort_order": 1004,
+      "path": "Маскування / Маскувальні матеріали",
+      "url_path": "maskuvannia/maskuvalni-materialy",
+      "aliases": [
+        "Маскувальні матеріали",
+        "Маскування / Маскувальні матеріали",
+        "Маскування / Маскувальні матеріали / Стрічки та тканини"
+      ]
+    },
+    {
+      "category_id": "field",
+      "parent_id": null,
+      "slug": "turyzm-ta-polove-sporiadzhennia",
+      "display_name_uk": "Туризм та польове спорядження",
+      "status": "active",
+      "sort_order": 1100,
+      "path": "Туризм та польове спорядження",
+      "url_path": "turyzm-ta-polove-sporiadzhennia",
+      "aliases": [
+        "Туризм та польове спорядження",
+        "Туризм та польове спорядження / Інше",
+        "Туризм та польове спорядження / Сон",
+        "Туризм та польове спорядження / Посуд та харчування",
+        "Туризм та польове спорядження / Вогонь та обігрів",
+        "Туризм та польове спорядження / Гігієна"
+      ]
+    },
+    {
+      "category_id": "field_sleeping",
+      "parent_id": "field",
+      "slug": "spalni-mishky",
+      "display_name_uk": "Спальні мішки",
+      "status": "active",
+      "sort_order": 1101,
+      "path": "Туризм та польове спорядження / Спальні мішки",
+      "url_path": "turyzm-ta-polove-sporiadzhennia/spalni-mishky",
+      "aliases": [
+        "Спальні мішки",
+        "Туризм та польове спорядження / Сон / Спальні мішки"
+      ]
+    },
+    {
+      "category_id": "field_mats",
+      "parent_id": "field",
+      "slug": "karematy",
+      "display_name_uk": "Каремати",
+      "status": "active",
+      "sort_order": 1102,
+      "path": "Туризм та польове спорядження / Каремати",
+      "url_path": "turyzm-ta-polove-sporiadzhennia/karematy",
+      "aliases": [
+        "Каремати",
+        "Туризм та польове спорядження / Каремати та сидушки",
+        "Туризм та польове спорядження / Каремати та сидушки / Розкладні каремати",
+        "Туризм та польове спорядження / Каремати та сидушки / Тактичні сидушки",
+        "Туризм та польове спорядження / Каремати та сидушки / Туристичні каремати",
+        "Туризм та польове спорядження / Сон / Каремати"
+      ]
+    },
+    {
+      "category_id": "field_seats",
+      "parent_id": "field",
+      "slug": "sydushky",
+      "display_name_uk": "Сидушки",
+      "status": "active",
+      "sort_order": 1103,
+      "path": "Туризм та польове спорядження / Сидушки",
+      "url_path": "turyzm-ta-polove-sporiadzhennia/sydushky",
+      "aliases": [
+        "Сидушки"
+      ]
+    },
+    {
+      "category_id": "field_blankets",
+      "parent_id": "field",
+      "slug": "termokovdry",
+      "display_name_uk": "Термоковдри",
+      "status": "active",
+      "sort_order": 1104,
+      "path": "Туризм та польове спорядження / Термоковдри",
+      "url_path": "turyzm-ta-polove-sporiadzhennia/termokovdry",
+      "aliases": [
+        "Термоковдри",
+        "Туризм та польове спорядження / Сон / Термоковдри"
+      ]
+    },
+    {
+      "category_id": "field_cookware",
+      "parent_id": "field",
+      "slug": "polovyi-posud",
+      "display_name_uk": "Польовий посуд",
+      "status": "active",
+      "sort_order": 1105,
+      "path": "Туризм та польове спорядження / Польовий посуд",
+      "url_path": "turyzm-ta-polove-sporiadzhennia/polovyi-posud",
+      "aliases": [
+        "Польовий посуд",
+        "Туризм та польове спорядження / Посуд та харчування / Польовий посуд"
+      ]
+    },
+    {
+      "category_id": "field_thermos",
+      "parent_id": "field",
+      "slug": "termosy",
+      "display_name_uk": "Термоси",
+      "status": "active",
+      "sort_order": 1106,
+      "path": "Туризм та польове спорядження / Термоси",
+      "url_path": "turyzm-ta-polove-sporiadzhennia/termosy",
+      "aliases": [
+        "Термоси",
+        "Туризм та польове спорядження / Посуд та харчування / Термоси"
+      ]
+    },
+    {
+      "category_id": "field_burners",
+      "parent_id": "field",
+      "slug": "palnyky",
+      "display_name_uk": "Пальники",
+      "status": "active",
+      "sort_order": 1107,
+      "path": "Туризм та польове спорядження / Пальники",
+      "url_path": "turyzm-ta-polove-sporiadzhennia/palnyky",
+      "aliases": [
+        "Пальники",
+        "Туризм та польове спорядження / Вогонь та обігрів / Пальники"
+      ]
+    },
+    {
+      "category_id": "field_fasteners",
+      "parent_id": "field",
+      "slug": "karabiny-ta-kriplennia",
+      "display_name_uk": "Карабіни та кріплення",
+      "status": "active",
+      "sort_order": 1108,
+      "path": "Туризм та польове спорядження / Карабіни та кріплення",
+      "url_path": "turyzm-ta-polove-sporiadzhennia/karabiny-ta-kriplennia",
+      "aliases": [
+        "Карабіни та кріплення",
+        "Туризм та польове спорядження / Інше / Карабіни та кріплення"
+      ]
+    },
+    {
+      "category_id": "field_hygiene",
+      "parent_id": "field",
+      "slug": "zasoby-hihiieny",
+      "display_name_uk": "Засоби гігієни",
+      "status": "active",
+      "sort_order": 1109,
+      "path": "Туризм та польове спорядження / Засоби гігієни",
+      "url_path": "turyzm-ta-polove-sporiadzhennia/zasoby-hihiieny",
+      "aliases": [
+        "Засоби гігієни",
+        "Туризм та польове спорядження / Гігієна / Засоби гігієни"
+      ]
+    },
+    {
+      "category_id": "field_other",
+      "parent_id": "field",
+      "slug": "inshe-polove-sporiadzhennia",
+      "display_name_uk": "Інше польове спорядження",
+      "status": "active",
+      "sort_order": 1110,
+      "path": "Туризм та польове спорядження / Інше польове спорядження",
+      "url_path": "turyzm-ta-polove-sporiadzhennia/inshe-polove-sporiadzhennia",
+      "aliases": [
+        "Інше польове спорядження",
+        "Туризм та польове спорядження / Інше / Польове спорядження",
+        "Туризм та польове спорядження / Інше / Прапори та шеврони"
+      ]
+    },
+    {
+      "category_id": "electronics",
+      "parent_id": null,
+      "slug": "elektronika-ta-sposterezhennia",
+      "display_name_uk": "Електроніка та спостереження",
+      "status": "active",
+      "sort_order": 1200,
+      "path": "Електроніка та спостереження",
+      "url_path": "elektronika-ta-sposterezhennia",
+      "aliases": [
+        "Електроніка та спостереження",
+        "Електроніка та спостереження / Оптика"
+      ]
+    },
+    {
+      "category_id": "electronics_cameras",
+      "parent_id": "electronics",
+      "slug": "ekshn-kamery",
+      "display_name_uk": "Екшн-камери",
+      "status": "active",
+      "sort_order": 1201,
+      "path": "Електроніка та спостереження / Екшн-камери",
+      "url_path": "elektronika-ta-sposterezhennia/ekshn-kamery",
+      "aliases": [
+        "Екшн-камери",
+        "Електроніка та спостереження / Екшн-камери",
+        "Електроніка та спостереження / Екшн-камери / Екшн-камери"
+      ]
+    },
+    {
+      "category_id": "electronics_monoculars",
+      "parent_id": "electronics",
+      "slug": "monokuliary",
+      "display_name_uk": "Монокуляри",
+      "status": "active",
+      "sort_order": 1202,
+      "path": "Електроніка та спостереження / Монокуляри",
+      "url_path": "elektronika-ta-sposterezhennia/monokuliary",
+      "aliases": [
+        "Монокуляри",
+        "Електроніка та спостереження / Оптика / Монокуляри"
+      ]
+    },
+    {
+      "category_id": "electronics_mounts",
+      "parent_id": "electronics",
+      "slug": "kriplennia",
+      "display_name_uk": "Кріплення",
+      "status": "active",
+      "sort_order": 1203,
+      "path": "Електроніка та спостереження / Кріплення",
+      "url_path": "elektronika-ta-sposterezhennia/kriplennia",
+      "aliases": [
+        "Кріплення",
+        "Електроніка та спостереження / Кріплення",
+        "Електроніка та спостереження / Кріплення / Для ПНБ та тепловізорів"
+      ]
+    },
+    {
+      "category_id": "electronics_memory",
+      "parent_id": "electronics",
+      "slug": "karty-pam-iati",
+      "display_name_uk": "Карти пам'яті",
+      "status": "active",
+      "sort_order": 1204,
+      "path": "Електроніка та спостереження / Карти пам'яті",
+      "url_path": "elektronika-ta-sposterezhennia/karty-pam-iati",
+      "aliases": [
+        "Карти пам'яті",
+        "Електроніка та спостереження / Аксесуари / Карти пам'яті"
+      ]
+    },
+    {
+      "category_id": "electronics_accessories",
+      "parent_id": "electronics",
+      "slug": "aksesuary",
+      "display_name_uk": "Аксесуари",
+      "status": "active",
+      "sort_order": 1205,
+      "path": "Електроніка та спостереження / Аксесуари",
+      "url_path": "elektronika-ta-sposterezhennia/aksesuary",
+      "aliases": [
+        "Аксесуари",
+        "Електроніка та спостереження / Аксесуари"
+      ]
+    },
+    {
+      "category_id": "lighting",
+      "parent_id": null,
+      "slug": "osvitlennia",
+      "display_name_uk": "Освітлення",
+      "status": "active",
+      "sort_order": 1300,
+      "path": "Освітлення",
+      "url_path": "osvitlennia",
+      "aliases": [
+        "Освітлення"
+      ]
+    },
+    {
+      "category_id": "lighting_handheld",
+      "parent_id": "lighting",
+      "slug": "ruchni-likhtari",
+      "display_name_uk": "Ручні ліхтарі",
+      "status": "active",
+      "sort_order": 1301,
+      "path": "Освітлення / Ручні ліхтарі",
+      "url_path": "osvitlennia/ruchni-likhtari",
+      "aliases": [
+        "Ручні ліхтарі",
+        "Освітлення / Ліхтарі та аксесуари / Ручні ліхтарі"
+      ]
+    },
+    {
+      "category_id": "lighting_headlamps",
+      "parent_id": "lighting",
+      "slug": "nalobni-likhtari",
+      "display_name_uk": "Налобні ліхтарі",
+      "status": "active",
+      "sort_order": 1302,
+      "path": "Освітлення / Налобні ліхтарі",
+      "url_path": "osvitlennia/nalobni-likhtari",
+      "aliases": [
+        "Налобні ліхтарі"
+      ]
+    },
+    {
+      "category_id": "lighting_tactical",
+      "parent_id": "lighting",
+      "slug": "taktychni-likhtari",
+      "display_name_uk": "Тактичні ліхтарі",
+      "status": "active",
+      "sort_order": 1303,
+      "path": "Освітлення / Тактичні ліхтарі",
+      "url_path": "osvitlennia/taktychni-likhtari",
+      "aliases": [
+        "Тактичні ліхтарі"
+      ]
+    },
+    {
+      "category_id": "lighting_accessories",
+      "parent_id": "lighting",
+      "slug": "aksesuary-ta-kriplennia",
+      "display_name_uk": "Аксесуари та кріплення",
+      "status": "active",
+      "sort_order": 1304,
+      "path": "Освітлення / Аксесуари та кріплення",
+      "url_path": "osvitlennia/aksesuary-ta-kriplennia",
+      "aliases": [
+        "Аксесуари та кріплення",
+        "Освітлення / Ліхтарі та аксесуари",
+        "Освітлення / Ліхтарі та аксесуари / Ліхтарі та аксесуари"
+      ]
+    },
+    {
+      "category_id": "power",
+      "parent_id": null,
+      "slug": "avtonomne-zhyvlennia",
+      "display_name_uk": "Автономне живлення",
+      "status": "active",
+      "sort_order": 1400,
+      "path": "Автономне живлення",
+      "url_path": "avtonomne-zhyvlennia",
+      "aliases": [
+        "Автономне живлення",
+        "Автономне живлення / Сонячна енергія"
+      ]
+    },
+    {
+      "category_id": "power_banks",
+      "parent_id": "power",
+      "slug": "paverbanky",
+      "display_name_uk": "Павербанки",
+      "status": "active",
+      "sort_order": 1401,
+      "path": "Автономне живлення / Павербанки",
+      "url_path": "avtonomne-zhyvlennia/paverbanky",
+      "aliases": [
+        "Павербанки",
+        "Автономне живлення / Павербанки"
+      ]
+    },
+    {
+      "category_id": "power_stations",
+      "parent_id": "power",
+      "slug": "zariadni-stantsii",
+      "display_name_uk": "Зарядні станції",
+      "status": "active",
+      "sort_order": 1402,
+      "path": "Автономне живлення / Зарядні станції",
+      "url_path": "avtonomne-zhyvlennia/zariadni-stantsii",
+      "aliases": [
+        "Зарядні станції",
+        "Автономне живлення / Зарядні станції",
+        "Автономне живлення / Зарядні станції / Портативні зарядні станції"
+      ]
+    },
+    {
+      "category_id": "power_solar",
+      "parent_id": "power",
+      "slug": "soniachni-paneli",
+      "display_name_uk": "Сонячні панелі",
+      "status": "active",
+      "sort_order": 1403,
+      "path": "Автономне живлення / Сонячні панелі",
+      "url_path": "avtonomne-zhyvlennia/soniachni-paneli",
+      "aliases": [
+        "Сонячні панелі",
+        "Автономне живлення / Сонячна енергія / Сонячні панелі"
+      ]
+    },
+    {
+      "category_id": "power_batteries",
+      "parent_id": "power",
+      "slug": "akumuliatory-ta-batareiky",
+      "display_name_uk": "Акумулятори та батарейки",
+      "status": "active",
+      "sort_order": 1404,
+      "path": "Автономне живлення / Акумулятори та батарейки",
+      "url_path": "avtonomne-zhyvlennia/akumuliatory-ta-batareiky",
+      "aliases": [
+        "Акумулятори та батарейки",
+        "Автономне живлення / Акумулятори та батарейки"
+      ]
+    },
+    {
+      "category_id": "power_cables",
+      "parent_id": "power",
+      "slug": "kabeli-ta-perekhidnyky",
+      "display_name_uk": "Кабелі та перехідники",
+      "status": "active",
+      "sort_order": 1405,
+      "path": "Автономне живлення / Кабелі та перехідники",
+      "url_path": "avtonomne-zhyvlennia/kabeli-ta-perekhidnyky",
+      "aliases": [
+        "Кабелі та перехідники",
+        "Автономне живлення / Кабелі та перехідники"
+      ]
+    },
+    {
+      "category_id": "power_accessories",
+      "parent_id": "power",
+      "slug": "aksesuary-zhyvlennia",
+      "display_name_uk": "Аксесуари живлення",
+      "status": "active",
+      "sort_order": 1406,
+      "path": "Автономне живлення / Аксесуари живлення",
+      "url_path": "avtonomne-zhyvlennia/aksesuary-zhyvlennia",
+      "aliases": [
+        "Аксесуари живлення",
+        "Автономне живлення / Аксесуари",
+        "Автономне живлення / Аксесуари / Аксесуари живлення"
+      ]
+    },
+    {
+      "category_id": "weapon_accessories",
+      "parent_id": null,
+      "slug": "zbroiovi-aksesuary",
+      "display_name_uk": "Збройові аксесуари",
+      "status": "active",
+      "sort_order": 1500,
+      "path": "Збройові аксесуари",
+      "url_path": "zbroiovi-aksesuary",
+      "aliases": [
+        "Збройові аксесуари",
+        "Збройові аксесуари / Платформа AR",
+        "Збройові аксесуари / Платформа АК"
+      ]
+    },
+    {
+      "category_id": "weapon_accessories_slings",
+      "parent_id": "weapon_accessories",
+      "slug": "remeni-dlia-zbroi",
+      "display_name_uk": "Ремені для зброї",
+      "status": "active",
+      "sort_order": 1501,
+      "path": "Збройові аксесуари / Ремені для зброї",
+      "url_path": "zbroiovi-aksesuary/remeni-dlia-zbroi",
+      "aliases": [
+        "Ремені для зброї",
+        "Збройові аксесуари / Ремені",
+        "Збройові аксесуари / Ремені / Ремені для зброї",
+        "Збройові аксесуари / Ремені / Одноточкові ремені",
+        "Збройові аксесуари / Ремені / Двоточкові ремені",
+        "Збройові аксесуари / Ремені / Трьохточкові ремені"
+      ]
+    },
+    {
+      "category_id": "weapon_accessories_magazines",
+      "parent_id": "weapon_accessories",
+      "slug": "mahazyny",
+      "display_name_uk": "Магазини",
+      "status": "active",
+      "sort_order": 1502,
+      "path": "Збройові аксесуари / Магазини",
+      "url_path": "zbroiovi-aksesuary/mahazyny",
+      "aliases": [
+        "Магазини",
+        "Збройові аксесуари / Магазини",
+        "Збройові аксесуари / Магазини / Для АК та AR-15",
+        "Збройові аксесуари / Магазини / Магазини АК та AR15"
+      ]
+    },
+    {
+      "category_id": "weapon_accessories_grips",
+      "parent_id": "weapon_accessories",
+      "slug": "rukiv-ia-ta-upory",
+      "display_name_uk": "Руків'я та упори",
+      "status": "active",
+      "sort_order": 1503,
+      "path": "Збройові аксесуари / Руків'я та упори",
+      "url_path": "zbroiovi-aksesuary/rukiv-ia-ta-upory",
+      "aliases": [
+        "Руків'я та упори",
+        "Збройові аксесуари / Руків'я та упори"
+      ]
+    },
+    {
+      "category_id": "weapon_accessories_stocks",
+      "parent_id": "weapon_accessories",
+      "slug": "pryklady-ta-shchoky",
+      "display_name_uk": "Приклади та щоки",
+      "status": "active",
+      "sort_order": 1504,
+      "path": "Збройові аксесуари / Приклади та щоки",
+      "url_path": "zbroiovi-aksesuary/pryklady-ta-shchoky",
+      "aliases": [
+        "Приклади та щоки",
+        "Збройові аксесуари / Приклади та щоки"
+      ]
+    },
+    {
+      "category_id": "weapon_accessories_bipods",
+      "parent_id": "weapon_accessories",
+      "slug": "soshky",
+      "display_name_uk": "Сошки",
+      "status": "active",
+      "sort_order": 1505,
+      "path": "Збройові аксесуари / Сошки",
+      "url_path": "zbroiovi-aksesuary/soshky",
+      "aliases": [
+        "Сошки",
+        "Збройові аксесуари / Сошки"
+      ]
+    },
+    {
+      "category_id": "weapon_accessories_holsters",
+      "parent_id": "weapon_accessories",
+      "slug": "kobury",
+      "display_name_uk": "Кобури",
+      "status": "active",
+      "sort_order": 1506,
+      "path": "Збройові аксесуари / Кобури",
+      "url_path": "zbroiovi-aksesuary/kobury",
+      "aliases": [
+        "Кобури",
+        "Збройові аксесуари / Кобури",
+        "Збройові аксесуари / Кобури / Тактичні кобури"
+      ]
+    },
+    {
+      "category_id": "weapon_accessories_cases",
+      "parent_id": "weapon_accessories",
+      "slug": "chokhly",
+      "display_name_uk": "Чохли",
+      "status": "active",
+      "sort_order": 1507,
+      "path": "Збройові аксесуари / Чохли",
+      "url_path": "zbroiovi-aksesuary/chokhly",
+      "aliases": [
+        "Чохли",
+        "Збройові аксесуари / Чохли для зброї"
+      ]
+    },
+    {
+      "category_id": "weapon_accessories_cleaning",
+      "parent_id": "weapon_accessories",
+      "slug": "dohliad-ta-chyshchennia",
+      "display_name_uk": "Догляд та чищення",
+      "status": "active",
+      "sort_order": 1508,
+      "path": "Збройові аксесуари / Догляд та чищення",
+      "url_path": "zbroiovi-aksesuary/dohliad-ta-chyshchennia",
+      "aliases": [
+        "Догляд та чищення",
+        "Збройові аксесуари / Догляд",
+        "Збройові аксесуари / Догляд / Набори для чищення",
+        "Збройові аксесуари / Догляд / Чищення зброї"
+      ]
+    },
+    {
+      "category_id": "weapon_accessories_other",
+      "parent_id": "weapon_accessories",
+      "slug": "inshi-aksesuary",
+      "display_name_uk": "Інші аксесуари",
+      "status": "active",
+      "sort_order": 1509,
+      "path": "Збройові аксесуари / Інші аксесуари",
+      "url_path": "zbroiovi-aksesuary/inshi-aksesuary",
+      "aliases": [
+        "Інші аксесуари",
+        "Збройові аксесуари / Інше",
+        "Збройові аксесуари / Інше / Інші аксесуари",
+        "Збройові аксесуари / Платформа AR / Аксесуари",
+        "Збройові аксесуари / Платформа АК / Аксесуари"
+      ]
+    },
+    {
+      "category_id": "eye_protection",
+      "parent_id": null,
+      "slug": "zakhyst-ochei-ta-oblychchia",
+      "display_name_uk": "Захист очей та обличчя",
+      "status": "active",
+      "sort_order": 1600,
+      "path": "Захист очей та обличчя",
+      "url_path": "zakhyst-ochei-ta-oblychchia",
+      "aliases": [
+        "Захист очей та обличчя"
+      ]
+    },
+    {
+      "category_id": "eye_protection_glasses",
+      "parent_id": "eye_protection",
+      "slug": "taktychni-okuliary",
+      "display_name_uk": "Тактичні окуляри",
+      "status": "active",
+      "sort_order": 1601,
+      "path": "Захист очей та обличчя / Тактичні окуляри",
+      "url_path": "zakhyst-ochei-ta-oblychchia/taktychni-okuliary",
+      "aliases": [
+        "Тактичні окуляри",
+        "Захист очей та обличчя / Окуляри",
+        "Захист очей та обличчя / Окуляри / Тактичні окуляри"
+      ]
+    },
+    {
+      "category_id": "eye_protection_masks",
+      "parent_id": "eye_protection",
+      "slug": "zakhysni-masky",
+      "display_name_uk": "Захисні маски",
+      "status": "active",
+      "sort_order": 1602,
+      "path": "Захист очей та обличчя / Захисні маски",
+      "url_path": "zakhyst-ochei-ta-oblychchia/zakhysni-masky",
+      "aliases": [
+        "Захисні маски"
+      ]
+    },
+    {
+      "category_id": "eye_protection_accessories",
+      "parent_id": "eye_protection",
+      "slug": "aksesuary",
+      "display_name_uk": "Аксесуари",
+      "status": "active",
+      "sort_order": 1603,
+      "path": "Захист очей та обличчя / Аксесуари",
+      "url_path": "zakhyst-ochei-ta-oblychchia/aksesuary",
+      "aliases": [
+        "Аксесуари"
+      ]
+    },
+    {
+      "category_id": "tools",
+      "parent_id": null,
+      "slug": "instrumenty-ta-nozhi",
+      "display_name_uk": "Інструменти та ножі",
+      "status": "active",
+      "sort_order": 1700,
+      "path": "Інструменти та ножі",
+      "url_path": "instrumenty-ta-nozhi",
+      "aliases": [
+        "Інструменти та ножі",
+        "Інструменти та ножі / Ножі та мультитули"
+      ]
+    },
+    {
+      "category_id": "tools_knives",
+      "parent_id": "tools",
+      "slug": "nozhi",
+      "display_name_uk": "Ножі",
+      "status": "active",
+      "sort_order": 1701,
+      "path": "Інструменти та ножі / Ножі",
+      "url_path": "instrumenty-ta-nozhi/nozhi",
+      "aliases": [
+        "Ножі"
+      ]
+    },
+    {
+      "category_id": "tools_multitools",
+      "parent_id": "tools",
+      "slug": "multytuly",
+      "display_name_uk": "Мультитули",
+      "status": "active",
+      "sort_order": 1702,
+      "path": "Інструменти та ножі / Мультитули",
+      "url_path": "instrumenty-ta-nozhi/multytuly",
+      "aliases": [
+        "Мультитули"
+      ]
+    },
+    {
+      "category_id": "tools_tools",
+      "parent_id": "tools",
+      "slug": "instrumenty",
+      "display_name_uk": "Інструменти",
+      "status": "active",
+      "sort_order": 1703,
+      "path": "Інструменти та ножі / Інструменти",
+      "url_path": "instrumenty-ta-nozhi/instrumenty",
+      "aliases": [
+        "Інструменти"
+      ]
+    },
+    {
+      "category_id": "tools_accessories",
+      "parent_id": "tools",
+      "slug": "aksesuary",
+      "display_name_uk": "Аксесуари",
+      "status": "active",
+      "sort_order": 1704,
+      "path": "Інструменти та ножі / Аксесуари",
+      "url_path": "instrumenty-ta-nozhi/aksesuary",
+      "aliases": [
+        "Аксесуари"
+      ]
+    },
+    {
+      "category_id": "__CATEGORY_REVIEW__",
+      "parent_id": null,
+      "slug": "category-review",
+      "display_name_uk": "Внутрішня перевірка категорії",
+      "status": "internal",
+      "sort_order": 99999,
+      "path": "__CATEGORY_REVIEW__",
+      "url_path": "",
+      "aliases": []
+    }
+  ],
+  "legacy_mapping": [
+    {
+      "old_path": "Одяг та форма",
+      "old_url": "odiah-ta-forma",
+      "category_id": "clothing",
+      "decision": "keep",
+      "derived_attributes": {},
+      "product_count_observed": 439
+    },
+    {
+      "old_path": "Одяг та форма / Аксесуари одягу",
+      "old_url": "odiah-ta-forma/aksesuary-odiahu",
+      "category_id": "clothing",
+      "decision": "resolve_products",
+      "derived_attributes": {},
+      "product_count_observed": 163
+    },
+    {
+      "old_path": "Одяг та форма / Аксесуари одягу / Головні убори",
+      "old_url": "odiah-ta-forma/aksesuary-odiahu/holovni-ubory",
+      "category_id": "clothing_headwear",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 10
+    },
+    {
+      "old_path": "Одяг та форма / Аксесуари одягу / Тактичні рукавички",
+      "old_url": "odiah-ta-forma/aksesuary-odiahu/taktychni-rukavychky",
+      "category_id": "clothing_gloves",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 61
+    },
+    {
+      "old_path": "Одяг та форма / Жіночий одяг",
+      "old_url": "odiah-ta-forma/zhinochyi-odiah",
+      "category_id": "clothing",
+      "decision": "resolve_products",
+      "derived_attributes": {
+        "Стать": "Жіноча"
+      },
+      "product_count_observed": 2
+    },
+    {
+      "old_path": "Одяг та форма / Жіночий одяг / Тактичні штани",
+      "old_url": "odiah-ta-forma/zhinochyi-odiah/taktychni-shtany",
+      "category_id": "clothing_pants",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Стать": "Жіноча"
+      },
+      "product_count_observed": 1
+    },
+    {
+      "old_path": "Одяг та форма / Жіночий одяг / Убакси та бойові сорочки",
+      "old_url": "odiah-ta-forma/zhinochyi-odiah/ubaksy-ta-boiovi-sorochky",
+      "category_id": "clothing_combat_shirts",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Стать": "Жіноча"
+      },
+      "product_count_observed": 1
+    },
+    {
+      "old_path": "Одяг та форма / Чоловічий одяг",
+      "old_url": "odiah-ta-forma/cholovichyi-odiah",
+      "category_id": "clothing",
+      "decision": "resolve_products",
+      "derived_attributes": {
+        "Стать": "Чоловіча"
+      },
+      "product_count_observed": 274
+    },
+    {
+      "old_path": "Одяг та форма / Чоловічий одяг / Куртки та вітровки",
+      "old_url": "odiah-ta-forma/cholovichyi-odiah/kurtky-ta-vitrovky",
+      "category_id": "clothing_jackets",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Стать": "Чоловіча"
+      },
+      "product_count_observed": 36
+    },
+    {
+      "old_path": "Одяг та форма / Чоловічий одяг / Тактичні шорти",
+      "old_url": "odiah-ta-forma/cholovichyi-odiah/taktychni-shorty",
+      "category_id": "clothing_shorts",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Стать": "Чоловіча"
+      },
+      "product_count_observed": 10
+    },
+    {
+      "old_path": "Одяг та форма / Чоловічий одяг / Тактичні штани",
+      "old_url": "odiah-ta-forma/cholovichyi-odiah/taktychni-shtany",
+      "category_id": "clothing_pants",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Стать": "Чоловіча"
+      },
+      "product_count_observed": 49
+    },
+    {
+      "old_path": "Одяг та форма / Чоловічий одяг / Термобілизна",
+      "old_url": "odiah-ta-forma/cholovichyi-odiah/termobilyzna",
+      "category_id": "clothing_thermal",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Стать": "Чоловіча"
+      },
+      "product_count_observed": 12
+    },
+    {
+      "old_path": "Одяг та форма / Чоловічий одяг / Убакси та бойові сорочки",
+      "old_url": "odiah-ta-forma/cholovichyi-odiah/ubaksy-ta-boiovi-sorochky",
+      "category_id": "clothing_combat_shirts",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Стать": "Чоловіча"
+      },
+      "product_count_observed": 9
+    },
+    {
+      "old_path": "Одяг та форма / Чоловічий одяг / Фліс, кофти та худі",
+      "old_url": "odiah-ta-forma/cholovichyi-odiah/flis-kofty-ta-khudi",
+      "category_id": "clothing_fleece",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Стать": "Чоловіча"
+      },
+      "product_count_observed": 20
+    },
+    {
+      "old_path": "Одяг та форма / Чоловічий одяг / Формені комплекти та костюми",
+      "old_url": "odiah-ta-forma/cholovichyi-odiah/formeni-komplekty-ta-kostiumy",
+      "category_id": "clothing_costumes",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Стать": "Чоловіча"
+      },
+      "product_count_observed": 20
+    },
+    {
+      "old_path": "Одяг та форма / Чоловічий одяг / Футболки та поло",
+      "old_url": "odiah-ta-forma/cholovichyi-odiah/futbolky-ta-polo",
+      "category_id": "clothing_tshirts",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Стать": "Чоловіча"
+      },
+      "product_count_observed": 42
+    },
+    {
+      "old_path": "Одяг та форма / Чоловічий одяг / Светри та гольфи",
+      "old_url": "odiah-ta-forma/cholovichyi-odiah/svetry-ta-holfy",
+      "category_id": "clothing_sweaters",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Стать": "Чоловіча"
+      },
+      "product_count_observed": 2
+    },
+    {
+      "old_path": "Одяг та форма / Чоловічий одяг / Інший формений одяг",
+      "old_url": "odiah-ta-forma/cholovichyi-odiah/inshyi-formenyi-odiah",
+      "category_id": "clothing_costumes",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Стать": "Чоловіча"
+      },
+      "product_count_observed": 1
+    },
+    {
+      "old_path": "Взуття",
+      "old_url": "vzuttia",
+      "category_id": "footwear",
+      "decision": "keep",
+      "derived_attributes": {},
+      "product_count_observed": 128
+    },
+    {
+      "old_path": "Взуття / Тактичне взуття",
+      "old_url": "vzuttia/taktychne-vzuttia",
+      "category_id": "footwear",
+      "decision": "resolve_products",
+      "derived_attributes": {},
+      "product_count_observed": 86
+    },
+    {
+      "old_path": "Взуття / Тактичне взуття / Взуття",
+      "old_url": "vzuttia/taktychne-vzuttia/vzuttia",
+      "category_id": "footwear",
+      "decision": "resolve_products",
+      "derived_attributes": {},
+      "product_count_observed": 20
+    },
+    {
+      "old_path": "Взуття / Тактичне взуття / Берці",
+      "old_url": "vzuttia/taktychne-vzuttia/bertsi",
+      "category_id": "footwear_boots",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 29
+    },
+    {
+      "old_path": "Взуття / Шкарпетки та аксесуари",
+      "old_url": "vzuttia/shkarpetky-ta-aksesuary",
+      "category_id": "footwear_socks",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 38
+    },
+    {
+      "old_path": "Взуття / Шкарпетки та аксесуари / Тактичні шкарпетки",
+      "old_url": "vzuttia/shkarpetky-ta-aksesuary/taktychni-shkarpetky",
+      "category_id": "footwear_socks",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 28
+    },
+    {
+      "old_path": "Бронезахист",
+      "old_url": "bronezakhyst",
+      "category_id": "armor",
+      "decision": "keep",
+      "derived_attributes": {},
+      "product_count_observed": 205
+    },
+    {
+      "old_path": "Бронезахист / Бронежилети",
+      "old_url": "bronezakhyst/bronezhylety",
+      "category_id": "armor_vests",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 21
+    },
+    {
+      "old_path": "Бронезахист / Бронежилети / Бронежилети",
+      "old_url": "bronezakhyst/bronezhylety/bronezhylety",
+      "category_id": "armor_vests",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 21
+    },
+    {
+      "old_path": "Бронезахист / Бронекомплекти",
+      "old_url": "bronezakhyst/bronekomplekty",
+      "category_id": "armor_sets",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 59
+    },
+    {
+      "old_path": "Бронезахист / Бронекомплекти / 1 клас захисту",
+      "old_url": "bronezakhyst/bronekomplekty/1-klas-zakhystu",
+      "category_id": "armor_sets",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Клас захисту": "1"
+      },
+      "product_count_observed": 32
+    },
+    {
+      "old_path": "Бронезахист / Бронекомплекти / 2 клас захисту",
+      "old_url": "bronezakhyst/bronekomplekty/2-klas-zakhystu",
+      "category_id": "armor_sets",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Клас захисту": "2"
+      },
+      "product_count_observed": 27
+    },
+    {
+      "old_path": "Бронезахист / Бронеплити",
+      "old_url": "bronezakhyst/broneplyty",
+      "category_id": "armor_plates",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 30
+    },
+    {
+      "old_path": "Бронезахист / Бронеплити / Бронеплити",
+      "old_url": "bronezakhyst/broneplyty/broneplyty",
+      "category_id": "armor_plates",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 30
+    },
+    {
+      "old_path": "Бронезахист / М'які балістичні пакети",
+      "old_url": "bronezakhyst/miaki-balistychni-pakety",
+      "category_id": "armor_soft",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 49
+    },
+    {
+      "old_path": "Бронезахист / М'які балістичні пакети / 1 клас захисту",
+      "old_url": "bronezakhyst/miaki-balistychni-pakety/1-klas-zakhystu",
+      "category_id": "armor_soft",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Клас захисту": "1"
+      },
+      "product_count_observed": 18
+    },
+    {
+      "old_path": "Бронезахист / М'які балістичні пакети / 2 клас захисту",
+      "old_url": "bronezakhyst/miaki-balistychni-pakety/2-klas-zakhystu",
+      "category_id": "armor_soft",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Клас захисту": "2"
+      },
+      "product_count_observed": 16
+    },
+    {
+      "old_path": "Бронезахист / Плитоноски",
+      "old_url": "bronezakhyst/plytonosky",
+      "category_id": "armor_carriers",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 46
+    },
+    {
+      "old_path": "Бронезахист / Плитоноски / Комплекти плитоносок",
+      "old_url": "bronezakhyst/plytonosky/komplekty-plytonosok",
+      "category_id": "armor_sets",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 16
+    },
+    {
+      "old_path": "Бронезахист / Плитоноски / Плитоноски",
+      "old_url": "bronezakhyst/plytonosky/plytonosky",
+      "category_id": "armor_carriers",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 28
+    },
+    {
+      "old_path": "Шоломи та захист голови",
+      "old_url": "sholomy-ta-zakhyst-holovy",
+      "category_id": "helmets",
+      "decision": "keep",
+      "derived_attributes": {},
+      "product_count_observed": 76
+    },
+    {
+      "old_path": "Шоломи та захист голови / Аксесуари",
+      "old_url": "sholomy-ta-zakhyst-holovy/aksesuary",
+      "category_id": "helmets_accessories",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 30
+    },
+    {
+      "old_path": "Шоломи та захист голови / Аксесуари / Інші аксесуари",
+      "old_url": "sholomy-ta-zakhyst-holovy/aksesuary/inshi-aksesuary",
+      "category_id": "helmets_accessories",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 6
+    },
+    {
+      "old_path": "Шоломи та захист голови / Аксесуари / Кавери на шоломи",
+      "old_url": "sholomy-ta-zakhyst-holovy/aksesuary/kavery-na-sholomy",
+      "category_id": "helmets_covers",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 9
+    },
+    {
+      "old_path": "Шоломи та захист голови / Аксесуари / Кріплення для навушників",
+      "old_url": "sholomy-ta-zakhyst-holovy/aksesuary/kriplennia-dlia-navushnykiv",
+      "category_id": "helmets_mounts",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 5
+    },
+    {
+      "old_path": "Шоломи та захист голови / Аксесуари / Підвісні системи та подушки",
+      "old_url": "sholomy-ta-zakhyst-holovy/aksesuary/pidvisni-systemy-ta-podushky",
+      "category_id": "helmets_suspension",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 8
+    },
+    {
+      "old_path": "Шоломи та захист голови / Шоломи",
+      "old_url": "sholomy-ta-zakhyst-holovy/sholomy",
+      "category_id": "helmets_ballistic",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 46
+    },
+    {
+      "old_path": "Шоломи та захист голови / Шоломи / FAST",
+      "old_url": "sholomy-ta-zakhyst-holovy/sholomy/fast",
+      "category_id": "helmets_ballistic",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Форм-фактор": "FAST"
+      },
+      "product_count_observed": 17
+    },
+    {
+      "old_path": "Шоломи та захист голови / Шоломи / MICH",
+      "old_url": "sholomy-ta-zakhyst-holovy/sholomy/mich",
+      "category_id": "helmets_ballistic",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Форм-фактор": "MICH"
+      },
+      "product_count_observed": 9
+    },
+    {
+      "old_path": "Шоломи та захист голови / Шоломи / Комплекти шоломів",
+      "old_url": "sholomy-ta-zakhyst-holovy/sholomy/komplekty-sholomiv",
+      "category_id": "helmets_ballistic",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 4
+    },
+    {
+      "old_path": "Тактичний зв'язок та слух",
+      "old_url": "taktychnyi-zviazok-ta-slukh",
+      "category_id": "communications",
+      "decision": "keep",
+      "derived_attributes": {},
+      "product_count_observed": 24
+    },
+    {
+      "old_path": "Тактичний зв'язок та слух / Активні навушники",
+      "old_url": "taktychnyi-zviazok-ta-slukh/aktyvni-navushnyky",
+      "category_id": "communications_headphones",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 19
+    },
+    {
+      "old_path": "Тактичний зв'язок та слух / Активні навушники / EARMOR",
+      "old_url": "taktychnyi-zviazok-ta-slukh/aktyvni-navushnyky/earmor",
+      "category_id": "communications_headphones",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Бренд": "EARMOR"
+      },
+      "product_count_observed": 3
+    },
+    {
+      "old_path": "Тактичний зв'язок та слух / Активні навушники / Walker's",
+      "old_url": "taktychnyi-zviazok-ta-slukh/aktyvni-navushnyky/walkers",
+      "category_id": "communications_headphones",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Бренд": "Walker's"
+      },
+      "product_count_observed": 2
+    },
+    {
+      "old_path": "Тактичний зв'язок та слух / Радіозв'язок",
+      "old_url": "taktychnyi-zviazok-ta-slukh/radiozviazok",
+      "category_id": "communications_radios",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 5
+    },
+    {
+      "old_path": "Тактичний зв'язок та слух / Радіозв'язок / Аксесуари для рацій",
+      "old_url": "taktychnyi-zviazok-ta-slukh/radiozviazok/aksesuary-dlia-ratsii",
+      "category_id": "communications_accessories",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 2
+    },
+    {
+      "old_path": "Рюкзаки, сумки та баули",
+      "old_url": "riukzaky-sumky-ta-bauly",
+      "category_id": "bags",
+      "decision": "keep",
+      "derived_attributes": {},
+      "product_count_observed": 66
+    },
+    {
+      "old_path": "Рюкзаки, сумки та баули / Рюкзаки",
+      "old_url": "riukzaky-sumky-ta-bauly/riukzaky",
+      "category_id": "bags",
+      "decision": "resolve_products",
+      "derived_attributes": {},
+      "product_count_observed": 34
+    },
+    {
+      "old_path": "Рюкзаки, сумки та баули / Рюкзаки / Гідратори та рюкзаки-гідратори",
+      "old_url": "riukzaky-sumky-ta-bauly/riukzaky/hidratory-ta-riukzaky-hidratory",
+      "category_id": "bags_hydration",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 4
+    },
+    {
+      "old_path": "Рюкзаки, сумки та баули / Рюкзаки / Тактичні рюкзаки",
+      "old_url": "riukzaky-sumky-ta-bauly/riukzaky/taktychni-riukzaky",
+      "category_id": "bags_tactical",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 20
+    },
+    {
+      "old_path": "Рюкзаки, сумки та баули / Рюкзаки / Штурмові рюкзаки",
+      "old_url": "riukzaky-sumky-ta-bauly/riukzaky/shturmovi-riukzaky",
+      "category_id": "bags_assault",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 1
+    },
+    {
+      "old_path": "Рюкзаки, сумки та баули / Сумки",
+      "old_url": "riukzaky-sumky-ta-bauly/sumky",
+      "category_id": "bags",
+      "decision": "resolve_products",
+      "derived_attributes": {},
+      "product_count_observed": 32
+    },
+    {
+      "old_path": "Рюкзаки, сумки та баули / Сумки / Баули та транспортні сумки",
+      "old_url": "riukzaky-sumky-ta-bauly/sumky/bauly-ta-transportni-sumky",
+      "category_id": "bags_duffel",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 9
+    },
+    {
+      "old_path": "Рюкзаки, сумки та баули / Сумки / Сумки для шоломів",
+      "old_url": "riukzaky-sumky-ta-bauly/sumky/sumky-dlia-sholomiv",
+      "category_id": "bags_tactical_bags",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 2
+    },
+    {
+      "old_path": "Рюкзаки, сумки та баули / Сумки / Через плече та бананки",
+      "old_url": "riukzaky-sumky-ta-bauly/sumky/cherez-pleche-ta-bananky",
+      "category_id": "bags_shoulder",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 11
+    },
+    {
+      "old_path": "Підсумки",
+      "old_url": "pidsumky",
+      "category_id": "pouches",
+      "decision": "keep",
+      "derived_attributes": {},
+      "product_count_observed": 78
+    },
+    {
+      "old_path": "Підсумки / Бойові підсумки",
+      "old_url": "pidsumky/boiovi-pidsumky",
+      "category_id": "pouches",
+      "decision": "resolve_products",
+      "derived_attributes": {},
+      "product_count_observed": 33
+    },
+    {
+      "old_path": "Підсумки / Бойові підсумки / Для гранат",
+      "old_url": "pidsumky/boiovi-pidsumky/dlia-hranat",
+      "category_id": "pouches_grenades",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 11
+    },
+    {
+      "old_path": "Підсумки / Бойові підсумки / Для магазинів",
+      "old_url": "pidsumky/boiovi-pidsumky/dlia-mahazyniv",
+      "category_id": "pouches_magazines",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 15
+    },
+    {
+      "old_path": "Підсумки / Бойові підсумки / Скидання магазинів",
+      "old_url": "pidsumky/boiovi-pidsumky/skydannia-mahazyniv",
+      "category_id": "pouches_dump",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 7
+    },
+    {
+      "old_path": "Підсумки / Медичні підсумки",
+      "old_url": "pidsumky/medychni-pidsumky",
+      "category_id": "pouches_ifak",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 15
+    },
+    {
+      "old_path": "Підсумки / Медичні підсумки / Аптечки IFAK",
+      "old_url": "pidsumky/medychni-pidsumky/aptechky-ifak",
+      "category_id": "pouches_ifak",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 8
+    },
+    {
+      "old_path": "Підсумки / Медичні підсумки / Для турнікету",
+      "old_url": "pidsumky/medychni-pidsumky/dlia-turniketu",
+      "category_id": "pouches_tourniquets",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 7
+    },
+    {
+      "old_path": "Підсумки / Нагрудні та напашні",
+      "old_url": "pidsumky/nahrudni-ta-napashni",
+      "category_id": "pouches_dangler",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 9
+    },
+    {
+      "old_path": "Підсумки / Нагрудні та напашні / Напашні сумки",
+      "old_url": "pidsumky/nahrudni-ta-napashni/napashni-sumky",
+      "category_id": "pouches_dangler",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 9
+    },
+    {
+      "old_path": "Підсумки / Панелі та платформи",
+      "old_url": "pidsumky/paneli-ta-platformy",
+      "category_id": "pouches_panels",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 2
+    },
+    {
+      "old_path": "Підсумки / Панелі та платформи / Панелі для плитоносок",
+      "old_url": "pidsumky/paneli-ta-platformy/paneli-dlia-plytonosok",
+      "category_id": "pouches_panels",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 2
+    },
+    {
+      "old_path": "Підсумки / Спеціальні підсумки",
+      "old_url": "pidsumky/spetsialni-pidsumky",
+      "category_id": "pouches",
+      "decision": "resolve_products",
+      "derived_attributes": {},
+      "product_count_observed": 11
+    },
+    {
+      "old_path": "Підсумки / Спеціальні підсумки / Для навушників",
+      "old_url": "pidsumky/spetsialni-pidsumky/dlia-navushnykiv",
+      "category_id": "pouches_other",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 4
+    },
+    {
+      "old_path": "Підсумки / Спеціальні підсумки / Для рацій",
+      "old_url": "pidsumky/spetsialni-pidsumky/dlia-ratsii",
+      "category_id": "pouches_radios",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 2
+    },
+    {
+      "old_path": "Підсумки / Утилітарні",
+      "old_url": "pidsumky/utylitarni",
+      "category_id": "pouches_utility",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 8
+    },
+    {
+      "old_path": "Підсумки / Утилітарні / Утилітарні підсумки",
+      "old_url": "pidsumky/utylitarni/utylitarni-pidsumky",
+      "category_id": "pouches_utility",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 7
+    },
+    {
+      "old_path": "Підсумки / Утилітарні / MOLLE-органайзери",
+      "old_url": "pidsumky/utylitarni/molle-orhanaizery",
+      "category_id": "pouches_utility",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 1
+    },
+    {
+      "old_path": "РПС та розвантаження",
+      "old_url": "rps-ta-rozvantazhennia",
+      "category_id": "load_bearing",
+      "decision": "keep",
+      "derived_attributes": {},
+      "product_count_observed": 30
+    },
+    {
+      "old_path": "РПС та розвантаження / Комплекти",
+      "old_url": "rps-ta-rozvantazhennia/komplekty",
+      "category_id": "load_bearing",
+      "decision": "resolve_products",
+      "derived_attributes": {},
+      "product_count_observed": 1
+    },
+    {
+      "old_path": "РПС та розвантаження / Комплекти / Комплекти РПС",
+      "old_url": "rps-ta-rozvantazhennia/komplekty/komplekty-rps",
+      "category_id": "load_bearing_rps",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 1
+    },
+    {
+      "old_path": "РПС та розвантаження / Компоненти",
+      "old_url": "rps-ta-rozvantazhennia/komponenty",
+      "category_id": "load_bearing_components",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 9
+    },
+    {
+      "old_path": "РПС та розвантаження / Компоненти / Пояси",
+      "old_url": "rps-ta-rozvantazhennia/komponenty/poiasy",
+      "category_id": "load_bearing_belts",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 4
+    },
+    {
+      "old_path": "РПС та розвантаження / Системи",
+      "old_url": "rps-ta-rozvantazhennia/systemy",
+      "category_id": "load_bearing_systems",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 20
+    },
+    {
+      "old_path": "РПС та розвантаження / Системи / Ремінно-плечові системи",
+      "old_url": "rps-ta-rozvantazhennia/systemy/reminno-plechovi-systemy",
+      "category_id": "load_bearing_rps",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 20
+    },
+    {
+      "old_path": "Захист колін та ліктів",
+      "old_url": "zakhyst-kolin-ta-liktiv",
+      "category_id": "limb_protection",
+      "decision": "keep",
+      "derived_attributes": {},
+      "product_count_observed": 14
+    },
+    {
+      "old_path": "Захист колін та ліктів / Комплекти",
+      "old_url": "zakhyst-kolin-ta-liktiv/komplekty",
+      "category_id": "limb_protection_sets",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 3
+    },
+    {
+      "old_path": "Захист колін та ліктів / Комплекти / Наколінники + налокітники",
+      "old_url": "zakhyst-kolin-ta-liktiv/komplekty/nakolinnyky-nalokitnyky",
+      "category_id": "limb_protection_sets",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 3
+    },
+    {
+      "old_path": "Захист колін та ліктів / Наколінники",
+      "old_url": "zakhyst-kolin-ta-liktiv/nakolinnyky",
+      "category_id": "limb_protection_knees",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 7
+    },
+    {
+      "old_path": "Захист колін та ліктів / Наколінники / Наколінники",
+      "old_url": "zakhyst-kolin-ta-liktiv/nakolinnyky/nakolinnyky",
+      "category_id": "limb_protection_knees",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 7
+    },
+    {
+      "old_path": "Захист колін та ліктів / Налокітники",
+      "old_url": "zakhyst-kolin-ta-liktiv/nalokitnyky",
+      "category_id": "limb_protection_elbows",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 4
+    },
+    {
+      "old_path": "Захист колін та ліктів / Налокітники / Налокітники",
+      "old_url": "zakhyst-kolin-ta-liktiv/nalokitnyky/nalokitnyky",
+      "category_id": "limb_protection_elbows",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 4
+    },
+    {
+      "old_path": "Тактична медицина",
+      "old_url": "taktychna-medytsyna",
+      "category_id": "medical",
+      "decision": "keep",
+      "derived_attributes": {},
+      "product_count_observed": 6
+    },
+    {
+      "old_path": "Тактична медицина / Кровоспинні засоби",
+      "old_url": "taktychna-medytsyna/krovospynni-zasoby",
+      "category_id": "medical",
+      "decision": "resolve_products",
+      "derived_attributes": {},
+      "product_count_observed": 4
+    },
+    {
+      "old_path": "Тактична медицина / Кровоспинні засоби / Турнікети, джгути та гемостатики",
+      "old_url": "taktychna-medytsyna/krovospynni-zasoby/turnikety-dzhhuty-ta-hemostatyky",
+      "category_id": "medical",
+      "decision": "resolve_products",
+      "derived_attributes": {},
+      "product_count_observed": 4
+    },
+    {
+      "old_path": "Маскування",
+      "old_url": "maskuvannia",
+      "category_id": "camouflage",
+      "decision": "keep",
+      "derived_attributes": {},
+      "product_count_observed": 849
+    },
+    {
+      "old_path": "Маскування / Антидронові сітки",
+      "old_url": "maskuvannia/antydronovi-sitky",
+      "category_id": "camouflage_antidrone",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 90
+    },
+    {
+      "old_path": "Маскування / Антидронові сітки / Для доріг і техніки",
+      "old_url": "maskuvannia/antydronovi-sitky/dlia-dorih-i-tekhniky",
+      "category_id": "camouflage_antidrone",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 90
+    },
+    {
+      "old_path": "Маскування / Маскувальні сітки Militex",
+      "old_url": "maskuvannia/maskuvalni-sitky-militex",
+      "category_id": "camouflage_nets",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Бренд": "Militex"
+      },
+      "product_count_observed": 138
+    },
+    {
+      "old_path": "Маскування / Маскувальні сітки Militex / Альпійська клякса",
+      "old_url": "maskuvannia/maskuvalni-sitky-militex/alpiiska-kliaksa",
+      "category_id": "camouflage_nets",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Бренд": "Militex",
+        "Камуфляж": "Альпійська клякса"
+      },
+      "product_count_observed": 17
+    },
+    {
+      "old_path": "Маскування / Маскувальні сітки Militex / Дубове листя",
+      "old_url": "maskuvannia/maskuvalni-sitky-militex/dubove-lystia",
+      "category_id": "camouflage_nets",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Бренд": "Militex",
+        "Камуфляж": "Дубове листя"
+      },
+      "product_count_observed": 17
+    },
+    {
+      "old_path": "Маскування / Маскувальні сітки Militex / З основою зимовий мультикам",
+      "old_url": "maskuvannia/maskuvalni-sitky-militex/z-osnovoiu-zymovyi-multykam",
+      "category_id": "camouflage_nets",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Сезон": "Зима",
+        "Бренд": "Militex",
+        "Камуфляж": "зимовий мультикам",
+        "Основа сітки": "З основою"
+      },
+      "product_count_observed": 17
+    },
+    {
+      "old_path": "Маскування / Маскувальні сітки Militex / З основою мультикам",
+      "old_url": "maskuvannia/maskuvalni-sitky-militex/z-osnovoiu-multykam",
+      "category_id": "camouflage_nets",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Бренд": "Militex",
+        "Камуфляж": "мультикам",
+        "Основа сітки": "З основою"
+      },
+      "product_count_observed": 17
+    },
+    {
+      "old_path": "Маскування / Маскувальні сітки Militex / Зимовий мультикам",
+      "old_url": "maskuvannia/maskuvalni-sitky-militex/zymovyi-multykam",
+      "category_id": "camouflage_nets",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Сезон": "Зима",
+        "Бренд": "Militex",
+        "Камуфляж": "Зимовий мультикам"
+      },
+      "product_count_observed": 17
+    },
+    {
+      "old_path": "Маскування / Маскувальні сітки Militex / Камуфляж",
+      "old_url": "maskuvannia/maskuvalni-sitky-militex/kamufliazh",
+      "category_id": "camouflage_nets",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Бренд": "Militex",
+        "Камуфляж": "Камуфляж"
+      },
+      "product_count_observed": 5
+    },
+    {
+      "old_path": "Маскування / Маскувальні сітки Militex / Листя осінь",
+      "old_url": "maskuvannia/maskuvalni-sitky-militex/lystia-osin",
+      "category_id": "camouflage_nets",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Бренд": "Militex",
+        "Камуфляж": "Листя осінь"
+      },
+      "product_count_observed": 17
+    },
+    {
+      "old_path": "Маскування / Маскувальні сітки Militex / Мультикам",
+      "old_url": "maskuvannia/maskuvalni-sitky-militex/multykam",
+      "category_id": "camouflage_nets",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Бренд": "Militex",
+        "Камуфляж": "Мультикам"
+      },
+      "product_count_observed": 8
+    },
+    {
+      "old_path": "Маскування / Маскувальні сітки Militex / Мультикам бруд",
+      "old_url": "maskuvannia/maskuvalni-sitky-militex/multykam-brud",
+      "category_id": "camouflage_nets",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Бренд": "Militex",
+        "Камуфляж": "Мультикам бруд"
+      },
+      "product_count_observed": 17
+    },
+    {
+      "old_path": "Маскування / Маскувальні сітки Militex / Піксель",
+      "old_url": "maskuvannia/maskuvalni-sitky-militex/piksel",
+      "category_id": "camouflage_nets",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Бренд": "Militex",
+        "Камуфляж": "Піксель"
+      },
+      "product_count_observed": 6
+    },
+    {
+      "old_path": "Туризм та польове спорядження",
+      "old_url": "turyzm-ta-polove-sporiadzhennia",
+      "category_id": "field",
+      "decision": "keep",
+      "derived_attributes": {},
+      "product_count_observed": 169
+    },
+    {
+      "old_path": "Туризм та польове спорядження / Інше",
+      "old_url": "turyzm-ta-polove-sporiadzhennia/inshe",
+      "category_id": "field",
+      "decision": "resolve_products",
+      "derived_attributes": {},
+      "product_count_observed": 92
+    },
+    {
+      "old_path": "Туризм та польове спорядження / Інше / Польове спорядження",
+      "old_url": "turyzm-ta-polove-sporiadzhennia/inshe/polove-sporiadzhennia",
+      "category_id": "field_other",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 3
+    },
+    {
+      "old_path": "Туризм та польове спорядження / Каремати та сидушки",
+      "old_url": "turyzm-ta-polove-sporiadzhennia/karematy-ta-sydushky",
+      "category_id": "field_mats",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 26
+    },
+    {
+      "old_path": "Туризм та польове спорядження / Каремати та сидушки / Розкладні каремати",
+      "old_url": "turyzm-ta-polove-sporiadzhennia/karematy-ta-sydushky/rozkladni-karematy",
+      "category_id": "field_mats",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 3
+    },
+    {
+      "old_path": "Туризм та польове спорядження / Каремати та сидушки / Тактичні сидушки",
+      "old_url": "turyzm-ta-polove-sporiadzhennia/karematy-ta-sydushky/taktychni-sydushky",
+      "category_id": "field_mats",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 18
+    },
+    {
+      "old_path": "Туризм та польове спорядження / Каремати та сидушки / Туристичні каремати",
+      "old_url": "turyzm-ta-polove-sporiadzhennia/karematy-ta-sydushky/turystychni-karematy",
+      "category_id": "field_mats",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 5
+    },
+    {
+      "old_path": "Туризм та польове спорядження / Сон",
+      "old_url": "turyzm-ta-polove-sporiadzhennia/son",
+      "category_id": "field",
+      "decision": "resolve_products",
+      "derived_attributes": {},
+      "product_count_observed": 45
+    },
+    {
+      "old_path": "Туризм та польове спорядження / Сон / Спальні мішки",
+      "old_url": "turyzm-ta-polove-sporiadzhennia/son/spalni-mishky",
+      "category_id": "field_sleeping",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 25
+    },
+    {
+      "old_path": "Електроніка та спостереження",
+      "old_url": "elektronika-ta-sposterezhennia",
+      "category_id": "electronics",
+      "decision": "keep",
+      "derived_attributes": {},
+      "product_count_observed": 29
+    },
+    {
+      "old_path": "Електроніка та спостереження / Екшн-камери",
+      "old_url": "elektronika-ta-sposterezhennia/ekshn-kamery",
+      "category_id": "electronics_cameras",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 5
+    },
+    {
+      "old_path": "Електроніка та спостереження / Екшн-камери / Екшн-камери",
+      "old_url": "elektronika-ta-sposterezhennia/ekshn-kamery/ekshn-kamery",
+      "category_id": "electronics_cameras",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 5
+    },
+    {
+      "old_path": "Електроніка та спостереження / Кріплення",
+      "old_url": "elektronika-ta-sposterezhennia/kriplennia",
+      "category_id": "electronics_mounts",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 20
+    },
+    {
+      "old_path": "Електроніка та спостереження / Кріплення / Для ПНБ та тепловізорів",
+      "old_url": "elektronika-ta-sposterezhennia/kriplennia/dlia-pnb-ta-teplovizoriv",
+      "category_id": "electronics_mounts",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 20
+    },
+    {
+      "old_path": "Освітлення",
+      "old_url": "osvitlennia",
+      "category_id": "lighting",
+      "decision": "keep",
+      "derived_attributes": {},
+      "product_count_observed": 6
+    },
+    {
+      "old_path": "Освітлення / Ліхтарі та аксесуари",
+      "old_url": "osvitlennia/likhtari-ta-aksesuary",
+      "category_id": "lighting_accessories",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 6
+    },
+    {
+      "old_path": "Освітлення / Ліхтарі та аксесуари / Ліхтарі та аксесуари",
+      "old_url": "osvitlennia/likhtari-ta-aksesuary/likhtari-ta-aksesuary",
+      "category_id": "lighting_accessories",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 5
+    },
+    {
+      "old_path": "Автономне живлення",
+      "old_url": "avtonomne-zhyvlennia",
+      "category_id": "power",
+      "decision": "keep",
+      "derived_attributes": {},
+      "product_count_observed": 21
+    },
+    {
+      "old_path": "Автономне живлення / Аксесуари",
+      "old_url": "avtonomne-zhyvlennia/aksesuary",
+      "category_id": "power_accessories",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 3
+    },
+    {
+      "old_path": "Автономне живлення / Аксесуари / Аксесуари живлення",
+      "old_url": "avtonomne-zhyvlennia/aksesuary/aksesuary-zhyvlennia",
+      "category_id": "power_accessories",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 3
+    },
+    {
+      "old_path": "Автономне живлення / Зарядні станції",
+      "old_url": "avtonomne-zhyvlennia/zariadni-stantsii",
+      "category_id": "power_stations",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 6
+    },
+    {
+      "old_path": "Автономне живлення / Зарядні станції / Портативні зарядні станції",
+      "old_url": "avtonomne-zhyvlennia/zariadni-stantsii/portatyvni-zariadni-stantsii",
+      "category_id": "power_stations",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 6
+    },
+    {
+      "old_path": "Автономне живлення / Сонячна енергія",
+      "old_url": "avtonomne-zhyvlennia/soniachna-enerhiia",
+      "category_id": "power",
+      "decision": "resolve_products",
+      "derived_attributes": {},
+      "product_count_observed": 1
+    },
+    {
+      "old_path": "Автономне живлення / Сонячна енергія / Сонячні панелі",
+      "old_url": "avtonomne-zhyvlennia/soniachna-enerhiia/soniachni-paneli",
+      "category_id": "power_solar",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 1
+    },
+    {
+      "old_path": "Збройові аксесуари",
+      "old_url": "zbroiovi-aksesuary",
+      "category_id": "weapon_accessories",
+      "decision": "keep",
+      "derived_attributes": {},
+      "product_count_observed": 70
+    },
+    {
+      "old_path": "Збройові аксесуари / Інше",
+      "old_url": "zbroiovi-aksesuary/inshe",
+      "category_id": "weapon_accessories_other",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 6
+    },
+    {
+      "old_path": "Збройові аксесуари / Інше / Інші аксесуари",
+      "old_url": "zbroiovi-aksesuary/inshe/inshi-aksesuary",
+      "category_id": "weapon_accessories_other",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 6
+    },
+    {
+      "old_path": "Збройові аксесуари / Догляд",
+      "old_url": "zbroiovi-aksesuary/dohliad",
+      "category_id": "weapon_accessories_cleaning",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 3
+    },
+    {
+      "old_path": "Збройові аксесуари / Магазини",
+      "old_url": "zbroiovi-aksesuary/mahazyny",
+      "category_id": "weapon_accessories_magazines",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 14
+    },
+    {
+      "old_path": "Збройові аксесуари / Магазини / Для АК та AR-15",
+      "old_url": "zbroiovi-aksesuary/mahazyny/dlia-ak-ta-ar-15",
+      "category_id": "weapon_accessories_magazines",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 7
+    },
+    {
+      "old_path": "Збройові аксесуари / Ремені",
+      "old_url": "zbroiovi-aksesuary/remeni",
+      "category_id": "weapon_accessories_slings",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 29
+    },
+    {
+      "old_path": "Збройові аксесуари / Ремені / Ремені для зброї",
+      "old_url": "zbroiovi-aksesuary/remeni/remeni-dlia-zbroi",
+      "category_id": "weapon_accessories_slings",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 5
+    },
+    {
+      "old_path": "Збройові аксесуари / Ремені / Одноточкові ремені",
+      "old_url": "zbroiovi-aksesuary/remeni/odnotochkovi-remeni",
+      "category_id": "weapon_accessories_slings",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 4
+    },
+    {
+      "old_path": "Збройові аксесуари / Ремені / Двоточкові ремені",
+      "old_url": "zbroiovi-aksesuary/remeni/dvotochkovi-remeni",
+      "category_id": "weapon_accessories_slings",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 15
+    },
+    {
+      "old_path": "Збройові аксесуари / Ремені / Трьохточкові ремені",
+      "old_url": "zbroiovi-aksesuary/remeni/trokhtochkovi-remeni",
+      "category_id": "weapon_accessories_slings",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 5
+    },
+    {
+      "old_path": "Захист очей та обличчя",
+      "old_url": "zakhyst-ochei-ta-oblychchia",
+      "category_id": "eye_protection",
+      "decision": "keep",
+      "derived_attributes": {},
+      "product_count_observed": 7
+    },
+    {
+      "old_path": "Захист очей та обличчя / Окуляри",
+      "old_url": "zakhyst-ochei-ta-oblychchia/okuliary",
+      "category_id": "eye_protection_glasses",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 7
+    },
+    {
+      "old_path": "Захист очей та обличчя / Окуляри / Тактичні окуляри",
+      "old_url": "zakhyst-ochei-ta-oblychchia/okuliary/taktychni-okuliary",
+      "category_id": "eye_protection_glasses",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 7
+    },
+    {
+      "old_path": "Одяг та форма / Чоловічий одяг / Жилети",
+      "old_url": "odiah-ta-forma/cholovichyi-odiah/zhylety",
+      "category_id": "clothing_vests",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Стать": "Чоловіча"
+      },
+      "product_count_observed": 3
+    },
+    {
+      "old_path": "Одяг та форма / Аксесуари одягу / Балаклави та бафи",
+      "old_url": "odiah-ta-forma/aksesuary-odiahu/balaklavy-ta-bafy",
+      "category_id": "clothing_balaclavas",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 2
+    },
+    {
+      "old_path": "Одяг та форма / Аксесуари одягу / Тактичні ремені",
+      "old_url": "odiah-ta-forma/aksesuary-odiahu/taktychni-remeni",
+      "category_id": "clothing_belts",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 5
+    },
+    {
+      "old_path": "Одяг та форма / Аксесуари одягу / Ремені та портупеї",
+      "old_url": "odiah-ta-forma/aksesuary-odiahu/remeni-ta-portupei",
+      "category_id": "clothing_belts",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 4
+    },
+    {
+      "old_path": "Взуття / Тактичне взуття / Літнє взуття",
+      "old_url": "vzuttia/taktychne-vzuttia/litnie-vzuttia",
+      "category_id": "footwear",
+      "decision": "resolve_products",
+      "derived_attributes": {
+        "Сезон": "Літо"
+      },
+      "product_count_observed": 1
+    },
+    {
+      "old_path": "Взуття / Тактичне взуття / Тактичні кросівки",
+      "old_url": "vzuttia/taktychne-vzuttia/taktychni-krosivky",
+      "category_id": "footwear_sneakers",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 13
+    },
+    {
+      "old_path": "Взуття / Тактичне взуття / Черевики",
+      "old_url": "vzuttia/taktychne-vzuttia/cherevyky",
+      "category_id": "footwear_shoes",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 6
+    },
+    {
+      "old_path": "Бронезахист / Плитоноски / Аксесуари для плитоносок",
+      "old_url": "bronezakhyst/plytonosky/aksesuary-dlia-plytonosok",
+      "category_id": "armor_accessories",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 2
+    },
+    {
+      "old_path": "Шоломи та захист голови / Аксесуари / Рейки та планки",
+      "old_url": "sholomy-ta-zakhyst-holovy/aksesuary/reiky-ta-planky",
+      "category_id": "helmets_rails",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 2
+    },
+    {
+      "old_path": "Тактичний зв'язок та слух / Радіозв'язок / PTT-кнопки",
+      "old_url": "taktychnyi-zviazok-ta-slukh/radiozviazok/ptt-knopky",
+      "category_id": "communications_ptt",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 2
+    },
+    {
+      "old_path": "Тактичний зв'язок та слух / Радіозв'язок / Антени",
+      "old_url": "taktychnyi-zviazok-ta-slukh/radiozviazok/anteny",
+      "category_id": "communications_antennas",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 1
+    },
+    {
+      "old_path": "Рюкзаки, сумки та баули / Сумки / Органайзери",
+      "old_url": "riukzaky-sumky-ta-bauly/sumky/orhanaizery",
+      "category_id": "bags_organizers",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 2
+    },
+    {
+      "old_path": "Рюкзаки, сумки та баули / Сумки / Тактичні сумки",
+      "old_url": "riukzaky-sumky-ta-bauly/sumky/taktychni-sumky",
+      "category_id": "bags_tactical_bags",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 5
+    },
+    {
+      "old_path": "Рюкзаки, сумки та баули / Сумки / Поясні сумки та органайзери",
+      "old_url": "riukzaky-sumky-ta-bauly/sumky/poiasni-sumky-ta-orhanaizery",
+      "category_id": "bags_waist",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 3
+    },
+    {
+      "old_path": "Підсумки / Спеціальні підсумки / Для телефону",
+      "old_url": "pidsumky/spetsialni-pidsumky/dlia-telefonu",
+      "category_id": "pouches_phone",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 2
+    },
+    {
+      "old_path": "Підсумки / Спеціальні підсумки / Для планшетів",
+      "old_url": "pidsumky/spetsialni-pidsumky/dlia-planshetiv",
+      "category_id": "pouches_other",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 3
+    },
+    {
+      "old_path": "РПС та розвантаження / Компоненти / Тактичні та розвантажувальні ремені",
+      "old_url": "rps-ta-rozvantazhennia/komponenty/taktychni-ta-rozvantazhuvalni-remeni",
+      "category_id": "load_bearing_belts",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 5
+    },
+    {
+      "old_path": "Маскування / Маскувальні костюми",
+      "old_url": "maskuvannia/maskuvalni-kostiumy",
+      "category_id": "camouflage_suits",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 1
+    },
+    {
+      "old_path": "Маскування / Маскувальні костюми / Сітчасті та сезонні костюми",
+      "old_url": "maskuvannia/maskuvalni-kostiumy/sitchasti-ta-sezonni-kostiumy",
+      "category_id": "camouflage_suits",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 1
+    },
+    {
+      "old_path": "Маскування / Маскувальні матеріали",
+      "old_url": "maskuvannia/maskuvalni-materialy",
+      "category_id": "camouflage_materials",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 1
+    },
+    {
+      "old_path": "Маскування / Маскувальні матеріали / Стрічки та тканини",
+      "old_url": "maskuvannia/maskuvalni-materialy/strichky-ta-tkanyny",
+      "category_id": "camouflage_materials",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 1
+    },
+    {
+      "old_path": "Туризм та польове спорядження / Сон / Каремати",
+      "old_url": "turyzm-ta-polove-sporiadzhennia/son/karematy",
+      "category_id": "field_mats",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 6
+    },
+    {
+      "old_path": "Туризм та польове спорядження / Посуд та харчування",
+      "old_url": "turyzm-ta-polove-sporiadzhennia/posud-ta-kharchuvannia",
+      "category_id": "field",
+      "decision": "resolve_products",
+      "derived_attributes": {},
+      "product_count_observed": 2
+    },
+    {
+      "old_path": "Туризм та польове спорядження / Посуд та харчування / Термоси",
+      "old_url": "turyzm-ta-polove-sporiadzhennia/posud-ta-kharchuvannia/termosy",
+      "category_id": "field_thermos",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 1
+    },
+    {
+      "old_path": "Туризм та польове спорядження / Посуд та харчування / Польовий посуд",
+      "old_url": "turyzm-ta-polove-sporiadzhennia/posud-ta-kharchuvannia/polovyi-posud",
+      "category_id": "field_cookware",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 1
+    },
+    {
+      "old_path": "Туризм та польове спорядження / Вогонь та обігрів",
+      "old_url": "turyzm-ta-polove-sporiadzhennia/vohon-ta-obihriv",
+      "category_id": "field",
+      "decision": "resolve_products",
+      "derived_attributes": {},
+      "product_count_observed": 2
+    },
+    {
+      "old_path": "Туризм та польове спорядження / Вогонь та обігрів / Пальники",
+      "old_url": "turyzm-ta-polove-sporiadzhennia/vohon-ta-obihriv/palnyky",
+      "category_id": "field_burners",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 2
+    },
+    {
+      "old_path": "Електроніка та спостереження / Оптика",
+      "old_url": "elektronika-ta-sposterezhennia/optyka",
+      "category_id": "electronics",
+      "decision": "resolve_products",
+      "derived_attributes": {},
+      "product_count_observed": 1
+    },
+    {
+      "old_path": "Електроніка та спостереження / Оптика / Монокуляри",
+      "old_url": "elektronika-ta-sposterezhennia/optyka/monokuliary",
+      "category_id": "electronics_monoculars",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 1
+    },
+    {
+      "old_path": "Освітлення / Ліхтарі та аксесуари / Ручні ліхтарі",
+      "old_url": "osvitlennia/likhtari-ta-aksesuary/ruchni-likhtari",
+      "category_id": "lighting_handheld",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 1
+    },
+    {
+      "old_path": "Автономне живлення / Павербанки",
+      "old_url": "avtonomne-zhyvlennia/paverbanky",
+      "category_id": "power_banks",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 1
+    },
+    {
+      "old_path": "Автономне живлення / Акумулятори та батарейки",
+      "old_url": "avtonomne-zhyvlennia/akumuliatory-ta-batareiky",
+      "category_id": "power_batteries",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 9
+    },
+    {
+      "old_path": "Автономне живлення / Кабелі та перехідники",
+      "old_url": "avtonomne-zhyvlennia/kabeli-ta-perekhidnyky",
+      "category_id": "power_cables",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 1
+    },
+    {
+      "old_path": "Збройові аксесуари / Руків'я та упори",
+      "old_url": "zbroiovi-aksesuary/rukivia-ta-upory",
+      "category_id": "weapon_accessories_grips",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 6
+    },
+    {
+      "old_path": "Збройові аксесуари / Приклади та щоки",
+      "old_url": "zbroiovi-aksesuary/pryklady-ta-shchoky",
+      "category_id": "weapon_accessories_stocks",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 6
+    },
+    {
+      "old_path": "Збройові аксесуари / Сошки",
+      "old_url": "zbroiovi-aksesuary/soshky",
+      "category_id": "weapon_accessories_bipods",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 2
+    },
+    {
+      "old_path": "Збройові аксесуари / Догляд / Набори для чищення",
+      "old_url": "zbroiovi-aksesuary/dohliad/nabory-dlia-chyshchennia",
+      "category_id": "weapon_accessories_cleaning",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 2
+    },
+    {
+      "old_path": "Одяг та форма / Чоловічий одяг / Спортивні костюми та комплекти",
+      "old_url": "odiah-ta-forma/cholovichyi-odiah/sportyvni-kostiumy-ta-komplekty",
+      "category_id": "clothing_costumes",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Стать": "Чоловіча"
+      },
+      "product_count_observed": 5
+    },
+    {
+      "old_path": "Збройові аксесуари / Кобури",
+      "old_url": "zbroiovi-aksesuary/kobury",
+      "category_id": "weapon_accessories_holsters",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 1
+    },
+    {
+      "old_path": "Збройові аксесуари / Кобури / Тактичні кобури",
+      "old_url": "zbroiovi-aksesuary/kobury/taktychni-kobury",
+      "category_id": "weapon_accessories_holsters",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 1
+    },
+    {
+      "old_path": "Одяг та форма / Чоловічий одяг / Зимові костюми та комплекти",
+      "old_url": "odiah-ta-forma/cholovichyi-odiah/zymovi-kostiumy-ta-komplekty",
+      "category_id": "clothing_costumes",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Стать": "Чоловіча",
+        "Сезон": "Зима"
+      },
+      "product_count_observed": 15
+    },
+    {
+      "old_path": "Одяг та форма / Чоловічий одяг / Костюми Soft Shell",
+      "old_url": "odiah-ta-forma/cholovichyi-odiah/kostiumy-soft-shell",
+      "category_id": "clothing_costumes",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Стать": "Чоловіча",
+        "Матеріал": "Софтшел"
+      },
+      "product_count_observed": 5
+    },
+    {
+      "old_path": "Одяг та форма / Чоловічий одяг / Тактичні сорочки",
+      "old_url": "odiah-ta-forma/cholovichyi-odiah/taktychni-sorochky",
+      "category_id": "clothing_combat_shirts",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Стать": "Чоловіча"
+      },
+      "product_count_observed": 8
+    },
+    {
+      "old_path": "Одяг та форма / Чоловічий одяг / Термофутболки",
+      "old_url": "odiah-ta-forma/cholovichyi-odiah/termofutbolky",
+      "category_id": "clothing_tshirts",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Стать": "Чоловіча"
+      },
+      "product_count_observed": 2
+    },
+    {
+      "old_path": "Одяг та форма / Чоловічий одяг / Зимові та утеплені куртки",
+      "old_url": "odiah-ta-forma/cholovichyi-odiah/zymovi-ta-utepleni-kurtky",
+      "category_id": "clothing_jackets",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Стать": "Чоловіча",
+        "Сезон": "Зима"
+      },
+      "product_count_observed": 25
+    },
+    {
+      "old_path": "Одяг та форма / Чоловічий одяг / Зимові та утеплені штани",
+      "old_url": "odiah-ta-forma/cholovichyi-odiah/zymovi-ta-utepleni-shtany",
+      "category_id": "clothing_pants",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Стать": "Чоловіча",
+        "Сезон": "Зима"
+      },
+      "product_count_observed": 3
+    },
+    {
+      "old_path": "Одяг та форма / Чоловічий одяг / Штани Soft Shell",
+      "old_url": "odiah-ta-forma/cholovichyi-odiah/shtany-soft-shell",
+      "category_id": "clothing_pants",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Стать": "Чоловіча",
+        "Матеріал": "Софтшел"
+      },
+      "product_count_observed": 2
+    },
+    {
+      "old_path": "Одяг та форма / Аксесуари одягу / Шапки та балаклави",
+      "old_url": "odiah-ta-forma/aksesuary-odiahu/shapky-ta-balaklavy",
+      "category_id": "clothing",
+      "decision": "resolve_products",
+      "derived_attributes": {},
+      "product_count_observed": 32
+    },
+    {
+      "old_path": "Одяг та форма / Аксесуари одягу / Кепки, панами, бейсболки",
+      "old_url": "odiah-ta-forma/aksesuary-odiahu/kepky-panamy-beisbolky",
+      "category_id": "clothing_headwear",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 46
+    },
+    {
+      "old_path": "Одяг та форма / Аксесуари одягу / Баффи",
+      "old_url": "odiah-ta-forma/aksesuary-odiahu/baffy",
+      "category_id": "clothing_balaclavas",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 3
+    },
+    {
+      "old_path": "Взуття / Тактичне взуття / Берці зимові",
+      "old_url": "vzuttia/taktychne-vzuttia/bertsi-zymovi",
+      "category_id": "footwear_boots",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Сезон": "Зима"
+      },
+      "product_count_observed": 1
+    },
+    {
+      "old_path": "Взуття / Тактичне взуття / Берці демісезонні",
+      "old_url": "vzuttia/taktychne-vzuttia/bertsi-demisezonni",
+      "category_id": "footwear_boots",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Сезон": "Демісезон"
+      },
+      "product_count_observed": 3
+    },
+    {
+      "old_path": "Взуття / Тактичне взуття / Черевики демісезонні",
+      "old_url": "vzuttia/taktychne-vzuttia/cherevyky-demisezonni",
+      "category_id": "footwear_shoes",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Сезон": "Демісезон"
+      },
+      "product_count_observed": 3
+    },
+    {
+      "old_path": "Взуття / Тактичне взуття / Кросівки літні",
+      "old_url": "vzuttia/taktychne-vzuttia/krosivky-litni",
+      "category_id": "footwear_sneakers",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Сезон": "Літо"
+      },
+      "product_count_observed": 5
+    },
+    {
+      "old_path": "Взуття / Тактичне взуття / Кросівки демісезонні",
+      "old_url": "vzuttia/taktychne-vzuttia/krosivky-demisezonni",
+      "category_id": "footwear_sneakers",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Сезон": "Демісезон"
+      },
+      "product_count_observed": 2
+    },
+    {
+      "old_path": "Взуття / Шкарпетки та аксесуари / Термошкарпетки",
+      "old_url": "vzuttia/shkarpetky-ta-aksesuary/termoshkarpetky",
+      "category_id": "footwear_socks",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 9
+    },
+    {
+      "old_path": "Взуття / Шкарпетки та аксесуари / Термостельки",
+      "old_url": "vzuttia/shkarpetky-ta-aksesuary/termostelky",
+      "category_id": "footwear_socks",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 1
+    },
+    {
+      "old_path": "Збройові аксесуари / Магазини / Магазини АК та AR15",
+      "old_url": "zbroiovi-aksesuary/mahazyny/mahazyny-ak-ta-ar15",
+      "category_id": "weapon_accessories_magazines",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 7
+    },
+    {
+      "old_path": "Збройові аксесуари / Догляд / Чищення зброї",
+      "old_url": "zbroiovi-aksesuary/dohliad/chyshchennia-zbroi",
+      "category_id": "weapon_accessories_cleaning",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 1
+    },
+    {
+      "old_path": "Взуття / Аксесуари взуття / Бахіли",
+      "old_url": "vzuttia/aksesuary-vzuttia/bakhily",
+      "category_id": "footwear_gaiters",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 4
+    },
+    {
+      "old_path": "Взуття / Тактичне взуття / Кросівки",
+      "old_url": "vzuttia/taktychne-vzuttia/krosivky",
+      "category_id": "footwear_sneakers",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 3
+    },
+    {
+      "old_path": "Інструменти та ножі",
+      "old_url": "instrumenty-ta-nozhi",
+      "category_id": "tools",
+      "decision": "keep",
+      "derived_attributes": {},
+      "product_count_observed": 9
+    },
+    {
+      "old_path": "Інструменти та ножі / Ножі та мультитули",
+      "old_url": "instrumenty-ta-nozhi/nozhi-ta-multytuly",
+      "category_id": "tools",
+      "decision": "resolve_products",
+      "derived_attributes": {},
+      "product_count_observed": 9
+    },
+    {
+      "old_path": "Електроніка та спостереження / Аксесуари",
+      "old_url": "elektronika-ta-sposterezhennia/aksesuary",
+      "category_id": "electronics_accessories",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 3
+    },
+    {
+      "old_path": "Електроніка та спостереження / Аксесуари / Карти пам'яті",
+      "old_url": "elektronika-ta-sposterezhennia/aksesuary/karty-pamiati",
+      "category_id": "electronics_memory",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 2
+    },
+    {
+      "old_path": "Туризм та польове спорядження / Гігієна",
+      "old_url": "turyzm-ta-polove-sporiadzhennia/hihiiena",
+      "category_id": "field",
+      "decision": "resolve_products",
+      "derived_attributes": {},
+      "product_count_observed": 2
+    },
+    {
+      "old_path": "Туризм та польове спорядження / Гігієна / Засоби гігієни",
+      "old_url": "turyzm-ta-polove-sporiadzhennia/hihiiena/zasoby-hihiieny",
+      "category_id": "field_hygiene",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 2
+    },
+    {
+      "old_path": "Туризм та польове спорядження / Інше / Карабіни та кріплення",
+      "old_url": "turyzm-ta-polove-sporiadzhennia/inshe/karabiny-ta-kriplennia",
+      "category_id": "field_fasteners",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 81
+    },
+    {
+      "old_path": "Туризм та польове спорядження / Інше / Прапори та шеврони",
+      "old_url": "turyzm-ta-polove-sporiadzhennia/inshe/prapory-ta-shevrony",
+      "category_id": "field_other",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 8
+    },
+    {
+      "old_path": "Туризм та польове спорядження / Сон / Термоковдри",
+      "old_url": "turyzm-ta-polove-sporiadzhennia/son/termokovdry",
+      "category_id": "field_blankets",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 14
+    },
+    {
+      "old_path": "Збройові аксесуари / Чохли для зброї",
+      "old_url": "zbroiovi-aksesuary/chokhly-dlia-zbroi",
+      "category_id": "weapon_accessories_cases",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 3
+    },
+    {
+      "old_path": "Маскування / Маскувальні сітки",
+      "old_url": "maskuvannia/maskuvalni-sitky",
+      "category_id": "camouflage_nets",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 619
+    },
+    {
+      "old_path": "Маскування / Маскувальні сітки / Маскувальні сітки",
+      "old_url": "maskuvannia/maskuvalni-sitky/maskuvalni-sitky",
+      "category_id": "camouflage_nets",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 619
+    },
+    {
+      "old_path": "Взуття / Аксесуари взуття",
+      "old_url": "vzuttia/aksesuary-vzuttia",
+      "category_id": "footwear_accessories",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 4
+    },
+    {
+      "old_path": "Одяг та форма / Чоловічий одяг / Убакси",
+      "old_url": "odiah-ta-forma/cholovichyi-odiah/ubaksy",
+      "category_id": "clothing_combat_shirts",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Стать": "Чоловіча"
+      },
+      "product_count_observed": 2
+    },
+    {
+      "old_path": "Тактична медицина / Навчальні засоби",
+      "old_url": "taktychna-medytsyna/navchalni-zasoby",
+      "category_id": "medical_training",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 1
+    },
+    {
+      "old_path": "Тактична медицина / Медичні аксесуари",
+      "old_url": "taktychna-medytsyna/medychni-aksesuary",
+      "category_id": "medical_other",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 1
+    },
+    {
+      "old_path": "Одяг та форма / Чоловічий одяг / Фліси та кофти",
+      "old_url": "odiah-ta-forma/cholovichyi-odiah/flisy-ta-kofty",
+      "category_id": "clothing_fleece",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Стать": "Чоловіча"
+      },
+      "product_count_observed": 1
+    },
+    {
+      "old_path": "Одяг та форма / Чоловічий одяг / Тактичні костюми",
+      "old_url": "odiah-ta-forma/cholovichyi-odiah/taktychni-kostiumy",
+      "category_id": "clothing_costumes",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Стать": "Чоловіча"
+      },
+      "product_count_observed": 2
+    },
+    {
+      "old_path": "Одяг та форма / Чоловічий одяг / Тактичні куртки",
+      "old_url": "odiah-ta-forma/cholovichyi-odiah/taktychni-kurtky",
+      "category_id": "clothing_jackets",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Стать": "Чоловіча"
+      },
+      "product_count_observed": 0
+    },
+    {
+      "old_path": "Збройові аксесуари / Платформа AR / Аксесуари",
+      "old_url": "zbroiovi-aksesuary/platforma-ar/aksesuary",
+      "category_id": "weapon_accessories_other",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Сумісність": "AR"
+      },
+      "product_count_observed": 0
+    },
+    {
+      "old_path": "Одяг та форма / Чоловічий одяг / Майки та тільняшки",
+      "old_url": "odiah-ta-forma/cholovichyi-odiah/maiky-ta-tilniashky",
+      "category_id": "clothing",
+      "decision": "resolve_products",
+      "derived_attributes": {
+        "Стать": "Чоловіча"
+      },
+      "product_count_observed": 0
+    },
+    {
+      "old_path": "Збройові аксесуари / Платформа АК / Аксесуари",
+      "old_url": "zbroiovi-aksesuary/platforma-ak/aksesuary",
+      "category_id": "weapon_accessories_other",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Сумісність": "АК"
+      },
+      "product_count_observed": 0
+    },
+    {
+      "old_path": "Взуття / Шкарпетки та аксесуари / Устілки",
+      "old_url": "vzuttia/shkarpetky-ta-aksesuary/ustilky",
+      "category_id": "footwear_socks",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 0
+    },
+    {
+      "old_path": "Взуття / Тактичне взуття / Черевики зимові",
+      "old_url": "vzuttia/taktychne-vzuttia/cherevyky-zymovi",
+      "category_id": "footwear_shoes",
+      "decision": "to_filters",
+      "derived_attributes": {
+        "Сезон": "Зима"
+      },
+      "product_count_observed": 0
+    },
+    {
+      "old_path": "Взуття / Догляд та аксесуари / Засоби догляду",
+      "old_url": "vzuttia/dohliad-ta-aksesuary/zasoby-dohliadu",
+      "category_id": "footwear_accessories",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 0
+    },
+    {
+      "old_path": "Взуття / Тактичне взуття / Лофери та чоловіче взуття",
+      "old_url": "vzuttia/taktychne-vzuttia/lofery-ta-choloviche-vzuttia",
+      "category_id": "footwear",
+      "decision": "resolve_products",
+      "derived_attributes": {},
+      "product_count_observed": 0
+    },
+    {
+      "old_path": "Збройові аксесуари / Платформа AR",
+      "old_url": "zbroiovi-aksesuary/platforma-ar",
+      "category_id": "weapon_accessories",
+      "decision": "resolve_products",
+      "derived_attributes": {
+        "Сумісність": "AR"
+      },
+      "product_count_observed": 0
+    },
+    {
+      "old_path": "Збройові аксесуари / Платформа АК",
+      "old_url": "zbroiovi-aksesuary/platforma-ak",
+      "category_id": "weapon_accessories",
+      "decision": "resolve_products",
+      "derived_attributes": {
+        "Сумісність": "АК"
+      },
+      "product_count_observed": 0
+    },
+    {
+      "old_path": "Взуття / Догляд та аксесуари",
+      "old_url": "vzuttia/dohliad-ta-aksesuary",
+      "category_id": "footwear_accessories",
+      "decision": "merge",
+      "derived_attributes": {},
+      "product_count_observed": 0
+    }
+  ]
+}

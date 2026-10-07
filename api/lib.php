@@ -7,6 +7,7 @@ const SCHEMA_VERSION = 3;
 require_once __DIR__ . '/perf.php';
 require_once __DIR__.'/../shop/units.php';
 require_once __DIR__.'/../shop/normalization.php';
+require_once __DIR__.'/../shop/taxonomy.php';
 
 function cfg(string $k = null) {
   static $c = null;
@@ -141,6 +142,7 @@ function clean_avail($a): string {
 }
 
 function sync_categories(PDO $pdo, array $cats): void {
+  if(shopTaxonomyActive($pdo))return; // Canonical definitions are versioned, never recreated from PIM labels.
   $st = $pdo->prepare("INSERT INTO categories (id,path,name,slug,url_path,parent_id,depth,sort,product_count,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)
     ON DUPLICATE KEY UPDATE name=VALUES(name), slug=VALUES(slug), url_path=VALUES(url_path), parent_id=VALUES(parent_id), depth=VALUES(depth), sort=VALUES(sort), updated_at=VALUES(updated_at)");
   $seen = [];
@@ -153,14 +155,12 @@ function sync_categories(PDO $pdo, array $cats): void {
     $url = implode('/', array_map('slugify', $parts));
     $st->execute([$id, $path, end($parts), slugify(end($parts)), $url, $parent, count($parts), $i, 0, now()]);
   }
-  // Ветки, которых больше нет в дереве PIM, удаляем (товары в них станут без категории до следующей отправки)
-  if ($seen) {
-    $in = implode(',', array_fill(0, count($seen), '?'));
-    $pdo->prepare("DELETE FROM categories WHERE id NOT IN ($in)")->execute($seen);
-  }
+  // Keep historical categories and URLs: a partial PIM tree must never delete them.
+
 }
 
 function recount_categories(PDO $pdo): void {
+  if(shopTaxonomyActive($pdo))return; // Historical tree stays available for rollback; public counts come from canonical relations.
   $pdo->exec("UPDATE categories SET product_count=0");
   $rows = $pdo->query("SELECT category_path, COUNT(*) n FROM products WHERE visible=1 GROUP BY category_path")->fetchAll();
   $add = [];
@@ -210,6 +210,7 @@ function catalog_order_articles(PDO $pdo,array $lines): array {
 function save_product(PDO $pdo, array $p): array {
   $id = trim((string)($p['id'] ?? ''));
   if ($id === '' || strlen($id) > 64) return ['id' => $id, 'status' => 'error', 'error' => 'нет id'];
+  if(($categoryError=shopTaxonomySyncValidate($pdo,$p))!==null)return ['id'=>$id,'status'=>'error','error'=>$categoryError];
   $name = trim((string)($p['name'] ?? ''));
   $vars = is_array($p['variants'] ?? null) ? $p['variants'] : [];
   if ($name === '') return ['id' => $id, 'status' => 'error', 'error' => 'нет названия'];
@@ -244,6 +245,7 @@ function save_product(PDO $pdo, array $p): array {
       if ($hasFulfillment) sync_product_fulfillment($pdo,$id,$fulfillment);
       if($hasArticles)sync_product_supplier_articles($pdo,$id,$articles);
       $pdo->prepare("UPDATE products SET synced_at=? WHERE id=?")->execute([now(), $id]);
+      shopTaxonomySyncProduct($pdo,$p);
       $pdo->commit();
     } catch (Throwable $e) {
       if ($pdo->inTransaction()) $pdo->rollBack();
@@ -288,6 +290,7 @@ function save_product(PDO $pdo, array $p): array {
       ON DUPLICATE KEY UPDATE src_url=VALUES(src_url), src_hash=VALUES(src_hash), file='', thumb='', status='pending', error='', tries=0, updated_at=VALUES(updated_at)");
     foreach ($photos as $pos => $u) { $h = sha1($u); if (($have[$pos] ?? null) !== $h) $ins->execute([$id, $pos, $u, $h, now()]); }
     $pdo->prepare("DELETE FROM photos WHERE product_id=? AND pos>=?")->execute([$id, count($photos)]);
+    shopTaxonomySyncProduct($pdo,$p);
     $pdo->commit();
   } catch (Throwable $e) {
     $pdo->rollBack();

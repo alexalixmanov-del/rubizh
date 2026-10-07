@@ -19,10 +19,13 @@ if ($isPim) {
   require_pim();
   $pdo = db();
 
+  if($path==='/pim/categories')out(['ok'=>true,'version'=>shopTaxonomySpec()['version'],'categories'=>shopTaxonomySpec()['categories']]);
   if ($path === '/pim/cache-clear') out(['ok' => true, 'removed' => shopCacheClear()]);
   if ($path === '/pim/sync' && $method === 'POST') {
     @set_time_limit(120);
     $b = body();
+    if((int)$pdo->query("SELECT GET_LOCK('rubizh-category-migration',10)")->fetchColumn()!==1)fail(503,'Каталог оновлюється; повторіть синхронізацію пізніше.');
+    register_shutdown_function(fn()=> $pdo->query("SELECT RELEASE_LOCK('rubizh-category-migration')"));
     if(isset($b['settings']['hide_unavailable']))$pdo->prepare("INSERT INTO meta(k,v) VALUES('hide_unavailable',?) ON DUPLICATE KEY UPDATE v=VALUES(v)")->execute([$b['settings']['hide_unavailable']===false?'0':'1']);
     $mode = ($b['mode'] ?? 'delta') === 'full' ? 'full' : 'delta';
     if (isset($b['categories']) && is_array($b['categories'])) sync_categories($pdo, $b['categories']);
@@ -112,10 +115,12 @@ if ($path === '/health') {
 }
 
 if ($path === '/categories') {
+  if(shopTaxonomyActive($pdo)){require_once __DIR__.'/../shop/catalog-lib.php';out(['ok'=>true,'categories'=>array_map(fn($c)=>$c+['url'=>$c['url_path'],'count'=>$c['product_count'],'depth'=>$c['parent_id']===null?1:2],shopCategories($pdo))]);}
   $rows = $pdo->query("SELECT id, parent_id, path, name, slug, url_path, depth, product_count FROM categories WHERE product_count>0 ORDER BY sort")->fetchAll();
   out(['ok' => true, 'categories' => array_map(fn($r) => ['id' => $r['id'], 'parent_id' => $r['parent_id'], 'path' => $r['path'], 'name' => $r['name'], 'slug' => $r['slug'], 'url' => $r['url_path'], 'depth' => (int)$r['depth'], 'count' => (int)$r['product_count']], $rows)]);
 }
 
+if ($path === '/catalog'&&shopTaxonomyActive($pdo)){require_once __DIR__.'/../shop/catalog-lib.php';$input=$_GET;if(isset($input['brand']))$input['brands']=$input['brand'];$input['sort']=['price_asc'=>'cheap','price_desc'=>'exp'][$input['sort']??'']??($input['sort']??'');$catalog=shopCatalog($pdo,$input);foreach($catalog['items'] as &$card){$card['photo']=$card['photos'][0]??null;$card['variants_count']=count($card['variants']);$card['price_max']=$card['variants']?max(array_column($card['variants'],'price')):null;}unset($card);out($catalog);}
 if ($path === '/catalog') {
   $where = ['p.visible=1']; $args = [];if($pdo->query("SELECT v FROM meta WHERE k='hide_unavailable'")->fetchColumn()!=='0')$where[]="EXISTS(SELECT 1 FROM variants av WHERE av.product_id=p.id AND av.availability IN ('in','order') AND av.price>0 AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(av.data,'$.size_unconfirmed')),'false') NOT IN ('true','1'))";
   if (($c = trim((string)($_GET['category'] ?? ''))) !== '') {   // url категории: odiah-ta-forma/cholovichyi-odiah
@@ -143,6 +148,7 @@ if ($path === '/catalog') {
 if (preg_match('~^/product/([a-z0-9-]{1,191})$~', $path, $m)) {
   $st = $pdo->prepare("SELECT * FROM products WHERE slug=? AND visible=1"); $st->execute([$m[1]]); $r = $st->fetch();
   if (!$r) fail(404, 'Товар не найден');
+  $taxonomy=shopTaxonomyProduct($pdo,$r);
   $d = json_decode((string)$r['data'], true) ?: [];
   $ph = product_photos($pdo, [$r['id']]);
   $vs = $pdo->prepare("SELECT data FROM variants WHERE product_id=? ORDER BY sort"); $vs->execute([$r['id']]);
@@ -159,9 +165,9 @@ if (preg_match('~^/product/([a-z0-9-]{1,191})$~', $path, $m)) {
     $links[$t] = array_values(array_map(fn($id) => card_row($byId[$id], $lp), array_filter($ids, fn($id) => isset($byId[$id]))));
   }
   out(['ok' => true, 'product' => [
-    'id' => $r['id'], 'slug' => $r['slug'], 'name' => $r['name'], 'brand' => $r['brand'], 'category' => $r['category_path'],
-    'category_url' => implode('/', array_map('slugify', array_filter(explode(' / ', $r['category_path']), 'strlen'))),
-    'description' => $r['description'], 'attributes' => json_decode((string)$r['attributes'], true) ?: new stdClass,
+    'id' => $r['id'], 'slug' => $r['slug'], 'name' => $r['name'], 'brand' => $r['brand'], 'category' => $taxonomy['category']??$r['category_path'],'canonical_category_id'=>$taxonomy['canonical_category_id']??null,
+    'category_url' => $taxonomy['category_url']??implode('/', array_map('slugify', array_filter(explode(' / ', $r['category_path']), 'strlen'))),
+    'description' => $r['description'], 'attributes' => (object)array_replace($taxonomy['derived_attributes']??[],json_decode((string)$r['attributes'],true)?:[]),
     'price_min' => $r['price_min'] !== null ? (int)$r['price_min'] : null, 'price_max' => $r['price_max'] !== null ? (int)$r['price_max'] : null,
     'availability' => $r['availability'], 'has_docs' => (bool)$r['has_docs'], 'docs_note' => $r['docs_note'],
     'size_scale' => $d['size_scale'] ?? '', 'photos' => $ph[$r['id']] ?? [], 'variants' => $variants, 'links' => $links]]);
