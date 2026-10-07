@@ -14,6 +14,7 @@ function monoMinor(mixed $amount): int {if(!is_numeric($amount)||(float)$amount<
 function monoPageUrl(string $url): bool {$p=parse_url($url);return ($p['scheme']??'')==='https'&&in_array(strtolower($p['host']??''),['pay.mbnk.biz','pay.monobank.ua'],true)&&!isset($p['user'])&&!isset($p['pass']);}
 function monoCreate(PDO $db,int $orderId): array {
  return npLocked($db,$orderId,function()use($db,$orderId){$order=npOrder($db,$orderId);if(in_array($order['payment_status'],['paid','refunded'],true)||in_array($order['status'],['cancelled','returned'],true))throw new RuntimeException('Це замовлення вже оплачене або закрите.');
+ if(!shopPaymentReady($order))throw new RuntimeException('Дочекайтеся підтвердження наявності менеджером.');
  if(($order['contact']['payment']??'')!=='card')throw new RuntimeException('Для замовлення обрано інший спосіб оплати.');
  $q=$db->prepare('SELECT * FROM rubizh_mono_invoices WHERE order_id=? ORDER BY id DESC LIMIT 1');$q->execute([$orderId]);$last=$q->fetch(PDO::FETCH_ASSOC);
  if($last&&in_array($last['status'],['creating','unknown','created','processing','hold'],true)){if($last['page_url']!==''&&monoPageUrl($last['page_url']))return ['url'=>$last['page_url'],'invoice_id'=>$last['invoice_id']];throw new RuntimeException('Результат створення рахунку потребує звірки з monobank. Новий рахунок поки не створюємо.');}

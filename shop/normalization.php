@@ -24,6 +24,7 @@ function shopSizeFacets(array $rows): array {
 function shopClothingSize(string $raw): string {
  $s=mb_strtoupper(trim(preg_replace('/^\s*:\s*/u','',$raw)));
  if(preg_match('/^(?:[3-9]XL|XXXL|XXXXL|XXXXXL)(?:\b|\+|\()/u',$s))return '3XL+';
+ if(preg_match('/^2XL(?:$|[\s(\/\-])/u',$s))return 'XXL';
  if(preg_match('/^(XXL|XL|XS|S|M|L)(?:$|[\s(\/\-])/u',$s,$m))return $m[1];
  if(preg_match('/^(\d{2})(?:$|[\s(\/])/u',$s,$m)){return match((int)$m[1]){40,42,44=>'XS',46=>'S',48=>'M',50,52=>'L',54,56=>'XL',58,60=>'XXL',62,64,66,68,70=>'3XL+',default=>''};}return '';
 }
@@ -33,7 +34,7 @@ function shopSizeSql(): string {
  return "CASE WHEN ".shopSizeKindSql()."='clothing' THEN CASE WHEN $s REGEXP '^([3-9]XL|XXXL|XXXXL|XXXXXL)($|[+ (/])' THEN '3XL+' WHEN $s REGEXP '^(XXL|XL|XS|S|M|L)($|[ (/\\-])' THEN REGEXP_SUBSTR($s,'^(XXL|XL|XS|S|M|L)') WHEN $s REGEXP '^[0-9]{2}($|[ (/])' THEN CASE WHEN $n IN (40,42,44) THEN 'XS' WHEN $n=46 THEN 'S' WHEN $n=48 THEN 'M' WHEN $n IN (50,52) THEN 'L' WHEN $n IN (54,56) THEN 'XL' WHEN $n IN (58,60) THEN 'XXL' WHEN $n IN (62,64,66,68,70) THEN '3XL+' ELSE '' END ELSE '' END WHEN ".shopSizeKindSql()."='footwear' AND $s REGEXP '^[0-9]{2}([.,]5)?$' THEN REPLACE($s,',','.') ELSE '' END";
 }
 function shopHeightSql(): string {$s=shopNativeSizeSql();return "CASE WHEN ".shopSizeKindSql()."='clothing' THEN CASE WHEN ($s) REGEXP '/[1-6]$' THEN SUBSTRING_INDEX(($s),'/',-1) WHEN LOWER(($s)) REGEXP '[(][1-6]-[1-6][[:space:]]*зріст' THEN REGEXP_SUBSTR(($s),'[1-6]-[1-6]') ELSE '' END ELSE '' END";}
-function shopAttributeKeys(): array {return ['Матеріал'=>['Матеріал','Материал','material'],'Склад'=>['Склад','Состав','composition'],'Капюшон'=>['Капюшон','Тип капюшона','Наявність капюшона'],'Сезон'=>['Сезон','Сезонність'],'Утеплювач'=>['Утеплювач','Утеплитель'],'Мембрана'=>['Мембрана'],'Клас захисту'=>['Клас захисту','Класс защиты'],'Тип'=>['Тип','Тип виробу'],'Обʼєм'=>['Обʼєм','Объем','Об’єм'],'Вага'=>['Вага','Вес'],'Розмір плити'=>['Розмір плити'],'Сумісність'=>['Сумісність','Совместимость'],'Кольори'=>['Кольори','Цвета'],'Розміри'=>['Розміри','Размеры'],'Країна виробник'=>['Країна виробник','Країна-виробник','Страна производитель']];}
+function shopAttributeKeys(): array {return ['Габарити'=>['Габарити','Габариты','Розміри виробу','Размеры изделия'],'Матеріал'=>['Матеріал','Материал','material'],'Склад'=>['Склад','Состав','composition'],'Капюшон'=>['Капюшон','Тип капюшона','Наявність капюшона'],'Сезон'=>['Сезон','Сезонність'],'Утеплювач'=>['Утеплювач','Утеплитель'],'Мембрана'=>['Мембрана'],'Клас захисту'=>['Клас захисту','Класс защиты'],'Тип'=>['Тип','Тип виробу'],'Обʼєм'=>['Обʼєм','Объем','Об’єм'],'Вага'=>['Вага','Вес'],'Розмір плити'=>['Розмір плити'],'Сумісність'=>['Сумісність','Совместимость'],'Кольори'=>['Кольори','Цвета'],'Розміри'=>['Розміри','Размеры'],'Країна виробник'=>['Країна виробник','Країна-виробник','Страна производитель']];}
 function shopMaterial(string $s): string {
  $s=trim(preg_replace('/\s*\([^)]*\).*/u','',$s));$s=preg_replace('/\s+/u',' ',$s);$key=mb_strtolower(preg_replace('/[\s_\-–]+/u','',$s));
  $dict=['ripstop'=>'Ріпстоп','ріпстоп'=>'Ріпстоп','рипстоп'=>'Ріпстоп','twill'=>'Твіл','твіл'=>'Твіл','твилл'=>'Твіл','coolpass'=>'CoolPASS','cordura'=>'Cordura','кордура'=>'Cordura','фліс'=>'Фліс','флис'=>'Фліс','fleece'=>'Фліс','softshell'=>'Софтшел','софтшел'=>'Софтшел','софтшелл'=>'Софтшел','нейлон'=>'Нейлон','nylon'=>'Нейлон','бавовна'=>'Бавовна','хлопок'=>'Бавовна','cotton'=>'Бавовна','поліестер'=>'Поліестер','полиэстер'=>'Поліестер','polyester'=>'Поліестер','оксфорд'=>'Оксфорд','oxford'=>'Оксфорд'];
@@ -57,6 +58,7 @@ function shopDescriptionAttributes(string $description,array $attributes=[]): ar
  return $out;
 }
 function shopCorrectCategory(string $name,string $category): string {
+ if(preg_match('/^Тактична медицина/iu',$category)){if(preg_match('/тренув|навчал|учб/iu',$name))return 'Тактична медицина / Навчальні засоби';if(preg_match('/маркер/iu',$name))return 'Тактична медицина / Медичні аксесуари';}
  if(!preg_match('/^Маскування(?:\s*\/|$)/iu',$category)||preg_match('/маскувальн.*костюм|кікімор|маскхалат|накидк|пончо/iu',$name))return $category;
  foreach([
   ['штани|брюки|джогер','Одяг та форма / Чоловічий одяг / Тактичні штани'],
@@ -83,4 +85,22 @@ function shopFilterKeys(string $category): array {
  if(preg_match('/медицин|медицина/iu',$category))return ['Тип'];
  if(preg_match('/курт|пончо|софтшел|фліс|термо/iu',$category))return ['Сезон','Матеріал','Капюшон','Утеплювач'];
  return ['Сезон','Матеріал','Капюшон'];
+}
+
+function shopMatchesSizes(array $row,array $wanted): bool {
+ $kind=shopSizeKind((string)$row['name'],(string)$row['category_path']);$extra=json_decode((string)($row['data']??''),true)?:[];
+ $raw=trim(preg_replace('/^\s*:\s*/u','',(string)$row['size']));$native=(string)($extra['size_native']??$raw);
+ $facets=shopSizeFacets([$row+['size_native'=>$native]]);$values=[];foreach($facets['size_groups'] as $g)$values[$g['kind']]=$g['values'];
+ $normal=[];$height=[];
+ foreach($wanted as $s){if(str_contains($s,':')){[$k,$v]=explode(':',$s,2);if($k==='height')$height[]=$v;elseif($k===$kind)$normal[]=in_array($v,$values[$k]??[],true);}
+ elseif(in_array($s,['XS','S','M','L','XL','XXL','2XL','3XL+'],true))$normal[]=$kind==='clothing'&&in_array($s==='2XL'?'XXL':$s,$values['clothing']??[],true);else $normal[]=$s===$raw;}
+ return (!$normal||in_array(true,$normal,true))&&(!$height||array_intersect($height,$values['height']??[]))&&($normal||$height);
+}
+
+function shopVariantAttributes(array $attributes,array $variants,string $unit): array {
+ $colors=[];$sizes=[];foreach($variants as $v){if(trim((string)($v['color']??''))!=='')$colors[shopColor($v['color'])]=true;if(empty($v['size_unconfirmed'])&&trim((string)($v['size_display']??''))!=='')$sizes[$v['size_display']]=true;}
+ if($colors&&!isset($attributes['Кольори']))$attributes['Кольори']=implode(', ',array_keys($colors));
+ if($sizes&&!isset($attributes['Розміри']))$attributes['Розміри']=implode(', ',array_keys($sizes));
+ if(!isset($attributes['Одиниця продажу']))$attributes['Одиниця продажу']=$unit==='m2'?'м²':'шт.';
+ return $attributes;
 }

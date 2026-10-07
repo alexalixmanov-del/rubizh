@@ -17,7 +17,7 @@ function shopDescription(string $s): string {
  return trim(preg_replace('/\n{3,}/',"\n\n",preg_replace('/[^\S\n]+/u',' ',$s)));
 }
 function shopSlot(array $p): string {
- foreach([['gear','^(підсум|чохол|сумк|футляр|холдер|тримач)'],['med','аптеч|турнікет|джгут|гемостат|бандаж|ifak'],['small','шкарпет|рукавич|рукавиц|наколін|налокіт'],['head','шолом|каск|шапк|кепк|панам|бейсбол|балаклав|навушник|баф|окуляр'],['boots','берц|черевик|кросів|взутт|бахіл'],['armor','плитоноск|бронежилет|бронеплит|бронепакет|балістичн.*пакет'],['legs','штани|штанів|брюки|шорти'],['gear','рюкзак|підсум|баул|розвантаж|рпс|сумк|гідратор|бойовий пояс'],['small','пояс|ремінь'],['body','курт|убакс|ubacs|сороч|футбол|поло|термобілиз|термобель|фліс|флис|кофта|худі|софтшел|пончо|костюм']] as [$r,$pattern])if(preg_match('~'.$pattern.'~iu',(string)($p['name']??'')))return $r;
+ foreach(shopKitSlotPatterns() as [$r,$pattern])if(preg_match('~'.$pattern.'~iu',(string)($p['name']??'')))return $r;
  foreach([['med','медицин|медицина'],['head','голов|шолом'],['armor','бронезахист'],['boots','взуття'],['legs','штани'],['small','рукавич|аксесуари одягу'],['gear','рюкзак|підсум|рпс|спорядження'],['body','одяг|форма']] as [$r,$pattern])if(preg_match('~'.$pattern.'~iu',(string)($p['category']??$p['category_path']??'')))return $r;return 'small';
 }
 function shopColorAliases(string $s): array {
@@ -34,7 +34,7 @@ function shopVariantSizeUnconfirmed(array $v,string $name='',string $category=''
  if(!empty($v['size_unconfirmed'])||!empty($extra['size_unconfirmed']))return true;
  $name=$name?:($v['name']??'');$category=$category?:($v['category_path']??'');
  if(!in_array(shopSlot(['name'=>$name,'category_path'=>$category]),['body','legs','boots'],true)||preg_match('/пончо|бахіл|костюм.*маскув/iu',$name))return false;
- foreach([$extra['size_display']??'',$extra['size_native']??'',$v['size_display']??'',$v['size_native']??'',$v['size']??''] as $size)if(trim(preg_replace('/^\s*:\s*/u','',(string)$size))!=='')return false;
+ foreach([$extra['size_display']??'',$extra['size_native']??'',$v['size_display']??'',$v['size_native']??'',$v['size']??''] as $size)if(!preg_match('/^(?:Один розмір|OS|універсальний|)$/iu',trim(preg_replace('/^\s*:\s*/u','',(string)$size))))return false;
  return true;
 }
 function shopVariantCanBuy(array $v): bool {
@@ -43,5 +43,26 @@ function shopVariantCanBuy(array $v): bool {
 }
 function shopBuyableSql(string $a): string {
  if(!preg_match('/^[a-z]+$/D',$a))throw new InvalidArgumentException('alias');$j="CASE WHEN JSON_VALID($a.data) THEN $a.data ELSE '{}' END";
- return "$a.price>0 AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT($j,'$.size_unconfirmed')),'false') NOT IN ('true','1') AND (($a.availability='in' AND (JSON_EXTRACT($j,'$.stock') IS NULL OR JSON_UNQUOTE(JSON_EXTRACT($j,'$.stock'))='null' OR CAST(JSON_UNQUOTE(JSON_EXTRACT($j,'$.stock')) AS DECIMAL(12,2))>0)) OR ($a.availability='order' AND (TRIM($a.lead_time)<>'' OR (JSON_UNQUOTE(JSON_EXTRACT($j,'$.availability_date')) REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' AND JSON_UNQUOTE(JSON_EXTRACT($j,'$.availability_date'))>=DATE_FORMAT(UTC_TIMESTAMP(),'%Y-%m-%d')))))";
+ $sizes=["JSON_UNQUOTE(JSON_EXTRACT($j,'$.size_display'))","JSON_UNQUOTE(JSON_EXTRACT($j,'$.size_native'))","$a.size"];
+ $missing=implode(' AND ',array_map(fn($size)=>"LOWER(TRIM(TRIM(LEADING ':' FROM TRIM(COALESCE($size,''))))) IN ('','один розмір','os','універсальний')",$sizes));
+ $context="NOT (".shopKitSlotSql()." IN ('body','legs','boots') AND LOWER(p.name) NOT REGEXP 'пончо|бахіл|костюм.*маскув' AND ($missing))";
+ return "$a.price>0 AND $context AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT($j,'$.size_unconfirmed')),'false') NOT IN ('true','1') AND (($a.availability='in' AND (JSON_EXTRACT($j,'$.stock') IS NULL OR JSON_UNQUOTE(JSON_EXTRACT($j,'$.stock'))='null' OR CAST(JSON_UNQUOTE(JSON_EXTRACT($j,'$.stock')) AS DECIMAL(12,2))>0)) OR ($a.availability='order' AND (TRIM($a.lead_time)<>'' OR (JSON_UNQUOTE(JSON_EXTRACT($j,'$.availability_date')) REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' AND JSON_UNQUOTE(JSON_EXTRACT($j,'$.availability_date'))>=DATE_FORMAT(UTC_TIMESTAMP(),'%Y-%m-%d')))))";
+}
+
+function shopKitSlotPatterns(): array {
+    return [['gear','^(?:підсум|чохол|сумк|футляр|холдер|тримач)|рюкзак|баул|розвантаж|рпс|гідратор|бойовий пояс'],['med','аптеч|турнікет|джгут|гемостат|бандаж|ifak'],['small','шкарпет|рукавич|рукавиц|наколін|налокіт'],['head','шолом|каск|шапк|кепк|панам|бейсбол|балаклав|навушник|баф|окуляр'],['boots','берц|черевик|кросів|взутт|бахіл'],['armor','плитоноск|бронежилет|бронеплит|бронепакет|балістичн.*пакет'],['legs','штани|штанів|брюки|джогер|шорти'],['small','пояс|ремінь'],['body','курт|убакс|ubacs|сороч|футбол|поло|термобілиз|термобель|фліс|флис|кофта|худі|софтшел|пончо|костюм']];
+}
+function shopKitSlotSql(): string {
+    $sql='CASE';foreach(shopKitSlotPatterns() as [$key,$pattern])$sql.=" WHEN LOWER(p.name) REGEXP '".str_replace(['(?:',"'"],['(',''],$pattern)."' THEN '$key'";
+    foreach(['med'=>'медицин|медицина','head'=>'голов|шолом','armor'=>'бронезахист','boots'=>'взуття','legs'=>'штани','small'=>'рукавич|аксесуари одягу','gear'=>'рюкзак|підсум|рпс|спорядження','body'=>'одяг|форма'] as $key=>$pattern)$sql.=" WHEN LOWER(p.category_path) REGEXP '$pattern' THEN '$key'";
+    return $sql." ELSE 'small' END";
+}
+function shopKitPrimarySql(string $slot): string {
+ $patterns=['head'=>'шолом|каск|шапк|балаклав|кепк|панам|бейсбол|навушник|окуляр','boots'=>'берц|черевик|кросів','armor'=>'плитоноск|бронежилет|бронеплит|бронепакет','med'=>'турнікет|джгут|гемостат|бандаж|аптечка|ifak','body'=>'курт|убакс|ubacs|сороч|фліс|флис|термобілиз|худі|костюм|пончо','legs'=>'штани|брюки|джогер|шорти','gear'=>'рюкзак|розвантаж|рпс|бойовий пояс|підсум','small'=>'рукавич|рукавиц|шкарпет|наколін|налокіт|пояс|ремінь'];
+ if(!isset($patterns[$slot]))throw new InvalidArgumentException('slot');$n='LOWER(p.name)';$sql="$n REGEXP '".$patterns[$slot]."'";
+ if(in_array($slot,['head','armor'],true))$sql.=" AND $n NOT REGEXP 'болт|велкро|подуш|панел|наклад|адаптер|кронштейн|чохол|фастекс|ремін|тримач|кріплен|рейк|фартух|напашник'";
+ if($slot==='head')$sql.=" AND $n NOT REGEXP 'кавер|камера|camera|ліхтар|стробоскоп|маркер|обвіс|підвіс|рюкзак|сумк'";
+ if($slot==='armor')$sql.=" AND $n NOT REGEXP 'камербанд|сороч|ubacs|сидуш|каремат|рюкзак|кавер'";
+ if($slot==='med')$sql.=" AND $n NOT REGEXP 'тренув|тренир|навчал|учб|маркер|сумк|підсум|чохол|порожн|без наповнення'";
+ return $sql;
 }

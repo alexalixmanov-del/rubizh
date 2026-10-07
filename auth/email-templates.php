@@ -73,7 +73,8 @@ function rubizhOrderEmail(array $order): array {
     $payment=['pending'=>'Очікує оплати','paid'=>'Оплачено','cod'=>'Оплата при отриманні','refunded'=>'Кошти повернено','failed'=>'Оплата не пройшла'][(string)($order['payment_status'] ?? '')] ?? 'Уточнюється';
     $delivery=(string)($order['delivery_label'] ?? '');
     $stage=in_array($order['status']??'',['cancelled','returned'],true)||($order['payment_status']??'')==='refunded'?'cancelled':(($order['payment_status']??'')==='paid'?'paid':'pending');
-    $title=['pending'=>'Майже готово — залишилась оплата','paid'=>'Замовлення оформлено','cancelled'=>'Скасовано'][$stage];
+    $ready=in_array($order['status']??'',['confirmed','processing','shipped','completed'],true);if($stage==='pending'&&!$ready)$payment='Очікує підтвердження наявності';
+    $title=['pending'=>$ready?'Наявність підтверджено — можна оплатити':'Замовлення отримано — очікуйте підтвердження','paid'=>'Замовлення оформлено','cancelled'=>'Скасовано'][$stage];
     if(($order['mail_event']??'')==='shipped'&&$stage!=='cancelled')$title='Передано Новій пошті';
     if(($order['mail_event']??'')==='reminder'&&$stage==='pending')$title='Нагадування: залишилась оплата';
     if(($order['mail_event']??'')==='arrived'&&$stage!=='cancelled')$title='Замовлення прибуло у відділення';
@@ -82,7 +83,7 @@ function rubizhOrderEmail(array $order): array {
     $donation=(int)round((float)$order['total']*.03,0,PHP_ROUND_HALF_UP);
     $brigade=shopDonationBrigade($order['contact']??[]);
     $donationText=$stage==='cancelled'?'Внесок за скасованим або поверненим замовленням не нараховується.':($stage==='pending'?'Після оплати '.$donation.' ₴ підуть на '.$brigade.'. ':'').'Протягом 3 робочих днів після оплати надішлемо скрін переказу на '.$brigade.' у Viber або Telegram. Ваш внесок — '.$donation.' ₴.';
-    $deadline='';if($stage==='pending'&&($order['payment_status']??'')!=='cod'&&!empty($order['payment_due'])){$deadline='Резерв до '.(new DateTimeImmutable($order['payment_due'],new DateTimeZone('UTC')))->setTimezone(new DateTimeZone('Europe/Kyiv'))->format('d.m.Y H:i').' (2 банківські дні). Після закінчення строку неоплачене замовлення скасуємо, якщо банк підтвердить відсутність оплати.';}
+    $deadline='';if($ready&&$stage==='pending'&&($order['payment_status']??'')!=='cod'&&!empty($order['payment_due'])){$deadline='Резерв до '.(new DateTimeImmutable($order['payment_due'],new DateTimeZone('UTC')))->setTimezone(new DateTimeZone('Europe/Kyiv'))->format('d.m.Y H:i').' (2 банківські дні). Після закінчення строку неоплачене замовлення скасуємо, якщо банк підтвердить відсутність оплати.';}
 
     $rows=''; $plainLines=[];
     foreach ($lines as $line) {
@@ -113,10 +114,11 @@ function rubizhOrderEmail(array $order): array {
         .'<p style="margin:0 0 10px;font-size:14px;line-height:22px;color:#A7B499"><strong style="color:#F2F0E7">Оплата:</strong> '.rubizhEmailEsc($payment).'</p>'
         .($delivery!=='' ? '<p style="margin:0;font-size:14px;line-height:22px;color:#A7B499;overflow-wrap:anywhere;word-break:break-word"><strong style="color:#F2F0E7">Доставка:</strong> '.rubizhEmailEsc($delivery).'</p>' : '')
         .'<div style="padding-top:24px">'.rubizhEmailButton('https://rubizh.shop/auth/?tab=orders','Переглянути замовлення →').'</div>';
+    if($ready&&$stage==='pending'){$link='https://rubizh.shop/shop/payment-return.php?order='.(int)($order['id']??0);$content.='<p>Наявність і комплектацію підтверджено менеджером.</p>'.rubizhEmailButton($link,'Перейти до оплати →');$summaryPlain.="\nОплата: ".$link;}elseif($stage==='pending'){$content.='<p>Перевіримо наявність і комплектацію. Оплата стане доступною після підтвердження менеджером.</p>';$summaryPlain.="\nОплачуйте після підтвердження наявності менеджером.";}
     $trackingPlain='';
     foreach($order['shipments']??[] as $shipment){$tracking=(string)($shipment['tracking_number']??'');if(!preg_match('/^\d{14}$/D',$tracking)||in_array($shipment['status']??'',['cancelled','returned'],true))continue;$trackingPlain.="\nТТН: ".$tracking." · https://novaposhta.ua/tracking/?cargo_number=".$tracking;$content.='<p style="color:#A7B499;line-height:24px">ТТН: <a href="https://novaposhta.ua/tracking/?cargo_number='.$tracking.'" style="color:#F2A33C">'.$tracking.'</a></p>';}
     $seller=rubizhSeller();$paymentDetails='';
-    if($stage==='pending'&&($order['payment_method']??'')!=='cod'&&in_array($order['payment_status']??'',['pending','failed'],true)){$paymentDetails="\n\nОплата після підтвердження наявності — 100% на рахунок ФОП.\n".$seller['name']."\nРНОКПП: ".$seller['tax_id']."\nIBAN: ".$seller['iban']."\nБанк: ".$seller['bank']."\nПризначення: оплата замовлення ".$number;$content.='<div style="color:#A7B499;white-space:pre-wrap">'.rubizhEmailEsc($paymentDetails).'</div>';}
+    if($ready&&$stage==='pending'&&($order['payment_method']??'')==='invoice'&&in_array($order['payment_status']??'',['pending','failed'],true)){$paymentDetails="\n\nОплата після підтвердження наявності — 100% на рахунок ФОП.\n".$seller['name']."\nРНОКПП: ".$seller['tax_id']."\nIBAN: ".$seller['iban']."\nБанк: ".$seller['bank']."\nПризначення: оплата замовлення ".$number;$content.='<div style="color:#A7B499;white-space:pre-wrap">'.rubizhEmailEsc($paymentDetails).'</div>';}
     $docs=count(array_filter($lines,fn($l)=>!empty($l['has_docs'])));$docText=$docs?"\nПротокол випробувань додається до замовлення; до покупки надаємо за запитом":'';if($docs)$content.='<p style="color:#A7B499">'.rubizhEmailEsc(trim($docText)).'</p>';
     $plain=$title."\n\n".$donationText."\n".$deadline."\n\nЗамовлення № ".$number."\n\n".implode("\n",$plainLines).$summaryPlain.$paymentDetails.$docText."\n\nСума замовлення: ".$total."\nОплата: ".$payment.($delivery!=='' ? "\nДоставка: ".$delivery : '')."\n\nВаші замовлення: https://rubizh.shop/auth/?tab=orders\n\nПотрібна допомога? Відповідайте на цей лист.\nКоманда РУБІЖ\nhttps://rubizh.shop";
      $content.='<p style="font-size:15px;color:#F2F0E7;line-height:1.6">'.rubizhEmailEsc($donationText).'</p><p style="color:#A7B499">'.rubizhEmailEsc($deadline).'</p>';

@@ -25,7 +25,7 @@ function shopCatalogVersion(): string {
     $updated = (string)($db->query("SELECT v FROM meta WHERE k='catalog_updated'")->fetchColumn() ?: '');
     $hide = (string)($db->query("SELECT v FROM meta WHERE k='hide_unavailable'")->fetchColumn() ?: '');
     $photos = (string)($db->query("SELECT MAX(updated_at) FROM photos")->fetchColumn() ?: '');
-    return $ver = substr(md5($updated . '|' . $photos . '|' . $hide . '|v2'), 0, 12);
+    return $ver = substr(md5($updated . '|' . $photos . '|' . $hide . '|v3'), 0, 12);
 }
 
 function shopCacheFile(string $key, string $extra = ''): string {
@@ -47,7 +47,7 @@ function shopCachePut(string $key, $data, string $extra = ''): void {
     shopCacheGc(shopCatalogVersion());
 }
 function shopCacheLastFile(string $key,string $extra=''): string {
-    return shopCacheDir().'/last-'.hash('sha256',$key.'|'.$extra).'.json';
+    return shopCacheDir().'/last-'.hash('sha256',$key.'|'.$extra.'|v3').'.json';
 }
 function shopCacheQueue(string $key,array $job): string {
     $file=shopCacheDir().'/refresh-'.hash('sha256',$key).'.json';

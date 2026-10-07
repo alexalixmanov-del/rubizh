@@ -309,6 +309,24 @@ function hide_products(PDO $pdo, array $ids): int {
 }
 
 /* ---------- фото: скачать, сжать в WebP, сохранить у себя ---------- */
+function media_file_exists(string $rel): bool {
+  if (!preg_match('~^p/[a-f0-9]{2}/[a-f0-9]{40}(?:-t)?\.webp$~D', $rel)) return false;
+  $file=rtrim((string)cfg('media_dir'),'/').'/'.$rel;
+  return is_file($file) && filesize($file)>0;
+}
+// Audit a bounded batch every worker run; an imported "ok" flag is not proof of a file.
+function repair_photo_files(PDO $pdo, int $limit=250, bool $all=false): array {
+  $cursor=$all?0:(int)$pdo->query("SELECT v FROM meta WHERE k='photos_file_cursor'")->fetchColumn();$checked=0;$missing=0;
+  $update=$pdo->prepare("UPDATE photos SET status='pending',file='',thumb='',tries=0,error='',updated_at=UTC_TIMESTAMP() WHERE id=? AND status='ok'");
+  do {
+    $rows=$pdo->query("SELECT id,file,thumb FROM photos WHERE status='ok' AND id>".$cursor." ORDER BY id LIMIT ".max(1,$limit))->fetchAll(PDO::FETCH_ASSOC);
+    foreach($rows as $r){$cursor=(int)$r['id'];$checked++;if(!media_file_exists((string)$r['file'])||!media_file_exists((string)$r['thumb'])){$update->execute([$r['id']]);$missing+=$update->rowCount();}}
+  } while($all&&count($rows)===$limit);
+  if(count($rows)<$limit)$cursor=0;
+  $pdo->prepare("INSERT INTO meta(k,v) VALUES('photos_file_cursor',?) ON DUPLICATE KEY UPDATE v=VALUES(v)")->execute([(string)$cursor]);
+  if($missing)$pdo->prepare("INSERT INTO meta(k,v) VALUES('catalog_updated',?) ON DUPLICATE KEY UPDATE v=VALUES(v)")->execute([now().'-photos-'.bin2hex(random_bytes(3))]);
+  return ['checked'=>$checked,'missing_requeued'=>$missing];
+}
 function process_photos(PDO $pdo, int $limit = 40, float $budget = 20.0): array {
   $t0 = microtime(true); $done = 0; $err = 0;
   $dir = rtrim((string)cfg('media_dir'), '/') . '/p';
@@ -319,7 +337,7 @@ function process_photos(PDO $pdo, int $limit = 40, float $budget = 20.0): array 
   foreach ($rows as $r) {
     if (microtime(true) - $t0 > $budget) break;
     $same->execute([$r['src_hash']]);
-    if ($s = $same->fetch()) { $upd->execute(['ok', $s['file'], $s['thumb'], $s['width'], $s['height'], '', now(), $r['id']]); $done++; continue; }
+    if (($s = $same->fetch()) && media_file_exists((string)$s['file']) && media_file_exists((string)$s['thumb'])) { $upd->execute(['ok', $s['file'], $s['thumb'], $s['width'], $s['height'], '', now(), $r['id']]); $done++; continue; }
     try {
       [$file, $thumb, $w, $h] = fetch_to_webp($r['src_url'], $r['src_hash'], $dir);
       $upd->execute(['ok', $file, $thumb, $w, $h, '', now(), $r['id']]); $done++;
@@ -335,7 +353,7 @@ function process_photos(PDO $pdo, int $limit = 40, float $budget = 20.0): array 
 function fetch_to_webp(string $url, string $hash, string $dir): array {
   $ch = curl_init($url);
   curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => true, CURLOPT_MAXREDIRS => 4, CURLOPT_CONNECTTIMEOUT => 8, CURLOPT_TIMEOUT => 20,
-    CURLOPT_USERAGENT => 'RubizhShop/1.0 (+photo import)', CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS]);
+    CURLOPT_USERAGENT => 'Mozilla/5.0 (compatible; RubizhShop/1.1; +https://rubizh.shop)' , CURLOPT_REFERER => (parse_url($url,PHP_URL_SCHEME)?:'https').'://'.(parse_url($url,PHP_URL_HOST)?:'rubizh.shop').'/', CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS]);
   $bin = curl_exec($ch); $code = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE); $cerr = curl_error($ch); curl_close($ch);
   if ($bin === false || $code >= 400) throw new RuntimeException('не скачалось: ' . ($cerr ?: 'HTTP ' . $code));
   if (strlen($bin) > 15 * 1024 * 1024) throw new RuntimeException('файл больше 15 МБ');
@@ -350,7 +368,8 @@ function fetch_to_webp(string $url, string $hash, string $dir): array {
     imagefill($dst, 0, 0, imagecolorallocatealpha($dst, 255, 255, 255, 127));
     imagecopyresampled($dst, $img, 0, 0, 0, 0, $nw, $nh, $w, $h);
     $rel = "p/$sub/$hash$suffix.webp";
-    if (!imagewebp($dst, rtrim(dirname($dir), '/') . '/' . $rel, (int)cfg('webp_quality'))) throw new RuntimeException('не удалось сохранить WebP');
+    $target=rtrim(dirname($dir), '/') . '/' . $rel;$temp=$target.'.'.bin2hex(random_bytes(4)).'.tmp';
+    if (!imagewebp($dst, $temp, (int)cfg('webp_quality')) || !rename($temp,$target)) { @unlink($temp); throw new RuntimeException('не удалось сохранить WebP'); }
     imagedestroy($dst);
     return [$rel, $nw, $nh];
   };
@@ -368,9 +387,9 @@ function product_photos(PDO $pdo, array $ids): array {
   $st = $pdo->prepare("SELECT product_id, pos, src_url, file, thumb, width, height, status FROM photos WHERE product_id IN ($in) ORDER BY product_id, pos");
   $st->execute($ids); $out = [];
   foreach ($st->fetchAll() as $r) {
-    $ok = $r['status'] === 'ok' && $r['file'];
+    $ok = $r['status'] === 'ok' && media_file_exists((string)$r['file']);
     // Пока фото не обработано, отдаём ссылку поставщика — сайт не остаётся без картинок
-    $out[$r['product_id']][] = ['url' => $ok ? media_url($r['file']) : $r['src_url'], 'thumb' => $ok ? media_url($r['thumb']) : $r['src_url'], 'width' => (int)$r['width'], 'height' => (int)$r['height'], 'local' => $ok];
+    $out[$r['product_id']][] = ['url' => $ok ? media_url($r['file']) : $r['src_url'], 'thumb' => $ok ? media_url(media_file_exists((string)$r['thumb'])?$r['thumb']:$r['file']) : $r['src_url'], 'width' => (int)$r['width'], 'height' => (int)$r['height'], 'local' => $ok];
   }
   return $out;
 }

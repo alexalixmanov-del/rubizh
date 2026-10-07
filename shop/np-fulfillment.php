@@ -84,15 +84,16 @@ function npDraft(PDO $db,int $order,string $actor,string $op,string $code,array 
 }
 function npConfirm(PDO $db,int $order,string $actor,bool $availability,bool $extra,string $proof): void {
     if(!$availability)throw new RuntimeException('Підтвердьте наявність і комплектацію всіх позицій.');
-    $o=npOrder($db,$order);$method=$o['contact']['payment']??'';if(in_array($o['status'],['cancelled','returned','completed'],true))throw new RuntimeException('Замовлення закрите.');
-    if($method==='invoice' && $o['payment_status']!=='paid' && mb_strlen(trim($proof))<6)throw new RuntimeException('Вкажіть підтвердження надходження коштів на рахунок ФОП.');
-    if($method==='card' && $o['payment_status']!=='paid')throw new RuntimeException('Оплату карткою ще не підтверджено платіжним сервісом.');
+    npLocked($db,$order,function()use($db,$order,$actor,$availability,$extra,$proof){$fresh=npOrder($db,$order);$method=$fresh['contact']['payment']??'';
+    if(in_array($fresh['status'],['cancelled','returned','completed'],true))throw new RuntimeException('Замовлення закрите.');
+    if($method==='invoice' && trim($proof)!=='' && mb_strlen(trim($proof))<6)throw new RuntimeException('Вкажіть підтвердження надходження коштів на рахунок ФОП.');
     if($method==='cod' && (cfg('np_cod_contract_confirmed')!==true||cfg('np_cod_service')!=='afterpayment'))throw new RuntimeException('Післяплату не підтверджено за договором ФОП.');
     if(!in_array($method,['invoice','card','cod'],true))throw new RuntimeException('Немає підтвердженого способу оплати.');
-    npLocked($db,$order,function()use($db,$order,$actor,$availability,$extra,$proof,$method){$db->beginTransaction();try{
-      $db->prepare('INSERT INTO rubizh_np_order_confirmations(order_id,availability_confirmed,extra_delivery_agreed,confirmed_at,confirmed_by,payment_proof,updated_at) VALUES(?,?,?,UTC_TIMESTAMP(),?,?,UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE availability_confirmed=VALUES(availability_confirmed),extra_delivery_agreed=VALUES(extra_delivery_agreed),confirmed_at=VALUES(confirmed_at),confirmed_by=VALUES(confirmed_by),payment_proof=VALUES(payment_proof),updated_at=VALUES(updated_at)')->execute([$order,1,$extra?1:0,$actor,mb_substr($proof,0,240)]);
+    $first=$fresh['status']==='new';$db->beginTransaction();try{
+      $db->prepare('INSERT INTO rubizh_np_order_confirmations(order_id,availability_confirmed,extra_delivery_agreed,confirmed_at,confirmed_by,payment_proof,updated_at) VALUES(?,?,?,UTC_TIMESTAMP(),?,?,UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE availability_confirmed=VALUES(availability_confirmed),extra_delivery_agreed=VALUES(extra_delivery_agreed),confirmed_at=VALUES(confirmed_at),confirmed_by=VALUES(confirmed_by),payment_proof=IF(LENGTH(VALUES(payment_proof))=0,payment_proof,VALUES(payment_proof)),updated_at=VALUES(updated_at)')->execute([$order,1,$extra?1:0,$actor,mb_substr($proof,0,240)]);
       if($method==='invoice'&&trim($proof)!=='')$db->prepare("UPDATE rubizh_customer_orders SET payment_status='paid',updated_at=UTC_TIMESTAMP() WHERE id=? AND payment_status IN ('pending','failed')")->execute([$order]);
       $db->prepare("UPDATE rubizh_customer_orders SET status='confirmed',updated_at=UTC_TIMESTAMP() WHERE id=? AND status='new'")->execute([$order]);
+      if($first&&$fresh['payment_status']!=='paid')shopStartPaymentTiming($db,$fresh);
       if($method==='invoice'&&trim($proof)!==''&&function_exists('shopQueueEvent'))shopQueueEvent($db,$order,'paid');
       npAudit($db,$actor,'order_confirmed',$order,0,$method==='invoice'?'Підтвердження банку: '.mb_substr($proof,0,200):'Наявність та спосіб оплати підтверджено');$db->commit();
     }catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}});

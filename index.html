@@ -9,7 +9,7 @@
 <script defer src="/assets/react.5e73fabcd0d0.js"></script>
 <script defer src="/assets/react-dom.c5c970a9cf36.js"></script>
 <script defer src="/assets/category-directory.2026100605.js"></script>
-<script defer src="/assets/shop-client.2026100701.js"></script>
+<script defer src="/assets/shop-client.2026100701.js?v=2026100703"></script>
 <script defer src="/assets/store-runtime.4b6bbf46ca4c.js"></script>
 
 <link rel="icon" href="/favicon.ico?v=2" sizes="any">
@@ -38,7 +38,7 @@
 <link rel="stylesheet" href="/assets/cart-reminder.2026100701.css">
 <link rel="stylesheet" href="/assets/catalog-redesign.2026100605.css">
 <link rel="stylesheet" href="/assets/kit-parameters.2026100606.css">
-<link rel="stylesheet" href="/assets/mobile-polish.2026100702.css">
+<link rel="stylesheet" href="/assets/mobile-polish.2026100702.css?v=2026100703">
 </head>
 <body>
 <a class="rz-skip" href="#main-content">Перейти до вмісту</a>
@@ -356,7 +356,7 @@
 
       <section class="rz-section rz-purchase-info" aria-label="Умови покупки">
         <div><div class="rz-eyebrow">БЕЗ НЕПРИЄМНИХ СЮРПРИЗІВ</div><h2>Просто обрати.<br><span>Спокійно замовити.</span></h2><a class="rz-text-link" href="/#page?id=delivery" sc-camel-on-click="{{ goDelivery }}">Доставка та оплата →</a></div>
-        <div class="rz-info-grid"><article><span class="rz-info-number">01</span><h3>Замовлення без реєстрації</h3><p>Контактні дані та адреса доставки. Кабінет — за бажанням.</p></article><article><span class="rz-info-number">02</span><h3>Перевірка перед оплатою</h3><p>Менеджер підтверджує наявність, розмір і строк відправлення.</p></article><article><span class="rz-info-number">03</span><h3>Зручний спосіб оплати</h3><p>Рахунок ФОП. Картка та післяплата відображаються під час оформлення, коли вони доступні.</p></article><article><span class="rz-info-number">04</span><h3>Доставка Новою поштою</h3><p>Відділення, поштомат або курʼєр. Вартість — за тарифом перевізника.</p></article></div>
+        <div class="rz-info-grid"><article><span class="rz-info-number">01</span><h3>Замовлення без реєстрації</h3><p>Контактні дані та адреса доставки. Кабінет — за бажанням.</p></article><article><span class="rz-info-number">02</span><h3>Перевірка перед оплатою</h3><p>Менеджер підтверджує наявність, розмір і строк відправлення.</p></article><article><span class="rz-info-number">03</span><h3>Зручний спосіб оплати</h3><p>Картка monobank або рахунок ФОП після підтвердження наявності.</p></article><article><span class="rz-info-number">04</span><h3>Доставка Новою поштою</h3><p>Відділення, поштомат або курʼєр. Вартість — за тарифом перевізника.</p></article></div>
       </section>
 
       <section class="rz-section rz-faq" aria-labelledby="faq-title"><div><div class="rz-eyebrow">04 / ВІДПОВІДІ ПОРУЧ</div><h2 id="faq-title">Є питання?<br><span>Є відповіді.</span></h2><p>Не знайшов свого? <a href="tel:+380976867892">Зателефонуй нам ↗</a></p></div><div class="rz-faq-list"><sc-for list="{{ faq }}" as="f"><div class="rz-faq-item"><button type="button" class="rz-faq-question" aria-expanded="{{ f.open }}" sc-camel-on-click="{{ f.toggle }}"><span>{{ f.q }}</span><span aria-hidden="true">{{ f.mark }}</span></button><sc-if value="{{ f.open }}"><p>{{ f.a }}</p></sc-if></div></sc-for></div></section>
@@ -949,7 +949,7 @@
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:10px">
               <sc-for list="{{ item.related }}" as="r" hint-placeholder-count="3">
                 <div style="border:1px solid var(--legacy-2a322b);background:var(--legacy-141815);min-width:0" style-hover="border-color:var(--legacy-4c5a36)">
-                  <div tabindex="0" role="button" sc-camel-on-click="{{ r.open }}" style="height:110px;min-width:0;overflow:hidden;background:var(--legacy-0f120f);cursor:pointer"><image-slot id="{{ r.slot }}" shape="rect" fit="cover" placeholder="{{ r.ph }}"></image-slot></div>
+                  <a href="{{ r.href }}" sc-camel-on-click="{{ r.open }}" aria-label="{{ r.name }}" style="display:block;height:110px;min-width:0;overflow:hidden;background:var(--legacy-0f120f);cursor:pointer"><sc-if value="{{ r.hasThumb }}"><img sc-camel-src="{{ r.thumb }}" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:contain"></sc-if><sc-if value="{{ !r.hasThumb }}"><span style="display:grid;place-items:center;height:100%;color:var(--muted)">Фото уточнюється</span></sc-if></a>
                   <div style="padding:11px">
                     <div tabindex="0" role="button" sc-camel-on-click="{{ r.open }}" style="font-family:'UAH','Oswald',sans-serif;font-size:14px;text-transform:uppercase;line-height:1.2;cursor:pointer">{{ r.name }}</div>
                     <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;margin-top:7px">
@@ -970,6 +970,8 @@
     <section style="max-width:1320px;margin:0 auto;padding:clamp(18px,2.4vw,30px) clamp(16px,4vw,40px) 0">
       
       <h1 style="font-family:'UAH','Oswald',sans-serif;font-weight:600;font-size:clamp(26px,3.4vw,40px);text-transform:uppercase;margin:0 0 18px;letter-spacing:.04em;line-height:1.2">Оформлення замовлення</h1><sc-if value="{{ hasCheckoutError }}"><div role="alert" style="padding:16px;border:1px solid var(--legacy-8b4934);color:var(--legacy-f1c4ac);background:var(--legacy-231a17);margin-bottom:16px">{{ checkoutError }}</div></sc-if>
+      <sc-if value="{{ cartEmpty }}"><div class="empty-cart"><h2>Кошик порожній</h2><p>Додайте спорядження з каталогу, щоб оформити замовлення.</p><a href="/catalog" class="empty-cart-link">До каталогу →</a></div></sc-if>
+      <sc-if value="{{ !cartEmpty }}">
       <sc-if value="{{ guest }}" hint-placeholder-val="{{ true }}">
         <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;border:1px solid var(--legacy-2a322b);background:var(--legacy-141815);padding:13px 16px;margin-bottom:14px">
           <div style="flex:1 1 260px;min-width:220px;color:var(--legacy-c7cec3);font-size:13.5px;line-height:1.5">Вже замовляли? <span tabindex="0" role="button" sc-camel-on-click="{{ goAccount }}" style="color:var(--link);cursor:pointer">Увійдіть</span> — підставимо розміри й адресу. Або оформіть без реєстрації — посилання до кабінету прийде на email.</div>
@@ -1150,6 +1152,7 @@
           <div style="color:var(--legacy-8a9487);font-size:12px;line-height:1.5">Менеджер звʼяжеться з вами, щоб підтвердити наявність, розміри та строк відправлення. Оплачуйте після підтвердження замовлення.</div>
         </aside>
       </div>
+      </sc-if>
     </section>
   </sc-if>
 
@@ -1353,7 +1356,7 @@
   </sc-if>
 
   <sc-if value="{{ hasCmp }}" hint-placeholder-val="{{ false }}">
-    <div data-cmp-pill="1" sc-camel-on-click="{{ goCompare }}" style="position:fixed;left:16px;bottom:16px;z-index:70;padding:12px 16px;background:var(--legacy-141815);border:1px solid var(--legacy-f2a33c);color:var(--link);font-family:'UAH','Oswald',sans-serif;font-size:13px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.45)" style-hover="background:var(--legacy-f2a33c);color:var(--button-text)">{{ cmpPillLabel }}</div>
+    <button type="button" data-cmp-pill="1" sc-camel-on-click="{{ goCompare }}" style="position:fixed;left:16px;bottom:16px;z-index:70;padding:12px 16px;background:var(--legacy-141815);border:1px solid var(--legacy-f2a33c);color:var(--link);font-family:'UAH','Oswald',sans-serif;font-size:13px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.45)" style-hover="background:var(--legacy-f2a33c);color:var(--button-text)">{{ cmpPillLabel }}</button>
   </sc-if>
 
   <sc-if value="{{ isCompare }}" hint-placeholder-val="{{ false }}">

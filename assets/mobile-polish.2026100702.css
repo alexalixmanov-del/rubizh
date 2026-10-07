@@ -48,3 +48,7 @@ html body [data-size-grid] [role="button"] {align-items:center!important;justify
   html body .rz-sections-pager>span {min-width:30px;font-size:12px;}
   html body [data-mob-bar]>[role="button"] {min-width:0;min-height:48px!important;letter-spacing:0!important;font-size:13px!important;}
 }
+
+.empty-cart{padding:clamp(24px,5vw,64px);margin:20px 0;border:1px solid var(--border);border-radius:12px;text-align:center;background:var(--surface)}
+.empty-cart h2{font-size:clamp(24px,4vw,36px);margin:0 0 12px}.empty-cart-link{display:inline-flex;align-items:center;justify-content:center;min-height:48px;margin-top:16px;padding:12px 24px;background:var(--accent);color:var(--button-text);text-decoration:none;border-radius:6px;font-weight:600}
+button[data-cmp-pill]{display:inline-flex;align-items:center;justify-content:center;min-height:44px}

@@ -23,6 +23,7 @@ function shopCustomerStatus(array $o): array {
  if(in_array($o['status'],['cancelled','returned','partially_returned'],true)||$o['payment_status']==='refunded')return ['label'=>$o['payment_status']==='refunded'||$o['status']!=='cancelled'?'Повернено':'Скасовано','tone'=>'danger'];
  if(in_array($o['status'],['delivered','completed'],true))return ['label'=>'Отримано','tone'=>'success'];
  if(in_array($o['status'],['shipped','partially_shipped'],true))return ['label'=>'Відправлено','tone'=>'info'];
+ if(($o['status']??'')==='new'&&in_array($o['payment_status'],['pending','failed'],true))return ['label'=>'Очікує підтвердження','tone'=>'waiting'];
  if(in_array($o['payment_status'],['pending','failed'],true))return ['label'=>'Очікує оплати','tone'=>'waiting'];
  if(in_array($o['status'],['confirmed','processing'],true))return ['label'=>'Готуємо','tone'=>'neutral'];
  return ['label'=>$o['payment_status']==='paid'?'Оплачено':'Нове','tone'=>$o['payment_status']==='paid'?'success':'neutral'];
