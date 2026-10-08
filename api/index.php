@@ -28,29 +28,42 @@ if ($isPim) {
     $b = body();
     if((int)$pdo->query("SELECT GET_LOCK('rubizh-category-migration',10)")->fetchColumn()!==1)fail(503,'Каталог оновлюється; повторіть синхронізацію пізніше.');
     register_shutdown_function(fn()=> $pdo->query("SELECT RELEASE_LOCK('rubizh-category-migration')"));
+    $pdo->beginTransaction();
+    try {
+    shopPricingCatalogVersion($pdo,true);
+    if(isset($b['settings']['pricing_policy_version'])&&($b['settings']['pricing_policy_version']!==1||($b['settings']['discount_margin_floor_pct']??null)!==15))throw new ShopPricingException('DISCOUNT_NOT_ALLOWED','Непідтримувані правила цін PIM.');
+    if(($b['settings']['pricing_policy_version']??null)===1)foreach($b['products']??[] as $product)if(($product['pricing_policy_version']??null)!==1)throw new ShopPricingException('DISCOUNT_NOT_ALLOWED','Товар без pricing_policy_version.');
     if(isset($b['settings']['hide_unavailable']))$pdo->prepare("INSERT INTO meta(k,v) VALUES('hide_unavailable',?) ON DUPLICATE KEY UPDATE v=VALUES(v)")->execute([$b['settings']['hide_unavailable']===false?'0':'1']);
     $mode = ($b['mode'] ?? 'delta') === 'full' ? 'full' : 'delta';
     if (isset($b['categories']) && is_array($b['categories'])) sync_categories($pdo, $b['categories']);
     $results = []; $cnt = ['created' => 0, 'updated' => 0, 'unchanged' => 0, 'error' => 0];
     foreach ((is_array($b['products'] ?? null) ? $b['products'] : []) as $p) {
       $r = save_product($pdo, is_array($p) ? $p : []); $results[] = $r; $cnt[$r['status']] = ($cnt[$r['status']] ?? 0) + 1;
+      if($r['status']==='error')throw new ShopPricingException($r['error_code']??'SYNC_FAILED',$r['error']??'Не вдалося зберегти пакет.');
     }
     $hidden = hide_products($pdo, is_array($b['hide_ids'] ?? null) ? $b['hide_ids'] : []);
     // Полная синхронизация: всё, чего нет в списке PIM, скрываем (не удаляем — ссылки и заказы не ломаются)
     if ($mode === 'full' && !empty($b['finalize']) && is_array($b['all_ids'] ?? null)) {
       $keep = array_flip(array_map('strval', $b['all_ids']));
-      if (count($keep) === 0) fail(400, 'Пустой список товаров при полной синхронизации — отменено, чтобы не скрыть весь каталог');
+      if (count($keep) === 0) throw new RuntimeException( 'Пустой список товаров при полной синхронизации — отменено, чтобы не скрыть весь каталог');
       $vis = $pdo->query("SELECT id FROM products WHERE visible=1")->fetchAll(PDO::FETCH_COLUMN);
       $hidden += hide_products($pdo, array_values(array_filter($vis, fn($id) => !isset($keep[$id]))));
     }
     $pdo->exec('DELETE a FROM rubizh_catalog_supplier_articles a LEFT JOIN variants v ON v.sku=a.sku AND v.product_id=a.product_id LEFT JOIN products p ON p.id=a.product_id WHERE v.sku IS NULL OR p.id IS NULL OR p.visible=0');
     $pdo->exec('DELETE f FROM rubizh_catalog_fulfillment f LEFT JOIN variants v ON v.sku=f.sku AND v.product_id=f.product_id LEFT JOIN products p ON p.id=f.product_id WHERE v.sku IS NULL OR p.id IS NULL OR p.visible=0');
-    if(isset($b['kits'])){if(!is_array($b['kits']))fail(400,'Невірний склад комплектів');require_once __DIR__.'/kits.php';sync_kits($pdo,$b['kits']);}
+    if(isset($b['kits'])){if(!is_array($b['kits']))throw new RuntimeException('Невірний склад комплектів');require_once __DIR__.'/kits.php';sync_kits($pdo,$b['kits']);}
     if ($cnt['created'] || $cnt['updated'] || $hidden || isset($b['categories'])) recount_categories($pdo);
     $pdo->prepare("INSERT INTO sync_log (at,mode,received,saved,unchanged,hidden,errors,note) VALUES (?,?,?,?,?,?,?,?)")
       ->execute([now(), $mode, count($results), $cnt['created'] + $cnt['updated'], $cnt['unchanged'], $hidden, $cnt['error'], mb_substr((string)($b['note'] ?? ''), 0, 255)]);
     $pdo->exec("INSERT INTO meta (k,v) VALUES ('catalog_updated','" . now() . "') ON DUPLICATE KEY UPDATE v=VALUES(v)");
     $pending = (int)$pdo->query("SELECT COUNT(*) FROM photos WHERE status='pending'")->fetchColumn();
+    if($cnt['created']||$cnt['updated']||$hidden||isset($b['kits'])||isset($b['categories']))$pdo->prepare("UPDATE meta SET v=? WHERE k='pricing_catalog_version'")->execute([bin2hex(random_bytes(16))]);
+    $pdo->commit();
+    } catch(Throwable $e) {
+      if($pdo->inTransaction())$pdo->rollBack();
+      error_log('rubizh pricing sync rejected: '.($e instanceof ShopPricingException?$e->reason:get_class($e)));
+      out(['ok'=>false,'counts'=>['created'=>0,'updated'=>0,'unchanged'=>0,'error'=>count(is_array($b['products']??null)?$b['products']:[])], 'results'=>array_map(fn($p)=>['id'=>(is_array($p)?($p['id']??''):''),'status'=>'error','error_code'=>$e instanceof ShopPricingException?$e->reason:'SYNC_FAILED','error'=>'Пакет відхилено; товари і ціни не змінено.'],is_array($b['products']??null)?$b['products']:[])],400);
+    }
     out(['ok' => true, 'mode' => $mode, 'counts' => $cnt, 'hidden' => $hidden, 'photos_pending' => $pending, 'results' => $results]);
   }
 
@@ -62,7 +75,7 @@ if ($isPim) {
 
   if ($path === '/pim/status') {
     $q = fn($sql) => $pdo->query($sql)->fetchColumn();
-    out(['ok' => true, 'api_version' => API_VERSION,
+    out(['ok' => true, 'api_version' => API_VERSION, 'capabilities'=>['pricing_policy_version'=>1],
       'products' => ['visible' => (int)$q("SELECT COUNT(*) FROM products WHERE visible=1"), 'hidden' => (int)$q("SELECT COUNT(*) FROM products WHERE visible=0")],
       'variants' => (int)$q("SELECT COUNT(*) FROM variants v JOIN products p ON p.id=v.product_id WHERE p.visible=1"),
       'categories' => (int)$q("SELECT COUNT(*) FROM categories WHERE product_count>0"),
@@ -136,8 +149,8 @@ if ($path === '/catalog') {
   if (($b = trim((string)($_GET['brand'] ?? ''))) !== '') { $where[] = 'p.brand=?'; $args[] = $b; }
   if (($a = (string)($_GET['availability'] ?? '')) === 'in') $where[] = "p.availability='in'";
   elseif ($a === 'available') $where[] = "p.availability IN ('in','order')";
-  if (is_numeric($_GET['price_from'] ?? null)) { $where[] = 'p.price_min>=?'; $args[] = (int)$_GET['price_from']; }
-  if (is_numeric($_GET['price_to'] ?? null)) { $where[] = 'p.price_min<=?'; $args[] = (int)$_GET['price_to']; }
+  if (is_numeric($_GET['price_from'] ?? null)) { $where[] = 'p.price_min>=?'; $args[] = (float)$_GET['price_from']; }
+  if (is_numeric($_GET['price_to'] ?? null)) { $where[] = 'p.price_min<=?'; $args[] = (float)$_GET['price_to']; }
   $sort = ['price_asc' => 'p.price_min IS NULL, p.price_min ASC', 'price_desc' => 'p.price_min DESC', 'new' => 'p.created_at DESC', 'name' => 'p.name ASC'][$_GET['sort'] ?? ''] ?? "FIELD(p.availability,'in','order','out'), p.updated_at DESC";
   $limit = max(1, min(100, (int)($_GET['limit'] ?? 24))); $page = max(1, (int)($_GET['page'] ?? 1));
   $w = implode(' AND ', $where);
@@ -154,7 +167,7 @@ if (preg_match('~^/product/([a-z0-9-]{1,191})$~', $path, $m)) {
   $d = json_decode((string)$r['data'], true) ?: [];
   $ph = product_photos($pdo, [$r['id']]);
   $vs = $pdo->prepare("SELECT data FROM variants WHERE product_id=? ORDER BY sort"); $vs->execute([$r['id']]);
-  $variants = array_map(fn($x) => json_decode((string)$x['data'], true), $vs->fetchAll());
+  $variants = array_map(fn($x) => catalog_public_data(json_decode((string)$x['data'], true)?:[]), $vs->fetchAll());
   // Связанные товары: только видимые; аналоги — только в наличии
   $links = [];
   foreach (['related', 'analogs', 'kit'] as $t) {
@@ -170,7 +183,7 @@ if (preg_match('~^/product/([a-z0-9-]{1,191})$~', $path, $m)) {
     'id' => $r['id'], 'slug' => $r['slug'], 'name' => $r['name'], 'brand' => $r['brand'], 'category' => $taxonomy['category']??$r['category_path'],'canonical_category_id'=>$taxonomy['canonical_category_id']??null,
     'category_url' => $taxonomy['category_url']??implode('/', array_map('slugify', array_filter(explode(' / ', $r['category_path']), 'strlen'))),
     'description' => $r['description'], 'attributes' => (object)array_replace($taxonomy['derived_attributes']??[],json_decode((string)$r['attributes'],true)?:[]),
-    'price_min' => $r['price_min'] !== null ? (int)$r['price_min'] : null, 'price_max' => $r['price_max'] !== null ? (int)$r['price_max'] : null,
+    'price_min' => $r['price_min'] !== null ? (float)$r['price_min'] : null, 'price_max' => $r['price_max'] !== null ? (float)$r['price_max'] : null,
     'availability' => $r['availability'], 'has_docs' => (bool)$r['has_docs'], 'docs_note' => $r['docs_note'],
     'size_scale' => $d['size_scale'] ?? '', 'photos' => $ph[$r['id']] ?? [], 'variants' => $variants, 'links' => $links]]);
 }

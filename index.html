@@ -9,7 +9,7 @@
 <script defer src="/assets/react.5e73fabcd0d0.js"></script>
 <script defer src="/assets/react-dom.c5c970a9cf36.js"></script>
 <script defer src="/assets/category-directory.2026100802.js"></script>
-<script defer src="/assets/shop-client.2026100802.js?v=2026100802"></script>
+<script defer src="/assets/shop-client.2026100803.js?v=2026100803"></script>
 <script defer src="/assets/store-runtime.4b6bbf46ca4c.js"></script>
 
 <link rel="icon" href="/favicon.ico?v=2" sizes="any">
@@ -247,7 +247,7 @@
           </sc-if>
           <div data-cm-label="1">Меню</div>
           <div data-cm-more="1">
-            <div tabindex="0" role="button" sc-camel-on-click="{{ goKit }}">Зібрати комплект −13%</div>
+            <div tabindex="0" role="button" sc-camel-on-click="{{ goKit }}">Зібрати комплект</div>
             <div tabindex="0" role="button" sc-camel-on-click="{{ goPicker }}">Підібрати комплект</div>
             <div tabindex="0" role="button" sc-camel-on-click="{{ goGuides }}">Поради</div>
             <div tabindex="0" role="button" sc-camel-on-click="{{ goSizes }}">Розмірні таблиці</div>
@@ -336,9 +336,8 @@
         <div class="rz-kit-feature">
           <div class="rz-kit-art"><img src="/assets/kit-photo.e31053f0210f.webp" alt="Берці, форма, рюкзак і плитоноска для комплекту" width="1400" height="1049" loading="lazy" decoding="async"><span class="rz-kit-tag">ОДНА ЗАДАЧА. ПОВНИЙ КОМПЛЕКТ.</span></div>
           <div class="rz-kit-copy"><div class="rz-eyebrow">02 / КОНСТРУКТОР КОМПЛЕКТУ</div><h2 id="kit-title">Твоя задача.<br>Твій <span>комплект.</span></h2><p>Форма, взуття, захист і спорядження — разом, у потрібних розмірах. Додай речі самостійно або почни з підбору за 6 питаннями.</p>
-            <div class="rz-discount"><strong>до −13%</strong><span>на комплект<br>Економію видно на кожній позиції</span></div>
-            <div class="rz-ladder"><sc-for list="{{ kitLadderHome }}" as="t" hint-placeholder-count="5"><div><strong>{{ t.pct }}</strong><span>{{ t.label }}</span></div></sc-for></div>
-            <p class="rz-fineprint">Знижка залежить від кількості та складу. Бронезахист — за фіксованою ціною. Остаточний розрахунок у конструкторі.</p>
+            <div class="rz-discount"><strong>Свій комплект</strong><span>Обрані речі та розміри<br>Ціна й економія одразу перед вами</span></div>
+            <p class="rz-fineprint">Економія залежить від обраних речей і розмірів. Якщо спеціальна ціна недоступна, діє роздрібна. Остаточну суму покажемо перед оформленням.</p>
             <div class="rz-actions"><a class="rz-btn rz-btn-primary" href="/kit" sc-camel-on-click="{{ goKit }}">Зібрати комплект <svg width="18" height="18" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 18 18 6M6 6h12v12"></path></svg></a><button class="rz-text-link" type="button" sc-camel-on-click="{{ goPicker }}">Допомогти з вибором →</button></div>
           </div>
         </div>
@@ -814,7 +813,7 @@
 
           <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;border-top:1px solid var(--legacy-2a322b);border-bottom:1px solid var(--legacy-2a322b);padding:18px 0;margin-bottom:20px">
             <div style="font-family:'UAH','Oswald',sans-serif;font-size:clamp(32px,4vw,46px);line-height:1">{{ item.priceFmt }}</div>
-            <div style="color:var(--legacy-99a398);font-size:13.5px">{{ availablePaymentsText }}</div>
+            <div style="color:var(--legacy-99a398);font-size:13.5px">{{ availablePaymentsText }}</div><sc-if value="{{ item.hasWholesale }}"><div data-wholesale-prices style="flex:1 1 100%;font-size:14px">Оптові ціни обраного SKU · за погодженням менеджера: <sc-for list="{{ item.wholesale }}" as="tier" hint-placeholder-count="0"><span style="display:inline-block;margin-right:14px">{{ tier.label }}</span></sc-for></div></sc-if>
             <div style="flex:1 1 100%;color:var(--legacy-99a398);font-size:13px">{{ itemDonText }}</div><sc-if value="{{ hasProductDocs }}" hint-placeholder-val="{{ false }}"><p style="color:var(--legacy-c6d3a8);font-size:13px;line-height:1.6">{{ productDocsNote }}</p></sc-if>
           </div>
           <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">
@@ -1910,16 +1909,7 @@
             <div style="padding:15px;text-align:center;background:var(--legacy-1c221d);border:1px solid var(--legacy-2a322b);color:var(--muted);font-family:'UAH','Oswald',sans-serif;font-size:14px;letter-spacing:.1em;text-transform:uppercase;cursor:not-allowed">{{ kitCantLabel }}</div>
           </sc-if>
           <div style="color:var(--legacy-8a9487);font-size:12px;line-height:1.5">Остаточну суму перераховуємо перед оплатою за тими самими правилами.</div>
-      <div class="rz-kit-ladder"><div class="rz-kit-ladder-label">Більше позицій — більше вигоди</div><div data-ladder5="1" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px">
-            <sc-for list="{{ kitLadder }}" as="t" hint-placeholder-count="5">
-              <div style="display:flex;flex-direction:column;gap:8px;min-width:0">
-                <div style="{{ t.barStyle }}"></div>
-                <div style="{{ t.labelStyle }}">{{ t.pct }}</div>
-                <div style="color:var(--legacy-99a398);font-size:12px;line-height:1.3">{{ t.label }}</div>
-              </div>
-            </sc-for>
-          </div></div>
-          <div style="color:var(--legacy-8a9487);font-size:12px;line-height:1.5">Знижка рахується по кожній позиції. На бронезахист і товари з фіксованою ціною виробника вона не діє.</div>
+          <div style="color:var(--legacy-8a9487);font-size:12px;line-height:1.5">Спеціальна ціна залежить від обраного розміру й кольору. Її наявність і точну суму видно в кожній позиції; без неї діє роздрібна ціна.</div>
 
           <div style="border-top:1px solid var(--legacy-2a322b);padding-top:12px;display:flex;flex-direction:column;gap:10px">
             <div tabindex="0" role="button" sc-camel-on-click="{{ toggleKitUnit }}" style="display:flex;justify-content:space-between;align-items:center;gap:12px;cursor:pointer"><span style="font-family:'UAH','Oswald',sans-serif;font-size:14px;letter-spacing:.1em;text-transform:uppercase">Для підрозділу</span><span style="{{ kitSW.track }}"><span style="{{ kitSW.knob }}"></span></span></div>

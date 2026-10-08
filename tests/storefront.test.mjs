@@ -132,13 +132,13 @@ async function chooseKitItem(page,slot,product,size){
   await page.locator('.rz-kit-modal-card').filter({hasText:product}).getByRole('button',{name:size,exact:true}).click();
   await page.locator('.rz-kit-modal').waitFor({state:'detached'});
 }
-test('Mobile kit selection, replacement and checkout preserve sizes and calculated prices',()=>withPage(async page=>{
+test('Mobile kit selection preserves sizes and uses retail when PIM has not confirmed special prices',()=>withPage(async page=>{
   await loaded(page,'/kit');await page.locator('.rz-kit-slot').first().waitFor();
   await chooseKitItem(page,'Тіло','Тактичний костюм','L');
   await chooseKitItem(page,'Взуття','Берці','43');
-  await page.waitForFunction(()=>document.querySelector('.rz-kit-total')?.innerText.includes('5\u00a0917'));
+  await page.waitForFunction(()=>document.querySelector('.rz-kit-total')?.innerText.includes('6\u00a0100'));
   await page.waitForTimeout(500);
-  assert.match(await page.locator('[data-kit-aside]').innerText(),/183\s*₴/);
+  assert.match(await page.locator('[data-kit-aside]').innerText(),/0\s*₴/);
   assert.equal(await page.locator('.rz-kit-item').count(),2);
   assert.equal(await page.getByText(/Донат бригаді:/).count(),0);
   await page.reload();await page.locator('.rz-kit-item').nth(1).waitFor();
@@ -153,7 +153,7 @@ test('Mobile kit selection, replacement and checkout preserve sizes and calculat
   await page.getByRole('heading',{name:'Оформлення замовлення'}).waitFor();
   await page.getByText('DEMO-UNIFORM-M',{exact:true}).waitFor();
   await page.getByText('DEMO-BOOTS-43',{exact:true}).waitFor();
-  assert.match(await page.locator('body').innerText(),/5\s*917\s*₴/);
+  assert.match(await page.locator('body').innerText(),/6\s*100\s*₴/);
 },{width:390,height:844}));
 test('Seller settings do not recursively copy mounted React elements when reopening the kit selector',()=>withPage(async page=>{
   await page.route('**/shop/analytics.php',route=>route.fulfill({contentType:'application/json',body:JSON.stringify({ok:true,ga4:'',meta:'',settings:{seller:{name:'Демонстраційний продавець'},donation:{enabled:false,percent:0}}})}));

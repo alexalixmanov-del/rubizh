@@ -39,7 +39,7 @@ function shopVariantSizeUnconfirmed(array $v,string $name='',string $category=''
 }
 function shopVariantCanBuy(array $v): bool {
  $extra=json_decode((string)($v['data']??''),true)?:[];$stock=$v['stock']??$extra['stock']??null;
- return (float)($v['price']??0)>0&&!shopVariantSizeUnconfirmed($v)&&(($v['availability']??'')==='in'&&($stock===null||is_numeric($stock)&&(float)$stock>0)||($v['availability']??'')==='order'&&(trim((string)($v['lead_time']??''))!==''||preg_match('/^\d{4}-\d{2}-\d{2}$/D',(string)($extra['availability_date']??''))&&$extra['availability_date']>=gmdate('Y-m-d')));
+ return (float)($v['price']??0)>0&&!shopVariantSizeUnconfirmed($v)&&(($v['availability']??'')==='in'&&($stock===null||is_numeric($stock)&&(float)$stock>0)||($v['availability']??'')==='order'&&(!empty($extra['order_on_request'])||trim((string)($v['lead_time']??''))!==''||preg_match('/^\d{4}-\d{2}-\d{2}$/D',(string)($extra['availability_date']??''))&&$extra['availability_date']>=gmdate('Y-m-d')));
 }
 function shopBuyableSql(string $a,?string $sizeRequiredSql=null): string {
  if(!preg_match('/^[a-z]+$/D',$a))throw new InvalidArgumentException('alias');$j="CASE WHEN JSON_VALID($a.data) THEN $a.data ELSE '{}' END";
@@ -47,7 +47,7 @@ function shopBuyableSql(string $a,?string $sizeRequiredSql=null): string {
  $missing=implode(' AND ',array_map(fn($size)=>"LOWER(TRIM(TRIM(LEADING ':' FROM TRIM(COALESCE($size,''))))) IN ('','один розмір','os','універсальний')",$sizes));
  $required=$sizeRequiredSql??("(".shopKitSlotSql()." IN ('body','legs','boots') AND LOWER(p.name) NOT REGEXP 'пончо|бахіл|костюм.*маскув')");
  $context="NOT (($required) AND ($missing))";
- return "$a.price>0 AND $context AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT($j,'$.size_unconfirmed')),'false') NOT IN ('true','1') AND (($a.availability='in' AND (JSON_EXTRACT($j,'$.stock') IS NULL OR JSON_UNQUOTE(JSON_EXTRACT($j,'$.stock'))='null' OR CAST(JSON_UNQUOTE(JSON_EXTRACT($j,'$.stock')) AS DECIMAL(12,2))>0)) OR ($a.availability='order' AND (TRIM($a.lead_time)<>'' OR (JSON_UNQUOTE(JSON_EXTRACT($j,'$.availability_date')) REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' AND JSON_UNQUOTE(JSON_EXTRACT($j,'$.availability_date'))>=DATE_FORMAT(UTC_TIMESTAMP(),'%Y-%m-%d')))))";
+ return "$a.price>0 AND $context AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT($j,'$.size_unconfirmed')),'false') NOT IN ('true','1') AND (($a.availability='in' AND (JSON_EXTRACT($j,'$.stock') IS NULL OR JSON_UNQUOTE(JSON_EXTRACT($j,'$.stock'))='null' OR CAST(JSON_UNQUOTE(JSON_EXTRACT($j,'$.stock')) AS DECIMAL(12,2))>0)) OR ($a.availability='order' AND (JSON_UNQUOTE(JSON_EXTRACT($j,'$.order_on_request'))='true' OR TRIM($a.lead_time)<>'' OR (JSON_UNQUOTE(JSON_EXTRACT($j,'$.availability_date')) REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' AND JSON_UNQUOTE(JSON_EXTRACT($j,'$.availability_date'))>=DATE_FORMAT(UTC_TIMESTAMP(),'%Y-%m-%d')))))";
 }
 
 function shopKitSlotPatterns(): array {

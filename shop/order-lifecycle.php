@@ -30,7 +30,7 @@ function shopEnsureTiming(PDO $db,array $o): array {
  $db->prepare('INSERT IGNORE INTO rubizh_order_timing(order_id,payment_due,remind_at) VALUES(?,?,?)')->execute([$o['id'],$due,$remind]);$q->execute([$o['id']]);return $q->fetch(PDO::FETCH_ASSOC);
 }
 function shopReserveLines(PDO $db,int $id,array $lines,string $expires): void {
- $totals=[];foreach($lines as $l)$totals[$l['sku']]=($totals[$l['sku']]??0)+(float)$l['qty'];foreach($totals as $sku=>$qty)$db->prepare('INSERT INTO rubizh_stock_reservations(order_id,sku,qty,expires_at) VALUES(?,?,?,?)')->execute([$id,$sku,$qty,$expires]);
+ $totals=[];foreach($lines as $l)if(($l['availability']??'')==='in'&&!empty($l['stock_confirmed']))$totals[$l['sku']]=($totals[$l['sku']]??0)+(float)$l['qty'];foreach($totals as $sku=>$qty)$db->prepare('INSERT INTO rubizh_stock_reservations(order_id,sku,qty,expires_at) VALUES(?,?,?,?)')->execute([$id,$sku,$qty,$expires]);
 }
 function shopReservedQty(PDO $db,string $sku): float {
  $q=$db->prepare("SELECT COALESCE(SUM(r.qty),0) FROM rubizh_stock_reservations r JOIN rubizh_customer_orders o ON o.id=r.order_id WHERE r.sku=? AND r.expires_at>UTC_TIMESTAMP() AND o.payment_status IN ('pending','failed','cod') AND o.status IN ('new','confirmed','processing')");$q->execute([$sku]);return (float)$q->fetchColumn();

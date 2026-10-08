@@ -12,7 +12,7 @@ require_once __DIR__.'/customer-ui.php';
 require_once __DIR__.'/cart-reminders-lib.php';
 
 function shopStoreDatabase(): PDO {
-    $db=database();if(rubizhSchemaPrepared($db))return $db;
+    $db=database();migrate($db);if(rubizhSchemaPrepared($db))return $db;
     customerDatabase();$db=identityDatabase();shopNotificationMigrate($db);monoMigrate($db);shopLifecycleMigrate($db);shopUiMigrate($db);shopCartReminderMigrate($db);static $ready=false;
     if(!$ready){migrate($db);npMigrate($db);supplierMigrate($db);
         if((int)$db->query("SELECT v FROM meta WHERE k='rubizh_shop_schema'")->fetchColumn()>=1){$ready=true;return $db;}
@@ -55,6 +55,7 @@ function shopFavoriteIds(PDO $db,string $id): array {
     $q=$db->prepare('SELECT product_id FROM rubizh_favorites WHERE customer_id=? ORDER BY created_at DESC');$q->execute([$id]);return $q->fetchAll(PDO::FETCH_COLUMN);
 }
 function shopResolvedLines(PDO $db,array $input,bool $lock=false): array {
+    if($lock)shopPricingCatalogVersion($db,true);
     if(!$input || count($input)>100)throw new RuntimeException('У кошику має бути від 1 до 100 позицій.');
     // Lock variants in the same order for all carts, even if customers add items
     // in opposite order. Output stays in the original order for kit discounts.
@@ -72,22 +73,29 @@ function shopResolvedLines(PDO $db,array $input,bool $lock=false): array {
         $qty=null;
         if($sku==='' || $productId==='')throw new RuntimeException('Перевірте товар і кількість у кошику.');
         $q=$db->prepare('SELECT v.*,p.name,p.slug,p.category_path,p.has_docs,p.docs_note,p.data AS product_data,f.supplier_name AS fulfillment_supplier_name FROM variants v JOIN products p ON p.id=v.product_id LEFT JOIN rubizh_catalog_fulfillment f ON f.sku=v.sku AND f.product_id=p.id WHERE v.sku=? AND p.id=? AND p.visible=1'.($lock?' FOR UPDATE':''));$q->execute([$sku,$productId]);$v=$q->fetch(PDO::FETCH_ASSOC);
-        if(!$v || !shopVariantCanBuy($v))throw new RuntimeException('Товар або розмір більше недоступний. Оновіть кошик.');
+        if(!$v)throw new ShopPricingException('INVALID_VARIANT','SKU більше не належить цьому товару. Оновіть кошик.');
+        if(!shopVariantCanBuy($v))throw new ShopPricingException('UNAVAILABLE','Товар або розмір більше недоступний. Оновіть кошик.');
         $extra=json_decode((string)$v['data'],true) ?: [];$product=json_decode((string)$v['product_data'],true) ?: [];
         $unit=shopSaleUnit($product+['name'=>$v['name']]);$qty=shopQuantity($line['qty']??null,$unit);
         if(!empty($extra['size_unconfirmed']))throw new RuntimeException('Розмір товару не підтверджено. Уточніть у менеджера.');
         $totals[$sku]=($totals[$sku] ?? 0)+$qty;
-        if($v['availability']==='in' && isset($extra['stock']) && $totals[$sku]+shopReservedQty($db,$sku)>(float)$extra['stock'])throw new RuntimeException('Недостатньо товару на складі: '.$v['name']);
-        $pct=$extra['kit_discount_pct'] ?? $product['kit_discount_pct'] ?? null;
-        // Without an explicit manufacturer allowance, kit_price is the allowed floor.
-        if($pct===null)$pct=$v['kit_price']!==null && (int)$v['kit_price']<(int)$v['price'] ? 100 : 0;
-        if(preg_match('/бронезахист|шоломи/ui',(string)$v['category_path']))$pct=0;
+        if($v['availability']==='in' && isset($extra['stock']) && $totals[$sku]+shopReservedQty($db,$sku)>(float)$extra['stock'])throw new ShopPricingException('UNAVAILABLE','Недостатньо товару на складі: '.$v['name']);
+        $policy=shopPricingRead($db,$sku,$productId);
+        $mode=$line['price_mode']??(!empty($line['kit_group'])?'kit':'retail');
+        if(!is_string($mode)||!in_array($mode,['retail','kit','wholesale'],true))throw new ShopPricingException('DISCOUNT_NOT_ALLOWED','Невідомий режим ціни.');
+        if(isset($line['color'])&&(!is_string($line['color'])||shopColor($line['color'])!==shopColor($v['color']))||isset($line['size'])&&$line['size']!==$v['size'])throw new ShopPricingException('INVALID_VARIANT','Колір або розмір не відповідає SKU.');
+        $maxAge=max(3600,(int)(cfg('catalog_checkout_max_age_seconds')??172800));
+        $fresh=$db->prepare('SELECT synced_at FROM products WHERE id=?');$fresh->execute([$productId]);
+        if(strtotime((string)$fresh->fetchColumn().' UTC')<time()-$maxAge)throw new ShopPricingException('UNAVAILABLE','Наявність потребує актуального підтвердження постачальника.');
+        $grants=cfg('shop_wholesale_customers');$buyer=function_exists('customerId')?customerId():null;$tier=is_array($grants)&&$buyer!==null?($grants[$buyer]??null):null;
         $group=customerField($line,'kit_group',64);$size=trim((string)($extra['size_display']??''))?:trim((string)($extra['size_native']??''));$size=$size?:trim((string)$v['size']);$size=preg_replace('/^\s*:\s*/u','',$size);
         $resolved[]=['product_id'=>$productId,'sku'=>$sku,'variant_id'=>(string)($extra['variant_id'] ?? $sku),'name'=>$v['name'],'slug'=>$v['slug'],
             'has_docs'=>!empty($v['has_docs']),'docs_note'=>!empty($v['has_docs'])?'Протокол випробувань додається до замовлення; до покупки надаємо за запитом':'','size'=>$size,'color'=>shopColor($v['color']),'variant'=>trim($size.' · '.$v['color'],' ·'),
-            'qty'=>$qty,'sale_unit'=>$unit,'qty_label'=>$qty.($unit==='m2'?' м²':' шт.'),'price'=>(int)$v['price'],'kit_price'=>$v['kit_price']===null?(int)$v['price']:(int)$v['kit_price'],
-            'kit_discount_pct'=>$pct,'kit_group'=>$group,'availability'=>$v['availability'],'fulfillment_supplier'=>npSupplierCode($sku,$productId,(string)($v['fulfillment_supplier_name']??''))];
+            'qty'=>$qty,'sale_unit'=>$unit,'qty_label'=>$qty.($unit==='m2'?' м²':' шт.'),'price'=>shopMoneyValue(shopMoney($v['price'])),'kit_price'=>$policy===null||$policy['kit_cents']===null?null:shopMoneyValue($policy['kit_cents']),
+            '_pricing'=>$policy,'_approved_wholesale_tier'=>$tier,'price_mode'=>$mode,'catalog_version'=>shopPricingCatalogVersion($db),'kit_group'=>$group,'stock_confirmed'=>isset($extra['stock'])&&is_numeric($extra['stock']),'request_state'=>$v['availability']==='order'?(!empty($extra['preorder_confirmed'])?'confirmed_preorder':'order_on_request'):'stock_check','availability'=>$v['availability'],'fulfillment_supplier'=>npSupplierCode($sku,$productId,(string)($v['fulfillment_supplier_name']??''))];
     }
+    $definitions=json_decode((string)$db->query("SELECT v FROM meta WHERE k='site_kits'")->fetchColumn(),true)?:[];
+    shopPricingKitComposition($resolved,array_column($definitions,null,'id'));
     return $resolved;
 }
 function shopSendOrderMail(PDO $db,int $orderId): string {

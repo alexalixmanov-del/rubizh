@@ -29,8 +29,9 @@ function shopProduct(PDO $db, array $row, array $photos=[],?array $variantRows=n
         $variants[]=['sku'=>$v['sku'],'variant_id'=>(string)($extra['variant_id'] ?? $v['sku']),
             'size_display'=>$display,'size_native'=>$native,
             'size_type'=>$extra['size_type'] ?? ($data['size_scale'] ?? 'other'),'color'=>shopColor($v['color']),
-            'price'=>$v['price']===null ? null : (int)$v['price'],'kit_price'=>$v['kit_price']===null ? null : (int)$v['kit_price'],
-            'kit_discount_pct'=>$extra['kit_discount_pct'] ?? $data['kit_discount_pct'] ?? null,
+            'price'=>$v['price']===null ? null : (float)$v['price'],'kit_price'=>($extra['pricing_policy_version']??null)===1&&$v['kit_price']!==null?(float)$v['kit_price']:null,
+            'pricing_policy_version'=>$extra['pricing_policy_version']??null,'wholesale'=>($extra['pricing_policy_version']??null)===1?($extra['wholesale']??[]):[],
+            'kit_discount_pct'=>($extra['pricing_policy_version']??null)===1?($extra['kit_discount_pct']??0):0,
             'size_unconfirmed'=>$unconfirmed,'stock'=>isset($extra['stock'])&&is_numeric($extra['stock']) ? max(0,(float)$extra['stock']) : null,
             'availability'=>!$unconfirmed&&shopVariantCanBuy($v)?$v['availability']:'out','lead_time'=>$v['lead_time']?:(!empty($extra['availability_date'])?'Очікується '.$extra['availability_date']:''), 'availability_date'=>$extra['availability_date']??null];
     }
@@ -38,7 +39,7 @@ function shopProduct(PDO $db, array $row, array $photos=[],?array $variantRows=n
     $data['attributes']=array_replace($taxonomy['derived_attributes']??[],is_array($data['attributes']??null)?$data['attributes']:[]);
     return ['canonical_category_id'=>$taxonomy['canonical_category_id']??null,'category_url'=>$taxonomy['category_url']??null,'id'=>$row['id'],'slug'=>$row['slug'],'name'=>$row['name'],'brand'=>shopBrand($row['brand']),'category'=>$taxonomy['category']??$row['category_path'],
         'sale_unit'=>shopSaleUnit($data+['name'=>$row['name']]),'description'=>shopDescription((string)($data['description']??$row['description'])),'attributes'=>shopVariantAttributes(shopDescriptionAttributes((string)($data['description']??$row['description']),array_replace(is_array($data['attributes']??null)?$data['attributes']:[],json_decode((string)$row['attributes'],true) ?: [])),$variants,shopSaleUnit($data+['name'=>$row['name']])),
-        'price_min'=>($prices=array_column(array_filter($variants,fn($v)=>$v['availability']!=='out'),'price'))?min($prices):($row['price_min']===null?null:(int)$row['price_min']),'availability'=>count(array_filter($variants,fn($v)=>$v['availability']==='in'))?'in':(count(array_filter($variants,fn($v)=>$v['availability']==='order'))?'order':'out'),
+        'price_min'=>($prices=array_column(array_filter($variants,fn($v)=>$v['availability']!=='out'),'price'))?min($prices):($row['price_min']===null?null:(float)$row['price_min']),'availability'=>count(array_filter($variants,fn($v)=>$v['availability']==='in'))?'in':(count(array_filter($variants,fn($v)=>$v['availability']==='order'))?'order':'out'),
         'has_docs'=>(bool)$row['has_docs'],'docs_note'=>(bool)$row['has_docs']?'Протокол випробувань додається до замовлення; до покупки надаємо за запитом':'','photos'=>$photos[$row['id']] ?? [],'variants'=>$variants];
 }
 function shopProductsByIds(PDO $db,array $ids): array {
