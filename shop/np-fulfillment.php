@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__.'/np-lib.php';
-function npMigrate(PDO $db): void {
+function npMigrate(PDO $db): void {if(function_exists('rubizhSchemaPrepared')&&rubizhSchemaPrepared($db))return;
     $version=(int)$db->query("SELECT v FROM meta WHERE k='rubizh_np_schema'")->fetchColumn();if($version>=3)return;
     $db->exec("CREATE TABLE IF NOT EXISTS rubizh_order_fulfillment_lines(order_id BIGINT UNSIGNED NOT NULL,line_no SMALLINT UNSIGNED NOT NULL,product_id VARCHAR(64) NOT NULL,sku VARCHAR(64) NOT NULL,qty DECIMAL(12,2) NOT NULL,supplier_code VARCHAR(32) NOT NULL DEFAULT '',line_amount DECIMAL(12,2) NULL,created_at DATETIME NOT NULL,PRIMARY KEY(order_id,line_no),INDEX(supplier_code,order_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     $db->exec("ALTER TABLE rubizh_order_fulfillment_lines MODIFY qty DECIMAL(12,2) NOT NULL");

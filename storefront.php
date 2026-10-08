@@ -1,14 +1,16 @@
 <?php
 declare(strict_types=1);
-require __DIR__.'/shop/catalog-lib.php';require_once __DIR__.'/shop/theme-bootstrap.php';$themeMarkup=shopThemeMarkup();require_once __DIR__.'/api/seller.php';
+require __DIR__.'/shop/catalog-lib.php';require_once __DIR__.'/shop/theme-bootstrap.php';require_once __DIR__.'/api/seller.php';
+rubizhHeaders();$nonce=rubizhStorefrontCsp();$themeMarkup='';
 $uri=parse_url($_SERVER['REQUEST_URI'] ?? '/',PHP_URL_PATH) ?: '/';
-if(in_array($uri,['/offer','/offer/','/privacy','/privacy/'],true)){echo str_replace('<head>','<head>'.$themeMarkup,rubizhSellerHtml(file_get_contents(__DIR__.($uri[1]==='o'?'/offer.html':'/privacy.html'))));exit;}
+if(in_array($uri,['/offer','/offer/','/privacy','/privacy/'],true)){header('Cache-Control: no-cache');echo rubizhNonceHtml(str_replace('<head>','<head>'.shopThemeMarkup(),rubizhSellerHtml(file_get_contents(__DIR__.($uri[1]==='o'?'/offer.html':'/privacy.html')))),$nonce);exit;}
 // Public datasets are cached with background refresh. Render the inexpensive HTML shell
 // per request so settings, metadata and theme never come from a stale full-page snapshot.
 require_once __DIR__.'/shop/settings-lib.php';
 $boot=['kitSlots'=>shopKitSlotPatterns()];$head='';$fallback='';$status=200;
 function storefrontEsc(string $s): string{return htmlspecialchars($s,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');}
 try{
+    rubizhPublicGate('storefront',180);rubizhHttpWork('public-read',16);$GLOBALS['rubizh_public_query_budget']=true;$themeMarkup=shopThemeMarkup();
     $db=db();
     if(str_starts_with($uri,'/catalog/')&&($redirect=shopTaxonomyRedirect($db,trim(substr($uri,9),'/'),$_GET))!==null){header('Location: '.$redirect,true,301);exit;}
     $boot['categories']=shopCategories($db);
@@ -16,7 +18,7 @@ try{
     if(preg_match('~^/product/([a-z0-9-]{1,191})/?$~',$uri,$m)){
         $q=$db->prepare('SELECT * FROM products WHERE visible=1 AND slug=?');$q->execute([$m[1]]);$row=$q->fetch(PDO::FETCH_ASSOC);
         if(!$row){$status=404;$fallback='<h1>Товар не знайдено</h1><p>Товар знято з публікації або адреса змінилася.</p><a href="/catalog">До каталогу</a>';}
-        else{$p=shopCached('product-'.md5($m[1].'|'),function()use($db,$row){$p=shopProduct($db,$row,product_photos($db,[$row['id']]));try{$p['related']=shopRelated($db,$row,$p);}catch(Throwable $e){error_log('rubizh related: '.$e->getMessage());$p['related']=[];}return $p;});$boot['product']=$p;$boot['slug']=$p['slug'];$canonical='https://rubizh.shop/product/'.$p['slug'];
+        else{$p=shopCached('product-'.md5($m[1].'|'),function()use($db,$row){$p=shopProduct($db,$row,product_photos($db,[$row['id']]));try{$p['related']=shopRelated($db,$row,$p);}catch(Throwable $e){error_log('rubizh related: '.get_class($e).' code '.(string)$e->getCode());$p['related']=[];}return $p;});$boot['product']=$p;$boot['slug']=$p['slug'];$canonical='https://rubizh.shop/product/'.$p['slug'];
             $title=$p['name'].' — РУБІЖ';$description=mb_substr($p['description'] ?: 'Замовити '.$p['name'].' у РУБІЖ. Розміри, ціна та доставка по Україні.',0,160);
             $offer=['@type'=>'Offer','url'=>$canonical,'priceCurrency'=>'UAH','price'=>(string)$p['price_min'],'availability'=>'https://schema.org/'.['in'=>'InStock','order'=>'PreOrder','out'=>'OutOfStock'][$p['availability']],'seller'=>['@type'=>'Organization','name'=>rubizhSeller()['name']]];
             if($p['availability']==='in'&&!array_filter($p['variants'],fn($v)=>isset($v['stock'])&&$v['stock']>0))unset($offer['availability']);
@@ -51,8 +53,8 @@ $boot['catalog']=shopCatalog($db,$args);
     elseif(in_array($uri,['/kit','/kit/'],true)){$head='<title>Зібрати комплект — РУБІЖ</title><link rel="canonical" href="https://rubizh.shop/kit/"><meta name="description" content="Конструктор комплекту РУБІЖ: голова, тіло, ноги, взуття, бронезахист, спорядження й медицина. Знижка залежить від кількості позицій.">';$fallback='<h1>Зібрати комплект</h1><p>Оберіть речі для кожного слоту — знижка рахується від кількості позицій.</p><a href="/catalog">До каталогу</a>';}
     elseif(preg_match('~^/(?:product|kit)(?:/|$)~',$uri)){$status=404;$fallback='<h1>Сторінку не знайдено</h1><p>Перевірте адресу або відкрийте каталог.</p><a href="/catalog">До каталогу</a>';}
     else{$boot['catalog']=shopCatalog($db,[]);$head='<link rel="canonical" href="https://rubizh.shop/">';$fallback='<h1>РУБІЖ — тактичний одяг та спорядження</h1><ul>';foreach($boot['categories'] as $c)if(!str_contains($c['path'],' / '))$fallback.='<li><a href="/catalog/'.storefrontEsc($c['url_path']).'">'.storefrontEsc($c['name']).'</a></li>';$fallback.='</ul>';}
-}catch(Throwable $e){error_log('rubizh storefront: '.$e->getMessage());$status=503;$boot['error']='Каталог тимчасово недоступний. Спробуйте ще раз.';$head='<meta name="robots" content="noindex,follow">';}
-http_response_code($status);header('Content-Type: text/html; charset=utf-8');header('Cache-Control: no-cache');header('X-Content-Type-Options: nosniff');
+}catch(Throwable $e){error_log('rubizh storefront: '.get_class($e).' code '.(string)$e->getCode());$status=$e instanceof RubizhHttpException?$e->status:503;$boot['error']=$e instanceof RubizhHttpException?$e->getMessage():'Каталог тимчасово недоступний. Спробуйте ще раз.';$head='<meta name="robots" content="noindex,follow">';if($e instanceof RubizhHttpException&&$e->retryAfter)header('Retry-After: '.$e->retryAfter);}
+http_response_code($status);header('Content-Type: text/html; charset=utf-8');header('Cache-Control: '.($status>=400?'no-store':(!empty($_SESSION['customer_id'])?'private, no-store':'no-cache')));header('X-Content-Type-Options: nosniff');
 if($status===503)header('Retry-After: 60');
 if($status===404){echo '<!doctype html><html lang="uk"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Не знайдено — РУБІЖ</title><body style="background:#0B0D0B;color:#EDEFEA;font:18px Arial;padding:40px">'.$fallback.'</body></html>';exit;}
 $boot['settings']=shopPublicSettings();
@@ -61,4 +63,4 @@ $html=rubizhSellerHtml(file_get_contents(__DIR__.'/index.html'));
 if(str_contains($head,'<title>'))$html=preg_replace('~<title>.*?</title>~s','',$html,1);
 $html=str_replace('</head>',$head.'<script>window.RUBIZH_BOOT='.json_encode($boot,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT).';</script></head>',$html);
 $html=str_replace('<body>','<body><noscript><div style="padding:24px;background:#0B0D0B;color:#EDEFEA">'.$fallback.'<p>Для оформлення замовлення увімкніть JavaScript або <a href="tel:+380976867892">зателефонуйте менеджеру</a>.</p></div></noscript>',$html);
-echo str_replace('<head>','<head>'.$themeMarkup,$html);
+echo rubizhNonceHtml(str_replace('<head>','<head>'.$themeMarkup,$html),$nonce);

@@ -2,6 +2,12 @@
 DirectoryIndex storefront.php index.php index.html
 Options -Indexes
 RewriteEngine On
+RewriteRule (^|/)\.(?!well-known(?:/|$)) - [F,L]
+RewriteRule ^(?:rubizh-private-backups|rubizh-private|rubizh-runtime|rubizh-automation|node_modules)(?:/|$) - [F,L]
+RewriteRule ^media/.*\.(?:php[0-9]?|phtml|phar)(?:/|$) - [F,L,NC]
+<FilesMatch "(?i)(?:\.(?:bak|backup|old|orig|swp|sql|log|ini|env)|~)$">
+  Require all denied
+</FilesMatch>
 # Development tooling is local-only.
 RewriteRule ^(?:dev|tests|docs)(?:/|$) - [F,L]
 <FilesMatch "^(?:package(?:-lock)?\.json|README\.md|\.env.*)$">
@@ -23,6 +29,9 @@ RewriteRule ^sitemap\.xml$ sitemap.php [L]
   AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript application/json image/svg+xml
 </IfModule>
 <IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "DENY"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
   <FilesMatch "\.(?:css|js|woff2|woff|webp|png|jpe?g|svg)$">
     Header set Cache-Control "public, max-age=86400"
   </FilesMatch>

@@ -60,7 +60,7 @@ test('Directory and product grid fit narrow and wide screens in both themes',()=
 }));
 
 test('All supplied banners have optimized assets and exact category assignments',()=>{
- const manifest=JSON.parse(readFileSync(new URL('../docs/category-banners.json',import.meta.url)));assert.equal(manifest.length,21);assert.equal(new Set(manifest.map(row=>row.asset)).size,21);
+ const manifest=JSON.parse(readFileSync(new URL('../docs/category-banners.json',import.meta.url)));assert.equal(manifest.length,117);assert.equal(new Set(manifest.map(row=>row.asset)).size,117);
  for(const row of manifest){assert.ok(existsSync(new URL('..'+row.asset,import.meta.url)));assert.ok(row.bytes<150000);}
  for(const name of roots)assert.equal(manifest.filter(row=>row.category===name).length,1);
 });

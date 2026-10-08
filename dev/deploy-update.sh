@@ -16,6 +16,20 @@ unzip -q "$RUBIZH_ARCHIVE" -d "$RUBIZH_RELEASE"
 [[ -f "$RUBIZH_RELEASE/rubizh/index.html" && -f "$RUBIZH_RELEASE/rubizh/storefront.php" ]] || exit 2
 RUBIZH_LIST="$RUBIZH_BACKUP/files.txt"
 find "$RUBIZH_RELEASE/rubizh" -type f -printf '%P\n' > "$RUBIZH_LIST"
+# New dependencies first, then reusable libraries, entry points and the HTML
+# shell. Each individual file is replaced atomically on the same filesystem.
+RUBIZH_ORDERED="$RUBIZH_BACKUP/install-order.txt"
+for RUBIZH_EARLY in shop/runtime.php api/database.php api/http-download.php api/perf.php; do
+ if [[ -f "$RUBIZH_RELEASE/rubizh/$RUBIZH_EARLY" ]]; then printf '%s\n' "$RUBIZH_EARLY" >> "$RUBIZH_ORDERED"; fi
+done
+while IFS= read -r RUBIZH_RELATIVE; do
+ case "$RUBIZH_RELATIVE" in shop/runtime.php|api/database.php|api/http-download.php|api/perf.php|index.html|storefront.php|shop/order.php|shop/mono-webhook.php|auth/bootstrap.php|api/index.php) continue ;; esac
+ printf '%s\n' "$RUBIZH_RELATIVE" >> "$RUBIZH_ORDERED"
+done < "$RUBIZH_LIST"
+for RUBIZH_LATE in auth/bootstrap.php api/index.php shop/order.php shop/mono-webhook.php storefront.php index.html; do
+ if [[ -f "$RUBIZH_RELEASE/rubizh/$RUBIZH_LATE" ]]; then printf '%s\n' "$RUBIZH_LATE" >> "$RUBIZH_ORDERED"; fi
+done
+mv "$RUBIZH_ORDERED" "$RUBIZH_LIST"
 # Validate against the hosting PHP version before touching the running site.
 while IFS= read -r RUBIZH_RELATIVE; do [[ "$RUBIZH_RELATIVE" != *.php ]] || php -l "$RUBIZH_RELEASE/rubizh/$RUBIZH_RELATIVE" >/dev/null; done < "$RUBIZH_LIST"
 while IFS= read -r RUBIZH_RELATIVE; do
@@ -48,7 +62,9 @@ trap 'rollback; rm -rf "$RUBIZH_RELEASE"' EXIT
 while IFS= read -r RUBIZH_RELATIVE; do
  case "$RUBIZH_RELATIVE" in api/config.php|auth/config.php|api/site-settings.json|api/site-settings.lock|media/*|cache/*|.env*) continue ;; esac
  install -d -m 755 "$(dirname "$RUBIZH_SITE_ROOT/$RUBIZH_RELATIVE")"
- install -m 644 "$RUBIZH_RELEASE/rubizh/$RUBIZH_RELATIVE" "$RUBIZH_SITE_ROOT/$RUBIZH_RELATIVE"
+ RUBIZH_ATOMIC="$RUBIZH_SITE_ROOT/$RUBIZH_RELATIVE.deploy-$$.tmp"
+ install -m 644 "$RUBIZH_RELEASE/rubizh/$RUBIZH_RELATIVE" "$RUBIZH_ATOMIC"
+ mv -f -- "$RUBIZH_ATOMIC" "$RUBIZH_SITE_ROOT/$RUBIZH_RELATIVE"
 done < "$RUBIZH_LIST"
 while IFS= read -r RUBIZH_RELATIVE; do [[ "$RUBIZH_RELATIVE" != *.php ]] || php -l "$RUBIZH_SITE_ROOT/$RUBIZH_RELATIVE" >/dev/null; done < "$RUBIZH_LIST"
 RUBIZH_SUCCESS=true

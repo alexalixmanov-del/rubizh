@@ -15,4 +15,4 @@ try{
     $code=(string)($_GET['code'] ?? '');if(!preg_match('/^[a-f0-9]{32}$/D',$code))shopJson(['ok'=>false,'error'=>'Комплект не знайдено.'],404);
     $q=$db->prepare('SELECT lines_json FROM rubizh_shared_kits WHERE code=? AND expires_at>UTC_TIMESTAMP()');$q->execute([$code]);$json=$q->fetchColumn();if(!$json)shopJson(['ok'=>false,'error'=>'Комплект не знайдено або термін посилання минув.'],404);
     $lines=json_decode($json,true);shopJson(['ok'=>true,'lines'=>$lines,'items'=>shopProductsByIds($db,array_column($lines,'product_id'))]);
-}catch(Throwable $e){error_log('rubizh kits: '.$e->getMessage());shopJson(['ok'=>false,'error'=>$e instanceof PDOException?'Не вдалося зберегти комплект. Спробуйте ще раз.':$e->getMessage()],400);}
+}catch(Throwable $e){error_log('rubizh kits: '.get_class($e).' code '.(string)$e->getCode());shopJson(['ok'=>false,'error'=>$e instanceof PDOException?'Не вдалося зберегти комплект. Спробуйте ще раз.':$e->getMessage()],400);}

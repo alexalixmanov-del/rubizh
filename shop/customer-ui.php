@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-function shopUiMigrate(PDO $db): void {
+function shopUiMigrate(PDO $db): void {if(function_exists('rubizhSchemaPrepared')&&rubizhSchemaPrepared($db))return;
  static $ready=false;if($ready)return;
  $db->exec("CREATE TABLE IF NOT EXISTS rubizh_customer_preferences(customer_id CHAR(32) PRIMARY KEY,theme VARCHAR(12) NOT NULL DEFAULT 'system',donation_channel VARCHAR(12) NOT NULL DEFAULT 'viber',donation_phone VARCHAR(20) NOT NULL DEFAULT '',updated_at DATETIME NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
  $db->exec("CREATE TABLE IF NOT EXISTS rubizh_order_timeline(order_id BIGINT UNSIGNED NOT NULL,event VARCHAR(24) NOT NULL,event_key VARCHAR(80) NOT NULL,occurred_at DATETIME NOT NULL,detail_json TEXT NOT NULL,PRIMARY KEY(order_id,event,event_key),INDEX(order_id,occurred_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");$ready=true;

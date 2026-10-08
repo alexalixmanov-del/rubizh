@@ -10,7 +10,7 @@ test('Category migration is reversible, preserves full rows/media, filters old U
  try{
   for(const folder of ['api','shop']){mkdirSync(path.join(dir,folder));for(const f of readdirSync(path.join(root,folder)))if((f.endsWith('.php')||f==='canonical-taxonomy.json')&&!['config.php','mono-private.php','np-private.php'].includes(f))copyFileSync(path.join(root,folder,f),path.join(dir,folder,f));}
   mkdirSync(path.join(dir,'media'));writeFileSync(path.join(dir,'media','source.webp'),'original-image-byte-fixture');
-  writeFileSync(path.join(dir,'api','config.php'),`<?php return ['db_host'=>'localhost;unix_socket=${process.env.RUBIZH_TEST_MYSQL_SOCKET}','db_name'=>'${schema}','db_user'=>'root','db_pass'=>'','media_dir'=>'${dir}/media','media_url'=>'/media','cache_dir'=>'${dir}/cache'];`);
+  writeFileSync(path.join(dir,'api','config.php'),`<?php return ['db_host'=>'localhost','db_name'=>'${schema}','db_user'=>'root','db_pass'=>'','media_dir'=>'${dir}/media','media_url'=>'/media','cache_dir'=>'${dir}/cache'];`);
   const source=String.raw`require '${dir}/shop/taxonomy-migration.php';
   $db=new PDO('mysql:unix_socket='.getenv('RUBIZH_TEST_MYSQL_SOCKET').';charset=utf8mb4','root','',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);$db->exec('CREATE DATABASE ${schema} CHARACTER SET utf8mb4');$db->exec('USE ${schema}');function check($ok,$msg){if(!$ok)throw new RuntimeException($msg);}try{migrate($db);
   $items=[['jacket','Куртка зимова',"Одяг та форма / Чоловічий одяг / Зимові та утеплені куртки",['Сезон'=>'Зима','supplier_id'=>'s1','external_id'=>'e1']],['female','Жіноча бойова сорочка UBACS',"Одяг та форма / Жіночий одяг / Убакси та бойові сорочки",['Стать'=>'Унісекс']],['net','Маскувальна сітка',"Маскування / Маскувальні сітки Militex / Мультикам",[]],['review','Невідомий предмет','Невідома гілка',[]]];
@@ -31,7 +31,7 @@ test('Category migration is reversible, preserves full rows/media, filters old U
   sync_categories($db,[['path'=>'Поставщик / Случайная категория']]);check(!$db->query("SELECT COUNT(*) FROM categories WHERE path='Поставщик / Случайная категория'")->fetchColumn(),'Supplier category created automatically');
   $current=shopTaxonomyAudit($db);$db->exec("UPDATE variants SET price=2000 WHERE sku='jacket-L'");$blocked=false;try{shopTaxonomyRollback($db,$r['backup']);}catch(RuntimeException $e){$blocked=true;}check($blocked,'Rollback overwrote later stock/price import');
   }finally{$db->exec('DROP DATABASE ${schema}');}echo 'passed';`;
-  const args=['-n','-d','error_reporting=24575',...['pdo','mysqlnd','pdo_mysql','mbstring'].flatMap(e=>['-d',`extension=${runtime}/lib/php/20240924/${e}.so`]),'-r',source];
+  const args=['-n','-d','error_reporting=24575','-d','pdo_mysql.default_socket='+process.env.RUBIZH_TEST_MYSQL_SOCKET,...['pdo','mysqlnd','pdo_mysql','mbstring'].flatMap(e=>['-d',`extension=${runtime}/lib/php/20240924/${e}.so`]),'-r',source];
   const r=spawnSync(runtime+'/bin/php8.4',args,{encoding:'utf8',timeout:30000,env:{...process.env,LD_LIBRARY_PATH:runtime+'/lib/x86_64-linux-gnu'}});assert.equal(r.status,0,r.stdout+'\n'+r.stderr);assert.equal(r.stdout,'passed');
  }finally{rmSync(dir,{recursive:true,force:true});rmSync(backup,{recursive:true,force:true});}
 });

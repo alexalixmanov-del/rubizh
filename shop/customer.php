@@ -26,4 +26,4 @@ try{
         'preferences'=>$id===null?null:shopPreferences($db,$id),'mono_enabled'=>monoConfigured(),'np_enabled'=>npConfigured(),'np_cod_enabled'=>cfg('np_cod_contract_confirmed')===true&&cfg('np_cod_service')==='afterpayment',
         'profile'=>$id===null?null:array_intersect_key(customerProfile($id),array_flip(['email','first_name','last_name','phone','delivery_type','city','delivery_address'])),
         'favorites'=>$favorites,'items'=>shopProductsByIds($db,$favorites)]);
-}catch(Throwable $e){if(isset($db)&&$db->inTransaction())$db->rollBack();error_log('rubizh customer: '.$e->getMessage());shopJson(['ok'=>false,'error'=>$e instanceof PDOException?'Кабінет тимчасово недоступний.':$e->getMessage()],400);}
+}catch(Throwable $e){if(isset($db)&&$db->inTransaction())$db->rollBack();error_log('rubizh customer: '.get_class($e).' code '.(string)$e->getCode());shopJson(['ok'=>false,'error'=>$e instanceof PDOException?'Кабінет тимчасово недоступний.':$e->getMessage()],400);}

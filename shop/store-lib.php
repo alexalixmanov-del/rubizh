@@ -12,6 +12,7 @@ require_once __DIR__.'/customer-ui.php';
 require_once __DIR__.'/cart-reminders-lib.php';
 
 function shopStoreDatabase(): PDO {
+    $db=database();if(rubizhSchemaPrepared($db))return $db;
     customerDatabase();$db=identityDatabase();shopNotificationMigrate($db);monoMigrate($db);shopLifecycleMigrate($db);shopUiMigrate($db);shopCartReminderMigrate($db);static $ready=false;
     if(!$ready){migrate($db);npMigrate($db);supplierMigrate($db);
         if((int)$db->query("SELECT v FROM meta WHERE k='rubizh_shop_schema'")->fetchColumn()>=1){$ready=true;return $db;}
@@ -48,13 +49,22 @@ function shopLimit(PDO $db,string $kind,int $max,int $window=3600): void {
     $key=hash('sha256',$kind.'|'.($_SERVER['REMOTE_ADDR'] ?? 'unknown'));$start=(int)(floor(time()/$window)*$window);
     $db->prepare('INSERT INTO rubizh_shop_limits(bucket,window_start,hits) VALUES(?,?,1) ON DUPLICATE KEY UPDATE hits=IF(window_start=VALUES(window_start),hits+1,1),window_start=VALUES(window_start)')->execute([$key,$start]);
     $q=$db->prepare('SELECT hits FROM rubizh_shop_limits WHERE bucket=?');$q->execute([$key]);if((int)$q->fetchColumn()>$max)shopJson(['ok'=>false,'error'=>'Забагато запитів. Спробуйте пізніше.'],429);
-    $db->prepare('DELETE FROM rubizh_shop_limits WHERE window_start<?')->execute([time()-172800]);
+    if(random_int(1,64)===1)$db->prepare('DELETE FROM rubizh_shop_limits WHERE window_start<? LIMIT 500')->execute([time()-172800]);
 }
 function shopFavoriteIds(PDO $db,string $id): array {
     $q=$db->prepare('SELECT product_id FROM rubizh_favorites WHERE customer_id=? ORDER BY created_at DESC');$q->execute([$id]);return $q->fetchAll(PDO::FETCH_COLUMN);
 }
 function shopResolvedLines(PDO $db,array $input,bool $lock=false): array {
     if(!$input || count($input)>100)throw new RuntimeException('У кошику має бути від 1 до 100 позицій.');
+    // Lock variants in the same order for all carts, even if customers add items
+    // in opposite order. Output stays in the original order for kit discounts.
+    if($lock){
+        $skus=[];$productIds=[];foreach($input as $line){if(!is_array($line))throw new RuntimeException('Перевірте кошик.');$skus[]=customerField($line,'sku',64);$productIds[]=customerField($line,'product_id',64);}
+        $productIds=array_values(array_unique($productIds));sort($productIds,SORT_STRING);
+        $products=$db->prepare('SELECT id FROM products WHERE id IN ('.implode(',',array_fill(0,count($productIds),'?')).') ORDER BY id FOR UPDATE');$products->execute($productIds);$products->fetchAll();
+        $skus=array_values(array_unique($skus));sort($skus,SORT_STRING);
+        $prelock=$db->prepare('SELECT sku FROM variants WHERE sku IN ('.implode(',',array_fill(0,count($skus),'?')).') ORDER BY sku FOR UPDATE');$prelock->execute($skus);$prelock->fetchAll();
+    }
     $resolved=[];$totals=[];
     foreach($input as $line){
         if(!is_array($line))throw new RuntimeException('Перевірте кошик.');
@@ -90,7 +100,7 @@ function shopSendOrderMail(PDO $db,int $orderId): string {
         $cfg=authConfig();$password=(string)($cfg['noreply_password'] ?? '');if($password==='')throw new RuntimeException('Пошта не налаштована.');
         require_once __DIR__.'/../auth/mailer.php';rubizhSendOrder($order['recipient'],$password,$order);
         $db->prepare("UPDATE rubizh_order_mail SET status='sent',locked_at=NULL,error='',updated_at=UTC_TIMESTAMP() WHERE order_id=?")->execute([$orderId]);return 'sent';
-    }catch(Throwable $e){error_log('rubizh order email: '.$e->getMessage());$db->prepare("UPDATE rubizh_order_mail SET status=IF(attempts>=5,'failed','pending'),locked_at=NULL,error='Не вдалося надіслати лист',next_at=UTC_TIMESTAMP()+INTERVAL 5 MINUTE,updated_at=UTC_TIMESTAMP() WHERE order_id=?")->execute([$orderId]);return shopOrderMailStatus($db,$orderId);}
+    }catch(Throwable $e){error_log('rubizh order email: '.get_class($e).' code '.(string)$e->getCode());$db->prepare("UPDATE rubizh_order_mail SET status=IF(attempts>=5,'failed','pending'),locked_at=NULL,error='Не вдалося надіслати лист',next_at=UTC_TIMESTAMP()+INTERVAL 5 MINUTE,updated_at=UTC_TIMESTAMP() WHERE order_id=?")->execute([$orderId]);return shopOrderMailStatus($db,$orderId);}
 }
 
 function shopOrderMailStatus(PDO $db,int $orderId): string {

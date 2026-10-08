@@ -6,13 +6,15 @@
 declare(strict_types=1);
 require __DIR__ . '/lib.php';
 ini_set('display_errors', '0');
-set_exception_handler(function (Throwable $e) { error_log('rubizh api: ' . $e->getMessage()); fail(500, 'Ошибка сервера: ' . mb_substr($e->getMessage(), 0, 200)); });
+set_exception_handler(function (Throwable $e) { error_log('rubizh api: '.get_class($e).' code '.(string)$e->getCode());header('Cache-Control: no-store');if($e instanceof RubizhHttpException){if($e->retryAfter)header('Retry-After: '.$e->retryAfter);fail($e->status,$e->getMessage());}fail(500,'Ошибка сервера. Попробуйте позже.'); });
+rubizhHeaders();
 
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 $path = '/' . trim(preg_replace('~^.*?/api~', '', $path), '/');
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $isPim = str_starts_with($path, '/pim/');
 cors($isPim);
+if(!$isPim){rubizhPublicGate('catalog');rubizhHttpWork('public-read',16);$GLOBALS['rubizh_public_query_budget']=true;}
 
 /* ===================== PIM ===================== */
 if ($isPim) {

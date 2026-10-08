@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 // A reminder is requested explicitly, sent once after 24h of inactivity, and never creates an order.
-function shopCartReminderMigrate(PDO $db): void {
+function shopCartReminderMigrate(PDO $db): void {if(function_exists('rubizhSchemaPrepared')&&rubizhSchemaPrepared($db))return;
  static $ready=false;if($ready)return;
  $db->exec("CREATE TABLE IF NOT EXISTS rubizh_cart_reminders(scope_hash CHAR(64) PRIMARY KEY,customer_id CHAR(32) NULL,email VARCHAR(254) NOT NULL,email_hash CHAR(64) NOT NULL,items_json TEXT NOT NULL,recovery_code CHAR(64) NOT NULL UNIQUE,status VARCHAR(12) NOT NULL DEFAULT 'pending',attempts INT NOT NULL DEFAULT 0,created_at DATETIME NOT NULL,updated_at DATETIME NOT NULL,next_at DATETIME NOT NULL,expires_at DATETIME NOT NULL,locked_at DATETIME NULL,sent_at DATETIME NULL,error VARCHAR(240) NOT NULL DEFAULT '',INDEX(status,next_at),INDEX(email_hash,sent_at),INDEX(customer_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");$ready=true;
 }

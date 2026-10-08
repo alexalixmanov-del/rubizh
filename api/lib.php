@@ -1,10 +1,13 @@
 <?php
 // РУБІЖ · API магазина: база, приём товаров из PIM, фото.
 declare(strict_types=1);
+ini_set('display_errors','0');
 
 const API_VERSION = '1.3.0';
 const SCHEMA_VERSION = 3;
+require_once __DIR__.'/../shop/runtime.php';
 require_once __DIR__ . '/perf.php';
+require_once __DIR__.'/database.php';
 require_once __DIR__.'/../shop/units.php';
 require_once __DIR__.'/../shop/normalization.php';
 require_once __DIR__.'/../shop/taxonomy.php';
@@ -27,21 +30,24 @@ function db(): PDO {
   if ($pdo) return $pdo;
   try {
     shopPerfStart(); $pdoClass = shopPerfOn() ? 'RubizhPDO' : 'PDO';
-    $pdo = new $pdoClass('mysql:host=' . cfg('db_host') . ';dbname=' . cfg('db_name') . ';charset=utf8mb4', cfg('db_user'), cfg('db_pass'), [
-      PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-      PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-      PDO::ATTR_EMULATE_PREPARES => false,
-    ]);
+    $pdo = rubizhDatabaseConnect(cfg(), $pdoClass);
   } catch (Throwable $e) {
     fail(500, 'Нет подключения к базе MySQL: проверьте данные в config.php');
   }
   if (shopPerfOn()) $pdo->setAttribute(PDO::ATTR_STATEMENT_CLASS, ['RubizhStatement', []]);
+  if(!empty($GLOBALS['rubizh_public_query_budget'])){
+    $server=(string)$pdo->getAttribute(PDO::ATTR_SERVER_VERSION);
+    try{$pdo->exec(stripos($server,'mariadb')!==false?'SET SESSION max_statement_time=6':'SET SESSION MAX_EXECUTION_TIME=6000');}
+    catch(PDOException $e){error_log('rubizh public SQL deadline unavailable');}
+  }
   migrate($pdo);
   return $pdo;
 }
 
 // Таблицы создаются сами при первом обращении
 function migrate(PDO $pdo): void {
+  try { $v=(int)$pdo->query("SELECT v FROM meta WHERE k='schema'")->fetchColumn(); if($v>=SCHEMA_VERSION)return; }
+  catch(PDOException $e){if($e->getCode()!=='42S02')throw $e;}
   $pdo->exec("CREATE TABLE IF NOT EXISTS meta (k VARCHAR(64) PRIMARY KEY, v TEXT) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
   $v = (int)($pdo->query("SELECT v FROM meta WHERE k='schema'")->fetchColumn() ?: 0);
   if ($v >= SCHEMA_VERSION) return;
@@ -100,8 +106,11 @@ function out($data, int $code = 200): void {
 function fail(int $code, string $msg): void { out(['ok' => false, 'error' => $msg], $code); }
 function now(): string { return gmdate('Y-m-d H:i:s'); }
 function body(): array {
-  $raw = file_get_contents('php://input') ?: '';
-  $j = json_decode($raw, true);
+  $limit=16*1024*1024;
+  if((int)($_SERVER['CONTENT_LENGTH']??0)>$limit)fail(413,'Запрос слишком большой');
+  $raw = file_get_contents('php://input',false,null,0,$limit+1) ?: '';
+  if(strlen($raw)>$limit)fail(413,'Запрос слишком большой');
+  $j = json_decode($raw, true,64);
   if (!is_array($j)) fail(400, 'Тело запроса не JSON');
   return $j;
 }
@@ -354,12 +363,10 @@ function process_photos(PDO $pdo, int $limit = 40, float $budget = 20.0): array 
   return ['processed' => $done, 'errors' => $err, 'pending' => $pending, 'failed' => $failed];
 }
 function fetch_to_webp(string $url, string $hash, string $dir): array {
-  $ch = curl_init($url);
-  curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => true, CURLOPT_MAXREDIRS => 4, CURLOPT_CONNECTTIMEOUT => 8, CURLOPT_TIMEOUT => 20,
-    CURLOPT_USERAGENT => 'Mozilla/5.0 (compatible; RubizhShop/1.1; +https://rubizh.shop)' , CURLOPT_REFERER => (parse_url($url,PHP_URL_SCHEME)?:'https').'://'.(parse_url($url,PHP_URL_HOST)?:'rubizh.shop').'/', CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS]);
-  $bin = curl_exec($ch); $code = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE); $cerr = curl_error($ch); curl_close($ch);
-  if ($bin === false || $code >= 400) throw new RuntimeException('не скачалось: ' . ($cerr ?: 'HTTP ' . $code));
-  if (strlen($bin) > 15 * 1024 * 1024) throw new RuntimeException('файл больше 15 МБ');
+  require_once __DIR__.'/http-download.php';
+  $bin = rubizhDownloadImage($url);
+  $dimensions=@getimagesizefromstring($bin);
+  if(!$dimensions||$dimensions[0]<1||$dimensions[1]<1||$dimensions[0]>12000||$dimensions[1]>12000||$dimensions[0]*$dimensions[1]>16000000)throw new RuntimeException('Неприпустимий розмір фото');
   $img = @imagecreatefromstring($bin);
   if (!$img) throw new RuntimeException('это не картинка');
   $w = imagesx($img); $h = imagesy($img);

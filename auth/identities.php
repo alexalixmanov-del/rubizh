@@ -39,6 +39,7 @@ function googleEnabled(): bool {
 }
 function identityDatabase(): PDO {
     $db = database();
+    if(function_exists('rubizhSchemaPrepared')&&rubizhSchemaPrepared($db))return $db;
     static $ready = false;
     if (!$ready) {
         $db->exec("CREATE TABLE IF NOT EXISTS rubizh_accounts (

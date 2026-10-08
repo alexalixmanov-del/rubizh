@@ -4,6 +4,7 @@ if (!defined('RUBIZH_AUTH')) { http_response_code(404); exit; }
 
 function customerDatabase(): PDO {
     $db = database();
+    if(function_exists('rubizhSchemaPrepared')&&rubizhSchemaPrepared($db))return $db;
     static $ready = false;
     if (!$ready) {
         $db->exec("CREATE TABLE IF NOT EXISTS rubizh_customers (

@@ -27,6 +27,6 @@ test('Canonical categories navigate with stable IDs and their own banners on pho
    await link.click();await page.waitForURL(url=>url.pathname==='/catalog/odiah-ta-forma/taktychni-kostiumy');await page.getByText(items.find(p=>p.slot==='body').name,{exact:true}).first().waitFor();
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);assert.deepEqual(errors,[]);await page.close();
   }
-  assert.equal(new Set(banners.map(b=>b.category_id)).size,21);assert.equal(spec.categories.filter(c=>c.status==='active'&&c.parent_id===null).length,18);
+  assert.equal(new Set(banners.map(b=>b.category_id)).size,117);assert.equal(spec.categories.filter(c=>c.status==='active'&&c.parent_id===null).length,18);
  }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
 });

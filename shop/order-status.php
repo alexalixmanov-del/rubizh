@@ -10,4 +10,4 @@ try{
  $order['current_step']=shopTimelineCurrent($source);
  $order['ui_version']=shopOrderUiVersion($source+['donation'=>$order['donation']]);
  shopJson(['ok'=>true,'order'=>$order,'email_status'=>shopOrderMailStatus($db,$id)]);
-}catch(Throwable $e){error_log('rubizh order receipt: '.$e->getMessage());shopJson(['ok'=>false,'error'=>'Замовлення тимчасово недоступне. Спробуйте ще раз.'],503);}
+}catch(Throwable $e){error_log('rubizh order receipt: '.get_class($e).' code '.(string)$e->getCode());shopJson(['ok'=>false,'error'=>'Замовлення тимчасово недоступне. Спробуйте ще раз.'],503);}

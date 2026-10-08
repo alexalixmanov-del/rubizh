@@ -34,9 +34,7 @@ $result=[
 ];
 if (in_array('--database',$argv,true) && is_file($file)) {
     try {
-        $host=(string)($api['db_host'] ?? '');$name=(string)($api['db_name'] ?? '');
-        if ($host===''||$name===''||preg_match('/[;\r\n]/',$host.$name)) { throw new RuntimeException('Invalid database config'); }
-        $db=new PDO('mysql:host='.$host.';dbname='.$name.';charset=utf8mb4',(string)($api['db_user'] ?? ''),(string)($api['db_pass'] ?? ''),[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_EMULATE_PREPARES=>false]);
+        require_once $root.'/api/database.php';$db=rubizhDatabaseConnect($api);
         $result['database']['status']=$db->query('SELECT 1')->fetchColumn()==1 ? 'verified' : 'failed';
     } catch (Throwable $e) { $result['database']['status']='failed'; }
 }

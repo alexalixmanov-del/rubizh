@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__.'/../shop/runtime.php';
 // РУБІЖ · кеш даних каталогу і профілювання запитів.
 //
 // Кеш: файли JSON у cfg('cache_dir') (за замовчуванням <корінь сайту>/cache). Ключ містить версію каталогу:
@@ -80,12 +81,18 @@ function shopCached(string $key, callable $build, string $extra = '', ?array $re
         if(is_array($snapshot)&&array_key_exists('data',$snapshot)){$stale=$snapshot['data'];$hasStale=true;}
     }
     if($hasStale&&empty($GLOBALS['rubizh_cache_rebuild'])&&empty($GLOBALS['rubizh_cache_worker'])){$queued=shopCacheQueue($key.'|'.$extra,$refresh);if(is_file($queued)&&time()-filemtime($queued)<=300){shopPerfMark('cache-stale:'.$key);return $stale;}$hasStale=false;}
-    $lock=@fopen($dir.'/build-'.hash('sha256',$key.'|'.$extra).'.lock','c');
+    // Fixed lock stripes prevent random search terms from filling the disk.
+    $lockName=$dir.'/build-'.substr(hash('sha256',$key.'|'.$extra),0,2).'.lock';
+    $lock=isset($GLOBALS['rubizh_cache_locks'][$lockName])?null:@fopen($lockName,'c');
     if($lock&&!flock($lock,LOCK_EX|LOCK_NB)){fclose($lock);if($hasStale)return $stale;throw new RuntimeException('Catalog cache is being prepared');}
+    if($lock)$GLOBALS['rubizh_cache_locks'][$lockName]=true;
+    $work=null;$ownsWork=empty($GLOBALS['rubizh_cache_build_depth']);
     try {
     // A process may have finished between our first read and obtaining the lock.
     if(empty($GLOBALS['rubizh_cache_rebuild'])&&is_file($file)){$raw=@file_get_contents($file);$decoded=json_decode((string)$raw,true);if($decoded!==null||$raw==='null')return $decoded;}
-    $data = $build();
+    if($ownsWork)$work=rubizhWorkAcquire('catalog-build',4);
+    $GLOBALS['rubizh_cache_build_depth']=($GLOBALS['rubizh_cache_build_depth']??0)+1;
+    try{$data = $build();}finally{$GLOBALS['rubizh_cache_build_depth']--;}
     $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     if ($json !== false && is_dir($dir) && is_writable($dir)) {
         $tmp = $file . '.' . bin2hex(random_bytes(4)) . '.tmp';
@@ -96,24 +103,29 @@ function shopCached(string $key, callable $build, string $extra = '', ?array $re
     if (function_exists('apcu_store') && ini_get('apc.enabled')) @apcu_store('rubizh:' . $key . ':' . $ver, $data, 86400);
     shopPerfMark('cache-build:' . $key);
     return $data;
-    } finally {if($lock){flock($lock,LOCK_UN);fclose($lock);}}
+    } finally {rubizhWorkRelease($work);if($lock){unset($GLOBALS['rubizh_cache_locks'][$lockName]);flock($lock,LOCK_UN);fclose($lock);}}
 }
 
-// Видаляє файли попередніх версій каталогу — один раз на версію.
+// Bounded disk use, including high-cardinality searches in the same catalog version.
 function shopCacheGc(string $ver): void {
     $dir = shopCacheDir();
     $base = substr($ver, 0, 12);
-    $marker = $dir . '/.gc-' . $base;
-    if (is_file($marker)) return;
-    @touch($marker);
+    $marker = $dir . '/.gc-current';
+    if(is_file($marker)&&filemtime($marker)>time()-60)return;
+    $lock=@fopen($dir.'/.gc.lock','c');if(!$lock||!flock($lock,LOCK_EX|LOCK_NB)){if($lock)fclose($lock);return;}
+    try{
+    if(is_file($marker)&&filemtime($marker)>time()-60)return;@touch($marker);
     foreach (glob($dir . '/*.json') ?: [] as $f) {
         $name=basename($f);
         if(str_starts_with($name,'refresh-'))continue;
         if(str_starts_with($name,'last-')){if(filemtime($f)<time()-7*86400)@unlink($f);continue;}
         if(!str_contains($name,'-'.$base)&&filemtime($f)<time()-3600)@unlink($f);
     }
+    $files=glob($dir.'/*.json')?:[];usort($files,fn($a,$b)=>filemtime($b)<=>filemtime($a));$bytes=0;
+    foreach($files as $i=>$file){$bytes+=(int)filesize($file);if($i>=512||$bytes>64*1024*1024)@unlink($file);}
     foreach (glob($dir . '/.gc-*') ?: [] as $f) if ($f !== $marker) @unlink($f);
     foreach (glob($dir . '/*.tmp') ?: [] as $f) if (filemtime($f) < time() - 300) @unlink($f);
+    }finally{flock($lock,LOCK_UN);fclose($lock);}
 }
 
 function shopCacheClear(): int {
@@ -147,7 +159,7 @@ function shopPerfStart(): void {
     RubizhPerf::$t0 = $_SERVER['REQUEST_TIME_FLOAT'] ?? microtime(true);
     register_shutdown_function(function () {
         usort(RubizhPerf::$slow, fn($a, $b) => $b[0] <=> $a[0]);
-        $line = ['at' => gmdate('c'), 'uri' => $_SERVER['REQUEST_URI'] ?? '', 'ms' => round((microtime(true) - RubizhPerf::$t0) * 1000), 'sql_count' => RubizhPerf::$n, 'sql_ms' => round(RubizhPerf::$sql * 1000),
+        $line = ['at' => gmdate('c'), 'uri' => parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?: '', 'ms' => round((microtime(true) - RubizhPerf::$t0) * 1000), 'sql_count' => RubizhPerf::$n, 'sql_ms' => round(RubizhPerf::$sql * 1000),
             'marks' => RubizhPerf::$marks, 'slowest' => array_map(fn($s) => [round($s[0] * 1000, 1), $s[1]], array_slice(RubizhPerf::$slow, 0, 5))];
         @file_put_contents(shopCacheDir() . '/perf.log', json_encode($line, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n", FILE_APPEND | LOCK_EX);
     });

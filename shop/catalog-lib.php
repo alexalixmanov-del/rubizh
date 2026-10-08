@@ -51,6 +51,7 @@ function shopProductsByIds(PDO $db,array $ids): array {
 }
 // Кеш за версією каталогу: однакові фільтри = однакова відповідь для всіх відвідувачів.
 function shopCatalog(PDO $db,array $input): array {
+    $input=rubizhCatalogInput($input);
     if(in_array((string)($input['slot']??''),array_column(shopKitSlotPatterns(),0),true)){require_once __DIR__.'/kit-catalog.php';return shopKitCatalog($db,$input);}
     $norm=[];foreach(['category','roots','slot','leaf','q','brands','availability','sizes','camo','attrs','page','limit','sort','price_from','price_to'] as $k)if(isset($input[$k])&&$input[$k]!==''&&is_scalar($input[$k]))$norm[$k]=(string)$input[$k];ksort($norm);
     return shopCached('catalog-'.md5(json_encode($norm,JSON_UNESCAPED_UNICODE)),fn()=>shopCatalogBuild($db,$norm),'',['operation'=>'catalog','input'=>$norm]);

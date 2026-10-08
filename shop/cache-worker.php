@@ -27,5 +27,7 @@ try {
         }catch(Throwable $e){$failed++;error_log('rubizh cache worker: refresh failed');}
     }
     echo json_encode(['built'=>$built,'failed'=>$failed],JSON_THROW_ON_ERROR)."\n";
+    rubizhCacheHeartbeat($failed === 0);
     if($failed)exit(1);
+}catch(Throwable $e){rubizhCacheHeartbeat(false);error_log('rubizh cache worker failed');exit(1);
 }finally{flock($lock,LOCK_UN);fclose($lock);}

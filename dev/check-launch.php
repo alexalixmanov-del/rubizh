@@ -29,8 +29,7 @@ foreach(['cache'=>180,'notifications'=>300,'payments'=>600,'delivery'=>1800,'pho
  $report['workers'][$name]=['status'=>$state,'last_success_age_seconds'=>$age];$failed=$failed||!in_array($state,['verified','running'],true);
 }
 try{
- $c=require $root.'/api/config.php';$host=(string)($c['db_host']??'');$name=(string)($c['db_name']??'');if($host===''||$name===''||preg_match('/[;\r\n]/',$host.$name))throw new RuntimeException('Database config invalid');
- $db=new PDO('mysql:host='.$host.';dbname='.$name.';charset=utf8mb4',(string)$c['db_user'],(string)$c['db_pass'],[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_EMULATE_PREPARES=>false]);
+ $c=require $root.'/api/config.php';require_once $root.'/api/database.php';$db=rubizhDatabaseConnect($c);
  foreach(['rubizh_order_mail','rubizh_buyer_mail','rubizh_cart_reminders'] as $table){
   $q=$db->prepare('SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=?');$q->execute([$table]);
   if(!$q->fetchColumn()){$report['mail_queues'][$table]=['status'=>'not_prepared'];$failed=true;continue;}

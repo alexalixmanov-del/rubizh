@@ -41,13 +41,15 @@ function shopKitResolve(array $kit,array $byId): ?array {
 // Дані главної/конструктора: кеш за версією каталогу + набором комплектів; у відповідь — лише поля для плиток і комплектів.
 function shopStorefront(PDO $db): array {
  $kits=(string)$db->query("SELECT v FROM meta WHERE k='site_kits'")->fetchColumn();
- return shopCached('storefront',fn()=>shopStorefrontBuild($db),$kits,['operation'=>'storefront']);
+ return shopCached('storefront-compact-v1',fn()=>shopStorefrontBuild($db),$kits,['operation'=>'storefront']);
 }
 function shopStorefrontBuild(PDO $db): array {
  $stored=$db->query("SELECT v FROM meta WHERE k='site_kits'")->fetchColumn();$kits=json_decode((string)$stored,true);if(!is_array($kits))$kits=[];$ids=[];
  foreach(['head','body','legs','boots','armor','gear','med','small'] as $slot){
   $size=in_array($slot,['body','legs','boots'],true)?" AND TRIM(TRIM(LEADING ':' FROM TRIM(av.size))) NOT IN ('','Один розмір','OS','Універсальний')":'';
-  $q=$db->prepare("SELECT p.id FROM products p WHERE p.visible=1 AND EXISTS(SELECT 1 FROM photos ph WHERE ph.product_id=p.id) AND EXISTS(SELECT 1 FROM variants av WHERE av.product_id=p.id AND ".shopBuyableSql('av').") AND ".shopKitPrimarySql($slot)." AND ".shopKitSlotSql()."=? ORDER BY FIELD(p.availability,'in','order','out'), CASE WHEN LOWER(p.name) REGEXP 'убакс|ubacs|куртк|плитоноск|шолом|рюкзак|турнікет|аптечка' THEN 0 ELSE 1 END,p.price_min,p.id LIMIT 40");$q->execute([$slot]);array_push($ids,...$q->fetchAll(PDO::FETCH_COLUMN));
+  // Only initial recommendations travel with the page. The selector fetches the
+  // complete slot catalogue separately, with its own pagination and filters.
+  $q=$db->prepare("SELECT p.id FROM products p WHERE p.visible=1 AND EXISTS(SELECT 1 FROM photos ph WHERE ph.product_id=p.id) AND EXISTS(SELECT 1 FROM variants av WHERE av.product_id=p.id AND ".shopBuyableSql('av').") AND ".shopKitPrimarySql($slot)." AND ".shopKitSlotSql()."=? ORDER BY FIELD(p.availability,'in','order','out'), CASE WHEN LOWER(p.name) REGEXP 'убакс|ubacs|куртк|плитоноск|шолом|рюкзак|турнікет|аптечка' THEN 0 ELSE 1 END,p.price_min,p.id LIMIT 12");$q->execute([$slot]);array_push($ids,...$q->fetchAll(PDO::FETCH_COLUMN));
  }
  foreach($kits as $b)foreach($b['items']??[] as $it)$ids[]=is_string($it)?$it:($it['product_id']??'');$products=[];foreach(array_chunk(array_values(array_unique($ids)),200) as $batch)array_push($products,...shopProductsByIds($db,$batch));$byId=array_column($products,null,'id');
  $resolved=[];$used=[];foreach($kits as $b){$r=shopKitResolve($b,$byId);if(!$r||array_intersect($used,array_column($r['items'],'product_id')))continue;$resolved[]=$r;array_push($used,...array_column($r['items'],'product_id'));}

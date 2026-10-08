@@ -9,7 +9,8 @@ function authPhone(string $value): string {
     return '+'.$phone;
 }
 function phoneDatabase(): PDO {
-    $db=identityDatabase(); static $ready=false;
+    $db=identityDatabase(); if(function_exists('rubizhSchemaPrepared')&&rubizhSchemaPrepared($db))return $db;
+    static $ready=false;
     if (!$ready) {
         $db->exec("CREATE TABLE IF NOT EXISTS rubizh_phone_challenges (
             id CHAR(32) PRIMARY KEY, phone VARCHAR(20) NOT NULL, code_hash CHAR(64) NOT NULL,

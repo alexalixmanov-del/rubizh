@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-function supplierMigrate(PDO $db): void {
+function supplierMigrate(PDO $db): void {if(function_exists('rubizhSchemaPrepared')&&rubizhSchemaPrepared($db))return;
  static $ready=false;if($ready)return;
  $db->exec("CREATE TABLE IF NOT EXISTS rubizh_supplier_skus(order_id BIGINT UNSIGNED NOT NULL,line_no SMALLINT UNSIGNED NOT NULL,supplier_sku VARCHAR(120) NOT NULL,updated_at DATETIME NOT NULL,PRIMARY KEY(order_id,line_no)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
  $db->exec("CREATE TABLE IF NOT EXISTS rubizh_supplier_dispatch(shipment_id BIGINT UNSIGNED PRIMARY KEY,order_id BIGINT UNSIGNED NOT NULL,supplier_code VARCHAR(32) NOT NULL,channel VARCHAR(12) NOT NULL DEFAULT '',recipient VARCHAR(240) NOT NULL DEFAULT '',payload_json MEDIUMTEXT NULL,status VARCHAR(16) NOT NULL DEFAULT 'blocked',attempts INT NOT NULL DEFAULT 0,sent_parts INT NOT NULL DEFAULT 0,next_at DATETIME NOT NULL,locked_at DATETIME NULL,sent_at DATETIME NULL,ack_at DATETIME NULL,ack_by CHAR(32) NULL,error VARCHAR(240) NOT NULL DEFAULT '',created_at DATETIME NOT NULL,updated_at DATETIME NOT NULL,INDEX(status,next_at),INDEX(order_id,shipment_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");$db->exec("INSERT IGNORE INTO meta(k,v) VALUES('supplier_dispatch_since',UTC_TIMESTAMP())");$ready=true;

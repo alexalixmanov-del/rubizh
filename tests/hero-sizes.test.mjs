@@ -10,6 +10,12 @@ before(async()=>{server=await startPreview(0);base='http://127.0.0.1:'+server.ad
 after(async()=>{await browser?.close();await new Promise(resolve=>server?.close(resolve));});
 async function pageTest(run){const context=await browser.newContext({viewport:{width:1440,height:1000}});const page=await context.newPage();page.setDefaultTimeout(10000);const errors=[];page.on('pageerror',e=>errors.push(e.message));try{await run(page);assert.deepEqual(errors,[]);}finally{await context.close();}}
 async function hero(page,layout,theme){await page.waitForFunction(({layout,theme})=>{const image=document.querySelector('.rz-hero-image');return image?.complete&&image.naturalWidth>0&&image.currentSrc.includes(`hero-${layout}-${theme}.`);},{layout,theme});}
+test('A cold kit page reserves bandwidth for equipment instead of downloading homepage hero artwork',()=>pageTest(async page=>{
+  const images=[];page.on('request',r=>{if(/\/assets\/hero-(?:mobile|desktop)-(?:light|dark)\./.test(r.url()))images.push(r.url());});
+  await page.goto(base+'/kit');await page.locator('.rz-slot-select').first().waitFor();await page.waitForTimeout(200);
+  assert.deepEqual(images,[]);
+  await page.locator('header [data-header-brand]').click();await hero(page,'desktop','dark');assert.ok(images.length>0);
+}));
 test('Homepage switches exact supplied artwork on both screen sizes, persists theme, and survives SPA navigation',()=>pageTest(async page=>{
   await page.goto(base);await hero(page,'desktop','dark');
   for(const width of [1440,768,390,320]){

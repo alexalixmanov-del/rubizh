@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-function shopNotificationMigrate(PDO $db): void {
+function shopNotificationMigrate(PDO $db): void {if(function_exists('rubizhSchemaPrepared')&&rubizhSchemaPrepared($db))return;
  static $done=false;if($done)return;
  $db->exec("CREATE TABLE IF NOT EXISTS rubizh_notifications(id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,order_id BIGINT UNSIGNED NOT NULL,event VARCHAR(32) NOT NULL,channel VARCHAR(12) NOT NULL,status VARCHAR(16) NOT NULL DEFAULT 'pending',attempts INT NOT NULL DEFAULT 0,sent_parts INT NOT NULL DEFAULT 0,next_at DATETIME NOT NULL,locked_at DATETIME NULL,error VARCHAR(240) NOT NULL DEFAULT '',updated_at DATETIME NOT NULL,UNIQUE KEY event_once(order_id,event,channel),INDEX(status,next_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");$done=true;
 }

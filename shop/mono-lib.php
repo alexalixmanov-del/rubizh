@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 function monoConfigured(): bool {return cfg('mono_activation_confirmed')===true&&trim((string)(getenv('RUBIZH_MONO_TOKEN')?:cfg('mono_token')))!=='';}
-function monoMigrate(PDO $db): void {static $ready=false;if($ready)return;
+function monoMigrate(PDO $db): void {if(function_exists('rubizhSchemaPrepared')&&rubizhSchemaPrepared($db))return;static $ready=false;if($ready)return;
  $db->exec("CREATE TABLE IF NOT EXISTS rubizh_mono_invoices(id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,order_id BIGINT UNSIGNED NOT NULL,invoice_id VARCHAR(100) NULL UNIQUE,reference VARCHAR(100) NOT NULL UNIQUE,amount BIGINT UNSIGNED NOT NULL,status VARCHAR(24) NOT NULL DEFAULT 'creating',page_url VARCHAR(500) NOT NULL DEFAULT '',modified_at VARCHAR(40) NOT NULL DEFAULT '',refund_ref VARCHAR(100) NOT NULL DEFAULT '',refund_status VARCHAR(24) NOT NULL DEFAULT '',created_at DATETIME NOT NULL,updated_at DATETIME NOT NULL,INDEX(order_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
  $db->exec("CREATE TABLE IF NOT EXISTS rubizh_mono_events(event_hash CHAR(64) PRIMARY KEY,invoice_id VARCHAR(100) NOT NULL,status VARCHAR(24) NOT NULL,created_at DATETIME NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");$ready=true;
 }
@@ -28,8 +28,20 @@ function monoVerifySignature(string $raw,string $signature,string $base64key): b
  $key=base64_decode($base64key,true);$sig=base64_decode($signature,true);if($key===false||$sig===false||strlen($sig)>256)return false;return @openssl_verify($raw,$sig,$key,OPENSSL_ALGO_SHA256)===1;
 }
 function monoPublicKey(PDO $db,bool $fresh=false): string {
- if(!$fresh){$key=$db->query("SELECT v FROM meta WHERE k='mono_public_key'")->fetchColumn();if(is_string($key)&&$key!=='')return $key;}
- $r=monoApi('pubkey');$key=(string)($r['key']??'');if(!openssl_pkey_get_public((string)base64_decode($key,true)))throw new RuntimeException('Неприпустимий відкритий ключ monobank.');$db->prepare("INSERT INTO meta(k,v) VALUES('mono_public_key',?) ON DUPLICATE KEY UPDATE v=VALUES(v)")->execute([$key]);return $key;
+ $key=$db->query("SELECT v FROM meta WHERE k='mono_public_key'")->fetchColumn();
+ if(!$fresh&&is_string($key)&&$key!=='')return $key;
+ // Invalid signatures cannot trigger unbounded outbound key refreshes.
+ $claim=$db->query("SELECT GET_LOCK('rubizh-mono-pubkey',0)")->fetchColumn();
+ if((int)$claim!==1){if(is_string($key)&&$key!=='')return $key;throw new RubizhHttpException(503,'Спробуйте пізніше.',5);}
+ try{
+  $key=$db->query("SELECT v FROM meta WHERE k='mono_public_key'")->fetchColumn();
+  $last=(int)$db->query("SELECT v FROM meta WHERE k='mono_public_key_checked'")->fetchColumn();
+  if($last>time()-60){if(is_string($key)&&$key!=='')return $key;throw new RubizhHttpException(503,'Спробуйте пізніше.',60);}
+  $db->prepare("INSERT INTO meta(k,v) VALUES('mono_public_key_checked',?) ON DUPLICATE KEY UPDATE v=VALUES(v)")->execute([(string)time()]);
+  $r=monoApi('pubkey');$key=(string)($r['key']??'');
+  if(!openssl_pkey_get_public((string)base64_decode($key,true)))throw new RuntimeException('Неприпустимий відкритий ключ monobank.');
+  $db->prepare("INSERT INTO meta(k,v) VALUES('mono_public_key',?) ON DUPLICATE KEY UPDATE v=VALUES(v)")->execute([$key]);return $key;
+ }finally{$db->query("SELECT RELEASE_LOCK('rubizh-mono-pubkey')");}
 }
 function monoValidateEvent(array $event,array $invoice): void {
  if(!is_string($event['invoiceId']??null)||$event['invoiceId']!==$invoice['invoice_id']||!is_int($event['amount']??null)||$event['amount']!==(int)$invoice['amount']||($event['ccy']??null)!==980)throw new RuntimeException('Рахунок, валюта або сума не збігаються.');
