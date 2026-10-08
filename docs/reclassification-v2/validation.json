@@ -1,0 +1,46 @@
+{
+  "test_suite": {
+    "total": 103,
+    "passed": 103,
+    "failed": 0,
+    "skipped": 0,
+    "execution": "node --test --test-concurrency=1 tests/*.test.mjs, with real MariaDB and Chromium"
+  },
+  "golden": {
+    "label_source": "Reviewed regression fixture; not a calibrated whole-catalogue accuracy estimate",
+    "products": 360,
+    "correct_before": 327,
+    "correct_after": 360,
+    "fixed": 33,
+    "regressions": 0,
+    "false_conflicts": 0
+  },
+  "snapshot_apply_rollback": {
+    "products": 2457,
+    "variants": 7336,
+    "protected_data_unchanged": true,
+    "rollback_restored_protected_data": true
+  },
+  "installer": {
+    "installer_exit": 0,
+    "previous_source": "a981cfd88c896eafcc3d6bc9351511a79b967c51",
+    "installed_source": "9788a9eddd607f1738832ce2b4f657de6f887b6c",
+    "customer_id_preserved": true,
+    "products_variants_category_relations_accounts_and_orders_preserved": true,
+    "photo_metadata_updated_only_by_repair_worker": true,
+    "classification_mass_apply": false,
+    "auth_and_settings_files_preserved": true,
+    "media_preserved": true,
+    "provider_settings_preserved": true,
+    "cron_untouched": true,
+    "banners_verified": 96,
+    "worker_heartbeat_healthy": true,
+    "private_rollback_backup": true
+  },
+  "limitations": [
+    "The full catalogue is a snapshot from 7 October, not the current live database.",
+    "Installer smoke uses isolated fixture accounts/orders and does not send real messages, payments or waybills.",
+    "Cloud test server concurrency measurements do not establish the capacity of production shared hosting.",
+    "No live mass classification apply or new kit engine activation has occurred."
+  ]
+}
