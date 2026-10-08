@@ -1,0 +1,32 @@
+{
+  "source_snapshot_date": "2026-10-07",
+  "live_apply": false,
+  "summary": {
+    "TOTAL_PRODUCTS": 2457,
+    "UNCHANGED": 2166,
+    "PROPOSED_CHANGES": 289,
+    "AUTO_CONFIRMED": 2455,
+    "REAL_CONFLICTS": 0,
+    "INSUFFICIENT_DATA": 2,
+    "MANUAL_LOCKS": 0,
+    "MANUAL_LOCK": 0,
+    "CATEGORY_ANOMALIES": 0,
+    "CHANGED_HIGH_CONFIDENCE": 289,
+    "CHANGED_REVIEW": 0,
+    "LOST_PRODUCTS": 0,
+    "LOST_VARIANTS": 0,
+    "DUPLICATES": 0
+  },
+  "protected_counts": {
+    "products": 2457,
+    "variants": 7336,
+    "photos": 15037,
+    "categories": 238,
+    "rubizh_catalog_fulfillment": 0,
+    "rubizh_catalog_supplier_articles": 0
+  },
+  "limitations": [
+    "Available snapshot has no live customer data and no actual private supplier identity rows.",
+    "This snapshot report is not the fresh hosting report required for reviewed apply."
+  ]
+}

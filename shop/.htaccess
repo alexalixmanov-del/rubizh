@@ -1,3 +1,3 @@
-<FilesMatch "^(runtime|taxonomy|taxonomy-migration|kit-catalog|catalog-lib|store-lib|pricing|units|kit-data|np-lib|np-fulfillment|np-check|np-worker|notifications|notification-worker|mono-lib|mono-worker|seller|cart-reminders-lib|order-lifecycle)\.php$|\.(json|log|sql|sh)$">
+<FilesMatch "^(runtime|taxonomy|taxonomy-migration|taxonomy-semantic-v2|reclassification-v2|kit-catalog|catalog-lib|store-lib|pricing|units|kit-data|np-lib|np-fulfillment|np-check|np-worker|notifications|notification-worker|mono-lib|mono-worker|seller|cart-reminders-lib|order-lifecycle)\.php$|\.(json|log|sql|sh)$">
   Require all denied
 </FilesMatch>

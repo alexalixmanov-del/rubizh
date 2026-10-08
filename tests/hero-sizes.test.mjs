@@ -91,3 +91,27 @@ test('Catalog API recovers native/database size labels and marks blank clothing 
   assert.equal(stored.size_display,'M');assert.equal(stored.availability,'in');
   assert.equal(missing.size_unconfirmed,true);assert.equal(missing.availability,'out');
 });
+
+test('Repeated sizes across colours are shown once, and the chosen colour/size adds its own SKU',()=>pageTest(async page=>{
+  const variants=[];for(const color of ['Койот','Мультикам'])for(const size of ['S','M','L'])variants.push({...variant(size,'FIX-'+color+'-'+size),color});
+  // An unavailable duplicate must not replace the available M offer.
+  variants.unshift({...variant('M','FIX-UNAVAILABLE-M'),color:'Койот',stock:0,availability:'out'});
+  await productPage(page,variants);
+  assert.deepEqual(await page.locator('[data-size-grid] [role="button"] > span:first-child').allTextContents(),['S','M','L']);
+  await page.getByRole('button',{name:'Мультикам',exact:true}).click();
+  assert.deepEqual(await page.locator('[data-size-grid] [role="button"] > span:first-child').allTextContents(),['S','M','L']);
+  await page.locator('[data-size-grid]').getByRole('button',{name:'M',exact:true}).click();
+  await page.getByText('FIX-Мультикам-M',{exact:true}).first().waitFor();
+  await page.getByRole('button',{name:/До кошика/}).first().click();
+  await page.getByRole('button',{name:'Продовжити',exact:true}).waitFor();
+  const saved=await page.evaluate(()=>Object.keys(localStorage).filter(k=>k.includes('cart')).map(k=>localStorage.getItem(k)).join('\n'));
+  assert.match(saved,/FIX-Мультикам-M/);assert.doesNotMatch(saved,/FIX-UNAVAILABLE-M/);
+}));
+
+test('A single size for the chosen colour remains one size despite other colours and duplicate offers',()=>pageTest(async page=>{
+  await productPage(page,[{...variant('L','FIX-COYOTE-L'),color:'Койот'},{...variant('L','FIX-MULTI-L'),color:'Мультикам'},{...variant('L','FIX-MULTI-DUP'),color:'Мультикам'}]);
+  assert.equal(await page.locator('[data-size-grid]').count(),0);
+  await page.getByRole('button',{name:'Мультикам',exact:true}).click();
+  assert.equal(await page.locator('[data-size-grid]').count(),0);
+  await page.getByText('FIX-MULTI-L',{exact:true}).first().waitFor();
+}));

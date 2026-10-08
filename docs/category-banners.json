@@ -695,7 +695,7 @@
   },
   {
     "category": "Тактичні рюкзаки",
-    "category_id": "bags_tactical",
+    "category_id": "bags_backpacks",
     "asset": "/assets/category-bags-tactical.2b76337d03e1.webp",
     "original": "34.png",
     "drive_file_id": "1lbvcclJ0q3whSB8jzuvWIcmVbALCrl6J",
@@ -849,7 +849,7 @@
   },
   {
     "category": "Медичні / IFAK",
-    "category_id": "pouches_ifak",
+    "category_id": "pouches_medical",
     "asset": "/assets/category-pouches-ifak.915ef6a060c2.webp",
     "original": "45.png",
     "drive_file_id": "1wTYv2sjqkkYrQ_DpXVKwtdhd_aLB5B86",

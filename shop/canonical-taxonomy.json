@@ -1,5 +1,5 @@
 {
-  "version": "20261007-v1",
+  "version": "20261008-v2",
   "categories": [
     {
       "category_id": "clothing",
@@ -675,7 +675,7 @@
       ]
     },
     {
-      "category_id": "bags_tactical",
+      "category_id": "bags_backpacks",
       "parent_id": "bags",
       "slug": "taktychni-riukzaky",
       "display_name_uk": "Тактичні рюкзаки",
@@ -845,7 +845,7 @@
       ]
     },
     {
-      "category_id": "pouches_ifak",
+      "category_id": "pouches_medical",
       "parent_id": "pouches",
       "slug": "medychni-ifak",
       "display_name_uk": "Медичні / IFAK",
@@ -2009,6 +2009,37 @@
       "path": "__CATEGORY_REVIEW__",
       "url_path": "",
       "aliases": []
+    },
+    {
+      "category_id": "bags_tactical",
+      "parent_id": "bags",
+      "slug": "taktychni-riukzaky",
+      "display_name_uk": "Тактичні рюкзаки",
+      "status": "deprecated",
+      "sort_order": 501,
+      "path": "Рюкзаки, сумки та баули / Тактичні рюкзаки",
+      "url_path": "riukzaky-sumky-ta-bauly/taktychni-riukzaky",
+      "aliases": [
+        "Тактичні рюкзаки",
+        "Рюкзаки, сумки та баули / Рюкзаки / Тактичні рюкзаки"
+      ],
+      "canonical_category_id": "bags_backpacks"
+    },
+    {
+      "category_id": "pouches_ifak",
+      "parent_id": "pouches",
+      "slug": "medychni-ifak",
+      "display_name_uk": "Медичні / IFAK",
+      "status": "deprecated",
+      "sort_order": 604,
+      "path": "Підсумки / Медичні / IFAK",
+      "url_path": "pidsumky/medychni-ifak",
+      "aliases": [
+        "Медичні / IFAK",
+        "Підсумки / Медичні підсумки",
+        "Підсумки / Медичні підсумки / Аптечки IFAK"
+      ],
+      "canonical_category_id": "pouches_medical"
     }
   ],
   "legacy_mapping": [
@@ -2515,7 +2546,7 @@
     {
       "old_path": "Рюкзаки, сумки та баули / Рюкзаки / Тактичні рюкзаки",
       "old_url": "riukzaky-sumky-ta-bauly/riukzaky/taktychni-riukzaky",
-      "category_id": "bags_tactical",
+      "category_id": "bags_backpacks",
       "decision": "merge",
       "derived_attributes": {},
       "product_count_observed": 20
@@ -2603,7 +2634,7 @@
     {
       "old_path": "Підсумки / Медичні підсумки",
       "old_url": "pidsumky/medychni-pidsumky",
-      "category_id": "pouches_ifak",
+      "category_id": "pouches_medical",
       "decision": "merge",
       "derived_attributes": {},
       "product_count_observed": 15
@@ -2611,7 +2642,7 @@
     {
       "old_path": "Підсумки / Медичні підсумки / Аптечки IFAK",
       "old_url": "pidsumky/medychni-pidsumky/aptechky-ifak",
-      "category_id": "pouches_ifak",
+      "category_id": "pouches_medical",
       "decision": "merge",
       "derived_attributes": {},
       "product_count_observed": 8
@@ -4067,5 +4098,10 @@
       "derived_attributes": {},
       "product_count_observed": 0
     }
-  ]
+  ],
+  "classifier_version": "semantic-v2",
+  "id_aliases": {
+    "bags_tactical": "bags_backpacks",
+    "pouches_ifak": "pouches_medical"
+  }
 }

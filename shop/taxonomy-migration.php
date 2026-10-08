@@ -45,10 +45,17 @@ function shopTaxonomyWriteAliases(PDO $db,array $mapping): void {
  $q=$db->prepare('INSERT INTO rubizh_category_aliases(legacy_id,legacy_path,legacy_url,category_id,filter_attributes) VALUES(?,?,?,?,?) ON DUPLICATE KEY UPDATE legacy_url=VALUES(legacy_url),category_id=VALUES(category_id),filter_attributes=VALUES(filter_attributes)');
  foreach($mapping as $m)$q->execute([sha1($m['old_path']),$m['old_path'],$m['old_url'],$m['category_id'],json_encode((object)$m['derived_attributes'],JSON_UNESCAPED_UNICODE)]);
 }
+function shopTaxonomyPrivateDirectory(string $dir): string {
+ $web=realpath(dirname(__DIR__));$ancestor=$dir;
+ while(!file_exists($ancestor)&&!is_link($ancestor)){$parent=dirname($ancestor);if($parent===$ancestor)throw new RuntimeException('Private directory unavailable');$ancestor=$parent;}
+ $resolved=realpath($ancestor);if(!$resolved||$resolved===$web||str_starts_with($resolved,$web.'/')||is_link($dir))throw new RuntimeException('Use a private directory outside the web root');
+ if(!is_dir($dir)&&!mkdir($dir,0700,true))throw new RuntimeException('Private directory unavailable');
+ $real=realpath($dir);if(!$real||$real===$web||str_starts_with($real,$web.'/')||!chmod($real,0700))throw new RuntimeException('Private directory permissions unavailable');
+ return $real;
+}
 function shopTaxonomyBackup(PDO $db,string $base): string {
- $web=realpath(dirname(__DIR__));$parent=realpath(is_dir($base)?$base:dirname($base));if($parent&&($parent===$web||str_starts_with($parent,$web.'/')))throw new RuntimeException('Backup must be outside the web root');
- if(is_link($base))throw new RuntimeException('Backup location cannot be a symlink');
- if(!is_dir($base)&&!mkdir($base,0700,true))throw new RuntimeException('Cannot create private backup directory');
+ $oldMask=umask(0077);try{
+ $base=shopTaxonomyPrivateDirectory($base);
  $dir=$base.'/taxonomy-'.gmdate('Ymd-His').'-'.bin2hex(random_bytes(4));if(!mkdir($dir,0700))throw new RuntimeException('Cannot create backup');
  $manifestDB=['version'=>2,'tables'=>[]];
  foreach($db->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN) as $table){
@@ -75,6 +82,7 @@ function shopTaxonomyBackup(PDO $db,string $base): string {
  }
  if(file_put_contents($dir.'/media-manifest.json',json_encode((object)$manifest,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR))===false)throw new RuntimeException('Media manifest failed');
  return $dir;
+ }finally{umask($oldMask);}
 }
 function shopTaxonomyExport(array $report,string $dir): void {
  if(!is_dir($dir)&&!mkdir($dir,0700,true))throw new RuntimeException('Report directory unavailable');

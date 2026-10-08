@@ -21,7 +21,7 @@ if ($isPim) {
   require_pim();
   $pdo = db();
 
-  if($path==='/pim/categories')out(['ok'=>true,'version'=>shopTaxonomySpec()['version'],'categories'=>shopTaxonomySpec()['categories']]);
+  if($path==='/pim/categories'&&$method==='GET')out(['ok'=>true,'version'=>shopTaxonomySpec()['version'],'classifier_version'=>shopTaxonomySpec()['classifier_version'],'id_aliases'=>shopTaxonomySpec()['id_aliases'],'categories'=>shopTaxonomySpec()['categories']]);
   if ($path === '/pim/cache-clear') out(['ok' => true, 'removed' => shopCacheClear()]);
   if ($path === '/pim/sync' && $method === 'POST') {
     @set_time_limit(120);

@@ -7,6 +7,12 @@ $lock=fopen(shopCacheDir().'/worker.lock','c');
 if(!$lock||!flock($lock,LOCK_EX|LOCK_NB))exit;
 try {
     $db=db();$started=microtime(true);$built=0;$failed=0;
+    // The existing cache-only cron also advances public photo thumbnails. One
+    // shared nonblocking DB lock prevents overlap with PIM/photo automation.
+    $photos=['processed'=>0,'errors'=>0];
+    if(function_exists('curl_init')&&function_exists('imagewebp')){
+        try{$photos=process_photos($db,8,12.0);}catch(Throwable $e){error_log('rubizh photo cache batch failed');$photos=['processed'=>0,'errors'=>1];}
+    }
     // Prewarm shared entry points after imports, without any visitor waiting.
     foreach([['operation'=>'categories'],['operation'=>'storefront'],['operation'=>'catalog','input'=>[]],['operation'=>'catalog','input'=>['page'=>'1','sort'=>'pop','availability'=>'available']]] as $job)shopCacheQueue('warm-'.$job['operation'].'-'.md5(json_encode($job)),$job);
     foreach(array_unique(array_column(shopKitSlotPatterns(),0)) as $slot)shopCacheQueue('warm-kit-'.$slot,['operation'=>'kit-slot','slot'=>$slot]);
@@ -26,7 +32,7 @@ try {
             unlink($file);$built++;
         }catch(Throwable $e){$failed++;error_log('rubizh cache worker: refresh failed');}
     }
-    echo json_encode(['built'=>$built,'failed'=>$failed],JSON_THROW_ON_ERROR)."\n";
+    echo json_encode(['built'=>$built,'failed'=>$failed,'photos'=>$photos],JSON_THROW_ON_ERROR)."\n";
     rubizhCacheHeartbeat($failed === 0);
     if($failed)exit(1);
 }catch(Throwable $e){rubizhCacheHeartbeat(false);error_log('rubizh cache worker failed');exit(1);

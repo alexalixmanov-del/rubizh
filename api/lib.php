@@ -340,10 +340,15 @@ function repair_photo_files(PDO $pdo, int $limit=250, bool $all=false): array {
   return ['checked'=>$checked,'missing_requeued'=>$missing];
 }
 function process_photos(PDO $pdo, int $limit = 40, float $budget = 20.0): array {
+  if((int)$pdo->query("SELECT GET_LOCK('rubizh_photo_worker',0)")->fetchColumn()!==1)return ['processed'=>0,'errors'=>0,'skipped'=>'worker_busy'];
+  try{return process_photos_locked($pdo,max(1,min(150,$limit)),max(.1,min(50.0,$budget)));}
+  finally{$pdo->query("SELECT RELEASE_LOCK('rubizh_photo_worker')");}
+}
+function process_photos_locked(PDO $pdo, int $limit, float $budget): array {
   $t0 = microtime(true); $done = 0; $err = 0;
-  $dir = rtrim((string)cfg('media_dir'), '/') . '/p';
-  if (!is_dir($dir) && !@mkdir($dir, 0755, true)) fail(500, 'Нет прав на создание папки media/p');
-  $rows = $pdo->query("SELECT id, product_id, pos, src_url, src_hash FROM photos WHERE status='pending' OR (status='error' AND tries<3 AND updated_at < (UTC_TIMESTAMP() - INTERVAL 1 HOUR)) ORDER BY pos, id LIMIT " . (int)$limit)->fetchAll();
+  require_once __DIR__.'/photo-storage.php';$dir=photo_storage_directory();
+  repair_photo_files($pdo);
+  $rows = $pdo->query("SELECT ph.id, ph.product_id, ph.pos, ph.src_url, ph.src_hash FROM photos ph JOIN products p ON p.id=ph.product_id WHERE ph.status='pending' OR (ph.status='error' AND ph.tries<3 AND ph.updated_at < (UTC_TIMESTAMP() - INTERVAL 1 HOUR)) ORDER BY p.visible DESC, ph.pos, ph.id LIMIT " . (int)$limit)->fetchAll();
   $upd = $pdo->prepare("UPDATE photos SET status=?, file=?, thumb=?, width=?, height=?, error=?, tries=tries+1, updated_at=? WHERE id=?");
   $same = $pdo->prepare("SELECT file, thumb, width, height FROM photos WHERE src_hash=? AND status='ok' LIMIT 1");
   foreach ($rows as $r) {
@@ -351,7 +356,7 @@ function process_photos(PDO $pdo, int $limit = 40, float $budget = 20.0): array 
     $same->execute([$r['src_hash']]);
     if (($s = $same->fetch()) && media_file_exists((string)$s['file']) && media_file_exists((string)$s['thumb'])) { $upd->execute(['ok', $s['file'], $s['thumb'], $s['width'], $s['height'], '', now(), $r['id']]); $done++; continue; }
     try {
-      [$file, $thumb, $w, $h] = fetch_to_webp($r['src_url'], $r['src_hash'], $dir);
+      [$file, $thumb, $w, $h] = fetch_to_webp($r['src_url'], $r['src_hash'], $dir,max(.1,$budget-(microtime(true)-$t0)));
       $upd->execute(['ok', $file, $thumb, $w, $h, '', now(), $r['id']]); $done++;
     } catch (Throwable $e) {
       $upd->execute(['error', '', '', 0, 0, mb_substr($e->getMessage(), 0, 250), now(), $r['id']]); $err++;
@@ -362,31 +367,9 @@ function process_photos(PDO $pdo, int $limit = 40, float $budget = 20.0): array 
   if($done>0)$pdo->prepare("INSERT INTO meta(k,v) VALUES('photos_last_progress',?) ON DUPLICATE KEY UPDATE v=VALUES(v)")->execute([now()]);
   return ['processed' => $done, 'errors' => $err, 'pending' => $pending, 'failed' => $failed];
 }
-function fetch_to_webp(string $url, string $hash, string $dir): array {
-  require_once __DIR__.'/http-download.php';
-  $bin = rubizhDownloadImage($url);
-  $dimensions=@getimagesizefromstring($bin);
-  if(!$dimensions||$dimensions[0]<1||$dimensions[1]<1||$dimensions[0]>12000||$dimensions[1]>12000||$dimensions[0]*$dimensions[1]>16000000)throw new RuntimeException('Неприпустимий розмір фото');
-  $img = @imagecreatefromstring($bin);
-  if (!$img) throw new RuntimeException('это не картинка');
-  $w = imagesx($img); $h = imagesy($img);
-  $sub = substr($hash, 0, 2); if (!is_dir("$dir/$sub")) @mkdir("$dir/$sub", 0755, true);
-  $save = function (int $max, string $suffix) use ($img, $w, $h, $dir, $sub, $hash) {
-    $k = min(1, $max / max($w, $h)); $nw = max(1, (int)round($w * $k)); $nh = max(1, (int)round($h * $k));
-    $dst = imagecreatetruecolor($nw, $nh);
-    imagealphablending($dst, false); imagesavealpha($dst, true);
-    imagefill($dst, 0, 0, imagecolorallocatealpha($dst, 255, 255, 255, 127));
-    imagecopyresampled($dst, $img, 0, 0, 0, 0, $nw, $nh, $w, $h);
-    $rel = "p/$sub/$hash$suffix.webp";
-    $target=rtrim(dirname($dir), '/') . '/' . $rel;$temp=$target.'.'.bin2hex(random_bytes(4)).'.tmp';
-    if (!imagewebp($dst, $temp, (int)cfg('webp_quality')) || !rename($temp,$target)) { @unlink($temp); throw new RuntimeException('не удалось сохранить WebP'); }
-    imagedestroy($dst);
-    return [$rel, $nw, $nh];
-  };
-  [$file, $fw, $fh] = $save((int)cfg('photo_max'), '');
-  [$thumb] = $save((int)cfg('thumb_max'), '-t');
-  imagedestroy($img);
-  return [$file, $thumb, $fw, $fh];
+function fetch_to_webp(string $url, string $hash, string $dir,float $timeout=20.0): array {
+  require_once __DIR__.'/http-download.php';require_once __DIR__.'/photo-storage.php';
+  return save_photo_webp(rubizhDownloadImage($url,$timeout),$hash,$dir);
 }
 
 /* ---------- отдача каталога сайту ---------- */

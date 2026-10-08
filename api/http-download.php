@@ -33,12 +33,13 @@ function rubizhRedirectUrl(string $base,string $location): string {
     $parts=[];foreach(explode('/',$path) as $part){if($part==='..')array_pop($parts);elseif($part!=='.'&&$part!=='')$parts[]=$part;}
     return $origin.'/'.implode('/',$parts).(isset($relative['query'])?'?'.$relative['query']:'');
 }
-function rubizhDownloadImage(string $url): string {
-    $deadline=microtime(true)+20;$limit=15*1024*1024;
+function rubizhDownloadImage(string $url,float $timeout=20.0): string {
+    $deadline=microtime(true)+max(.1,min(20.0,$timeout));$limit=15*1024*1024;
     for($hop=0;$hop<=4;$hop++){
         $target=rubizhDownloadTarget($url);$body='';$location='';$h=curl_init($url);
         $resolve=$target['host'].':'.$target['port'].':'.implode(',',array_map(fn($ip)=>str_contains($ip,':')?'['.$ip.']':$ip,$target['ips']));
-        curl_setopt_array($h,[CURLOPT_FOLLOWLOCATION=>false,CURLOPT_CONNECTTIMEOUT=>5,CURLOPT_TIMEOUT=>max(1,(int)ceil($deadline-microtime(true))),CURLOPT_SSL_VERIFYPEER=>true,CURLOPT_SSL_VERIFYHOST=>2,CURLOPT_PROTOCOLS=>CURLPROTO_HTTP|CURLPROTO_HTTPS,CURLOPT_RESOLVE=>[$resolve],CURLOPT_PROXY=>'',CURLOPT_USERAGENT=>'RubizhShop/1.4 (+https://rubizh.shop)',CURLOPT_REFERER=>parse_url($url,PHP_URL_SCHEME).'://'.$target['host'].'/',
+        $remaining=max(1,(int)ceil(1000*($deadline-microtime(true))));
+        curl_setopt_array($h,[CURLOPT_FOLLOWLOCATION=>false,CURLOPT_CONNECTTIMEOUT_MS=>min(5000,$remaining),CURLOPT_TIMEOUT_MS=>$remaining,CURLOPT_SSL_VERIFYPEER=>true,CURLOPT_SSL_VERIFYHOST=>2,CURLOPT_PROTOCOLS=>CURLPROTO_HTTP|CURLPROTO_HTTPS,CURLOPT_RESOLVE=>[$resolve],CURLOPT_PROXY=>'',CURLOPT_USERAGENT=>'RubizhShop/1.4 (+https://rubizh.shop)',CURLOPT_REFERER=>parse_url($url,PHP_URL_SCHEME).'://'.$target['host'].'/',
             CURLOPT_WRITEFUNCTION=>function($h,string $chunk)use(&$body,$limit){if(strlen($body)+strlen($chunk)>$limit)return 0;$body.=$chunk;return strlen($chunk);},
             CURLOPT_HEADERFUNCTION=>function($h,string $line)use(&$location){if(strncasecmp($line,'Location:',9)===0)$location=trim(substr($line,9));return strlen($line);}]);
         try{$ok=curl_exec($h);$code=(int)curl_getinfo($h,CURLINFO_RESPONSE_CODE);}finally{curl_close($h);}

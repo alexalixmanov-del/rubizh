@@ -5,6 +5,7 @@ function shopTaxonomySpec(): array {
  static $spec;return $spec??=json_decode(file_get_contents(__DIR__.'/canonical-taxonomy.json'),true,512,JSON_THROW_ON_ERROR);
 }
 function shopTaxonomyDefinitions(): array {return array_column(shopTaxonomySpec()['categories'],null,'category_id');}
+function shopCanonicalCategoryId(string $id): string {return shopTaxonomySpec()['id_aliases'][$id]??$id;}
 function shopTaxonomyNormalize(string $s): string {return mb_strtolower(trim(preg_replace('/\s+/u',' ',str_replace(['’','ʼ'],"'",$s))));}
 function shopTaxonomyLegacy(string $path): ?array {
  static $map; $map??=array_column(shopTaxonomySpec()['legacy_mapping'],null,'old_path');
@@ -12,7 +13,9 @@ function shopTaxonomyLegacy(string $path): ?array {
 }
 function shopTaxonomyActive(PDO $db,bool $reset=false): bool {
  global $rubizhTaxonomyActive;$key=spl_object_id($db);if($reset)unset($rubizhTaxonomyActive[$key]);
- return $rubizhTaxonomyActive[$key]??=($db->query("SELECT v FROM meta WHERE k='canonical_taxonomy'")->fetchColumn()==='20261007-v1');
+ if(isset($rubizhTaxonomyActive[$key]))return $rubizhTaxonomyActive[$key];
+ $version=$db->query("SELECT v FROM meta WHERE k='canonical_taxonomy'")->fetchColumn();
+ return $rubizhTaxonomyActive[$key]=$version==='20261007-v1'||($version!==false&&$version===shopTaxonomySpec()['version']);
 }
 function shopTaxonomyContext(PDO $db,bool $reset=false): array {
  global $rubizhTaxonomyContext;$key=spl_object_id($db);
@@ -79,7 +82,7 @@ function shopTaxonomyWriteRelation(PDO $db,string $id,array $r): void {
 }
 function shopTaxonomySyncValidate(PDO $db,array $p): ?string {
  if(!shopTaxonomyActive($db)||!array_key_exists('canonical_category_id',$p))return null;
- $id=$p['canonical_category_id'];$defs=shopTaxonomyDefinitions();
+  $id=is_string($p['canonical_category_id'])?shopCanonicalCategoryId($p['canonical_category_id']):$p['canonical_category_id'];$defs=shopTaxonomyDefinitions();
  if(!is_string($id)||!isset($defs[$id])||$defs[$id]['status']!=='active'||$defs[$id]['parent_id']===null){
   $db->prepare('INSERT INTO rubizh_category_sync_errors(product_id,category_id,reason,created_at) VALUES(?,?,?,UTC_TIMESTAMP())')->execute([(string)($p['id']??''),is_scalar($id)?mb_substr((string)$id,0,191):'invalid','unknown_or_nonleaf_category_id']);
   return 'Невідомий canonical_category_id; товар і його поточну категорію збережено.';
@@ -87,31 +90,44 @@ function shopTaxonomySyncValidate(PDO $db,array $p): ?string {
 }
 function shopTaxonomySyncProduct(PDO $db,array $p): void {
  if(!shopTaxonomyActive($db))return;
+ // An administrator's lock also survives imports during the v1 -> v2 review.
+ $q=$db->prepare("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='rubizh_category_decisions'");$q->execute();
+ if((int)$q->fetchColumn()===1){$q=$db->prepare('SELECT manual_category_lock FROM rubizh_category_decisions WHERE product_id=?');$q->execute([(string)$p['id']]);if((int)$q->fetchColumn()===1)return;}
+ if($db->query("SELECT v FROM meta WHERE k='classifier_version'")->fetchColumn()==='semantic-v2'){
+  require_once __DIR__.'/reclassification-v2.php';
+  $q=$db->prepare('SELECT * FROM rubizh_product_categories WHERE product_id=?');$q->execute([(string)$p['id']]);$old=$q->fetch()?:null;
+  $q=$db->prepare('SELECT * FROM rubizh_category_decisions WHERE product_id=?');$q->execute([(string)$p['id']]);$decision=$q->fetch()?:null;
+  $r=shopV2Evaluate($p,$old,$decision);
+  if($r['status']==='MANUAL_LOCK')return;
+  if(in_array($r['status'],['REAL_CONFLICT','INSUFFICIENT_DATA'],true)&&$old)$r['category_id']=shopCanonicalCategoryId($old['category_id']);
+  shopTaxonomyWriteRelation($db,(string)$p['id'],$r);shopV2DecisionWrite($db,(string)$p['id'],$r,$r['authority']);shopV2AuditEvent($db,(string)$p['id'],$old['category_id']??null,$r['category_id'],$r['status'],$r['reason'],$r['evidence'],'import-'.bin2hex(random_bytes(5)));shopTaxonomyContext($db,true);return;
+ }
  $r=shopTaxonomyResolve($p);
- if(isset($p['canonical_category_id'])){$r['category_id']=$p['canonical_category_id'];$r['reason']='pim_canonical_id';}
+ if(isset($p['canonical_category_id'])){$r['category_id']=shopCanonicalCategoryId($p['canonical_category_id']);$r['reason']='pim_canonical_id';}
  shopTaxonomyWriteRelation($db,(string)$p['id'],$r);shopTaxonomyContext($db,true);
 }
 function shopTaxonomyProduct(PDO $db,array $row): array {
  $context=shopTaxonomyContext($db);$r=$context['relations'][$row['id']]??null;
  if(!$context['active']||!$r)return [];
- $c=shopTaxonomyDefinitions()[$r['category_id']]??null;if(!$c)return [];
+ $c=shopTaxonomyDefinitions()[shopCanonicalCategoryId($r['category_id'])]??null;if(!$c)return [];
  return ['canonical_category_id'=>$c['category_id'],'category'=>$c['status']==='active'?$c['path']:$row['category_path'],'category_url'=>$c['status']==='active'?$c['url_path']:'','derived_attributes'=>json_decode($r['derived_attributes'],true)?:[]];
 }
 function shopTaxonomyTarget(PDO $db,string $url): ?array {
  if(!shopTaxonomyContext($db)['active'])return null;
- foreach(shopTaxonomyDefinitions() as $c)if($c['status']==='active'&&($c['url_path']===$url||$c['category_id']===$url))return $c+['filters'=>[]];
+ $id=shopCanonicalCategoryId($url);foreach(shopTaxonomyDefinitions() as $c)if($c['status']==='active'&&($c['url_path']===$url||$c['category_id']===$id))return $c+['filters'=>[]];
  $q=$db->prepare('SELECT category_id,filter_attributes FROM rubizh_category_aliases WHERE legacy_url=? ORDER BY legacy_id LIMIT 1');$q->execute([$url]);$r=$q->fetch(PDO::FETCH_ASSOC);
- if(!$r)return null;if($r['category_id']==='__CATEGORY_REVIEW__')return ['category_id'=>'__CATEGORY_REVIEW__','status'=>'internal','url_path'=>'','filters'=>[]];$c=shopTaxonomyDefinitions()[$r['category_id']]??null;
+ if(!$r)return null;if($r['category_id']==='__CATEGORY_REVIEW__')return ['category_id'=>'__CATEGORY_REVIEW__','status'=>'internal','url_path'=>'','filters'=>[]];$c=shopTaxonomyDefinitions()[shopCanonicalCategoryId($r['category_id'])]??null;
  return $c&&$c['status']==='active'?$c+['filters'=>json_decode($r['filter_attributes'],true)?:[]]:null;
 }
 function shopTaxonomyPredicate(PDO $db,array $category): string {
  $ids=[$category['category_id']];foreach(shopTaxonomyDefinitions() as $c)if($c['parent_id']===$category['category_id'])$ids[]=$c['category_id'];
+ foreach(shopTaxonomySpec()['id_aliases']??[] as $old=>$target)if(in_array($target,$ids,true))$ids[]=$old;
  return 'EXISTS(SELECT 1 FROM rubizh_product_categories pc WHERE pc.product_id=p.id AND pc.category_id IN ('.implode(',',array_map(fn($id)=>$db->quote($id),$ids)).'))';
 }
 function shopTaxonomyCategories(PDO $db): array {
  $defs=shopTaxonomyDefinitions();$counts=[];
  // Count published goods, including preorder/out of stock. Publication is not changed by migration.
- foreach($db->query('SELECT pc.category_id,COUNT(*) n FROM rubizh_product_categories pc JOIN products p ON p.id=pc.product_id WHERE p.visible=1 GROUP BY pc.category_id') as $r){$id=$r['category_id'];$counts[$id]=($counts[$id]??0)+(int)$r['n'];$parent=$defs[$id]['parent_id']??null;if($parent)$counts[$parent]=($counts[$parent]??0)+(int)$r['n'];}
+ foreach($db->query('SELECT pc.category_id,COUNT(*) n FROM rubizh_product_categories pc JOIN products p ON p.id=pc.product_id WHERE p.visible=1 GROUP BY pc.category_id') as $r){$id=shopCanonicalCategoryId($r['category_id']);$counts[$id]=($counts[$id]??0)+(int)$r['n'];$parent=$defs[$id]['parent_id']??null;if($parent)$counts[$parent]=($counts[$parent]??0)+(int)$r['n'];}
  $out=[];foreach($defs as $id=>$c)if($c['status']==='active'&&($counts[$id]??0)>0)$out[]=['id'=>$id,'category_id'=>$id,'parent_id'=>$c['parent_id'],'slug'=>$c['slug'],'name'=>$c['display_name_uk'],'path'=>$c['path'],'url_path'=>$c['url_path'],'status'=>$c['status'],'sort_order'=>$c['sort_order'],'product_count'=>$counts[$id]];
  return $out;
 }

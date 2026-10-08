@@ -19,11 +19,11 @@ find "$RUBIZH_RELEASE/rubizh" -type f -printf '%P\n' > "$RUBIZH_LIST"
 # New dependencies first, then reusable libraries, entry points and the HTML
 # shell. Each individual file is replaced atomically on the same filesystem.
 RUBIZH_ORDERED="$RUBIZH_BACKUP/install-order.txt"
-for RUBIZH_EARLY in shop/runtime.php api/database.php api/http-download.php api/perf.php; do
+for RUBIZH_EARLY in shop/runtime.php api/database.php api/http-download.php api/photo-storage.php api/perf.php; do
  if [[ -f "$RUBIZH_RELEASE/rubizh/$RUBIZH_EARLY" ]]; then printf '%s\n' "$RUBIZH_EARLY" >> "$RUBIZH_ORDERED"; fi
 done
 while IFS= read -r RUBIZH_RELATIVE; do
- case "$RUBIZH_RELATIVE" in shop/runtime.php|api/database.php|api/http-download.php|api/perf.php|index.html|storefront.php|shop/order.php|shop/mono-webhook.php|auth/bootstrap.php|api/index.php) continue ;; esac
+ case "$RUBIZH_RELATIVE" in shop/runtime.php|api/database.php|api/http-download.php|api/photo-storage.php|api/perf.php|index.html|storefront.php|shop/order.php|shop/mono-webhook.php|auth/bootstrap.php|api/index.php) continue ;; esac
  printf '%s\n' "$RUBIZH_RELATIVE" >> "$RUBIZH_ORDERED"
 done < "$RUBIZH_LIST"
 for RUBIZH_LATE in auth/bootstrap.php api/index.php shop/order.php shop/mono-webhook.php storefront.php index.html; do

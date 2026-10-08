@@ -8,8 +8,8 @@
 <script defer src="/assets/image-slot.df1039e4aec7.js"></script>
 <script defer src="/assets/react.5e73fabcd0d0.js"></script>
 <script defer src="/assets/react-dom.c5c970a9cf36.js"></script>
-<script defer src="/assets/category-directory.2026100801.js"></script>
-<script defer src="/assets/shop-client.2026100701.js?v=2026100705"></script>
+<script defer src="/assets/category-directory.2026100802.js"></script>
+<script defer src="/assets/shop-client.2026100802.js?v=2026100802"></script>
 <script defer src="/assets/store-runtime.4b6bbf46ca4c.js"></script>
 
 <link rel="icon" href="/favicon.ico?v=2" sizes="any">
@@ -588,7 +588,7 @@
                   <div aria-hidden="true" style="font-size:12px;letter-spacing:.02em">Фото готується</div>
                 </div>
                 <sc-if value="{{ p.hasPhoto }}" hint-placeholder-val="{{ false }}">
-                  <img sc-camel-src="{{ p.photo }}" alt="{{ p.name }}" sc-camel-on-error="{{ p.photoErr }}" loading="lazy" decoding="async" width="480" height="600" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block">
+                  <img sc-camel-src="{{ p.photo }}" alt="{{ p.name }}" sc-camel-on-error="{{ p.photoErr }}" loading="{{ p.photoLoading }}" fetchpriority="{{ p.photoPriority }}" decoding="async" width="480" height="600" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block">
                 </sc-if>
                 <sc-if value="{{ p.noPhoto }}" hint-placeholder-val="{{ true }}">
                   <div style="position:absolute;top:8%;left:8%;right:8%;bottom:8%"><image-slot data-tile-photo="1" id="{{ p.slot }}" shape="rect" fit="contain" placeholder=" "></image-slot></div>
@@ -627,7 +627,7 @@
                   <div aria-hidden="true" style="font-size:12px;letter-spacing:.02em">Фото готується</div>
                 </div>
                 <sc-if value="{{ p.hasPhoto }}" hint-placeholder-val="{{ false }}">
-                  <img sc-camel-src="{{ p.photo }}" alt="{{ p.name }}" sc-camel-on-error="{{ p.photoErr }}" loading="lazy" decoding="async" width="480" height="600" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block">
+                  <img sc-camel-src="{{ p.photo }}" alt="{{ p.name }}" sc-camel-on-error="{{ p.photoErr }}" loading="{{ p.photoLoading }}" fetchpriority="{{ p.photoPriority }}" decoding="async" width="480" height="600" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block">
                 </sc-if>
                 <sc-if value="{{ p.noPhoto }}" hint-placeholder-val="{{ true }}">
                   <div style="position:absolute;top:8%;left:8%;right:8%;bottom:8%"><image-slot data-tile-photo="1" id="{{ p.slot }}" shape="rect" fit="contain" placeholder=" "></image-slot></div>
@@ -1193,7 +1193,7 @@
                   <div aria-hidden="true" style="font-size:12px;letter-spacing:.02em">Фото готується</div>
                 </div>
                 <sc-if value="{{ p.hasPhoto }}" hint-placeholder-val="{{ false }}">
-                  <img sc-camel-src="{{ p.photo }}" alt="{{ p.name }}" sc-camel-on-error="{{ p.photoErr }}" loading="lazy" decoding="async" width="480" height="600" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block">
+                  <img sc-camel-src="{{ p.photo }}" alt="{{ p.name }}" sc-camel-on-error="{{ p.photoErr }}" loading="{{ p.photoLoading }}" fetchpriority="{{ p.photoPriority }}" decoding="async" width="480" height="600" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block">
                 </sc-if>
                 <sc-if value="{{ p.noPhoto }}" hint-placeholder-val="{{ true }}">
                   <div style="position:absolute;top:8%;left:8%;right:8%;bottom:8%"><image-slot data-tile-photo="1" id="{{ p.slot }}" shape="rect" fit="contain" placeholder=" "></image-slot></div>
@@ -1238,7 +1238,7 @@
                   <div aria-hidden="true" style="font-size:12px;letter-spacing:.02em">Фото готується</div>
                 </div>
                 <sc-if value="{{ p.hasPhoto }}" hint-placeholder-val="{{ false }}">
-                  <img sc-camel-src="{{ p.photo }}" alt="{{ p.name }}" sc-camel-on-error="{{ p.photoErr }}" loading="lazy" decoding="async" width="480" height="600" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block">
+                  <img sc-camel-src="{{ p.photo }}" alt="{{ p.name }}" sc-camel-on-error="{{ p.photoErr }}" loading="{{ p.photoLoading }}" fetchpriority="{{ p.photoPriority }}" decoding="async" width="480" height="600" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block">
                 </sc-if>
                 <sc-if value="{{ p.noPhoto }}" hint-placeholder-val="{{ true }}">
                   <div style="position:absolute;top:8%;left:8%;right:8%;bottom:8%"><image-slot data-tile-photo="1" id="{{ p.slot }}" shape="rect" fit="contain" placeholder=" "></image-slot></div>
