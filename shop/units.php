@@ -42,7 +42,14 @@ function shopVariantCanBuy(array $v): bool {
  return (float)($v['price']??0)>0&&!shopVariantSizeUnconfirmed($v)&&(($v['availability']??'')==='in'&&($stock===null||is_numeric($stock)&&(float)$stock>0)||($v['availability']??'')==='order'&&(!empty($extra['order_on_request'])||trim((string)($v['lead_time']??''))!==''||preg_match('/^\d{4}-\d{2}-\d{2}$/D',(string)($extra['availability_date']??''))&&$extra['availability_date']>=gmdate('Y-m-d')));
 }
 function shopBuyableSql(string $a,?string $sizeRequiredSql=null): string {
- if(!preg_match('/^[a-z]+$/D',$a))throw new InvalidArgumentException('alias');$j="CASE WHEN JSON_VALID($a.data) THEN $a.data ELSE '{}' END";
+ if(!preg_match('/^[a-z]+$/D',$a))throw new InvalidArgumentException('alias');
+ $v3="($a.pim_active=1 AND $a.pim_order_submission_allowed=1 AND $a.price>0)";
+ if(!empty($GLOBALS['rubizh_pim_v3_columns'])&&$sizeRequiredSql==='0=1')return $v3;
+ if(!empty($GLOBALS['rubizh_pim_v3_columns']))return "($v3 OR ($a.pim_active IS NULL AND ".shopBuyableLegacySql($a,$sizeRequiredSql)."))";
+ return shopBuyableLegacySql($a,$sizeRequiredSql);
+}
+function shopBuyableLegacySql(string $a,?string $sizeRequiredSql=null): string {
+ $j="CASE WHEN JSON_VALID($a.data) THEN $a.data ELSE '{}' END";
  $sizes=["JSON_UNQUOTE(JSON_EXTRACT($j,'$.size_display'))","JSON_UNQUOTE(JSON_EXTRACT($j,'$.size_native'))","$a.size"];
  $missing=implode(' AND ',array_map(fn($size)=>"LOWER(TRIM(TRIM(LEADING ':' FROM TRIM(COALESCE($size,''))))) IN ('','один розмір','os','універсальний')",$sizes));
  $required=$sizeRequiredSql??("(".shopKitSlotSql()." IN ('body','legs','boots') AND LOWER(p.name) NOT REGEXP 'пончо|бахіл|костюм.*маскув')");

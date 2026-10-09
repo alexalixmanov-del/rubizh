@@ -12,6 +12,7 @@ require_once __DIR__.'/../shop/pricing-policy.php';
 require_once __DIR__.'/../shop/units.php';
 require_once __DIR__.'/../shop/normalization.php';
 require_once __DIR__.'/../shop/taxonomy.php';
+require_once __DIR__.'/../shop/pim-v3-read.php';
 
 function cfg(string $k = null) {
   static $c = null;
@@ -42,6 +43,7 @@ function db(): PDO {
     catch(PDOException $e){error_log('rubizh public SQL deadline unavailable');}
   }
   migrate($pdo);
+  try{$GLOBALS['rubizh_pim_v3_columns']=(string)$pdo->query("SELECT v FROM meta WHERE k='pim_v3_schema'")->fetchColumn()==='2';}catch(PDOException $e){$GLOBALS['rubizh_pim_v3_columns']=false;}
   return $pdo;
 }
 

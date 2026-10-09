@@ -11,7 +11,7 @@ function shopKitCatalogBaseBuild(PDO $db,string $slot): array {
     $primary=shopKitPrimarySql($slot);
     if($slot==='body')$primary.=" OR LOWER(p.name) REGEXP 'футбол|поло|кофт|жилет|софтшел'";
     if($slot==='gear')$primary.=" OR LOWER(p.name) REGEXP 'сумк|баул|гідратор'";
-    $rows=$db->query("SELECT p.id,p.name,p.category_path FROM products p WHERE p.visible=1 AND (".$primary.") AND EXISTS(SELECT 1 FROM photos ph WHERE ph.product_id=p.id) AND EXISTS(SELECT 1 FROM variants v WHERE v.product_id=p.id AND v.price>0 AND v.availability IN ('in','order')) ORDER BY FIELD(p.availability,'in','order','out'),p.updated_at DESC,p.id")->fetchAll(PDO::FETCH_ASSOC);
+    $rows=$db->query("SELECT p.id,p.name,p.category_path FROM products p WHERE p.visible=1 AND (".$primary.") AND ".shopUsablePhotoSql('p')." AND EXISTS(SELECT 1 FROM variants v WHERE v.product_id=p.id AND v.price>0 AND v.availability IN ('in','order')) ORDER BY FIELD(p.availability,'in','order','out'),p.updated_at DESC,p.id")->fetchAll(PDO::FETCH_ASSOC);
     $ids=[];foreach($rows as $row)if(shopSlot($row)===$slot&&!preg_match('/патрон|боєприпас|глушник|реб|репліка|страйкбол/iu',$row['name']))$ids[]=$row['id'];
     $items=[];foreach(array_chunk($ids,200) as $batch)foreach(shopProductsByIds($db,$batch) as $p){
         if(!$p['photos']||$p['sale_unit']==='m2')continue;

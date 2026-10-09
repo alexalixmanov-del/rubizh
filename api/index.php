@@ -141,7 +141,7 @@ if ($path === '/categories') {
 
 if ($path === '/catalog'&&shopTaxonomyActive($pdo)){require_once __DIR__.'/../shop/catalog-lib.php';$input=$_GET;if(isset($input['brand']))$input['brands']=$input['brand'];$input['sort']=['price_asc'=>'cheap','price_desc'=>'exp'][$input['sort']??'']??($input['sort']??'');$catalog=shopCatalog($pdo,$input);foreach($catalog['items'] as &$card){$card['photo']=$card['photos'][0]??null;$card['variants_count']=count($card['variants']);$card['price_max']=$card['variants']?max(array_column($card['variants'],'price')):null;}unset($card);out($catalog);}
 if ($path === '/catalog') {
-  $where = ['p.visible=1']; $args = [];if($pdo->query("SELECT v FROM meta WHERE k='hide_unavailable'")->fetchColumn()!=='0')$where[]="EXISTS(SELECT 1 FROM variants av WHERE av.product_id=p.id AND av.availability IN ('in','order') AND av.price>0 AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(av.data,'$.size_unconfirmed')),'false') NOT IN ('true','1'))";
+  $where = ['p.visible=1',shopUsablePhotoSql('p')]; $args = [];if($pdo->query("SELECT v FROM meta WHERE k='hide_unavailable'")->fetchColumn()!=='0')$where[]="EXISTS(SELECT 1 FROM variants av WHERE av.product_id=p.id AND av.availability IN ('in','order') AND av.price>0 AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(av.data,'$.size_unconfirmed')),'false') NOT IN ('true','1'))";
   if (($c = trim((string)($_GET['category'] ?? ''))) !== '') {   // url категории: odiah-ta-forma/cholovichyi-odiah
     $st = $pdo->prepare("SELECT path FROM categories WHERE url_path=?"); $st->execute([trim($c, '/')]); $cp = $st->fetchColumn();
     if (!$cp) out(['ok' => true, 'total' => 0, 'items' => []]);
@@ -165,8 +165,9 @@ if ($path === '/catalog') {
 }
 
 if (preg_match('~^/product/([a-z0-9-]{1,191})$~', $path, $m)) {
-  $st = $pdo->prepare("SELECT * FROM products WHERE slug=? AND visible=1"); $st->execute([$m[1]]); $r = $st->fetch();
+  $st = $pdo->prepare("SELECT * FROM products p WHERE slug=? AND visible=1 AND ".shopUsablePhotoSql('p')); $st->execute([$m[1]]); $r = $st->fetch();
   if (!$r) fail(404, 'Товар не найден');
+  if(pimV3IsModel($r)){require_once __DIR__.'/../shop/catalog-lib.php';out(['ok'=>true,'product'=>pimV3ProductDto($pdo,$r)]);}
   $taxonomy=shopTaxonomyProduct($pdo,$r);
   $d = json_decode((string)$r['data'], true) ?: [];
   $ph = product_photos($pdo, [$r['id']]);

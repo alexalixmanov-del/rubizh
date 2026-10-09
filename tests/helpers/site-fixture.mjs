@@ -20,6 +20,8 @@ export async function startSite({enableV3=true,extraConfig=''}={}){
  writeFileSync(path.join(site,'auth/config.php'),"<?php return ['sms_enabled'=>false,'google_enabled'=>false,'noreply_password'=>'','auth_secret'=>'pim-v3-fixture-secret-at-least-forty-characters'];");
  const admin=`$db=new PDO('mysql:unix_socket='.getenv('RUBIZH_TEST_MYSQL_SOCKET'),'root','',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);`;
  php(`${admin}$db->exec('CREATE DATABASE ${schema} CHARACTER SET utf8mb4');require '${site}/dev/prepare-runtime.php';`);
+ // Production already runs the canonical taxonomy (meta canonical_taxonomy); reproduce that state.
+ php(`require '${site}/api/lib.php';$db=db();shopTaxonomySchema($db);shopTaxonomySeed($db);$db->prepare("INSERT INTO meta(k,v) VALUES('canonical_taxonomy',?) ON DUPLICATE KEY UPDATE v=VALUES(v)")->execute([shopTaxonomySpec()['version']]);`);
  // Same operator CLI as staging/production, in its isolated mode.
  const mig=spawnSync(runtime+'/bin/php8.4',[...phpArgs,path.join(site,'dev/migrate-pim-v3.php'),'--isolated','--database='+schema,'--socket='+process.env.RUBIZH_TEST_MYSQL_SOCKET,'--apply'],{env:phpEnv,encoding:'utf8'});
  assert.equal(mig.status,0,mig.stdout+mig.stderr);
