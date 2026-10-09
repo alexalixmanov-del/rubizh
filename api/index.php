@@ -25,7 +25,16 @@ if ($isPim) {
   if ($path === '/pim/cache-clear') out(['ok' => true, 'removed' => shopCacheClear()]);
   if ($path === '/pim/sync' && $method === 'POST') {
     @set_time_limit(120);
-    $b = body();
+    require_once __DIR__.'/../shop/pim-v3-sync.php';
+    if((int)($_SERVER['CONTENT_LENGTH']??0)>16*1024*1024)fail(413,'Запрос слишком большой');
+    $raw=(string)file_get_contents('php://input',false,null,0,16*1024*1024+1);if(strlen($raw)>16*1024*1024)fail(413,'Запрос слишком большой');
+    $peek=json_decode($raw,true,64);
+    if(is_array($peek)&&array_key_exists('contract_version',$peek)){
+      try{out(pimV3HandleSync($pdo,$raw));}
+      catch(PimV3Rejected $e){out(['ok'=>false,'error'=>'PIM contract 3: '.$e->reason,'error_code'=>$e->reason,'results'=>$e->results],$e->getCode()?:422);}
+    }
+    if(pimV3Enabled($pdo))fail(409,'CONTRACT_V3_REQUIRED: legacy PIM sync is disabled after contract 3 activation.');
+    $b = is_array($peek) ? $peek : body();
     if((int)$pdo->query("SELECT GET_LOCK('rubizh-category-migration',10)")->fetchColumn()!==1)fail(503,'Каталог оновлюється; повторіть синхронізацію пізніше.');
     register_shutdown_function(fn()=> $pdo->query("SELECT RELEASE_LOCK('rubizh-category-migration')"));
     $pdo->beginTransaction();
@@ -42,13 +51,7 @@ if ($isPim) {
       if($r['status']==='error')throw new ShopPricingException($r['error_code']??'SYNC_FAILED',$r['error']??'Не вдалося зберегти пакет.');
     }
     $hidden = hide_products($pdo, is_array($b['hide_ids'] ?? null) ? $b['hide_ids'] : []);
-    // Полная синхронизация: всё, чего нет в списке PIM, скрываем (не удаляем — ссылки и заказы не ломаются)
-    if ($mode === 'full' && !empty($b['finalize']) && is_array($b['all_ids'] ?? null)) {
-      $keep = array_flip(array_map('strval', $b['all_ids']));
-      if (count($keep) === 0) throw new RuntimeException( 'Пустой список товаров при полной синхронизации — отменено, чтобы не скрыть весь каталог');
-      $vis = $pdo->query("SELECT id FROM products WHERE visible=1")->fetchAll(PDO::FETCH_COLUMN);
-      $hidden += hide_products($pdo, array_values(array_filter($vis, fn($id) => !isset($keep[$id]))));
-    }
+    // Absence from a full PIM list is not a hide command: only explicit hide_ids hide (contract rule G07).
     $pdo->exec('DELETE a FROM rubizh_catalog_supplier_articles a LEFT JOIN variants v ON v.sku=a.sku AND v.product_id=a.product_id LEFT JOIN products p ON p.id=a.product_id WHERE v.sku IS NULL OR p.id IS NULL OR p.visible=0');
     $pdo->exec('DELETE f FROM rubizh_catalog_fulfillment f LEFT JOIN variants v ON v.sku=f.sku AND v.product_id=f.product_id LEFT JOIN products p ON p.id=f.product_id WHERE v.sku IS NULL OR p.id IS NULL OR p.visible=0');
     if(isset($b['kits'])){if(!is_array($b['kits']))throw new RuntimeException('Невірний склад комплектів');require_once __DIR__.'/kits.php';sync_kits($pdo,$b['kits']);}
@@ -75,7 +78,8 @@ if ($isPim) {
 
   if ($path === '/pim/status') {
     $q = fn($sql) => $pdo->query($sql)->fetchColumn();
-    out(['ok' => true, 'api_version' => API_VERSION, 'capabilities'=>['pricing_policy_version'=>1],
+    require_once __DIR__.'/../shop/pim-v3-sync.php';
+    out(['ok' => true, 'api_version' => API_VERSION, 'capabilities'=>pimV3Capabilities($pdo),
       'products' => ['visible' => (int)$q("SELECT COUNT(*) FROM products WHERE visible=1"), 'hidden' => (int)$q("SELECT COUNT(*) FROM products WHERE visible=0")],
       'variants' => (int)$q("SELECT COUNT(*) FROM variants v JOIN products p ON p.id=v.product_id WHERE p.visible=1"),
       'categories' => (int)$q("SELECT COUNT(*) FROM categories WHERE product_count>0"),

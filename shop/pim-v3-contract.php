@@ -83,9 +83,20 @@ function pimV3ValidateJson(string $json): array {
     try{$batch=json_decode($json,false,64,JSON_THROW_ON_ERROR);}catch(JsonException){return ['valid'=>false,'errors'=>[['path'=>'$','code'=>'INVALID_JSON']]];}
     $errors=[];$add=static function(string $path,string $code)use(&$errors):void{if(count($errors)<100)$errors[]=['path'=>$path,'code'=>$code];};
     if(!$batch instanceof stdClass||($batch->contract_version??null)!==3||($batch->pricing_policy_version??null)!==1||!is_array($batch->models??null)||!array_is_list($batch->models)||count($batch->models)>1000)return ['valid'=>false,'errors'=>[['path'=>'$','code'=>'BATCH_CONTRACT']]];
+    $result=pimV3ValidateModels($batch->models,'$.models');
+    return ['valid'=>$result['errors']===[],'errors'=>$result['errors'],'model_count'=>count($batch->models),'sku_count'=>$result['sku_count']];
+}
+
+/** Model-level contract shared by the offline wrapper and the exact products[] wire envelope.
+ * $allowHttp only widens the URL scheme for supplier image sources that the photo worker
+ * downloads through its SSRF guard; public DTOs never expose non-local http URLs.
+ */
+function pimV3ValidateModels(array $list,string $root,bool $allowHttp=false): array {
+    $errors=[];$add=static function(string $path,string $code)use(&$errors):void{if(count($errors)<100)$errors[]=['path'=>$path,'code'=>$code];};
+    $photoOk=static fn($url)=>pimV3PhotoUrl($url)||$allowHttp&&is_string($url)&&str_starts_with($url,'http://')&&pimV3PhotoUrl('https://'.substr($url,7));
     $schema=pimV3PinnedSchema();$models=[];$skus=[];
-    foreach($batch->models as $i=>$model){
-        $p='$.models['.$i.']';
+    foreach($list as $i=>$model){
+        $p=$root.'['.$i.']';
         if($model instanceof stdClass){
             $bounded=true;
             foreach(['variants'=>5000,'colors'=>256,'size_options'=>1024,'size_catalogs'=>256] as $list=>$limit)if(is_array($model->$list??null)&&count($model->$list)>$limit)$bounded=false;
@@ -108,7 +119,7 @@ function pimV3ValidateJson(string $json): array {
             if(isset($colorKeys[strtolower($color->id)]))$add($cp,'DUPLICATE_COLOR');
             $colorKeys[strtolower($color->id)]=true;
             $colors[$color->id]=array_fill_keys(array_filter($color->photos,'is_string'),true);
-            foreach($color->photos as $url)if(!pimV3PhotoUrl($url))$add($cp.'.photos','UNSAFE_PHOTO_URL');
+            foreach($color->photos as $url)if(!$photoOk($url))$add($cp.'.photos','UNSAFE_PHOTO_URL');
             foreach(['color','camouflage'] as $f)if(isset($color->$f)&&(!is_string($color->$f)||strlen($color->$f)>480))$add($cp.'.'.$f,'COLOR_LABEL');
             if(isset($color->variant_skus)&&(!is_array($color->variant_skus)||array_filter($color->variant_skus,fn($sku)=>!pimV3Identifier($sku))))$add($cp.'.variant_skus','COLOR_SKU_LIST');
         }
@@ -132,7 +143,7 @@ function pimV3ValidateJson(string $json): array {
             if($v->color_id!==null&&!isset($colors[$v->color_id]))$add($vp.'.color_id','ORPHAN_COLOR');
             if($v->payment_allowed&&($v->binding_confirmation_required||$v->size_confirmation_required))$add($vp,'CONFIRMATION_PERMISSION_CONFLICT');
             foreach($v->photos as $url){
-                if(!pimV3PhotoUrl($url))$add($vp.'.photos','UNSAFE_PHOTO_URL');
+                if(!$photoOk($url))$add($vp.'.photos','UNSAFE_PHOTO_URL');
                 if($v->color_id!==null&&!isset($colors[$v->color_id][$url]))$add($vp.'.photos','PHOTO_COLOR_OWNERSHIP');
             }
             foreach(['variant_id'] as $f)if(isset($v->$f)&&!pimV3Identifier($v->$f))$add($vp.'.'.$f,'VARIANT_IDENTITY');
@@ -161,7 +172,7 @@ function pimV3ValidateJson(string $json): array {
             if($actual!==$expected)$add($p.'.colors','COLOR_SKU_OWNERSHIP');
         }
     }
-    return ['valid'=>$errors===[],'errors'=>$errors,'model_count'=>count($batch->models),'sku_count'=>count($skus)];
+    return ['errors'=>$errors,'sku_count'=>count($skus),'sku_owners'=>$skus];
 }
 
 /** Explicit legacy mapping validator; produces no guessed targets, redirects or catalog writes. */

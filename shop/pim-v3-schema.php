@@ -68,6 +68,13 @@ function pimV3SchemaPlan(): array {
     $table('rubizh_order_request_selections',"order_id BIGINT UNSIGNED NOT NULL, line_no INT UNSIGNED NOT NULL, product_id VARCHAR(64) NOT NULL, option_id VARCHAR(64) NOT NULL, original_selection_json JSON NOT NULL, resolved_sku VARCHAR(64) NULL, resolution_revision VARCHAR(64) NULL, created_at DATETIME NOT NULL, PRIMARY KEY(order_id,line_no), FOREIGN KEY(order_id) REFERENCES rubizh_customer_orders(id), FOREIGN KEY(product_id,option_id) REFERENCES rubizh_size_options(product_id,option_id), FOREIGN KEY(product_id,resolved_sku) REFERENCES variants(product_id,sku)");
     $steps[]=['id'=>'variants.pim_color_owner','kind'=>'constraint','table'=>'variants','name'=>'pim_color_owner',
         'sql'=>'ALTER TABLE variants ADD CONSTRAINT pim_color_owner FOREIGN KEY(product_id,pim_color_id) REFERENCES rubizh_product_colors(product_id,color_id)'];
+    // Ingestion additions, appended so earlier journal entries stay valid.
+    $table('rubizh_pim_categories',"category_id VARCHAR(64) NOT NULL PRIMARY KEY, parent_id VARCHAR(64) NULL, name VARCHAR(255) NOT NULL, slug VARCHAR(191) NOT NULL, path VARCHAR(600) NOT NULL, url_path VARCHAR(700) NOT NULL, sort_order INT NOT NULL DEFAULT 0, revision VARCHAR(64) NOT NULL, updated_at DATETIME NOT NULL, UNIQUE KEY pim_category_url(url_path(191))");
+    $table('rubizh_pim_category_mappings',"legacy_category_id VARCHAR(64) NOT NULL PRIMARY KEY, pim_category_id VARCHAR(64) NULL, status VARCHAR(16) NOT NULL CHECK(status IN ('PROPOSED','CONFIRMED','REJECTED')), evidence VARCHAR(255) NOT NULL, decided_by VARCHAR(64) NULL, decided_at DATETIME NULL, CHECK(status<>'CONFIRMED' OR pim_category_id IS NOT NULL)");
+    $index('variants','pim_submit','product_id,pim_active,pim_order_submission_allowed');
+    $index('products','pim_contract_visible','pim_contract_version,visible');
+    $index('photos','pim_usable','product_id,status');
+    $column('rubizh_customer_orders','pim_payment_state',"VARCHAR(24) NULL DEFAULT NULL CHECK(pim_payment_state IN ('UNPAID','PAYMENT_PENDING','PAID','PARTIALLY_REFUNDED','REFUNDED'))");
     return $steps;
 }
 
@@ -97,9 +104,11 @@ function pimV3SchemaObjectHash(PDO $db,array $step): string {
 }
 
 // Only the explicit isolated CLI/test runner calls this. No auto-migration entry point.
-function pimV3ApplyFoundation(PDO $db): array {
+function pimV3ApplyFoundation(PDO $db,?string $approvedDatabase=null): array {
     $name=(string)$db->query('SELECT DATABASE()')->fetchColumn();
-    if(!preg_match('/^fixture_pim_v3_[a-f0-9]{8,32}$/D',$name))throw new RuntimeException('Isolated fixture schema required');
+    // A named staging/production database is accepted only when the operator CLI passed the same name
+    // after a verified backup; otherwise only isolated fixture schemas are allowed.
+    if(!preg_match('/^fixture_pim_v3_[a-f0-9]{8,32}$/D',$name)&&($approvedDatabase===null||$approvedDatabase!==$name))throw new RuntimeException('Isolated fixture schema required');
     $version=(string)$db->query('SELECT VERSION()')->fetchColumn();
     if(str_contains($version,'MariaDB')?version_compare($version,'10.6','<'):version_compare($version,'8.0.16','<'))throw new RuntimeException('Enforced CHECK constraints required');
     foreach(['products','variants','photos','rubizh_customer_orders'] as $t)if(!pimV3SchemaStepExists($db,['kind'=>'table','table'=>$t]))throw new RuntimeException('Prepared legacy schema required');
@@ -130,6 +139,7 @@ function pimV3ApplyFoundation(PDO $db): array {
             if($exists)throw new RuntimeException('Unjournaled foundation object requires explicit review: '.$s['id']);
             $db->exec($s['sql']);$write->execute([$s['id'],$hash,pimV3SchemaObjectHash($db,$s)]);$applied[]=$s['id'];
         }
-        return ['applied'=>$applied,'schema_version'=>'pim-v3-foundation-1','sync_enabled'=>false];
+        $db->exec("INSERT INTO meta(k,v) VALUES('pim_v3_schema','2') ON DUPLICATE KEY UPDATE v=VALUES(v)");
+        return ['applied'=>$applied,'schema_version'=>'pim-v3-foundation-2','sync_enabled'=>false];
     }finally{$q=$db->prepare('SELECT RELEASE_LOCK(?)');$q->execute([$name.':pim-v3-foundation']);}
 }

@@ -1,0 +1,83 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://rubizh.shop/schemas/pim-site-wire-v3.json",
+  "title": "PIM → SITE wire envelope, contract 3",
+  "description": "Top-level envelope produced by pimSiteWire() and sent to POST /pim/sync in chunks. Each products[] item must also satisfy category-size-export.schema.json. Fields marked private are server-to-server only and must never reach a browser DTO.",
+  "type": "object",
+  "required": ["contract_version", "version", "pricing_policy_version", "category_catalog_version", "size_catalog_version", "inventory_policy_version", "order_policy_version", "model_colors_version", "pim_version", "currency", "generated_at", "catalog_revision", "category_catalog_hash", "categories", "products", "hide_ids"],
+  "properties": {
+    "contract_version": {"const": 3},
+    "version": {"const": 3},
+    "pricing_policy_version": {"const": 1},
+    "category_catalog_version": {"const": 2},
+    "size_catalog_version": {"const": 1},
+    "inventory_policy_version": {"const": 1},
+    "order_policy_version": {"const": 1},
+    "model_colors_version": {"const": 1},
+    "pim_version": {"type": "string", "minLength": 1},
+    "currency": {"const": "UAH"},
+    "generated_at": {"type": "string", "minLength": 20},
+    "catalog_revision": {"type": "string", "minLength": 8},
+    "category_catalog_hash": {"type": "string", "minLength": 8},
+    "categories": {"type": "array", "items": {"type": "object", "required": ["id"], "properties": {"id": {"type": "string", "minLength": 1}}}},
+    "hide_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "products": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "model_id", "slug", "name", "marketing_name_uk", "description", "photos", "canonical_category_id", "publication_state", "pricing_policy_version", "site_price", "colors", "variants", "size_catalogs", "size_options"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "model_id": {"type": "string", "minLength": 1},
+          "slug": {"type": "string", "minLength": 1},
+          "name": {"type": "string", "minLength": 1},
+          "marketing_name_uk": {"type": "string", "minLength": 1},
+          "description": {"type": "string", "minLength": 1},
+          "photos": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+          "canonical_category_id": {"type": "string", "minLength": 1},
+          "publication_state": {"enum": ["ACTIVE", "HIDDEN", "ARCHIVED"]},
+          "pricing_policy_version": {"const": 1},
+          "site_price": {"type": ["number", "null"]},
+          "colors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "photos", "variant_skus"],
+              "additionalProperties": false,
+              "properties": {
+                "id": {"type": "string", "minLength": 1},
+                "color": {"type": ["string", "null"]},
+                "camouflage": {"type": ["string", "null"]},
+                "photos": {"type": "array", "items": {"type": "string"}},
+                "variant_skus": {"type": "array", "items": {"type": "string"}},
+                "photo_assignment": {"enum": ["source_associated", "unknown"]}
+              }
+            }
+          },
+          "variants": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["sku", "color_id", "price", "site_price", "pricing_policy_version", "minimum_sale_price", "kit_price", "wholesale", "availability", "order_submission_allowed", "payment_allowed", "requires_order_confirmation"],
+              "properties": {
+                "sku": {"type": "string", "minLength": 1},
+                "price": {"type": ["number", "null"]},
+                "site_price": {"type": ["number", "null"]},
+                "pricing_policy_version": {"const": 1},
+                "minimum_sale_price": {"description": "private: server pricing floor", "type": ["number", "null"]},
+                "kit_price": {"type": ["number", "null"]},
+                "wholesale": {"type": "array", "items": {"type": "object", "required": ["price"], "properties": {"price": {"type": "number"}}}},
+                "fulfillment_supplier_id": {"description": "private: shipment routing", "type": "string"},
+                "fulfillment_supplier_sku": {"description": "private: shipment routing", "type": "string"},
+                "checkout_allowed": false
+              }
+            }
+          },
+          "supplier_bindings": false,
+          "checkout_allowed": false
+        }
+      }
+    }
+  }
+}
