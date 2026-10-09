@@ -93,3 +93,29 @@ test('invalid model rejects the whole batch with no catalog writes',{skip,timeou
   const legacy=await site.post('/api/pim/sync',{mode:'full',finalize:true,all_ids:['x'],products:[]},site.auth);assert.equal(legacy.status,409);
  }finally{site.stop();}
 });
+
+test('owner legacy hide: plan → apply (exact plan + verified off-webroot backup) → restore; v3 models untouched',{skip,timeout:180000},async()=>{
+ const {spawnSync}=await import('node:child_process'),{writeFileSync}=await import('node:fs'),path=(await import('node:path')).default,crypto=await import('node:crypto');
+ const {runtime,phpArgs,phpEnv}=await import('./helpers/site-fixture.mjs');
+ const site=await startSite();
+ try{
+  site.sql("INSERT INTO products(id,slug,name,visible,created_at,updated_at,synced_at) VALUES('old-a','old-a','Стара картка A',1,UTC_TIMESTAMP(),UTC_TIMESTAMP(),UTC_TIMESTAMP()),('old-b','old-b','Стара картка B',1,UTC_TIMESTAMP(),UTC_TIMESTAMP(),UTC_TIMESTAMP())");
+  const cli=(...args)=>spawnSync(runtime+'/bin/php8.4',[...phpArgs,path.join(site.site,'dev/pim-v3-legacy-hide.php'),...args],{env:phpEnv,encoding:'utf8',cwd:site.site});
+  assert.match(cli('--plan').stderr,/publish contract 3 first/);
+  assert.equal((await publish(site,wire,{size:2})).data.status,'COMMITTED');
+  const planFile=path.join(site.dir,'legacy-plan.json'),backup=path.join(site.dir,'db.sql.gz');writeFileSync(backup,crypto.randomBytes(4096));
+  const backupSha=crypto.createHash('sha256').update((await import('node:fs')).readFileSync(backup)).digest('hex');
+  const plan=JSON.parse(cli('--plan','--out='+planFile).stdout);assert.equal(plan.legacy_visible,2);
+  assert.match(cli('--plan','--out='+path.join(site.site,'x.json')).stderr,/outside the web root/);
+  assert.match(cli('--apply','--plan-file='+planFile,'--plan-sha256='+'0'.repeat(64),'--backup-file='+backup,'--backup-sha256='+backupSha).stderr,/do not match/);
+  assert.match(cli('--apply','--plan-file='+planFile,'--plan-sha256='+plan.plan_sha256).stderr,/backup required/);
+  const v3Before=site.sql('SELECT COUNT(*) n FROM products WHERE visible=1 AND pim_contract_version=3')[0].n;
+  assert.equal(JSON.parse(cli('--apply','--plan-file='+planFile,'--plan-sha256='+plan.plan_sha256,'--backup-file='+backup,'--backup-sha256='+backupSha).stdout).hidden,2);
+  assert.equal(site.sql('SELECT COUNT(*) n FROM products WHERE visible=1 AND pim_contract_version IS NULL')[0].n,0);
+  assert.equal(site.sql('SELECT COUNT(*) n FROM products WHERE visible=1 AND pim_contract_version=3')[0].n,v3Before);
+  assert.equal(site.sql("SELECT COUNT(*) n FROM rubizh_pim_history WHERE operation='OWNER_LEGACY_HIDE'")[0].n,2);
+  assert.match(cli('--apply','--plan-file='+planFile,'--plan-sha256='+plan.plan_sha256,'--backup-file='+backup,'--backup-sha256='+backupSha).stderr,/STALE_PLAN/);
+  assert.equal(JSON.parse(cli('--restore='+planFile,'--plan-sha256='+plan.plan_sha256).stdout).restored,2);
+  assert.equal(site.sql('SELECT COUNT(*) n FROM products WHERE visible=1 AND pim_contract_version IS NULL')[0].n,2);
+ }finally{site.stop();}
+});

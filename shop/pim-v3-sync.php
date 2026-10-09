@@ -126,12 +126,18 @@ function pimV3ValidateBatch(PDO $db,array $products,array $objects,array $catego
     return [$errors,$results];
 }
 
+// Multi-row INSERT with the same rows in the same order as one statement per row (identical AUTO_INCREMENT order).
+function pimV3InsertRows(PDO $db,string $head,int $width,array $rows,string $tail=''): void {
+    foreach(array_chunk($rows,300) as $part){
+        $db->prepare($head.' VALUES '.implode(',',array_fill(0,count($part),'('.implode(',',array_fill(0,$width,'?')).')')).$tail)->execute(array_merge(...$part));
+    }
+}
 function pimV3PhotoSync(PDO $db,string $id,array $urls): array {
     // Same positional photo storage and worker queue as legacy sync; only changed positions are re-queued.
     $cur=$db->prepare('SELECT id,pos,src_hash FROM photos WHERE product_id=?');$cur->execute([$id]);
     $have=[];foreach($cur->fetchAll(PDO::FETCH_ASSOC) as $r)$have[(int)$r['pos']]=$r;
-    $ins=$db->prepare("INSERT INTO photos(product_id,pos,src_url,src_hash,status,updated_at) VALUES(?,?,?,?,'pending',UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE src_url=VALUES(src_url),src_hash=VALUES(src_hash),file='',thumb='',status='pending',error='',tries=0,updated_at=VALUES(updated_at)");
-    foreach(array_values($urls) as $pos=>$u){$h=sha1($u);if(($have[$pos]['src_hash']??null)!==$h)$ins->execute([$id,$pos,$u,$h]);}
+    $rows=[];foreach(array_values($urls) as $pos=>$u){$h=sha1($u);if(($have[$pos]['src_hash']??null)!==$h)$rows[]=[$id,$pos,$u,$h];}
+    foreach(array_chunk($rows,300) as $part)$db->prepare('INSERT INTO photos(product_id,pos,src_url,src_hash,status,updated_at) VALUES '.implode(',',array_fill(0,count($part),"(?,?,?,?,'pending',UTC_TIMESTAMP())")).' ON DUPLICATE KEY UPDATE src_url=VALUES(src_url),src_hash=VALUES(src_hash),file=\'\',thumb=\'\',status=\'pending\',error=\'\',tries=0,updated_at=VALUES(updated_at)')->execute(array_merge(...$part));
     // Photos beyond the new list are detached from model/color relations first, then removed.
     $db->prepare('DELETE FROM rubizh_color_photos WHERE product_id=?')->execute([$id]);
     $db->prepare('DELETE FROM rubizh_model_photos WHERE product_id=?')->execute([$id]);
@@ -175,30 +181,32 @@ function pimV3WriteModel(PDO $db,array $m,string $batch,string $revision): strin
     $urls=[];foreach($m['photos'] as $u)$urls[$u]=true;foreach($m['colors'] as $c)foreach($c['photos'] as $u)$urls[$u]=true;
     $ids=pimV3PhotoSync($db,$id,array_keys($urls));$posOf=array_flip(array_keys($urls));
     $owned=[];foreach($m['colors'] as $c)foreach($c['photos'] as $u)$owned[$u][]=$c['id'];
-    $mp=$db->prepare('INSERT INTO rubizh_model_photos(product_id,photo_id,sort,assignment_state,revision) VALUES(?,?,?,?,?)');
-    $cp=$db->prepare("INSERT INTO rubizh_color_photos(product_id,color_id,photo_id,sort,revision,assignment_state) VALUES(?,?,?,?,?,'CONFIRMED')");
-    foreach($urls as $u=>$_){$photo=$ids[$posOf[$u]]??null;if($photo===null)continue;$mp->execute([$id,$photo,$posOf[$u],isset($owned[$u])?'CONFIRMED':'UNKNOWN',$revision]);foreach($owned[$u]??[] as $cid)$cp->execute([$id,$cid,$photo,$posOf[$u],$revision]);}
+    $mpRows=[];$cpRows=[];
+    foreach($urls as $u=>$_){$photo=$ids[$posOf[$u]]??null;if($photo===null)continue;$mpRows[]=[$id,$photo,$posOf[$u],isset($owned[$u])?'CONFIRMED':'UNKNOWN',$revision];foreach($owned[$u]??[] as $cid)$cpRows[]=[$id,$cid,$photo,$posOf[$u],$revision,'CONFIRMED'];}
+    pimV3InsertRows($db,'INSERT INTO rubizh_model_photos(product_id,photo_id,sort,assignment_state,revision)',5,$mpRows);
+    pimV3InsertRows($db,'INSERT INTO rubizh_color_photos(product_id,color_id,photo_id,sort,revision,assignment_state)',6,$cpRows);
     // Real SKU: never deleted (orders, mappings and history may reference them); absent ones become inactive.
     $db->prepare("UPDATE variants SET pim_active=0,availability='out',pim_order_submission_allowed=0,pim_payment_allowed=0 WHERE product_id=?")->execute([$id]);
     $cols=['sku','product_id','size','color','barcode','price','kit_price','availability','lead_time','sort','data','pim_variant_id','pim_color_id','pim_size_system','pim_size_raw','pim_size_normalized','pim_size_display','pim_size_status','pim_size_confidence_tier','pim_source_binding_status','pim_effective_availability','pim_stock_status','pim_stock_quantity','pim_availability_status','pim_availability_source','pim_availability_confirmation','pim_inventory_mode','pim_inventory_policy_id','pim_inventory_policy_version','pim_stock_observed_at','pim_source_updated_at','pim_stock_data_age_hours','pim_stock_warning_hours','pim_expires_at','pim_delivery_lead_time_days','pim_revision','pim_order_submission_allowed','pim_payment_allowed','pim_requires_order_confirmation','pim_inventory_policy_confirmed','pim_stale_source','pim_ready_to_dispatch','pim_price_ready','pim_binding_confirmation_required','pim_size_confirmation_required','pim_active'];
-    $vs=$db->prepare('INSERT INTO variants('.implode(',',$cols).') VALUES('.implode(',',array_fill(0,count($cols),'?')).') ON DUPLICATE KEY UPDATE '.implode(',',array_map(fn($c)=>"$c=VALUES($c)",array_slice($cols,1))));
+    $vRows=[];$vTail=' ON DUPLICATE KEY UPDATE '.implode(',',array_map(fn($c)=>"$c=VALUES($c)",array_slice($cols,1)));
     $str=static fn($v,int $n=120)=>is_string($v)&&$v!==''?mb_substr($v,0,$n):null;$flag=static fn($v)=>$v===null?null:($v?1:0);
     $time=static fn($v)=>is_int($v)&&$v>0?$v:(is_string($v)&&($t=strtotime($v))!==false?$t*1000:null);
     $fulfillment=[];$articles=[];
     foreach(array_values($variants) as $i=>$v){
         $policy=$policies[$v['sku']];$display=$v['size_display']??$v['size_normalized']??$v['size']??'';
-        $vs->execute([$v['sku'],$id,mb_substr((string)($display??''),0,120),mb_substr(trim(implode(' / ',array_filter([$v['color']??null,$v['camouflage']??null]))),0,120),mb_substr((string)($v['barcode']??''),0,64),
+        $vRows[]=[$v['sku'],$id,mb_substr((string)($display??''),0,120),mb_substr(trim(implode(' / ',array_filter([$v['color']??null,$v['camouflage']??null]))),0,120),mb_substr((string)($v['barcode']??''),0,64),
             $policy?shopMoneyValue($policy['price_cents']):null,$policy&&$policy['kit_cents']!==null?shopMoneyValue($policy['kit_cents']):null,pimV3LegacyAvailability($v),
             isset($v['delivery_lead_time_days'])&&is_int($v['delivery_lead_time_days'])?mb_substr($v['delivery_lead_time_days'].' дн.',0,60):'',$i,json_encode(pimV3PublicVariantData($v),JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),
             $str($v['variant_id']??null,64),$v['color_id'],$str($v['size_system']??null,32),$str($v['size_raw']??null),$str(isset($v['size_normalized'])?(string)$v['size_normalized']:null),$str($v['size_display']??null),$v['size_status'],$v['size_confidence_tier'],$v['source_binding_status'],
             $v['availability'],$v['stock_status'],$v['stock_quantity'],$v['availability_status'],$v['availability_source'],$v['availability_confirmation'],$v['inventory_mode'],$str($v['inventory_policy_id']??null,64),$v['inventory_policy_version'],
             $time($v['stock_observed_at']),$time($v['source_updated_at']),is_numeric($v['stock_data_age_hours'])?round((float)$v['stock_data_age_hours'],2):null,is_numeric($v['stock_warning_hours']??null)?$v['stock_warning_hours']:null,$time($v['expires_at']??null),
             is_int($v['delivery_lead_time_days'])?$v['delivery_lead_time_days']:null,$revision,$flag($v['order_submission_allowed']),$flag($v['payment_allowed']),$flag($v['requires_order_confirmation']),$flag($v['inventory_policy_confirmed']),$flag($v['stale_source']),
-            $flag($v['ready_to_dispatch']),$flag($v['price_ready']),$flag($v['binding_confirmation_required']),$flag($v['size_confirmation_required']),1]);
+            $flag($v['ready_to_dispatch']),$flag($v['price_ready']),$flag($v['binding_confirmation_required']),$flag($v['size_confirmation_required']),1];
         // Private routing only: supplier name for the NP origin map, supplier article for the supplier order.
         if(is_string($v['fulfillment_supplier']??null)&&$v['fulfillment_supplier']!=='')$fulfillment[$v['sku']]=mb_substr($v['fulfillment_supplier'],0,191);
         if(is_string($v['fulfillment_supplier_sku']??null)&&$v['fulfillment_supplier_sku']!=='')$articles[$v['sku']]=['supplier_name'=>$fulfillment[$v['sku']]??'','supplier_sku'=>mb_substr($v['fulfillment_supplier_sku'],0,120)];
     }
+    pimV3InsertRows($db,'INSERT INTO variants('.implode(',',$cols).')',count($cols),$vRows,$vTail);
     sync_product_fulfillment($db,$id,$fulfillment);sync_product_supplier_articles($db,$id,$articles);
     shopPricingStore($db,$id,array_filter($policies));
     // Size catalogs/options are assortment, not inventory; options never carry SKU/stock.
@@ -209,7 +217,9 @@ function pimV3WriteModel(PDO $db,array $m,string $batch,string $revision): strin
     foreach($m['size_options'] as $o)$so->execute([$id,$o['option_id'],$o['catalog_id']??null,$o['scope'],$o['color_id']??null,mb_substr((string)$o['size'],0,120),$str($o['size_system']??null,32),$revision]);
     // Category: PIM canonical ID, except a SITE administrator lock that already exists.
     $locked=false;
-    if((int)$db->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='rubizh_category_decisions'")->fetchColumn()===1){$q=$db->prepare('SELECT manual_category_lock FROM rubizh_category_decisions WHERE product_id=?');$q->execute([$id]);$locked=(int)$q->fetchColumn()===1;}
+    static $decisionTable=[];$dbKey=spl_object_id($db);
+    $decisionTable[$dbKey]??=(int)$db->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='rubizh_category_decisions'")->fetchColumn()===1;
+    if($decisionTable[$dbKey]){$q=$db->prepare('SELECT manual_category_lock FROM rubizh_category_decisions WHERE product_id=?');$q->execute([$id]);$locked=(int)$q->fetchColumn()===1;}
     if(!$locked)$db->prepare("INSERT INTO rubizh_product_categories(product_id,category_id,legacy_path,derived_attributes,filter_attributes,reason,revision) VALUES(?,?,?,'{}',?,'PIM_V3',?) ON DUPLICATE KEY UPDATE category_id=VALUES(category_id),legacy_path=VALUES(legacy_path),derived_attributes='{}',filter_attributes=VALUES(filter_attributes),reason='PIM_V3',revision=VALUES(revision)")
         ->execute([$id,$m['canonical_category_id'],$path,json_encode((object)$public['attributes'],JSON_UNESCAPED_UNICODE),$revision]);
     $db->prepare("INSERT INTO rubizh_pim_history(batch_id,entity_type,entity_id,operation,before_json,after_json,proof_reference,created_at) VALUES(?,'model',?,?,?,?,?,UTC_TIMESTAMP())")
@@ -244,7 +254,9 @@ function pimV3HandleSync(PDO $db,string $raw): array {
     if($saved!==false&&$saved!==$hash)throw new PimV3Rejected('BATCH_HASH_CONFLICT',[],409);
     if($saved===false)$db->prepare('INSERT INTO rubizh_pim_batch_chunks(batch_id,chunk_no,content_hash,private_payload,created_at) VALUES(?,?,?,?,UTC_TIMESTAMP())')->execute([$batch,$index,$hash,$raw]);
     if($index<$count-1)return ['ok'=>true,'batch_id'=>$batch,'chunk_index'=>$index,'status'=>'STAGED'];
-    // Final chunk: assemble, validate everything, then one atomic catalog write.
+    // Final chunk: assemble, validate everything, then one atomic catalog write. A proxy timeout must not cut the
+    // transaction short: PHP keeps running and the PIM re-send of the same batch gets the stored ACK.
+    ignore_user_abort(true);if(function_exists('set_time_limit'))@set_time_limit(300);
     $q=$db->prepare('SELECT chunk_no,private_payload FROM rubizh_pim_batch_chunks WHERE batch_id=? ORDER BY chunk_no');$q->execute([$batch]);$chunks=$q->fetchAll(PDO::FETCH_KEY_PAIR);
     if(count($chunks)!==$count||array_keys($chunks)!==range(0,$count-1))throw new PimV3Rejected('MISSING_CHUNKS',[],409);
     $products=[];$objects=[];$categories=null;
@@ -261,6 +273,9 @@ function pimV3HandleSync(PDO $db,string $raw): array {
     // Idempotent CREATE IF NOT EXISTS must run before the transaction (DDL commits implicitly).
     shopTaxonomySchema($db);
     if((int)$db->query("SELECT GET_LOCK('rubizh-category-migration',10)")->fetchColumn()!==1)throw new PimV3Rejected('CATALOG_BUSY',[],503);
+    // A re-send that waited for a still-running commit of the same batch returns that stored ACK instead of rewriting.
+    $again=$db->prepare('SELECT status,summary_json FROM rubizh_pim_batches WHERE batch_id=?');$again->execute([$batch]);$now=$again->fetch(PDO::FETCH_ASSOC);
+    if(($now['status']??'')==='COMMITTED'){$db->query("SELECT RELEASE_LOCK('rubizh-category-migration')");return (json_decode((string)$now['summary_json'],true)?:[])+['replayed'=>true];}
     $out=[];$hidden=[];$catalogRevision=$chunk['catalog_revision'];
     try{
         $db->beginTransaction();
