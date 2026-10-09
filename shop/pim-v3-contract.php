@@ -6,6 +6,7 @@ require_once __DIR__.'/pricing-policy.php';
 
 function pimV3FoundationPolicy(): array {
     return ['foundation_version'=>1, 'sync_enabled'=>false, 'capabilities_advertised'=>[],
+        'wire_contract_status'=>'UNCONFIRMED', 'ingestion_enabled'=>false,
         'mixed_cart'=>['confirmation_state'=>'WAITING_CONFIRMATION', 'payment_strategy'=>'SINGLE_ORDER_PAYMENT_AFTER_CONFIRMATION', 'automatic_split'=>false]];
 }
 
@@ -73,7 +74,10 @@ function pimV3PhotoUrl(mixed $value): bool {
         &&!preg_match('/(?:^|\.)(?:localhost|local|internal|test|invalid)$/i',$u['host'])&&(!isset($u['port'])||$u['port']===443);
 }
 
-/** Offline private-wire validation. Does not authorize publication, payment or a sync capability. */
+/** Offline synthetic-fixture validation only. models[] is an internal test wrapper,
+ * not a negotiated PIM wire envelope. Exact release fixture after G02 is required
+ * before ingestion; no runtime caller may infer/rename products/models from this helper.
+ */
 function pimV3ValidateJson(string $json): array {
     if(strlen($json)>8*1024*1024)return ['valid'=>false,'errors'=>[['path'=>'$','code'=>'BYTE_LIMIT']]];
     try{$batch=json_decode($json,false,64,JSON_THROW_ON_ERROR);}catch(JsonException){return ['valid'=>false,'errors'=>[['path'=>'$','code'=>'INVALID_JSON']]];}
@@ -196,7 +200,9 @@ function pimV3ValidateMappingJson(string $mappingJson,string $batchJson): array 
     return ['valid'=>$errors===[],'errors'=>$errors,'mapping_count'=>count($mapping['entries'])];
 }
 
-/** Public DTO foundation. Explicit whitelist + computed public pricing; never copy sources/raw evidence. */
+/** Public DTO foundation. Supplier quantities/provenance are private; any future
+ * max_order_qty must be server-derived, not an alias for stock_quantity.
+ */
 function pimV3PublicDto(string $json): array {
     $result=pimV3ValidateJson($json);
     if(!$result['valid'])throw new InvalidArgumentException('Invalid private PIM foundation contract');
@@ -211,7 +217,7 @@ function pimV3PublicDto(string $json): array {
         $public['size_options']=array_map(fn($s)=>$pick($s,['option_id','scope','color_id','size','variant_sku','availability','order_submission_allowed','payment_allowed','requires_order_confirmation']),$m['size_options']);
         $public['variants']=[];
         foreach($m['variants'] as $v){
-            $item=$pick($v,['sku','variant_id','color_id','photos','size_status','size_raw','size_display','size_normalized','size_system','size_type','size_alpha','size_fit','size_height','availability','order_submission_allowed','payment_allowed','requires_order_confirmation','stock_quantity','delivery_lead_time_days','ready_to_dispatch']);
+            $item=$pick($v,['sku','variant_id','color_id','photos','size_status','size_raw','size_display','size_normalized','size_system','size_type','size_alpha','size_fit','size_height','availability','order_submission_allowed','payment_allowed','requires_order_confirmation','delivery_lead_time_days','ready_to_dispatch']);
             $item=array_merge($item,$v['price_ready']?shopPricingPublic(shopPricingPolicy($v)):['price'=>null,'site_price'=>null,'kit_price'=>null,'wholesale'=>[]]);
             $public['variants'][]=$item;
         }

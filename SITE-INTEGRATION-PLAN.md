@@ -32,7 +32,7 @@ flowchart LR
  D --> UI[Color gallery + real sizes or request option]
  UI --> Q[Server current selection + quote]
  Q --> R{All selected lines payment-ready?}
- R -->|yes| O[Order READY_FOR_PAYMENT]
+ R -->|yes| O[Order CONFIRMED / payment UNPAID]
  R -->|no request allowed| C[WAITING_CONFIRMATION]
  C --> M[Manager resolves real SKU + current quote]
  M --> O
@@ -53,7 +53,7 @@ flowchart LR
 | 6. Selector/gallery + home/mobile | `index.html`, active client version source → new versioned JS; catalog/theme/hero assets as necessary; `storefront.php` SSR | Color id changes gallery/SKU/sizes/prices/perms; one size auto; multiple prompt; NO_SIZE_REQUIRED no fake; null-SKU options request; single hero CTA; 360/390/430 and desktop two themes |
 | 7. Cart/quote selection | `shop/store-lib.php`, `shop/checkout-quote.php`, `shop/pricing-policy.php`, active client/runtime | Exact model/color/SKU/normalized size/qty/version. Legacy cart resolve only mapping; typed price/selection conflict; forged IDs/perms rejected; request option not reserved/invoiced |
 | 8. Order/payment/fulfillment states | `shop/order.php`, `shop/order-lifecycle.php`, `shop/np-fulfillment.php`; new state reducer helper | Separate state columns + legacy projection; immutable snapshot; request idempotency; paid/cancelled/late events safe; no TTL changes; paid allocation protected |
-| 9. Immediate IN_STOCK payment eligibility | `shop/order.php`, `shop/store-lib.php`, `shop/order-lifecycle.php` | Real confirmed SKU/status/price enters READY_FOR_PAYMENT without manager; STATUS quantity null works; no invoice yet if payment adapter not ready; expiry vs warning tests |
+| 9. Immediate IN_STOCK payment eligibility | `shop/order.php`, `shop/store-lib.php`, `shop/order-lifecycle.php` | Real confirmed SKU/status/price may create order_state=CONFIRMED, payment_status=UNPAID, payment_allowed=true without manager; readiness is derived, not an order status; STATUS quantity null works; no invoice yet if payment adapter not ready; expiry vs warning tests |
 | 10. Manager request confirmation | `shop/np-manager.php`, `shop/np-fulfillment.php`, `shop/store-lib.php` | Auth/audit/fresh resolver; options resolve real SKU; current price agreement; confirmed preorder nullable lead time; cannot pay unknown/unpublished; repeat safe |
 | 11. MonoPay adapter | `shop/mono-lib.php`, `shop/payment-start.php`, `shop/payment-return.php`, `shop/mono-webhook.php` | Both ready paths use fresh selection before invoice; saved amount immutable; mocks only; signature/amount/currency/hash/retry/unknown outcome; webhook alone online paid; bank status only diagnostics; browser cannot mark paid |
 | 12. Legacy URL / SEO | root `.htaccess`, `storefront.php`, `shop/catalog-lib.php`, `sitemap.php`, feeds | Confirmed mapping old URL → model URL + selected color; canonical once; no loops/open redirects; hidden history/restores retain identities; zero-photo SEO exclusion |
@@ -68,6 +68,11 @@ flowchart LR
 
 ## Request contracts и shared resolver
 
+Hardening decision 2026-10-09: final order states = NEW / WAITING_CONFIRMATION /
+CONFIRMED / CANCELLED / COMPLETED. Payment readiness is derived; request confirmation
+leads to CONFIRMED, followed by one payment for the entire mixed cart. These are
+future implementation targets, not runtime behavior enabled by the foundation.
+
 Один server resolver вызывается quote/order/manager-confirm/invoice/kit validation; frontend не вычисляет доступность.
 
 Реальный выбор: `{model_id,color_id,sku,variant_id?,size,qty,catalog_version,price_mode,kit_group?}`. Обязательность цвета зависит от реального export; если PIM не подтвердил ownership, server не присваивает неизвестный color_id. Отдельный выбор заявки: `{model_id,color_id?,option_id,size,qty,selection_type:"SIZE_OPTION"}`, SKU=null. MODEL-scoped option не подтверждает все цвета. Inventory и pricing поля клиентом не авторизуются.
@@ -78,6 +83,14 @@ flowchart LR
 
 ## Sync/ACK adapter contract
 
+**Gate before ingestion:** SITE must not assume a production `models[]` envelope
+from the synthetic foundation fixtures, rename current PIM fields, or start Commit 3.
+Obtain exact wire fixture from PIM production-release after G02 correction, pin its
+commit/hash, inspect top-level versions and original products/models envelope,
+one complete model/colors/size_catalogs/size_options/real variants/publication/
+inventory-order permissions/per-SKU pricing v1/public-private boundaries. Agree one
+wire contract only after this evidence. Commit 2/3 are not authorized yet.
+
 Использовать существующий `/api/pim/sync`; предложенные поля batch_id/request_hash/schema version/finalize оформляются как negotiated wire contract, а не как уже существующий PIM API. Exact canonical hash алгоритм фиксируется golden fixture (UTF-8 deterministic category serialization) отдельно от SHA256 сырых JSON файлов. Все поля `contract_version:3`, `category_catalog_version:2`, `size_catalog_version:1`, `order_policy_version:1`, `inventory_policy_version:1`, `pricing_policy_version:1` проверяются на соответствующей границе.
 
 Status сообщает exact IDs/hash и только готовые capabilities. ACK после commit: batch/hash/revision/result per model, confirmed versions, explicit `hidden_ids`; неизвестные IDs/ownership не silent alias. Неполный ACK не даёт PIM помечать публикацию успешной. Long exports допускают controlled temporary batch staging private payload без публичного чтения; единый atomic finalize существующих таблиц, bounded chunk size/memory/retries. Только `all_ids` не является командой hide.
@@ -85,6 +98,11 @@ Status сообщает exact IDs/hash и только готовые capabiliti
 UNPUBLISHED — состояние публикации отдельно от supplier enums. Explicit archive/restore сохраняют IDs/media/history; no-image не меняет publication. PIM schema nullable canonical ID валидна для review, но не авторизует публичный неразмеченный model: удержать прежнюю confirmed category или NEEDS_MAPPING; не назначать категорию regex.
 
 ## Pricing и quantity
+
+Exact supplier `stock_quantity` and inventory provenance stay in server/private
+catalog data. Public storefront DTO carries availability and permissions/lead time/
+dispatch status, not raw quantities. Any future `max_order_qty` must be separately
+server-derived and cannot be copied from supplier stock.
 
 Pricing bee5832 должен быть предком интеграционных commits и будущего main. Не сужать decimal values, не переводить floor в public DTO. PIM approved kit/wholesale и shop promo проверяются на final unit floor; customer grant и exact composition на сервере. Заказы с m² сохраняют decimal quantity, обычные units проверяются typed sale_unit, без name parsing v3. Floor неизвестен → скидка запрещена, а не восстановлена по проценту. Signed provider amount всегда integer kopecks.
 

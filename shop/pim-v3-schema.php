@@ -2,6 +2,8 @@
 declare(strict_types=1);
 
 // Pure additive schema descriptions. Inclusion and plan inspection never execute SQL.
+function pimV3OrderStates(): array {return ['NEW','WAITING_CONFIRMATION','CONFIRMED','CANCELLED','COMPLETED'];}
+
 function pimV3SchemaPlan(): array {
     $steps=[];
     $column=static function(string $table,string $name,string $definition)use(&$steps):void{
@@ -38,7 +40,7 @@ function pimV3SchemaPlan(): array {
     foreach(['pim_photo_id'=>'VARCHAR(64)','pim_media_revision'=>'VARCHAR(64)'] as $f=>$type)$column('photos',$f,$type.' NULL DEFAULT NULL');
     foreach(['pim_order_state'=>'VARCHAR(32)','pim_fulfillment_state'=>'VARCHAR(32)','pim_contract_version'=>'SMALLINT UNSIGNED',
         'pim_catalog_revision'=>'VARCHAR(64)','pim_confirmation_revision'=>'VARCHAR(64)'] as $f=>$type){
-        $check=match($f){'pim_order_state'=>" CHECK(pim_order_state IN ('NEW','WAITING_CONFIRMATION','CONFIRMED','READY_FOR_PAYMENT','CANCELLED','COMPLETED'))",'pim_fulfillment_state'=>" CHECK(pim_fulfillment_state IN ('NOT_READY','READY_TO_SHIP','TTN_CREATED','SHIPPED','IN_TRANSIT','DELIVERED'))",default=>''};
+        $check=match($f){'pim_order_state'=>" CHECK(pim_order_state IN ('".implode("','",pimV3OrderStates())."'))",'pim_fulfillment_state'=>" CHECK(pim_fulfillment_state IN ('NOT_READY','READY_TO_SHIP','TTN_CREATED','SHIPPED','IN_TRANSIT','DELIVERED'))",default=>''};
         $column('rubizh_customer_orders',$f,$type.' NULL DEFAULT NULL'.$check);
     }
     $index=static function(string $table,string $name,string $columns,bool $unique=false)use(&$steps):void{

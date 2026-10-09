@@ -99,6 +99,32 @@ test('Public whitelist strips nested supplier/source/pricing/evidence/key canari
  assert.doesNotMatch(out,/PRIVATE_|supplier|sources|bindings|evidence|minimum_sale_price|discount_margin_floor_pct|purchase_price|api_key|metadata/);
  const dto=JSON.parse(out);assert.equal(dto.models[0].variants[0].price,4350.25);assert.equal(dto.models[0].variants[0].kit_price,4200.15);assert.equal(dto.models[0].size_options[0].variant_sku,null);
 });
+for(const name of ['quantity','status','feed_presence'])test(`Public ${name} DTO hides supplier quantities and inventory provenance at every depth`,()=>{
+ const b=fixture(name),original=structuredClone(b),model=b.models[0];
+ for(const item of [model,...model.colors,...model.size_catalogs,...model.size_options,...model.variants]){
+  item.inventory_provenance={private:'PRIVATE_INVENTORY_CANARY',stock_quantity:987654};
+  item.supplier_quantity=987654;item.max_order_qty=987654;
+ }
+ // Poison optional private metadata on all non-SKU levels as well.
+ for(const item of [model,...model.colors,...model.size_catalogs])item.stock_quantity=987654;
+ const out=php(`require '${root}/shop/pim-v3-contract.php';echo json_encode(pimV3PublicDto(stream_get_contents(STDIN)));`,JSON.stringify(b));
+ const publicModel=JSON.parse(out).models[0],variant=publicModel.variants[0];
+ const forbidden=new Set(['stock','stock_quantity','supplier_quantity','max_order_qty','inventory_provenance','inventory_mode','inventory_policy_id','inventory_policy_version','inventory_policy_confirmed','availability_source','availability_confirmation','stock_status','stock_observed_at','source_updated_at','stock_data_age_hours','stale_source','stock_warning_hours','expires_at','source_binding_status','supplier_bindings','sources']);
+ function walk(value){if(value&&typeof value==='object')for(const [key,child] of Object.entries(value)){assert.ok(!forbidden.has(key),key);walk(child);}}
+ walk(JSON.parse(out));assert.doesNotMatch(out,/PRIVATE_INVENTORY_CANARY|987654/);
+ for(const field of ['availability','order_submission_allowed','payment_allowed','requires_order_confirmation','delivery_lead_time_days','ready_to_dispatch'])assert.deepEqual(variant[field],v(original)[field],field);
+ assert.equal(v(b).stock_quantity,v(original).stock_quantity);assert.equal(validate(b).valid,true);
+});
+test('Order states exclude payment readiness; exact PIM wire remains unconfirmed and ingestion disabled',()=>{
+ const states=['NEW','WAITING_CONFIRMATION','CONFIRMED','CANCELLED','COMPLETED'];
+ const result=JSON.parse(php(`require '${root}/shop/pim-v3-contract.php';require '${root}/shop/pim-v3-schema.php';echo json_encode(['states'=>pimV3OrderStates(),'policy'=>pimV3FoundationPolicy(),'steps'=>pimV3SchemaPlan()]);`));
+ const manifest=JSON.parse(readFileSync(path.join(root,'contracts/pim-v3/1/manifest.json')));
+ assert.deepEqual(result.states,states);assert.deepEqual(manifest.order_states,states);
+ const order=result.steps.find(x=>x.id==='rubizh_customer_orders.pim_order_state');assert.doesNotMatch(order.sql,/READY_FOR_PAYMENT/);
+ for(const state of states)assert.ok(order.sql.includes("'"+state+"'"));
+ for(const policy of [result.policy,manifest]){assert.equal(policy.wire_contract_status,'UNCONFIRMED');assert.equal(policy.ingestion_enabled,false);assert.equal(policy.sync_enabled,false);assert.deepEqual(policy.capabilities_advertised,[]);}
+ assert.equal(manifest.exact_release_wire_fixture_required,true);assert.equal(manifest.fixture_envelope,'SYNTHETIC_MODELS_ONLY');
+});
 test('Explicit mappings require proof and owned model/color/SKU; unknown photo has null target and redirects remain data only',()=>{
  const m=fixture('legacy-mapping');assert.equal(mapping(m).valid,true);
  for(const mutate of [m=>m.entries[0].evidence_refs=[],m=>m.entries[1].variant_sku='unrelated-sku',m=>m.entries[1].color_id='wrong-color',m=>m.entries[2].color_id='clr_black',m=>m.entries[0].redirect_url='https://attacker.example.com/',m=>m.entries[0].model_id={}]){
@@ -130,6 +156,10 @@ test('Isolated CLI: additive schema, legacy/pricing/order/account preservation, 
   const before=snapshot(),plan=cli('plan');assert.equal(plan.status,0,plan.stderr);assert.equal(JSON.parse(plan.stdout).writes,0);assert.deepEqual(snapshot(),before);
   const first=cli('apply');assert.equal(first.status,0,first.stderr);assert.equal(JSON.parse(first.stdout).applied.length,JSON.parse(plan.stdout).steps.length);assert.deepEqual(snapshot(),before);
   const replay=cli('apply');assert.equal(replay.status,0,replay.stderr);assert.deepEqual(JSON.parse(replay.stdout).applied,[]);
+  // Exercise the DB CHECK, not just the plan's strings. All business states fit;
+  // payment eligibility is separate and cannot become an order status.
+  const orderStates=JSON.parse(php(connect+`$db->beginTransaction();$q=$db->prepare('UPDATE rubizh_customer_orders SET pim_order_state=?');$out=[];foreach(['NEW','WAITING_CONFIRMATION','CONFIRMED','CANCELLED','COMPLETED'] as $s){$q->execute([$s]);$out[]=$db->query('SELECT pim_order_state FROM rubizh_customer_orders')->fetchColumn();}try{$q->execute(['READY_FOR_PAYMENT']);$out[]='ACCEPTED';}catch(PDOException){$out[]='REJECTED';}$db->rollBack();echo json_encode($out);`));
+  assert.deepEqual(orderStates,['NEW','WAITING_CONFIRMATION','CONFIRMED','CANCELLED','COMPLETED','REJECTED']);assert.deepEqual(snapshot(),before);
   php(`require '${site}/api/lib.php';require '${site}/shop/store-lib.php';class NoDdl extends PDO{public function exec(string $s):int|false{if(preg_match('/^(CREATE|ALTER|DROP)/i',$s))throw new Exception('GET/bootstrap attempted DDL');return parent::exec($s);}}$db=new NoDdl('mysql:unix_socket='.getenv('RUBIZH_TEST_MYSQL_SOCKET').';dbname=${schema}','root','',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);migrate($db);shopUiMigrate($db);shopLifecycleMigrate($db);npMigrate($db);monoMigrate($db);`);
   const defaults=JSON.parse(php(connect+`echo json_encode(['product'=>$db->query('SELECT pim_contract_version,pim_model_id,pim_publication_state FROM products')->fetch(PDO::FETCH_ASSOC),'variant'=>$db->query('SELECT pim_payment_allowed,pim_stock_quantity,pim_color_id FROM variants')->fetch(PDO::FETCH_ASSOC),'prices'=>$db->query("SELECT COLUMN_NAME,COLUMN_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='variants' AND COLUMN_NAME IN ('price','kit_price')")->fetchAll(PDO::FETCH_ASSOC)]);`));
   assert.deepEqual(defaults.product,{pim_contract_version:null,pim_model_id:null,pim_publication_state:'LEGACY'});assert.ok(Object.values(defaults.variant).every(x=>x===null));assert.ok(defaults.prices.every(x=>x.COLUMN_TYPE==='decimal(14,2)'));

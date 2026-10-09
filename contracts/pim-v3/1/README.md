@@ -8,9 +8,19 @@ snapshots of PIM `27fb26056563eb1fcf144ffdb2ba9ab264fa9313`; their SHA256 hashes
 in `manifest.json`. All 143 category identities and parents are retained here.
 The active SITE taxonomy remains unchanged. No category/URL mapping is guessed.
 
-`pimV3ValidateJson()` accepts a private offline envelope with integer
+`pimV3ValidateJson()` uses a **synthetic internal test wrapper** with integer
 `contract_version=3`, `pricing_policy_version=1`, and `models[]`.
-This envelope is **not** an enabled wire endpoint. It validates every keyword in
+It does not establish that production PIM must send `models[]`, does not negotiate
+an envelope, and must not rename `products`/`models`. The actual wire contract is
+UNCONFIRMED; ingestion is disabled. Before any ingestion implementation, obtain
+one exact wire fixture from the PIM production-release branch **after G02 is fixed**,
+with pinned commit/hash, top-level versions and original envelope (`products` or
+`models`), a complete model, colors, size_catalogs, size_options, real variants,
+publication fields, inventory/order permissions, pricing v1 on every SKU, and
+explicit public/private boundaries. Only then fix one wire contract. No Commit 2/3
+or `/pim/sync` v3 implementation is authorized by foundation or hardening.
+
+The offline helper validates every keyword in
 the pinned draft-07 schema with JSON object/array distinction, and rejects unknown
 schema keywords. It is not a general JSON Schema library. Errors contain paths
 and codes, not submitted values/private data.
@@ -35,12 +45,19 @@ are metadata, not an authorization TTL in this offline validator.
 
 `pimV3PublicDto()` validates first and serializes only whitelisted fields plus
 existing computed public pricing. It omits supplier bindings, `colors[].sources`,
-raw/procurement prices, private floors, proof, provenance and arbitrary nested
+raw/procurement prices, private floors, proof, provenance, supplier stock quantities
+(`stock`/`stock_quantity`) and arbitrary nested
 objects. It is a DTO foundation, **not** a public-read eligibility/payment resolver:
 publication, category readiness, usable local media, explicit expiration and current
 DB ownership must still be enforced by the later read/checkout adapter. URL checks
 are syntax restrictions, not a download/SSRF authorization or evidence of usable media.
 No outbound HTTP or public route is implemented here.
+Public availability/permission data may include `availability`,
+`order_submission_allowed`, `payment_allowed`, `requires_order_confirmation`,
+`delivery_lead_time_days`, and `ready_to_dispatch`; exact supplier quantities and
+inventory provenance remain private/server data. If a frontend quantity limit is
+needed later, define a separately server-derived `max_order_qty`, not raw supplier
+stock. This hardening does not expose that field or trust an input with that name.
 
 `pimV3ValidateMappingJson(mapping, batch)` validates versioned explicit `entries[]`,
 owned targets, proof-reference presence, local product URL syntax, and null targets
@@ -54,6 +71,14 @@ any PREORDER / ORDER_ON_REQUEST / SIZE_CONFIRMATION_REQUIRED / manager-confirmat
 line sends the whole order to WAITING_CONFIRMATION, followed by one payment after
 confirmation. No automatic split. Existing checkout behavior is untouched.
 
+The order-state catalog is exactly NEW / WAITING_CONFIRMATION / CONFIRMED /
+CANCELLED / COMPLETED. Payment readiness is a derived permission/state-machine
+result, not another order status. Target examples for later implementation:
+an ordinary payment-ready order may be CONFIRMED + UNPAID + payment_allowed=true;
+a request goes WAITING_CONFIRMATION → manager confirmation → CONFIRMED, then
+payment may be permitted. These examples do not change existing checkout or
+payment behavior in foundation/hardening.
+
 Migration entry point: `dev/migrate-pim-v3.php`, CLI only. It requires `--isolated`,
 `--database=fixture_pim_v3_<8–32 hex>`, a Unix socket matching the explicitly set
 `RUBIZH_TEST_MYSQL_SOCKET`, and a prepared schema4/runtime baseline. `--plan` (default)
@@ -62,6 +87,9 @@ uses an advisory lock and records SQL/object hashes in an isolated journal. Drif
 unjournaled existing objects or incompatible baseline types/collations require review.
 MySQL DDL can commit implicitly: it is not represented as transactional/reversible
 DDL. An interrupted unjournaled step is deliberately not silently repaired.
+Hardening narrows the order-state CHECK in the offline plan. Previously journaled
+fixture DDL hashes will differ and be rejected; validate on a fresh isolated DB.
+No in-place ALTER/drop-CHECK upgrade or runtime auto-migration is implemented.
 
 This CLI never loads live configuration, accepts network DSNs or migrates a production
 database. Retrying after code rollback leaves additive structures in place; never use

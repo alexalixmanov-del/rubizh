@@ -3,6 +3,14 @@
 Дата: 2026-10-09. Ветка: `integration/site-pim-v3-foundation-2026-10-09`.
 Scope: **Integration Base + SITE CONTRACT / DB FOUNDATION**, без Commit 2/3.
 
+Hardening amendment 2026-10-09: current public DTO excludes supplier stock_quantity
+and inventory provenance; final order states are NEW / WAITING_CONFIRMATION /
+CONFIRMED / CANCELLED / COMPLETED. Synthetic models[] fixtures are not a negotiated
+production PIM wire envelope. Exact release fixture after G02 correction remains
+mandatory before ingestion. The counts/evidence below describe the original
+d0389bc foundation run; current hardening evidence is separate in
+[FOUNDATION-HARDENING-REPORT.md](FOUNDATION-HARDENING-REPORT.md).
+
 ## Результат и границы
 
 ```text
