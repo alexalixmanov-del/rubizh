@@ -1,0 +1,416 @@
+{
+  "source_commit": "ded3a70a0e18272b0e6ea92cc90bf566c64bd4cf",
+  "database_session_read_only": true,
+  "taxonomy_activation_meta_present": false,
+  "media_files_restored": false,
+  "scenarios": {
+    "current-kit-med": {
+      "input": {
+        "slot": "med"
+      },
+      "cold_handler_time_ms": 31.337538,
+      "total": 5,
+      "items": 5,
+      "query_count": 5,
+      "selected_queries": [
+        {
+          "params": [],
+          "explain": [
+            {
+              "id": 1,
+              "select_type": "PRIMARY",
+              "table": "p",
+              "type": "ALL",
+              "possible_keys": "PRIMARY,vis",
+              "key": null,
+              "key_len": null,
+              "ref": null,
+              "rows": "2377",
+              "Extra": "Using where; Using filesort"
+            },
+            {
+              "id": 1,
+              "select_type": "PRIMARY",
+              "table": "ph",
+              "type": "ref",
+              "possible_keys": "prodpos",
+              "key": "prodpos",
+              "key_len": "258",
+              "ref": "fixture_catalog_perf_20261009.p.id",
+              "rows": "7",
+              "Extra": "Using index; FirstMatch(p)"
+            },
+            {
+              "id": 1,
+              "select_type": "PRIMARY",
+              "table": "<subquery3>",
+              "type": "eq_ref",
+              "possible_keys": "distinct_key",
+              "key": "distinct_key",
+              "key_len": "260",
+              "ref": "func",
+              "rows": "1",
+              "Extra": ""
+            },
+            {
+              "id": 3,
+              "select_type": "MATERIALIZED",
+              "table": "v",
+              "type": "ALL",
+              "possible_keys": "prod",
+              "key": null,
+              "key_len": null,
+              "ref": null,
+              "rows": "8474",
+              "Extra": "Using where"
+            }
+          ],
+          "query_number": 1,
+          "runs": [
+            {
+              "time_ms": 16.784761,
+              "rows_examined": 11810,
+              "rows_sent": 5,
+              "result_rows": 5
+            },
+            {
+              "time_ms": 16.783679,
+              "rows_examined": 11810,
+              "rows_sent": 5,
+              "result_rows": 5
+            },
+            {
+              "time_ms": 16.38547,
+              "rows_examined": 11810,
+              "rows_sent": 5,
+              "result_rows": 5
+            },
+            {
+              "time_ms": 16.268746,
+              "rows_examined": 11810,
+              "rows_sent": 5,
+              "result_rows": 5
+            },
+            {
+              "time_ms": 16.5612,
+              "rows_examined": 11810,
+              "rows_sent": 5,
+              "result_rows": 5
+            },
+            {
+              "time_ms": 16.128238,
+              "rows_examined": 11810,
+              "rows_sent": 5,
+              "result_rows": 5
+            }
+          ],
+          "sql_file": "current-kit-med-1.sql",
+          "sql_sha256": "f2e3cb24615597c7075001d1fd8adc5c46a45bb962a4cfcb27a51f3b85cd5d9d",
+          "sql_operations": {
+            "REGEXP": 2,
+            "JSON_VALID": 0,
+            "JSON_EXTRACT": 0,
+            "JSON_UNQUOTE": 0,
+            "CAST": 0,
+            "EXISTS": 2
+          },
+          "median_time_ms": 16.473335,
+          "indexes_used": [
+            "distinct_key",
+            "prodpos"
+          ]
+        }
+      ],
+      "sql_operation_counts": [
+        {
+          "regexp": 2,
+          "json_extract": 0,
+          "exists": 2
+        },
+        {
+          "regexp": 0,
+          "json_extract": 0,
+          "exists": 0
+        },
+        {
+          "regexp": 0,
+          "json_extract": 0,
+          "exists": 0
+        },
+        {
+          "regexp": 0,
+          "json_extract": 0,
+          "exists": 0
+        },
+        {
+          "regexp": 0,
+          "json_extract": 0,
+          "exists": 0
+        }
+      ]
+    },
+    "current-catalog-available": {
+      "input": {
+        "availability": "available"
+      },
+      "cold_handler_time_ms": 1179.380729,
+      "total": 2226,
+      "items": 24,
+      "query_count": 11,
+      "selected_queries": [
+        {
+          "params": [],
+          "explain": [
+            {
+              "id": 1,
+              "select_type": "PRIMARY",
+              "table": "av",
+              "type": "ALL",
+              "possible_keys": "prod",
+              "key": null,
+              "key_len": null,
+              "ref": null,
+              "rows": "8474",
+              "Extra": "Using where; Start temporary"
+            },
+            {
+              "id": 1,
+              "select_type": "PRIMARY",
+              "table": "p",
+              "type": "eq_ref",
+              "possible_keys": "PRIMARY,vis",
+              "key": "PRIMARY",
+              "key_len": "258",
+              "ref": "fixture_catalog_perf_20261009.av.product_id",
+              "rows": "1",
+              "Extra": "Using where; End temporary"
+            },
+            {
+              "id": 1,
+              "select_type": "PRIMARY",
+              "table": "av",
+              "type": "ref",
+              "possible_keys": "prod",
+              "key": "prod",
+              "key_len": "258",
+              "ref": "fixture_catalog_perf_20261009.av.product_id",
+              "rows": "2",
+              "Extra": "Using where; FirstMatch(p)"
+            }
+          ],
+          "query_number": 3,
+          "runs": [
+            {
+              "time_ms": 118.038942,
+              "rows_examined": 17426,
+              "rows_sent": 1,
+              "result_rows": 1
+            },
+            {
+              "time_ms": 129.159159,
+              "rows_examined": 17426,
+              "rows_sent": 1,
+              "result_rows": 1
+            },
+            {
+              "time_ms": 148.931161,
+              "rows_examined": 17426,
+              "rows_sent": 1,
+              "result_rows": 1
+            },
+            {
+              "time_ms": 129.161643,
+              "rows_examined": 17426,
+              "rows_sent": 1,
+              "result_rows": 1
+            },
+            {
+              "time_ms": 127.893606,
+              "rows_examined": 17426,
+              "rows_sent": 1,
+              "result_rows": 1
+            },
+            {
+              "time_ms": 120.242764,
+              "rows_examined": 17426,
+              "rows_sent": 1,
+              "result_rows": 1
+            }
+          ],
+          "sql_file": "current-catalog-available-1.sql",
+          "sql_sha256": "ff3c1fc40b5a64f1583db282e4a6615622c9f5ce68325472d4f8db8860fa7d9d",
+          "sql_operations": {
+            "REGEXP": 2,
+            "JSON_VALID": 18,
+            "JSON_EXTRACT": 18,
+            "JSON_UNQUOTE": 16,
+            "CAST": 2,
+            "EXISTS": 2
+          },
+          "median_time_ms": 128.5263825,
+          "indexes_used": [
+            "PRIMARY",
+            "prod"
+          ]
+        },
+        {
+          "params": [],
+          "explain": [
+            {
+              "id": 1,
+              "select_type": "PRIMARY",
+              "table": "av",
+              "type": "ALL",
+              "possible_keys": "prod",
+              "key": null,
+              "key_len": null,
+              "ref": null,
+              "rows": "8474",
+              "Extra": "Using where; Start temporary; Using temporary; Using filesort"
+            },
+            {
+              "id": 1,
+              "select_type": "PRIMARY",
+              "table": "p",
+              "type": "eq_ref",
+              "possible_keys": "PRIMARY,vis",
+              "key": "PRIMARY",
+              "key_len": "258",
+              "ref": "fixture_catalog_perf_20261009.av.product_id",
+              "rows": "1",
+              "Extra": "Using where; End temporary"
+            },
+            {
+              "id": 1,
+              "select_type": "PRIMARY",
+              "table": "av",
+              "type": "ref",
+              "possible_keys": "prod",
+              "key": "prod",
+              "key_len": "258",
+              "ref": "fixture_catalog_perf_20261009.av.product_id",
+              "rows": "2",
+              "Extra": "Using where; FirstMatch(p)"
+            }
+          ],
+          "query_number": 4,
+          "runs": [
+            {
+              "time_ms": 183.174379,
+              "rows_examined": 19676,
+              "rows_sent": 24,
+              "result_rows": 24
+            },
+            {
+              "time_ms": 184.309849,
+              "rows_examined": 19676,
+              "rows_sent": 24,
+              "result_rows": 24
+            },
+            {
+              "time_ms": 144.068034,
+              "rows_examined": 19676,
+              "rows_sent": 24,
+              "result_rows": 24
+            },
+            {
+              "time_ms": 146.830241,
+              "rows_examined": 19676,
+              "rows_sent": 24,
+              "result_rows": 24
+            },
+            {
+              "time_ms": 167.342309,
+              "rows_examined": 19676,
+              "rows_sent": 24,
+              "result_rows": 24
+            },
+            {
+              "time_ms": 139.875588,
+              "rows_examined": 19676,
+              "rows_sent": 24,
+              "result_rows": 24
+            }
+          ],
+          "sql_file": "current-catalog-available-2.sql",
+          "sql_sha256": "165e95448bed81f84328a295944d8d8020118014ebd1dfcfac5a4fa53cd002fb",
+          "sql_operations": {
+            "REGEXP": 2,
+            "JSON_VALID": 18,
+            "JSON_EXTRACT": 18,
+            "JSON_UNQUOTE": 16,
+            "CAST": 2,
+            "EXISTS": 2
+          },
+          "median_time_ms": 157.086275,
+          "indexes_used": [
+            "PRIMARY",
+            "prod"
+          ]
+        }
+      ],
+      "sql_operation_counts": [
+        {
+          "regexp": 0,
+          "json_extract": 0,
+          "exists": 0
+        },
+        {
+          "regexp": 0,
+          "json_extract": 0,
+          "exists": 0
+        },
+        {
+          "regexp": 2,
+          "json_extract": 18,
+          "exists": 2
+        },
+        {
+          "regexp": 2,
+          "json_extract": 18,
+          "exists": 2
+        },
+        {
+          "regexp": 0,
+          "json_extract": 0,
+          "exists": 0
+        },
+        {
+          "regexp": 0,
+          "json_extract": 0,
+          "exists": 0
+        },
+        {
+          "regexp": 3,
+          "json_extract": 27,
+          "exists": 2
+        },
+        {
+          "regexp": 3,
+          "json_extract": 27,
+          "exists": 2
+        },
+        {
+          "regexp": 3,
+          "json_extract": 27,
+          "exists": 2
+        },
+        {
+          "regexp": 3,
+          "json_extract": 28,
+          "exists": 2
+        },
+        {
+          "regexp": 2,
+          "json_extract": 18,
+          "exists": 2
+        }
+      ]
+    }
+  },
+  "copy_overrides": [
+    "Synthetic local DB/cache/media configuration",
+    "Both local PDO sessions SET SESSION TRANSACTION READ ONLY; query generators unchanged"
+  ],
+  "scope": "Cold handler calls, not HTTP/browser measurements; no application code changes"
+}
