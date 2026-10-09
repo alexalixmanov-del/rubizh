@@ -119,3 +119,32 @@ test('owner legacy hide: plan → apply (exact plan + verified off-webroot backu
   assert.equal(site.sql('SELECT COUNT(*) n FROM products WHERE visible=1 AND pim_contract_version IS NULL')[0].n,2);
  }finally{site.stop();}
 });
+
+test('full catalog reset: exact plan + verified backup, catalog tables empty, taxonomy/orders kept, fresh publish has clean URLs',{skip,timeout:240000},async()=>{
+ const {spawnSync}=await import('node:child_process'),fs=await import('node:fs'),path=(await import('node:path')).default,crypto=await import('node:crypto');
+ const {runtime,phpArgs,phpEnv}=await import('./helpers/site-fixture.mjs');
+ const site=await startSite();
+ try{
+  assert.equal((await publish(site,wire,{size:2})).data.status,'COMMITTED');
+  const first=wire.products[0];
+  site.sql(`INSERT INTO products(id,slug,name,visible,created_at,updated_at,synced_at) VALUES('old-dup','${first.slug}-old','Стара',1,UTC_TIMESTAMP(),UTC_TIMESTAMP(),UTC_TIMESTAMP())`);
+  const cli=(...args)=>spawnSync(runtime+'/bin/php8.4',[...phpArgs,path.join(site.site,'dev/pim-v3-catalog-reset.php'),...args],{env:phpEnv,encoding:'utf8',cwd:site.site});
+  const planFile=path.join(site.dir,'reset-plan.json'),backup=path.join(site.dir,'db.sql.gz');fs.writeFileSync(backup,crypto.randomBytes(4096));
+  const backupSha=crypto.createHash('sha256').update(fs.readFileSync(backup)).digest('hex');
+  const plan=JSON.parse(cli('--plan','--out='+planFile).stdout);assert.ok(plan.remove.products>=wire.products.length+1);assert.ok(plan.keep.rubizh_pim_categories>0);
+  const keptBefore=JSON.stringify(plan.keep);
+  assert.match(cli('--apply','--plan-file='+planFile,'--plan-sha256='+plan.plan_sha256).stderr,/backup required/);
+  assert.match(cli('--plan','--out='+path.join(site.site,'x.json')).stderr,/outside the web root/);
+  site.sql("UPDATE products SET name='змінено' WHERE id='old-dup'");
+  const stale=JSON.parse(cli('--plan','--out='+planFile).stdout);site.sql("INSERT INTO products(id,slug,name,visible,created_at,updated_at,synced_at) VALUES('late','late','Пізня',1,UTC_TIMESTAMP(),UTC_TIMESTAMP(),UTC_TIMESTAMP())");
+  assert.match(cli('--apply','--plan-file='+planFile,'--plan-sha256='+stale.plan_sha256,'--backup-file='+backup,'--backup-sha256='+backupSha).stderr,/STALE_PLAN/);
+  const fresh=JSON.parse(cli('--plan','--out='+planFile).stdout);
+  const done=JSON.parse(cli('--apply','--plan-file='+planFile,'--plan-sha256='+fresh.plan_sha256,'--backup-file='+backup,'--backup-sha256='+backupSha).stdout);assert.equal(done.reset,'COMMITTED');
+  for(const t of ['products','variants','photos','rubizh_product_colors','rubizh_size_options','rubizh_pim_batches','rubizh_pim_history','rubizh_catalog_pricing'])assert.equal(site.sql(`SELECT COUNT(*) n FROM ${t}`)[0].n,0,t);
+  assert.equal(JSON.stringify(done.kept),keptBefore,'taxonomy, rules and orders kept');
+  assert.equal((await site.get('/shop/catalog.php')).data.total,0);
+  const again=await publish(site,wire,{size:2});assert.equal(again.data.status,'COMMITTED');assert.ok(again.data.results.every(r=>r.status==='created'));
+  const slugs=site.sql('SELECT id,slug FROM products');assert.equal(slugs.length,wire.products.length);
+  for(const p of wire.products)assert.equal(slugs.find(r=>r.id===p.id).slug,p.slug,'no -2 URL after reset');
+ }finally{site.stop();}
+});
