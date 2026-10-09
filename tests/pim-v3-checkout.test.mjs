@@ -33,7 +33,7 @@ test('IN_STOCK real SKU: immediate CONFIRMED order, one invoice, browser return 
   assert.equal(site.sql('SELECT payment_status FROM rubizh_customer_orders WHERE id='+id)[0].payment_status,'pending','redirect is not payment');
   const bad=await site.post('/shop/mono-webhook.php',JSON.stringify({invoiceId:inv[0].invoice_id,status:'success',amount:286000,ccy:980,modifiedDate:new Date().toISOString()}),{'X-Sign':Buffer.from('forged').toString('base64')});assert.notEqual(bad.status,200);assert.equal(site.sql('SELECT payment_status FROM rubizh_customer_orders WHERE id='+id)[0].payment_status,'pending','forged callback never pays');
   const hook=await site.webhook(inv[0]);assert.equal(hook.status,200,JSON.stringify(hook.data));
-  const row=site.sql('SELECT payment_status,pim_payment_state,pim_order_state FROM rubizh_customer_orders WHERE id='+id)[0];assert.equal(row.payment_status,'paid');assert.equal(row.pim_payment_state,'PAID');assert.equal(row.pim_order_state,'CONFIRMED');
+  const row=site.sql('SELECT payment_status,pim_payment_state,pim_order_state,pim_fulfillment_state FROM rubizh_customer_orders WHERE id='+id)[0];assert.equal(row.payment_status,'paid');assert.equal(row.pim_payment_state,'PAID');assert.equal(row.pim_order_state,'CONFIRMED');assert.equal(row.pim_fulfillment_state,'READY_TO_SHIP');
   const again=await site.post('/shop/payment-start.php',{csrf:s.csrf,order_id:id},s.h);assert.notEqual(again.status,200,'no second payment');
   assert.equal(site.sql('SELECT COUNT(*) n FROM rubizh_mono_invoices WHERE order_id='+id)[0].n,1);
  }finally{site.stop();}

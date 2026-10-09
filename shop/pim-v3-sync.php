@@ -81,6 +81,11 @@ function pimV3SyncCategories(PDO $db,array $categories,string $revision): void {
     $db->prepare("INSERT INTO meta(k,v) VALUES('pim_v3_category_revision',?) ON DUPLICATE KEY UPDATE v=VALUES(v)")->execute([$revision]);
 }
 
+// PIM kit_component (structured product type) → storefront kit slot.
+function pimV3KitSlot(?string $component): ?string {
+    return ['combat_shirt'=>'body','outer_layer'=>'body','fleece'=>'body','base_layer'=>'body','pants'=>'legs','footwear'=>'boots','socks'=>'small','gloves'=>'small','knee_protection'=>'small',
+        'carrier'=>'armor','plates'=>'armor','helmet'=>'head','hearing'=>'head','eye_protection'=>'head','backpack'=>'gear','pouch'=>'gear','rps'=>'gear','battle_belt'=>'gear','ifak'=>'med','tourniquet'=>'med'][$component??'']??null;
+}
 function pimV3PublicVariantData(array $v): array {
     $keep=['sku','color_id','color','camouflage','size','size_raw','size_display','size_normalized','size_system','size_status','size_type','size_alpha','size_fit','size_height','availability','order_submission_allowed','payment_allowed','requires_order_confirmation','delivery_lead_time_days','ready_to_dispatch','price_ready','pricing_policy_version','price','site_price','kit_price','wholesale','stock_observed_at','stale_source','expires_at','barcode'];
     $out=array_intersect_key($v,array_fill_keys($keep,true));
@@ -162,6 +167,7 @@ function pimV3WriteModel(PDO $db,array $m,string $batch,string $revision): strin
             $prices?shopMoneyValue(min($prices)):null,$prices?shopMoneyValue(max($prices)):null,$best,count($variants),$hash,json_encode($public,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),
             $m['model_id'],$revision,count($m['photos']),sha1(json_encode([$m['photos'],array_column($m['colors'],'photos','id')],JSON_THROW_ON_ERROR))]);
     // Colors: composite (model,color) identity; inactive colors keep history.
+    $db->prepare('UPDATE products SET pim_kit_slot=? WHERE id=?')->execute([pimV3KitSlot(is_string($m['kit_component']??null)?$m['kit_component']:null),$id]);
     $db->prepare('UPDATE rubizh_product_colors SET active=0 WHERE product_id=?')->execute([$id]);
     $color=$db->prepare('INSERT INTO rubizh_product_colors(product_id,color_id,color,camouflage,sort,revision,active) VALUES(?,?,?,?,?,?,1) ON DUPLICATE KEY UPDATE color=VALUES(color),camouflage=VALUES(camouflage),sort=VALUES(sort),revision=VALUES(revision),active=1');
     foreach($m['colors'] as $i=>$c)$color->execute([$id,$c['id'],isset($c['color'])?mb_substr((string)$c['color'],0,120):null,isset($c['camouflage'])?mb_substr((string)$c['camouflage'],0,120):null,$i,$revision]);
@@ -272,5 +278,7 @@ function pimV3HandleSync(PDO $db,string $raw): array {
     }catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}
     finally{$db->query("SELECT RELEASE_LOCK('rubizh-category-migration')");}
     if(function_exists('recount_categories'))try{recount_categories($db);}catch(Throwable){}
+    // Public snapshots may otherwise stay stale for minutes; explicit hides must not linger in listings.
+    if($changed&&function_exists('shopCacheClear'))try{shopCacheClear();}catch(Throwable){}
     return $ack;
 }

@@ -74,6 +74,7 @@ function pimV3SchemaPlan(): array {
     $index('variants','pim_submit','product_id,pim_active,pim_order_submission_allowed');
     $index('products','pim_contract_visible','pim_contract_version,visible');
     $index('photos','pim_usable','product_id,status');
+    $column('products','pim_kit_slot',"VARCHAR(16) NULL DEFAULT NULL CHECK(pim_kit_slot IN ('head','body','legs','boots','armor','gear','med','small'))");
     $column('rubizh_customer_orders','pim_payment_state',"VARCHAR(24) NULL DEFAULT NULL CHECK(pim_payment_state IN ('UNPAID','PAYMENT_PENDING','PAID','PARTIALLY_REFUNDED','REFUNDED'))");
     return $steps;
 }

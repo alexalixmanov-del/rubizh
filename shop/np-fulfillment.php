@@ -201,4 +201,10 @@ function npAggregateOrder(PDO $db,int $order): void {
     elseif($covered&&count(array_filter($states,fn($s)=>$s==='delivered'))===count($ships))$status='delivered';
     elseif($covered&&$moving===count($ships))$status='shipped';elseif($moving>0)$status='partially_shipped';
     if($status)$db->prepare('UPDATE rubizh_customer_orders SET status=?,updated_at=UTC_TIMESTAMP() WHERE id=?')->execute([$status,$order]);
+    // PIM v3 orders keep fulfillment separate from order/payment state.
+    if(!empty($GLOBALS['rubizh_pim_v3_columns'])&&(int)($o['pim_contract_version']??0)===3){
+        $delivered=count(array_filter($states,fn($s)=>$s==='delivered'));$ttn=count(array_filter($ships,fn($s)=>trim((string)($s['tracking_number']??''))!==''));
+        $f=$covered&&$delivered===count($ships)?'DELIVERED':($moving>0?'IN_TRANSIT':($ttn>0?'TTN_CREATED':null));
+        if($f!==null)$db->prepare('UPDATE rubizh_customer_orders SET pim_fulfillment_state=?,pim_order_state=IF(?=\'DELIVERED\' AND payment_status=\'paid\' AND pim_order_state=\'CONFIRMED\',\'COMPLETED\',pim_order_state) WHERE id=?')->execute([$f,$f,$order]);
+    }
 }
