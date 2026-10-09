@@ -1,0 +1,1045 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:rubizh:pim:category-size:rc-inventory-policy:1",
+  "type": "object",
+  "required": [
+    "id",
+    "model_id",
+    "classification_version",
+    "size_catalog_version",
+    "canonical_category_id",
+    "size_catalogs",
+    "size_options",
+    "variants",
+    "colors",
+    "availability",
+    "order_policy_version",
+    "order_submission_allowed",
+    "payment_allowed",
+    "requires_order_confirmation",
+    "inventory_policy_version"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "model_id": {
+      "type": "string"
+    },
+    "classification_version": {
+      "const": 1
+    },
+    "size_catalog_version": {
+      "const": 1
+    },
+    "canonical_category_id": {
+      "enum": [
+        "clothing",
+        "clothing_suits",
+        "clothing_combat_shirts",
+        "clothing_pants",
+        "clothing_jackets",
+        "clothing_fleece",
+        "clothing_tshirts",
+        "clothing_thermal",
+        "clothing_shorts",
+        "clothing_rainwear",
+        "clothing_gloves",
+        "clothing_headwear",
+        "clothing_balaclavas",
+        "clothing_belts",
+        "footwear",
+        "footwear_boots",
+        "footwear_tactical_boots",
+        "footwear_sneakers",
+        "footwear_socks",
+        "footwear_gaiters",
+        "footwear_insoles",
+        "armor",
+        "armor_plate_carriers",
+        "armor_vests",
+        "armor_plates",
+        "armor_soft",
+        "armor_sets",
+        "armor_accessories",
+        "helmets",
+        "helmets_ballistic",
+        "helmets_covers",
+        "helmets_padding",
+        "helmets_rails",
+        "helmets_mounts",
+        "helmets_accessories",
+        "communications",
+        "communications_headsets",
+        "communications_radios",
+        "communications_ptt",
+        "communications_antennas",
+        "communications_accessories",
+        "bags",
+        "bags_backpacks",
+        "bags_assault_backpacks",
+        "bags_hydration",
+        "bags_duffels",
+        "bags_tactical",
+        "bags_waist",
+        "bags_shoulder",
+        "bags_organizers",
+        "pouches",
+        "pouches_magazine",
+        "pouches_grenade",
+        "pouches_tourniquet",
+        "pouches_medical",
+        "pouches_radio",
+        "pouches_phone",
+        "pouches_utility",
+        "pouches_dump",
+        "pouches_dangler",
+        "pouches_panels",
+        "pouches_other",
+        "load_bearing",
+        "load_bearing_rps",
+        "load_bearing_belts",
+        "load_bearing_systems",
+        "load_bearing_harness",
+        "load_bearing_accessories",
+        "protection_knee_elbow",
+        "protection_knee",
+        "protection_elbow",
+        "protection_kits",
+        "medical",
+        "medical_tourniquets",
+        "medical_hemostatic",
+        "medical_bandages",
+        "medical_ifak",
+        "medical_scissors",
+        "medical_occlusive",
+        "medical_other",
+        "medical_training",
+        "camouflage",
+        "camouflage_nets",
+        "camouflage_antidrone",
+        "camouflage_suits",
+        "camouflage_materials",
+        "field_gear",
+        "field_sleeping_bags",
+        "field_mats",
+        "field_seats",
+        "field_thermal_blankets",
+        "field_cookware",
+        "field_thermos",
+        "field_burners",
+        "field_carabiners",
+        "field_hygiene",
+        "field_other",
+        "electronics",
+        "electronics_action_cameras",
+        "electronics_monoculars",
+        "electronics_mounts",
+        "electronics_memory",
+        "electronics_accessories",
+        "lighting",
+        "lighting_handheld",
+        "lighting_headlamps",
+        "lighting_tactical",
+        "lighting_accessories",
+        "power",
+        "power_banks",
+        "power_stations",
+        "power_solar",
+        "power_batteries",
+        "power_cables",
+        "power_accessories",
+        "weapon_accessories",
+        "weapon_slings",
+        "weapon_magazines",
+        "weapon_grips",
+        "weapon_stocks",
+        "weapon_bipods",
+        "weapon_holsters",
+        "weapon_cases",
+        "weapon_cleaning",
+        "weapon_other",
+        "eye_face",
+        "eye_glasses",
+        "eye_masks",
+        "eye_accessories",
+        "tools",
+        "tools_knives",
+        "tools_multitools",
+        "tools_other",
+        "tools_accessories",
+        "symbols",
+        "armor_ballistic_blankets",
+        "clothing_insulated_vests",
+        "footwear_care",
+        "footwear_shoes",
+        "communications_earplugs",
+        "electronics_rf_detectors",
+        "symbols_flags",
+        "field_watches",
+        null
+      ]
+    },
+    "size_catalogs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "catalog_id",
+          "scope",
+          "allowed_sizes",
+          "size_system"
+        ],
+        "properties": {
+          "catalog_id": {
+            "type": "string"
+          },
+          "scope": {
+            "enum": [
+              "MODEL",
+              "COLOR"
+            ]
+          },
+          "color_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "size_system": {
+            "type": "string"
+          },
+          "allowed_sizes": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "size_options": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "option_id",
+          "size",
+          "variant_sku",
+          "supplier_sku",
+          "stock",
+          "stock_status",
+          "availability",
+          "scope",
+          "order_submission_allowed",
+          "payment_allowed",
+          "requires_order_confirmation",
+          "stock_quantity",
+          "availability_status",
+          "availability_source",
+          "availability_confirmation"
+        ],
+        "properties": {
+          "option_id": {
+            "type": "string"
+          },
+          "size": {
+            "type": "string"
+          },
+          "variant_sku": {
+            "const": null
+          },
+          "supplier_sku": {
+            "const": null
+          },
+          "stock": {
+            "const": null
+          },
+          "stock_status": {
+            "const": "UNKNOWN"
+          },
+          "availability": {
+            "const": "SIZE_CONFIRMATION_REQUIRED"
+          },
+          "scope": {
+            "enum": [
+              "MODEL",
+              "COLOR"
+            ]
+          },
+          "color_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "order_submission_allowed": {
+            "const": true
+          },
+          "payment_allowed": {
+            "const": false
+          },
+          "requires_order_confirmation": {
+            "const": true
+          },
+          "stock_quantity": {
+            "const": null
+          },
+          "availability_status": {
+            "const": "UNKNOWN"
+          },
+          "availability_source": {
+            "const": null
+          },
+          "availability_confirmation": {
+            "const": "UNKNOWN"
+          }
+        },
+        "additionalProperties": true,
+        "not": {
+          "required": [
+            "checkout_allowed"
+          ]
+        }
+      }
+    },
+    "variants": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "sku",
+          "size_status",
+          "stock",
+          "stock_status",
+          "availability",
+          "color_id",
+          "photos",
+          "order_submission_allowed",
+          "payment_allowed",
+          "requires_order_confirmation",
+          "size_confidence_tier",
+          "source_binding_status",
+          "stock_observed_at",
+          "source_updated_at",
+          "stock_data_age_hours",
+          "stale_source",
+          "stock_quantity",
+          "availability_status",
+          "availability_source",
+          "availability_confirmation",
+          "inventory_mode",
+          "inventory_policy_id",
+          "inventory_policy_version",
+          "inventory_policy_confirmed",
+          "delivery_lead_time_days",
+          "ready_to_dispatch",
+          "price_ready",
+          "binding_confirmation_required",
+          "size_confirmation_required"
+        ],
+        "properties": {
+          "sku": {
+            "type": "string",
+            "minLength": 1
+          },
+          "size_status": {
+            "enum": [
+              "EXACT_SIZE",
+              "ONE_SIZE",
+              "NO_SIZE_REQUIRED",
+              "SIZE_CONFIRMATION_REQUIRED"
+            ]
+          },
+          "size_confidence_tier": {
+            "enum": [
+              "SAFE_AUTO",
+              "LIKELY",
+              "AMBIGUOUS"
+            ]
+          },
+          "stock": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "stock_status": {
+            "enum": [
+              "CONFIRMED",
+              "CONFIRMED_BY_STATUS",
+              "CONFIRMED_BY_PRESENCE",
+              "UNKNOWN"
+            ]
+          },
+          "availability": {
+            "enum": [
+              "IN_STOCK",
+              "OUT_OF_STOCK",
+              "PREORDER",
+              "ORDER_ON_REQUEST",
+              "UNKNOWN",
+              "SIZE_CONFIRMATION_REQUIRED"
+            ]
+          },
+          "color_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "photos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "lead_time_days": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "order_submission_allowed": {
+            "type": "boolean"
+          },
+          "payment_allowed": {
+            "type": "boolean"
+          },
+          "requires_order_confirmation": {
+            "type": "boolean"
+          },
+          "source_binding_status": {
+            "enum": [
+              "CONFIRMED",
+              "CONFIRMATION_REQUIRED"
+            ]
+          },
+          "stock_observed_at": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "source_updated_at": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "stock_data_age_hours": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "stale_source": {
+            "type": "boolean"
+          },
+          "stock_warning_hours": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "expires_at": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "stock_quantity": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "availability_status": {
+            "enum": [
+              "IN_STOCK",
+              "OUT_OF_STOCK",
+              "PREORDER",
+              "ORDER_ON_REQUEST",
+              "UNKNOWN"
+            ]
+          },
+          "availability_source": {
+            "enum": [
+              "QUANTITY",
+              "STATUS",
+              "FEED_PRESENCE",
+              "MANUAL",
+              null
+            ]
+          },
+          "availability_confirmation": {
+            "enum": [
+              "CONFIRMED",
+              "UNKNOWN"
+            ]
+          },
+          "inventory_mode": {
+            "enum": [
+              "QUANTITY",
+              "STATUS",
+              "FEED_PRESENCE",
+              "NO_AVAILABILITY_SIGNAL"
+            ]
+          },
+          "inventory_policy_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "inventory_policy_version": {
+            "const": 1
+          },
+          "inventory_policy_confirmed": {
+            "type": "boolean"
+          },
+          "delivery_lead_time_days": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "ready_to_dispatch": {
+            "type": "boolean"
+          },
+          "price_ready": {
+            "type": "boolean"
+          },
+          "binding_confirmation_required": {
+            "type": "boolean"
+          },
+          "size_confirmation_required": {
+            "type": "boolean"
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "stock_status": {
+                  "const": "UNKNOWN"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "stock": {
+                  "const": null
+                },
+                "stock_quantity": {
+                  "const": null
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "availability": {
+                  "const": "IN_STOCK"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "size_status": {
+                  "enum": [
+                    "EXACT_SIZE",
+                    "ONE_SIZE",
+                    "NO_SIZE_REQUIRED"
+                  ]
+                },
+                "size_confidence_tier": {
+                  "const": "SAFE_AUTO"
+                },
+                "source_binding_status": {
+                  "const": "CONFIRMED"
+                },
+                "availability_status": {
+                  "const": "IN_STOCK"
+                },
+                "availability_confirmation": {
+                  "const": "CONFIRMED"
+                },
+                "inventory_policy_confirmed": {
+                  "const": true
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "availability": {
+                  "const": "PREORDER"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "order_submission_allowed": {
+                  "const": true
+                },
+                "payment_allowed": {
+                  "const": false
+                },
+                "requires_order_confirmation": {
+                  "const": true
+                },
+                "stock": {
+                  "const": null
+                },
+                "availability_status": {
+                  "const": "PREORDER"
+                },
+                "availability_confirmation": {
+                  "const": "CONFIRMED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "availability": {
+                  "const": "ORDER_ON_REQUEST"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "order_submission_allowed": {
+                  "const": true
+                },
+                "payment_allowed": {
+                  "const": false
+                },
+                "requires_order_confirmation": {
+                  "const": true
+                },
+                "stock": {
+                  "const": null
+                },
+                "availability_status": {
+                  "const": "ORDER_ON_REQUEST"
+                },
+                "availability_confirmation": {
+                  "const": "CONFIRMED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "availability": {
+                  "const": "SIZE_CONFIRMATION_REQUIRED"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "order_submission_allowed": {
+                  "const": true
+                },
+                "payment_allowed": {
+                  "const": false
+                },
+                "requires_order_confirmation": {
+                  "const": true
+                },
+                "stock_status": {
+                  "const": "UNKNOWN"
+                },
+                "stock": {
+                  "const": null
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "availability": {
+                  "const": "UNKNOWN"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "order_submission_allowed": {
+                  "const": false
+                },
+                "payment_allowed": {
+                  "const": false
+                },
+                "requires_order_confirmation": {
+                  "const": true
+                },
+                "stock_status": {
+                  "const": "UNKNOWN"
+                },
+                "stock": {
+                  "const": null
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "availability": {
+                  "const": "OUT_OF_STOCK"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "order_submission_allowed": {
+                  "const": false
+                },
+                "payment_allowed": {
+                  "const": false
+                },
+                "requires_order_confirmation": {
+                  "const": false
+                },
+                "availability_status": {
+                  "const": "OUT_OF_STOCK"
+                },
+                "availability_confirmation": {
+                  "const": "CONFIRMED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "stock_status": {
+                  "enum": [
+                    "CONFIRMED_BY_STATUS",
+                    "CONFIRMED_BY_PRESENCE"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "stock": {
+                  "const": null
+                },
+                "stock_quantity": {
+                  "const": null
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "stock_status": {
+                  "const": "CONFIRMED"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "stock": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "stock_quantity": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "availability_source": {
+                  "const": "QUANTITY"
+                },
+                "availability": {
+                  "const": "IN_STOCK"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "stock": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "stock_quantity": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "stock_status": {
+                  "const": "CONFIRMED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "availability_source": {
+                  "enum": [
+                    "STATUS",
+                    "FEED_PRESENCE"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "stock": {
+                  "const": null
+                },
+                "stock_quantity": {
+                  "const": null
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "payment_allowed": {
+                  "const": true
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "availability": {
+                  "const": "IN_STOCK"
+                },
+                "availability_status": {
+                  "const": "IN_STOCK"
+                },
+                "availability_confirmation": {
+                  "const": "CONFIRMED"
+                },
+                "inventory_policy_confirmed": {
+                  "const": true
+                },
+                "price_ready": {
+                  "const": true
+                },
+                "order_submission_allowed": {
+                  "const": true
+                },
+                "requires_order_confirmation": {
+                  "const": false
+                },
+                "size_status": {
+                  "enum": [
+                    "EXACT_SIZE",
+                    "ONE_SIZE",
+                    "NO_SIZE_REQUIRED"
+                  ]
+                },
+                "size_confidence_tier": {
+                  "const": "SAFE_AUTO"
+                },
+                "source_binding_status": {
+                  "const": "CONFIRMED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "availability": {
+                  "const": "IN_STOCK"
+                },
+                "price_ready": {
+                  "const": true
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "payment_allowed": {
+                  "const": true
+                },
+                "order_submission_allowed": {
+                  "const": true
+                },
+                "requires_order_confirmation": {
+                  "const": false
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "availability": {
+                  "const": "IN_STOCK"
+                },
+                "price_ready": {
+                  "const": false
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "payment_allowed": {
+                  "const": false
+                },
+                "order_submission_allowed": {
+                  "const": false
+                },
+                "requires_order_confirmation": {
+                  "const": true
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "availability_confirmation": {
+                  "const": "CONFIRMED"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "availability_source": {
+                  "enum": [
+                    "QUANTITY",
+                    "STATUS",
+                    "FEED_PRESENCE",
+                    "MANUAL"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "availability_source": {
+                  "const": "STATUS"
+                },
+                "availability": {
+                  "const": "IN_STOCK"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "inventory_mode": {
+                  "const": "STATUS"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "availability_source": {
+                  "const": "FEED_PRESENCE"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "inventory_mode": {
+                  "const": "FEED_PRESENCE"
+                }
+              }
+            }
+          }
+        ],
+        "not": {
+          "required": [
+            "checkout_allowed"
+          ]
+        }
+      }
+    },
+    "colors": {
+      "type": "array"
+    },
+    "order_submission_allowed": {
+      "type": "boolean"
+    },
+    "payment_allowed": {
+      "type": "boolean"
+    },
+    "requires_order_confirmation": {
+      "type": "boolean"
+    },
+    "order_policy_version": {
+      "const": 1
+    },
+    "availability": {
+      "enum": [
+        "IN_STOCK",
+        "OUT_OF_STOCK",
+        "PREORDER",
+        "ORDER_ON_REQUEST",
+        "UNKNOWN",
+        "SIZE_CONFIRMATION_REQUIRED"
+      ]
+    },
+    "inventory_policy_version": {
+      "const": 1
+    }
+  },
+  "not": {
+    "required": [
+      "checkout_allowed"
+    ]
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "payment_allowed": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "availability": {
+            "const": "IN_STOCK"
+          },
+          "variants": {
+            "contains": {
+              "properties": {
+                "payment_allowed": {
+                  "const": true
+                }
+              },
+              "required": [
+                "payment_allowed"
+              ]
+            }
+          }
+        }
+      }
+    }
+  ]
+}

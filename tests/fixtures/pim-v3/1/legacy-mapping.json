@@ -1,0 +1,40 @@
+{
+  "mapping_version": 1,
+  "entries": [
+    {
+      "mapping_id": "fixture-map-product",
+      "legacy_product_id": "old-jacket",
+      "legacy_url": "/product/old-jacket",
+      "model_id": "fixture-jacket",
+      "color_id": "clr_black",
+      "redirect_url": "/product/fixture-jacket?color=clr_black",
+      "mapping_status": "CONFIRMED",
+      "evidence_refs": [
+        "fixture-source:explicit-owner-approved"
+      ]
+    },
+    {
+      "mapping_id": "fixture-map-sku",
+      "legacy_product_id": "old-jacket",
+      "legacy_variant_id": "old-variant",
+      "legacy_sku": "old-sku",
+      "model_id": "fixture-jacket",
+      "color_id": "clr_black",
+      "variant_sku": "fixture-jacket-black-M",
+      "mapping_status": "CONFIRMED",
+      "evidence_refs": [
+        "fixture-source:supplier-binding"
+      ]
+    },
+    {
+      "mapping_id": "fixture-map-photo-unknown",
+      "legacy_product_id": "old-jacket",
+      "legacy_photo_id": 123,
+      "model_id": null,
+      "color_id": null,
+      "variant_sku": null,
+      "mapping_status": "UNKNOWN",
+      "evidence_refs": []
+    }
+  ]
+}
