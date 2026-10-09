@@ -69,4 +69,5 @@ done < "$RUBIZH_LIST"
 while IFS= read -r RUBIZH_RELATIVE; do [[ "$RUBIZH_RELATIVE" != *.php ]] || php -l "$RUBIZH_SITE_ROOT/$RUBIZH_RELATIVE" >/dev/null; done < "$RUBIZH_LIST"
 RUBIZH_SUCCESS=true
 echo "Source update installed. Private rollback backup: $RUBIZH_BACKUP"
+echo "Rollback command: bash \"$RUBIZH_SITE_ROOT/dev/rollback-update.sh\" \"$RUBIZH_BACKUP\" \"$RUBIZH_SITE_ROOT\""
 echo 'Database repair, service activation and cron setup are separate commands.'
