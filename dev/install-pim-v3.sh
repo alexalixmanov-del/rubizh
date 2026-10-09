@@ -18,8 +18,8 @@ RUBIZH_DB_REAL=$(realpath "$RUBIZH_DB_BACKUP")
 printf '%s  %s\n' "$RUBIZH_DB_SHA" "$RUBIZH_DB_REAL" | sha256sum -c -
 RUBIZH_TEMP=$(mktemp -d /tmp/rubizh-pim-v3.XXXXXX)
 trap 'command rm -rf -- "$RUBIZH_TEMP"' EXIT
-RUBIZH_SHA=7f0bc08892331c8c0d11b7d8b7af8568f08ddbb3e998c47c3f0685cbc2bf9f59
-curl -fsSL "${RUBIZH_ARCHIVE_URL:-https://raw.githubusercontent.com/alexalixmanov-del/rubizh/671618493c1193c89cccb3e566f880dbea9d748f/downloads/Rubizh-pim-v3-20261009.zip}" -o "$RUBIZH_TEMP/update.zip"
+RUBIZH_SHA=1fc494d6b647c7824295c7536129bbd2f59d9ab4fc588661dd8de1681aad2769
+curl -fsSL "${RUBIZH_ARCHIVE_URL:-https://raw.githubusercontent.com/alexalixmanov-del/rubizh/b12af713a8f2ac7e1f20d37ab62b465d65da95e0/downloads/Rubizh-pim-v3-20261009.zip}" -o "$RUBIZH_TEMP/update.zip"
 printf '%s  %s\n' "$RUBIZH_SHA" "$RUBIZH_TEMP/update.zip" | sha256sum -c -
 RUBIZH_REPORTS="$(dirname "$RUBIZH_ROOT")/rubizh-private-backups/pim-v3-$(date -u +%Y%m%d-%H%M%S)"
 mkdir -p "$RUBIZH_REPORTS"
