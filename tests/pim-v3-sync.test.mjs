@@ -41,6 +41,7 @@ test('exact PIM wire ingests atomically into MODEL / COLOR / real SKU / size opt
   const pricing=site.sql("SELECT sku,policy_json FROM rubizh_catalog_pricing WHERE product_id='m-jacket' ORDER BY sku");assert.equal(pricing.length,4);
   const p1=JSON.parse(pricing[0].policy_json);assert.equal(p1.price_cents,286000);assert.equal(p1.minimum_cents,241000);assert.equal(p1.kit_cents,247000);assert.equal(p1.wholesale.length,2);
   assert.equal(site.sql("SELECT category_id FROM rubizh_product_categories WHERE product_id='m-belt'")[0].category_id,'clothing_belts');
+  const route=site.sql("SELECT f.supplier_name,a.supplier_sku FROM rubizh_catalog_fulfillment f JOIN rubizh_catalog_supplier_articles a ON a.sku=f.sku WHERE f.sku='RUB-F0001'")[0];assert.deepEqual(route,{supplier_name:'M-WIN',supplier_sku:'MW-J-BK-M'},'private routing stored server-side');
   assert.equal(site.sql('SELECT COUNT(*) n FROM rubizh_pim_categories')[0].n,143);
   // Replay of the same final chunk returns the stored ACK, no second write.
   const replay=await site.post('/api/pim/sync',chunks[1],site.auth);assert.equal(replay.status,200);assert.equal(replay.data.replayed,true);assert.equal(site.sql("SELECT COUNT(*) n FROM rubizh_pim_history WHERE operation='CREATE'")[0].n,wire.products.length);

@@ -189,7 +189,8 @@ function pimV3WriteModel(PDO $db,array $m,string $batch,string $revision): strin
             $time($v['stock_observed_at']),$time($v['source_updated_at']),is_numeric($v['stock_data_age_hours'])?round((float)$v['stock_data_age_hours'],2):null,is_numeric($v['stock_warning_hours']??null)?$v['stock_warning_hours']:null,$time($v['expires_at']??null),
             is_int($v['delivery_lead_time_days'])?$v['delivery_lead_time_days']:null,$revision,$flag($v['order_submission_allowed']),$flag($v['payment_allowed']),$flag($v['requires_order_confirmation']),$flag($v['inventory_policy_confirmed']),$flag($v['stale_source']),
             $flag($v['ready_to_dispatch']),$flag($v['price_ready']),$flag($v['binding_confirmation_required']),$flag($v['size_confirmation_required']),1]);
-        if(is_string($v['fulfillment_supplier_id']??null))$fulfillment[$v['sku']]=mb_substr((string)($v['fulfillment_origin']??$v['fulfillment_supplier_id']),0,191);
+        // Private routing only: supplier name for the NP origin map, supplier article for the supplier order.
+        if(is_string($v['fulfillment_supplier']??null)&&$v['fulfillment_supplier']!=='')$fulfillment[$v['sku']]=mb_substr($v['fulfillment_supplier'],0,191);
         if(is_string($v['fulfillment_supplier_sku']??null)&&$v['fulfillment_supplier_sku']!=='')$articles[$v['sku']]=['supplier_name'=>$fulfillment[$v['sku']]??'','supplier_sku'=>mb_substr($v['fulfillment_supplier_sku'],0,120)];
     }
     sync_product_fulfillment($db,$id,$fulfillment);sync_product_supplier_articles($db,$id,$articles);

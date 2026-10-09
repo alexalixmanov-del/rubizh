@@ -2,11 +2,15 @@
 declare(strict_types=1);
 // Public read model for PIM contract 3 MODELs. Whitelist only: no supplier data, floors, quantities or provenance.
 
+/** Whether the additive v3 columns exist on this connection (set once per request). */
+function pimV3DetectColumns(PDO $db): void {
+    try{$GLOBALS['rubizh_pim_v3_columns']=(string)$db->query("SELECT v FROM meta WHERE k='pim_v3_schema'")->fetchColumn()==='2';}catch(PDOException $e){$GLOBALS['rubizh_pim_v3_columns']=false;}
+}
 function pimV3IsModel(array $row): bool {return (int)($row['pim_contract_version']??0)===3;}
 /** One usable-photo predicate for catalog, product, search, related, kits, sitemap and feeds. */
 function shopUsablePhotoSql(string $alias='p'): string {
     if(!preg_match('/^[a-z]+$/D',$alias))throw new InvalidArgumentException('alias');
-    return "EXISTS(SELECT 1 FROM photos uph WHERE uph.product_id=$alias.id AND (uph.status='ok' OR uph.status='pending' AND uph.src_url LIKE 'https://%'))";
+    return "EXISTS(SELECT 1 FROM photos uph WHERE uph.product_id=$alias.id AND (uph.status='ok' OR uph.status='pending' AND (uph.src_url LIKE 'https://%' OR uph.src_url LIKE '/%')))";
 }
 /** True when every visible product is a PIM v3 MODEL: legacy text/JSON predicates are then not generated at all. */
 function pimV3OnlyCatalog(PDO $db): bool {
@@ -32,10 +36,10 @@ function pimV3VariantPublic(array $v,?array $policy): array {
 }
 /** Photos of one MODEL with color ownership; same local-file/source fallback as legacy product_photos(). */
 function pimV3Photos(PDO $db,string $id): array {
-    $q=$db->prepare("SELECT ph.id,ph.pos,ph.src_url,ph.file,ph.thumb,ph.width,ph.height,ph.status FROM photos ph WHERE ph.product_id=? AND (ph.status='ok' OR ph.status='pending' AND ph.src_url LIKE 'https://%') ORDER BY ph.pos");$q->execute([$id]);
+    $q=$db->prepare("SELECT ph.id,ph.pos,ph.src_url,ph.file,ph.thumb,ph.width,ph.height,ph.status FROM photos ph WHERE ph.product_id=? AND (ph.status='ok' OR ph.status='pending' AND (ph.src_url LIKE 'https://%' OR ph.src_url LIKE '/%')) ORDER BY ph.pos");$q->execute([$id]);
     $byId=[];foreach($q->fetchAll(PDO::FETCH_ASSOC) as $r){$ok=$r['status']==='ok'&&media_file_exists((string)$r['file']);
         // Supplier source is shown only over https while the local copy is pending.
-        if(!$ok&&!str_starts_with((string)$r['src_url'],'https://'))continue;
+        if(!$ok&&!str_starts_with((string)$r['src_url'],'https://')&&!str_starts_with((string)$r['src_url'],'/'))continue;
         $byId[(int)$r['id']]=['url'=>$ok?media_url($r['file']):$r['src_url'],'thumb'=>$ok?media_url(media_file_exists((string)$r['thumb'])?$r['thumb']:$r['file']):$r['src_url'],'width'=>(int)$r['width'],'height'=>(int)$r['height'],'local'=>$ok];}
     $c=$db->prepare('SELECT color_id,photo_id FROM rubizh_color_photos WHERE product_id=? ORDER BY sort');$c->execute([$id]);
     $colors=[];foreach($c->fetchAll(PDO::FETCH_ASSOC) as $r)if(isset($byId[(int)$r['photo_id']]))$colors[$r['color_id']][]=$byId[(int)$r['photo_id']];

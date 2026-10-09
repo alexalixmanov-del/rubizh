@@ -18,8 +18,8 @@ test('HTTP PIM pricing sync, private projection, atomic failure, checkout replay
   async function send(route,body,headers={}){const r=await fetch(base+route,{method:'POST',headers:{'Content-Type':'application/json',...headers},body:JSON.stringify(body)});return {status:r.status,data:await r.json()};}
   for(let i=0;i<50;i++){try{const r=await fetch(base+'/api/pim/status',{headers:auth});if(r.ok){assert.equal((await r.json()).capabilities.pricing_policy_version,1);break;}}catch{}await new Promise(r=>setTimeout(r,40));}
   function variant(sku,price=1590,kit=1370,extra={}){return {sku,price,site_price:price,minimum_sale_price:1340,pricing_policy_version:1,discount_margin_floor_pct:15,kit_price:kit,wholesale:[{price:1400,requested_discount:12},{price:1340,requested_discount:18,capped:true}],size:'L',color:'Чорний',stock:20,availability:'in',...extra};}
-  const product={id:'jacket',name:'Куртка тестова',pricing_policy_version:1,category:'Одяг та форма / Куртки',variants:[variant('jacket-L'),variant('jacket-M',1710.25,1490.25,{size:'M'})],photos:[]};
-  const requestProduct={id:'request',name:'Підсумок',pricing_policy_version:1,variants:[variant('request-one',1590,1370,{stock:0,availability:'ORDER_ON_REQUEST',lead_time:''})],photos:[]};
+  const product={id:'jacket',name:'Куртка тестова',pricing_policy_version:1,category:'Одяг та форма / Куртки',variants:[variant('jacket-L'),variant('jacket-M',1710.25,1490.25,{size:'M'})],photos:['https://cdn.example.com/jacket.webp']};
+  const requestProduct={id:'request',name:'Підсумок',pricing_policy_version:1,variants:[variant('request-one',1590,1370,{stock:0,availability:'ORDER_ON_REQUEST',lead_time:''})],photos:['https://cdn.example.com/request.webp']};
   const payload={settings:{pricing_policy_version:1,discount_margin_floor_pct:15},products:[product,requestProduct]};
   let response=await send('/api/pim/sync',payload,auth);assert.equal(response.status,200,JSON.stringify(response));assert.ok(response.data.results.every(r=>r.pricing_policy_version===1));
   response=await send('/api/pim/sync',payload,auth);assert.equal(response.status,200);assert.ok(response.data.results.every(r=>r.status==='unchanged'));
