@@ -43,7 +43,7 @@ function db(): PDO {
     catch(PDOException $e){error_log('rubizh public SQL deadline unavailable');}
   }
   migrate($pdo);
-  try{$GLOBALS['rubizh_pim_v3_columns']=(string)$pdo->query("SELECT v FROM meta WHERE k='pim_v3_schema'")->fetchColumn()==='2';}catch(PDOException $e){$GLOBALS['rubizh_pim_v3_columns']=false;}
+  pimV3DetectColumns($pdo);
   return $pdo;
 }
 
