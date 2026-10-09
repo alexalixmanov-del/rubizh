@@ -22,10 +22,13 @@ try{
     if(isset($o['plan'])&&!isset($o['apply'])){
         $ids=$current();if($v3===0)throw new RuntimeException('No PIM v3 model is visible yet: publish contract 3 first');
         $sample=$db->query('SELECT id,slug,name FROM products WHERE visible=1 AND pim_contract_version IS NULL ORDER BY id LIMIT 20')->fetchAll(PDO::FETCH_ASSOC);
-        $plan=['kind'=>'PIM_V3_LEGACY_HIDE_PLAN','database'=>(string)$db->query('SELECT DATABASE()')->fetchColumn(),'created_at'=>gmdate('c'),'visible_v3_models'=>$v3,'legacy_visible'=>count($ids),'ids'=>$ids];
+        // URL impact: a legacy card whose slug a v3 model also wanted (the model got "<slug>-N") — hiding it without a
+        // URL takeover/redirect makes that indexed legacy URL 404 while the model keeps its suffixed URL.
+        $pairs=$db->query("SELECT l.id legacy_id,l.slug legacy_slug,n.id model_id,n.slug model_slug FROM products l JOIN products n ON n.pim_contract_version=3 AND n.slug REGEXP CONCAT('^',REPLACE(l.slug,'-','[-]'),'-[0-9]+$') WHERE l.visible=1 AND l.pim_contract_version IS NULL ORDER BY l.id")->fetchAll(PDO::FETCH_ASSOC);
+        $plan=['kind'=>'PIM_V3_LEGACY_HIDE_PLAN','url_successor_pairs'=>count($pairs),'url_successor_sample'=>array_slice($pairs,0,20),'database'=>(string)$db->query('SELECT DATABASE()')->fetchColumn(),'created_at'=>gmdate('c'),'visible_v3_models'=>$v3,'legacy_visible'=>count($ids),'ids'=>$ids];
         $plan['plan_sha256']=$sha($ids);
         if(isset($o['out'])){$file=$private((string)$o['out']);file_put_contents($file,json_encode($plan,JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT|JSON_THROW_ON_ERROR));chmod($file,0600);}
-        echo json_encode(['legacy_visible'=>count($ids),'visible_v3_models'=>$v3,'plan_sha256'=>$plan['plan_sha256'],'plan_file'=>$file??null,'sample'=>$sample],JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT),"\n";exit(0);
+        echo json_encode(['legacy_visible'=>count($ids),'visible_v3_models'=>$v3,'url_successor_pairs'=>count($pairs),'warning'=>$pairs?'Hiding these legacy cards makes their URLs 404 (no product redirects exist); their v3 successors keep suffixed URLs. Decide URL takeover first.':null,'plan_sha256'=>$plan['plan_sha256'],'plan_file'=>$file??null,'sample'=>$sample],JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT),"\n";exit(0);
     }
     $load=static function(string $file,string $want)use($private,$sha):array{
         $plan=json_decode((string)file_get_contents($private($file)),true,64,JSON_THROW_ON_ERROR);
