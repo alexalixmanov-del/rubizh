@@ -90,6 +90,7 @@ function npConfirm(PDO $db,int $order,string $actor,bool $availability,bool $ext
     if($method==='cod' && (cfg('np_cod_contract_confirmed')!==true||cfg('np_cod_service')!=='afterpayment'))throw new RuntimeException('Післяплату не підтверджено за договором ФОП.');
     if(!in_array($method,['invoice','card','cod'],true))throw new RuntimeException('Немає підтвердженого способу оплати.');
     $first=$fresh['status']==='new';$db->beginTransaction();try{
+      if(function_exists('pimV3ConfirmRequests')){pimV3ConfirmRequests($db,$order,is_array($GLOBALS['rubizh_request_resolution']??null)?$GLOBALS['rubizh_request_resolution']:[],$actor);if(!empty($GLOBALS['rubizh_pim_v3_columns']))$db->prepare("UPDATE rubizh_customer_orders SET pim_order_state='CONFIRMED' WHERE id=? AND pim_contract_version=3 AND pim_order_state='WAITING_CONFIRMATION'")->execute([$order]);$fresh=npOrder($db,$order);}
       $db->prepare('INSERT INTO rubizh_np_order_confirmations(order_id,availability_confirmed,extra_delivery_agreed,confirmed_at,confirmed_by,payment_proof,updated_at) VALUES(?,?,?,UTC_TIMESTAMP(),?,?,UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE availability_confirmed=VALUES(availability_confirmed),extra_delivery_agreed=VALUES(extra_delivery_agreed),confirmed_at=VALUES(confirmed_at),confirmed_by=VALUES(confirmed_by),payment_proof=IF(LENGTH(VALUES(payment_proof))=0,payment_proof,VALUES(payment_proof)),updated_at=VALUES(updated_at)')->execute([$order,1,$extra?1:0,$actor,mb_substr($proof,0,240)]);
       if($method==='invoice'&&trim($proof)!=='')$db->prepare("UPDATE rubizh_customer_orders SET payment_status='paid',updated_at=UTC_TIMESTAMP() WHERE id=? AND payment_status IN ('pending','failed')")->execute([$order]);
       $db->prepare("UPDATE rubizh_customer_orders SET status='confirmed',updated_at=UTC_TIMESTAMP() WHERE id=? AND status='new'")->execute([$order]);
@@ -124,7 +125,7 @@ function npSaveProperties(array $shipment,array $origin,array $sender,array $del
 }
 function npRecipient(array $contact,array $delivery): array {
     $name=trim((string)(($contact['recipient']??'')?:$contact['name']));$parts=preg_split('/\s+/u',$name);
-    if(count($parts)<2)throw new RuntimeException('Для НП потрібні імʼя та прізвище одержувача.');
+    if(count($parts)<2)throw new RuntimeException('Для НП потрібні ім’я та прізвище одержувача.');
     $result=npApiCall('Counterparty','save',['FirstName'=>$parts[0],'LastName'=>$parts[1],'MiddleName'=>implode(' ',array_slice($parts,2)),'Phone'=>preg_replace('/\D/','',$contact['phone']),'Email'=>$contact['email'],'CounterpartyType'=>'PrivatePerson','CounterpartyProperty'=>'Recipient','CityRef'=>$delivery['city_ref']]);
     $r=$result[0]??[];if(!npRef($r['Ref']??''))throw new NpUnknownResult('НП не повернула ідентифікатор одержувача.');
     $persons=$r['ContactPerson']['data']??null;
@@ -200,4 +201,10 @@ function npAggregateOrder(PDO $db,int $order): void {
     elseif($covered&&count(array_filter($states,fn($s)=>$s==='delivered'))===count($ships))$status='delivered';
     elseif($covered&&$moving===count($ships))$status='shipped';elseif($moving>0)$status='partially_shipped';
     if($status)$db->prepare('UPDATE rubizh_customer_orders SET status=?,updated_at=UTC_TIMESTAMP() WHERE id=?')->execute([$status,$order]);
+    // PIM v3 orders keep fulfillment separate from order/payment state.
+    if(!empty($GLOBALS['rubizh_pim_v3_columns'])&&(int)($o['pim_contract_version']??0)===3){
+        $delivered=count(array_filter($states,fn($s)=>$s==='delivered'));$ttn=count(array_filter($ships,fn($s)=>trim((string)($s['tracking_number']??''))!==''));
+        $f=$covered&&$delivered===count($ships)?'DELIVERED':($moving>0?'IN_TRANSIT':($ttn>0?'TTN_CREATED':null));
+        if($f!==null)$db->prepare('UPDATE rubizh_customer_orders SET pim_fulfillment_state=?,pim_order_state=IF(?=\'DELIVERED\' AND payment_status=\'paid\' AND pim_order_state=\'CONFIRMED\',\'COMPLETED\',pim_order_state) WHERE id=?')->execute([$f,$f,$order]);
+    }
 }

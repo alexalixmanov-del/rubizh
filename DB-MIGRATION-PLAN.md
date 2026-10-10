@@ -46,6 +46,14 @@ Existing canonical tables/aliases/decisions/locks, private catalog_pricing/fulfi
 
 Минимальные target states: order NEW/WAITING_CONFIRMATION/CONFIRMED/CANCELLED/COMPLETED; payment UNPAID/PAYMENT_PENDING/PAID/PARTIALLY_REFUNDED/REFUNDED; fulfillment NOT_READY/READY_TO_SHIP/TTN_CREATED/SHIPPED/IN_TRANSIT/DELIVERED. Payment readiness — derived permission, не объединённый status. Provider failed/unknown и частичные возвраты/parcel states остаются в существующих журналах; legacy mapping не теряет эти факты.
 
+Hardening decision 2026-10-09: order states above are the final five-state catalog;
+payment readiness must not be persisted as a sixth order state. An ordinary ready
+order may start CONFIRMED + UNPAID + payment_allowed=true; a request starts
+WAITING_CONFIRMATION and reaches CONFIRMED after manager confirmation. No runtime
+state machine/payment flow is enabled in foundation or this hardening.
+Typed supplier stock_quantity and inventory provenance remain private. Public DTO
+omits exact supplier quantity; future max_order_qty is a separate server derivation.
+
 Для photos existing UNIQUE(product_id,pos) нельзя поверх старых позиций заменять URL и считать историю сохранённой. Минимальный additive вариант: новые asset rows получают свободные технические pos, а display sort живёт в versioned model/color relations; все gallery readers для v3 читают relations. Legacy позиции/files сохраняются. Альтернативный переход к immutable global media identity требует отдельного review/index migration, не входит скрытно в foundation. Historical media refs берутся из snapshot/retained manifest, а не current product gallery.
 
 ## Publications/photos

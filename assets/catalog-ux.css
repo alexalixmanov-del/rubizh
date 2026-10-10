@@ -1,4 +1,4 @@
-/* Апостроф ʼ (U+02BC): у IBM Plex Sans і Oswald його немає, браузер брав запасний шрифт і виходило «Кур ʼєр». Підставляємо гліф із системного шрифту лише для цього символу. */
+/* Апостроф U+02BC: у IBM Plex Sans і Oswald його немає, браузер брав запасний шрифт і слово розривалося пробілами. Інтерфейс тепер використовує ’ (U+2019); для старих даних з U+02BC підставляємо гліф із системного шрифту лише для цього символу. */
 @font-face{font-family:'IBM Plex Sans';src:local('Arial'),local('Helvetica Neue'),local('Helvetica'),local('Roboto'),local('DejaVu Sans');unicode-range:U+02BC;font-weight:100 900;font-style:normal}
 @font-face{font-family:'Oswald';src:local('Arial Narrow'),local('Arial'),local('Helvetica Neue'),local('Roboto Condensed'),local('DejaVu Sans Condensed');unicode-range:U+02BC;font-weight:100 900;font-style:normal}
 @font-face{font-family:'UAH';src:local('Arial'),local('Helvetica Neue'),local('Helvetica'),local('DejaVu Sans');unicode-range:U+02BC}

@@ -68,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
             $result=($proof['kind'] ?? '')==='email_link'
                 ? identityFinishEmail($proof['actor'],$proof['email'],true)
                 : identityFinishPhone($proof['phone'],true);
-            customerLogin($result['id'],$result['method']); $_SESSION['flash']='Кабінети обʼєднано. Замовлення та способи входу збережено.';
+            customerLogin($result['id'],$result['method']); $_SESSION['flash']='Кабінети об’єднано. Замовлення та способи входу збережено.';
             header('Location: /auth/',true,303); exit;
         }
         if($action==='remove_favorite') {

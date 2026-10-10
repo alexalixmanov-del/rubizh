@@ -99,7 +99,7 @@ function identityCreate(PDO $db, array $profile = []): string {
 }
 function identityAttach(PDO $db, string $id, string $provider, string $subject, string $email = ''): void {
     $owner=identityFind($provider,$subject);
-    if ($owner !== null && $owner !== $id) { throw new RuntimeException('Цей спосіб входу вже привʼязано до іншого кабінету. Увійдіть у нього та підтвердьте свій телефон.'); }
+    if ($owner !== null && $owner !== $id) { throw new RuntimeException('Цей спосіб входу вже прив’язано до іншого кабінету. Увійдіть у нього та підтвердьте свій телефон.'); }
     if ($owner === null) {
         $db->prepare('INSERT INTO rubizh_customer_identities(provider,subject,customer_id,contact_email,created_at) VALUES(?,?,?,?,UTC_TIMESTAMP())')->execute([$provider,$subject,$id,$email]);
     }

@@ -10,9 +10,10 @@ require_once __DIR__.'/supplier-notifications.php';
 require_once __DIR__.'/order-lifecycle.php';
 require_once __DIR__.'/customer-ui.php';
 require_once __DIR__.'/cart-reminders-lib.php';
+require_once __DIR__.'/pim-v3-checkout.php';
 
 function shopStoreDatabase(): PDO {
-    $db=database();migrate($db);if(rubizhSchemaPrepared($db))return $db;
+    $db=database();migrate($db);pimV3DetectColumns($db);if(rubizhSchemaPrepared($db))return $db;
     customerDatabase();$db=identityDatabase();shopNotificationMigrate($db);monoMigrate($db);shopLifecycleMigrate($db);shopUiMigrate($db);shopCartReminderMigrate($db);static $ready=false;
     if(!$ready){migrate($db);npMigrate($db);supplierMigrate($db);
         if((int)$db->query("SELECT v FROM meta WHERE k='rubizh_shop_schema'")->fetchColumn()>=1){$ready=true;return $db;}
@@ -41,9 +42,16 @@ function shopComment(array $input): string {
     if(mb_strlen($value)>1500||preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u',$value))throw new RuntimeException('Коментар надто довгий або містить недопустимі символи.');
     return $value;
 }
+// Staging may add its own exact origins (and a loopback test origin); production keeps only rubizh.shop.
+function shopAllowedOrigins(): array {
+    $out=['https://rubizh.shop','https://www.rubizh.shop'];
+    if(function_exists('cfg')&&cfg('environment')==='staging'){foreach((array)(cfg('staging_origins')??[]) as $o)if(is_string($o)&&preg_match('~^https?://[a-z0-9.-]+(?::\d+)?$~D',$o))$out[]=$o;
+        if(cfg('staging_allow_loopback')===true&&isset($_SERVER['HTTP_ORIGIN'])&&preg_match('~^http://127\.0\.0\.1:\d+$~D',(string)$_SERVER['HTTP_ORIGIN']))$out[]=(string)$_SERVER['HTTP_ORIGIN'];}
+    return $out;
+}
 function shopCsrf(array $input): void {
     if(!is_string($input['csrf'] ?? null) || !hash_equals($_SESSION['csrf'],$input['csrf']))shopJson(['ok'=>false,'error'=>'Оновіть сторінку та спробуйте ще раз.'],403);
-    if(isset($_SERVER['HTTP_ORIGIN']) && !in_array($_SERVER['HTTP_ORIGIN'],['https://rubizh.shop','https://www.rubizh.shop'],true))shopJson(['ok'=>false,'error'=>'Недозволений запит.'],403);
+    if(isset($_SERVER['HTTP_ORIGIN']) && !in_array($_SERVER['HTTP_ORIGIN'],shopAllowedOrigins(),true))shopJson(['ok'=>false,'error'=>'Недозволений запит.'],403);
 }
 function shopLimit(PDO $db,string $kind,int $max,int $window=3600): void {
     $key=hash('sha256',$kind.'|'.($_SERVER['REMOTE_ADDR'] ?? 'unknown'));$start=(int)(floor(time()/$window)*$window);
@@ -60,7 +68,7 @@ function shopResolvedLines(PDO $db,array $input,bool $lock=false): array {
     // Lock variants in the same order for all carts, even if customers add items
     // in opposite order. Output stays in the original order for kit discounts.
     if($lock){
-        $skus=[];$productIds=[];foreach($input as $line){if(!is_array($line))throw new RuntimeException('Перевірте кошик.');$skus[]=customerField($line,'sku',64);$productIds[]=customerField($line,'product_id',64);}
+        $skus=[];$productIds=[];foreach($input as $line){if(!is_array($line))throw new RuntimeException('Перевірте кошик.');$skus[]=customerField($line,'sku',64);$productIds[]=customerField($line,'product_id',64);}$skus=array_values(array_filter($skus,'strlen'));if(!$skus)$skus=[''];
         $productIds=array_values(array_unique($productIds));sort($productIds,SORT_STRING);
         $products=$db->prepare('SELECT id FROM products WHERE id IN ('.implode(',',array_fill(0,count($productIds),'?')).') ORDER BY id FOR UPDATE');$products->execute($productIds);$products->fetchAll();
         $skus=array_values(array_unique($skus));sort($skus,SORT_STRING);
@@ -69,6 +77,7 @@ function shopResolvedLines(PDO $db,array $input,bool $lock=false): array {
     $resolved=[];$totals=[];
     foreach($input as $line){
         if(!is_array($line))throw new RuntimeException('Перевірте кошик.');
+        if(($model=pimV3LineProduct($db,customerField($line,'product_id',64),$lock))!==null){$resolved[]=pimV3ResolveLine($db,$line,$model,$lock,$totals);continue;}
         $sku=customerField($line,'sku',64);$productId=customerField($line,'product_id',64);
         $qty=null;
         if($sku==='' || $productId==='')throw new RuntimeException('Перевірте товар і кількість у кошику.');
@@ -131,5 +140,5 @@ function shopCancelOrder(PDO $db,int $id): void {
  npLocked($db,$id,function()use($db,$id){$o=npOrder($db,$id);if($o['status']==='cancelled')return;
  if(!in_array($o['status'],['new','confirmed','processing'],true)||in_array($o['payment_status'],['paid','refunded'],true)||!shopNoOpenCardInvoice($db,$id))throw new RuntimeException('Для цього замовлення потрібне скасування через менеджера.');
  foreach(npShipments($db,$id) as $s)if(!in_array($s['status'],['draft','error','cancelled'],true))throw new RuntimeException('Посилку вже передано на оформлення. Зверніться до менеджера.');
- $db->beginTransaction();try{$db->prepare("UPDATE rubizh_customer_orders SET status='cancelled',updated_at=UTC_TIMESTAMP() WHERE id=?")->execute([$id]);$db->prepare("UPDATE rubizh_order_shipments SET status='cancelled',updated_at=UTC_TIMESTAMP() WHERE order_id=? AND status IN ('draft','error')")->execute([$id]);shopQueueEvent($db,$id,'cancelled');shopQueueBuyerMail($db,$id,'cancelled');npAudit($db,str_repeat('0',32),'customer_cancelled',$id);$db->commit();}catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}});
+ $db->beginTransaction();try{$db->prepare("UPDATE rubizh_customer_orders SET status='cancelled',updated_at=UTC_TIMESTAMP() WHERE id=?")->execute([$id]);if(!empty($GLOBALS['rubizh_pim_v3_columns']))$db->prepare("UPDATE rubizh_customer_orders SET pim_order_state='CANCELLED' WHERE id=? AND pim_contract_version=3")->execute([$id]);$db->prepare("UPDATE rubizh_order_shipments SET status='cancelled',updated_at=UTC_TIMESTAMP() WHERE order_id=? AND status IN ('draft','error')")->execute([$id]);shopQueueEvent($db,$id,'cancelled');shopQueueBuyerMail($db,$id,'cancelled');npAudit($db,str_repeat('0',32),'customer_cancelled',$id);$db->commit();}catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}});
 }

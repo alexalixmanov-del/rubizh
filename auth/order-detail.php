@@ -6,6 +6,6 @@
 <div class="order-info"><span aria-hidden="true">₴</span><div><span>Сума замовлення</span><strong class="order-large-sum"><?=esc(customerMoney($order['total']))?></strong></div></div>
 <p>Оплата: <?=esc(customerPayment($order['payment_status']))?></p><?php if($receipt['stage']==='pending'):?><a class="button inline-button" href="<?=esc($receipt['payment_url'])?>"><?=!empty($receipt['payment_ready'])?'Сплатити замовлення →':'Очікує підтвердження →'?></a><a class="button inline-button secondary" href="<?=esc($receipt['payment_url'])?>">Скасувати замовлення →</a><?php endif;?>
 <?php if(in_array($order['status'],['delivered','completed','cancelled'],true)):?><a class="button inline-button secondary" href="/#cart?repeat=<?=(int)$order['id']?>">Повторити замовлення →</a><?php endif;?>
-<a class="button inline-button secondary" href="mailto:<?=esc(rubizhSeller()['email'])?>?subject=<?=rawurlencode('Замовлення '.$order['order_number'])?>">Звʼязатися з нами →</a>
+<a class="button inline-button secondary" href="mailto:<?=esc(rubizhSeller()['email'])?>?subject=<?=rawurlencode('Замовлення '.$order['order_number'])?>">Зв’язатися з нами →</a>
 <section class="donation-order"><h3>Внесок на ЗСУ</h3><p><?=esc($order['donation_text'])?></p><?php if(!empty($order['donation']['proof_url'])):?><a href="<?=esc($order['donation']['proof_url'])?>" target="_blank" rel="noopener">Переглянути скрін →</a><?php elseif(!empty($order['donation']['due_at'])):?><p>Скрін надішлемо до <?=esc(customerDate($order['donation']['due_at']))?>.</p><?php endif;?></section>
 </section>

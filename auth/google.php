@@ -31,10 +31,10 @@ try {
     if (!is_string($code) || $code==='' || strlen($code)>4096) { throw new RuntimeException('Почніть вхід через Google ще раз.'); }
     $claims=googleExchange($code,$flow['nonce']); $owner=identityFind('google',$claims['sub']);
     if ($flow['mode']==='link') {
-        if ($owner!==null && $owner!==$flow['actor']) { throw new RuntimeException('Цей Google уже привʼязано до іншого кабінету. Увійдіть через нього та підтвердьте свій телефон для обʼєднання.'); }
+        if ($owner!==null && $owner!==$flow['actor']) { throw new RuntimeException('Цей Google уже прив’язано до іншого кабінету. Увійдіть через нього та підтвердьте свій телефон для об’єднання.'); }
         if (customerVerifiedPhone($flow['actor'])!=='') {
             identityTransaction(fn(PDO $db)=>identityAttach($db,$flow['actor'],'google',$claims['sub'],$claims['email']));
-            $_SESSION['flash']='Google привʼязано. Телефон і Google відкривають один кабінет.';
+            $_SESSION['flash']='Google прив’язано. Телефон і Google відкривають один кабінет.';
             header('Location: /auth/?tab=security',true,303); exit;
         }
     } elseif ($owner!==null && customerVerifiedPhone($owner)!=='') {

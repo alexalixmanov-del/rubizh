@@ -1,0 +1,25 @@
+{
+  "foundation_version": 1,
+  "pim_commit": "27fb26056563eb1fcf144ffdb2ba9ab264fa9313",
+  "schema_sha256": "12206d40acc471972ab9e67efb796839c5d4bdb1fc557329af49103dd46836e2",
+  "category_file_sha256": "8afe5241ef9a0aae10672a5a96de6432f33ed4b906c116c31f154fd50d8e1ef9",
+  "category_count": 143,
+  "sync_enabled": false,
+  "wire_contract_status": "UNCONFIRMED",
+  "ingestion_enabled": false,
+  "fixture_envelope": "SYNTHETIC_MODELS_ONLY",
+  "exact_release_wire_fixture_required": true,
+  "order_states": ["NEW", "WAITING_CONFIRMATION", "CONFIRMED", "CANCELLED", "COMPLETED"],
+  "capabilities_advertised": [],
+  "extensions": [
+    "explicit model/color ownership",
+    "per-SKU pricing v1 retained",
+    "scoped size catalog/options",
+    "private/public whitelist"
+  ],
+  "mixed_cart": {
+    "confirmation_state": "WAITING_CONFIRMATION",
+    "payment_strategy": "SINGLE_ORDER_PAYMENT_AFTER_CONFIRMATION",
+    "automatic_split": false
+  }
+}

@@ -4,14 +4,24 @@ declare(strict_types=1);
 function shopTaxonomySpec(): array {
  static $spec;return $spec??=json_decode(file_get_contents(__DIR__.'/canonical-taxonomy.json'),true,512,JSON_THROW_ON_ERROR);
 }
-function shopTaxonomyDefinitions(): array {return array_column(shopTaxonomySpec()['categories'],null,'category_id');}
-function shopCanonicalCategoryId(string $id): string {return shopTaxonomySpec()['id_aliases'][$id]??$id;}
+// PIM contract 3 categories (exact IDs/parents from PIM, slugs fixed at first sync) extend the shop's own
+// taxonomy; shop-only legacy IDs, aliases, banners and locks stay untouched. No mapping by similar names.
+function shopTaxonomyLoadPim(PDO $db): void {
+ if(isset($GLOBALS['rubizhPimCategories'][spl_object_id($db)]))return;$GLOBALS['rubizhPimCategories']=[spl_object_id($db)=>[]];
+ if(empty($GLOBALS['rubizh_pim_v3_columns']))return;
+ foreach($db->query('SELECT category_id,parent_id,name,slug,path,url_path,sort_order FROM rubizh_pim_categories ORDER BY sort_order')->fetchAll(PDO::FETCH_ASSOC) as $c)
+  $GLOBALS['rubizhPimCategories'][spl_object_id($db)][$c['category_id']]=['category_id'=>$c['category_id'],'parent_id'=>$c['parent_id'],'slug'=>$c['slug'],'display_name_uk'=>$c['name'],'status'=>'active','sort_order'=>(int)$c['sort_order'],'path'=>$c['path'],'url_path'=>$c['url_path'],'aliases'=>[],'source'=>'pim'];
+}
+function shopPimCategories(): array {$all=$GLOBALS['rubizhPimCategories']??[];return $all?reset($all):[];}
+function shopTaxonomyDefinitions(): array {return array_replace(array_column(shopTaxonomySpec()['categories'],null,'category_id'),shopPimCategories());}
+function shopCanonicalCategoryId(string $id): string {return isset(shopPimCategories()[$id])?$id:(shopTaxonomySpec()['id_aliases'][$id]??$id);}
 function shopTaxonomyNormalize(string $s): string {return mb_strtolower(trim(preg_replace('/\s+/u',' ',str_replace(['’','ʼ'],"'",$s))));}
 function shopTaxonomyLegacy(string $path): ?array {
  static $map; $map??=array_column(shopTaxonomySpec()['legacy_mapping'],null,'old_path');
  return $map[$path]??null;
 }
 function shopTaxonomyActive(PDO $db,bool $reset=false): bool {
+ shopTaxonomyLoadPim($db);
  global $rubizhTaxonomyActive;$key=spl_object_id($db);if($reset)unset($rubizhTaxonomyActive[$key]);
  if(isset($rubizhTaxonomyActive[$key]))return $rubizhTaxonomyActive[$key];
  $version=$db->query("SELECT v FROM meta WHERE k='canonical_taxonomy'")->fetchColumn();

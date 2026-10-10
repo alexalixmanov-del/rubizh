@@ -1,0 +1,136 @@
+{
+  "date": "2026-10-09",
+  "base_commit": "d0389bc422547f4a987935f7205580c90084d5da",
+  "scope": "Foundation hardening only; no runtime integration, Commit 2 or Commit 3",
+  "files_changed": 10,
+  "public_stock_quantity_exposed": false,
+  "order_states": [
+    "NEW",
+    "WAITING_CONFIRMATION",
+    "CONFIRMED",
+    "CANCELLED",
+    "COMPLETED"
+  ],
+  "capabilities_advertised": {
+    "pricing_policy_version": 1
+  },
+  "wire_contract_status": "UNCONFIRMED",
+  "ingestion_enabled": false,
+  "production_writes": 0,
+  "real_pim_sync_calls": 0,
+  "runs": [
+    {
+      "label": "Focused foundation hardening",
+      "command": "RUBIZH_TEST_MYSQL_SOCKET=/workspace/test-runtime/mariadb/mysql.sock node --test --test-concurrency=1 tests/pim-v3-foundation.test.mjs",
+      "counts": {
+        "tests": 56,
+        "pass": 56,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "duration_ms": 2505.550219,
+      "test_names": [
+        "Pinned schema/hash and all 143 category identities are preserved separately from production taxonomy",
+        "Versioned quantity fixture passes offline contract; stale observation is warning, not TTL",
+        "Versioned status fixture passes offline contract; stale observation is warning, not TTL",
+        "Versioned feed_presence fixture passes offline contract; stale observation is warning, not TTL",
+        "Typed PREORDER input preserves null/confirmation semantics without changing checkout",
+        "Typed ORDER_ON_REQUEST input preserves null/confirmation semantics without changing checkout",
+        "Typed UNKNOWN input preserves null/confirmation semantics without changing checkout",
+        "Typed SIZE_CONFIRMATION_REQUIRED input preserves null/confirmation semantics without changing checkout",
+        "Typed OUT_OF_STOCK input preserves null/confirmation semantics without changing checkout",
+        "Typed PRICE_NOT_READY input preserves null/confirmation semantics without changing checkout",
+        "ONE_SIZE remains a real SKU with explicit typed size",
+        "NO_SIZE_REQUIRED remains a real SKU with explicit typed size",
+        "Foundation rejects unsupported batch version",
+        "Foundation rejects wrong policy version",
+        "Foundation rejects missing required timestamp",
+        "Foundation rejects legacy combined checkout permission",
+        "Foundation rejects unknown effective availability",
+        "Foundation rejects numeric unknown quantity",
+        "Foundation rejects zero QUANTITY cannot authorize in stock",
+        "Foundation rejects false confirmed binding while payable",
+        "Foundation rejects unconfirmed price while payable",
+        "Foundation rejects request option must not invent SKU",
+        "Foundation rejects request option cannot authorize payment",
+        "Foundation rejects request option cannot invent stock",
+        "Foundation rejects COLOR scope requires owned color",
+        "Foundation rejects duplicate sizes rejected",
+        "Foundation rejects unknown canonical ID rejected",
+        "Foundation rejects color object extension validated",
+        "Foundation rejects orphan SKU color rejected",
+        "Foundation rejects wrong color gallery rejected",
+        "Foundation rejects duplicate model rejected",
+        "Foundation rejects SKU ownership across models rejected",
+        "Foundation rejects G02 exporter missing v1 SKU pricing rejected",
+        "Foundation rejects missing site price rejected",
+        "Foundation rejects price disagreement rejected",
+        "Foundation rejects sub-kopeck rounding forbidden",
+        "Foundation rejects kit below private floor rejected",
+        "Foundation rejects credentials in photo URL rejected",
+        "Foundation rejects internal photo URL rejected",
+        "Foundation rejects structured size cannot leak private object",
+        "Foundation rejects structured color cannot leak private object",
+        "Foundation rejects color list cannot claim another SKU",
+        "Foundation rejects confirmation flag cannot authorize payment",
+        "Foundation rejects stock precision cannot be silently rounded",
+        "Foundation rejects bounded catalog prevents quadratic unique-size work",
+        "Foundation rejects SKU case collision under legacy DB collation",
+        "Schema interpreter rejects unknown keywords; JSON object/array distinction, conditional and contains checks are real",
+        "Color identity is composite per model, unknown photos stay unassigned, absent floor disables discounts without guessing",
+        "Public whitelist strips nested supplier/source/pricing/evidence/key canaries and retains decimal public prices",
+        "Public quantity DTO hides supplier quantities and inventory provenance at every depth",
+        "Public status DTO hides supplier quantities and inventory provenance at every depth",
+        "Public feed_presence DTO hides supplier quantities and inventory provenance at every depth",
+        "Order states exclude payment readiness; exact PIM wire remains unconfirmed and ingestion disabled",
+        "Explicit mappings require proof and owned model/color/SKU; unknown photo has null target and redirects remain data only",
+        "Pure inclusion/plan has no DDL or configuration side effects; foundation advertises no capability and records single-payment mixed policy",
+        "Isolated CLI: additive schema, legacy/pricing/order/account preservation, composite FK, null SKU options, replay/journal drift and public GET refusal"
+      ]
+    },
+    {
+      "label": "Full workspace regression",
+      "command": "RUBIZH_TEST_MYSQL_SOCKET=/workspace/test-runtime/mariadb/mysql.sock node --test --test-concurrency=1 tests/*.test.mjs",
+      "counts": {
+        "tests": 181,
+        "pass": 181,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "duration_ms": 123222.485376
+    }
+  ],
+  "committed_tests_passed_within_full_workspace_run": 172,
+  "pre_existing_untracked_tests_passed": 9,
+  "ddl_compare": {
+    "steps_before": 70,
+    "steps_after": 70,
+    "changed_steps": [
+      {
+        "id": "rubizh_customer_orders.pim_order_state",
+        "before_sql_sha256": "4b417cb4e42fb6de09344a9c44cdf288e763fe65dc8a2ae157861b120142d066",
+        "after_sql_sha256": "576120240352f31a53e020bec2da9b4b80ddb4fc058e3064e10df24ea94a5b8c"
+      }
+    ]
+  },
+  "checks": [
+    "Public DTO excludes raw quantities and inventory provenance at every depth for QUANTITY/STATUS/FEED_PRESENCE; no input max_order_qty copied",
+    "Public availability and permission/lead time/dispatch fields retained; private stock_quantity unchanged",
+    "Fresh isolated DB accepts exactly five order states and rejects READY_FOR_PAYMENT; order changes rolled back",
+    "Existing isolated migration replay, legacy pricing/ownership/account/Mono/NP preservation and HTTP refusal pass",
+    "Pinned schema, category snapshots, pricing policy, production taxonomy and runtime handlers unchanged",
+    "PHP syntax of both modified helpers and JS syntax of modified test passed",
+    "Existing isolated DB startup/repeated SELECT 1 passed"
+  ],
+  "limitations": [
+    "Public privacy guarantee is for the offline foundation DTO; existing runtime API is not changed",
+    "models[] is a synthetic test wrapper, not an approved PIM wire envelope",
+    "Exact production-release wire fixture after G02 fix is still required before ingestion",
+    "No applied-DDL upgrade: prior foundation journal hash changes require fresh isolated fixtures/review",
+    "PHP 8.4/MariaDB 11.8.6 tested; deployment PHP 8.2/MySQL 8 not executed"
+  ]
+}

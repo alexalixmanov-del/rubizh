@@ -1,0 +1,3549 @@
+{
+  "contract_version": 3,
+  "version": 3,
+  "pricing_policy_version": 1,
+  "category_catalog_version": 2,
+  "size_catalog_version": 1,
+  "inventory_policy_version": 1,
+  "order_policy_version": 1,
+  "model_colors_version": 1,
+  "pim_version": "10.9.3",
+  "currency": "UAH",
+  "generated_at": "2026-10-09T12:00:00.000Z",
+  "catalog_revision": "bee08d9f3c05103a",
+  "category_catalog_hash": "0058a062ebd411c2",
+  "categories": [
+    {
+      "id": "clothing",
+      "name": "Одяг та форма",
+      "parent_id": null,
+      "path": "Одяг та форма",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "clothing_suits",
+      "name": "Костюми та комплекти",
+      "parent_id": "clothing",
+      "path": "Одяг та форма / Костюми та комплекти",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "size",
+        "season",
+        "material",
+        "membrane",
+        "gender"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "clothing_combat_shirts",
+      "name": "Убакси та бойові сорочки",
+      "parent_id": "clothing",
+      "path": "Одяг та форма / Убакси та бойові сорочки",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "size",
+        "season",
+        "material",
+        "membrane",
+        "gender"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "clothing_pants",
+      "name": "Штани",
+      "parent_id": "clothing",
+      "path": "Одяг та форма / Штани",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "size",
+        "season",
+        "material",
+        "membrane",
+        "gender"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "clothing_jackets",
+      "name": "Куртки",
+      "parent_id": "clothing",
+      "path": "Одяг та форма / Куртки",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "size",
+        "season",
+        "material",
+        "membrane",
+        "gender"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "clothing_fleece",
+      "name": "Фліс та кофти",
+      "parent_id": "clothing",
+      "path": "Одяг та форма / Фліс та кофти",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "size",
+        "season",
+        "material",
+        "membrane",
+        "gender"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "clothing_tshirts",
+      "name": "Футболки та поло",
+      "parent_id": "clothing",
+      "path": "Одяг та форма / Футболки та поло",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "size",
+        "season",
+        "material",
+        "membrane",
+        "gender"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "clothing_thermal",
+      "name": "Термобілизна",
+      "parent_id": "clothing",
+      "path": "Одяг та форма / Термобілизна",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "size",
+        "season",
+        "material",
+        "membrane",
+        "gender"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "clothing_shorts",
+      "name": "Шорти",
+      "parent_id": "clothing",
+      "path": "Одяг та форма / Шорти",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "size",
+        "season",
+        "material",
+        "membrane",
+        "gender"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "clothing_rainwear",
+      "name": "Дощовики та пончо",
+      "parent_id": "clothing",
+      "path": "Одяг та форма / Дощовики та пончо",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "size",
+        "season",
+        "material",
+        "membrane",
+        "gender"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "clothing_gloves",
+      "name": "Рукавички",
+      "parent_id": "clothing",
+      "path": "Одяг та форма / Рукавички",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "size",
+        "season",
+        "material",
+        "membrane",
+        "gender"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "clothing_headwear",
+      "name": "Головні убори",
+      "parent_id": "clothing",
+      "path": "Одяг та форма / Головні убори",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "size",
+        "season",
+        "material",
+        "membrane",
+        "gender"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "clothing_balaclavas",
+      "name": "Балаклави та бафи",
+      "parent_id": "clothing",
+      "path": "Одяг та форма / Балаклави та бафи",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "size",
+        "season",
+        "material",
+        "membrane",
+        "gender"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "clothing_belts",
+      "name": "Ремені одягу",
+      "parent_id": "clothing",
+      "path": "Одяг та форма / Ремені одягу",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "size",
+        "season",
+        "material",
+        "membrane",
+        "gender"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "footwear",
+      "name": "Взуття",
+      "parent_id": null,
+      "path": "Взуття",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "footwear_boots",
+      "name": "Берці",
+      "parent_id": "footwear",
+      "path": "Взуття / Берці",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "size",
+        "season",
+        "material",
+        "membrane",
+        "gender"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "footwear_tactical_boots",
+      "name": "Тактичні черевики",
+      "parent_id": "footwear",
+      "path": "Взуття / Тактичні черевики",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "size",
+        "season",
+        "material",
+        "membrane",
+        "gender"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "footwear_sneakers",
+      "name": "Кросівки",
+      "parent_id": "footwear",
+      "path": "Взуття / Кросівки",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "size",
+        "season",
+        "material",
+        "membrane",
+        "gender"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "footwear_socks",
+      "name": "Шкарпетки",
+      "parent_id": "footwear",
+      "path": "Взуття / Шкарпетки",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "size",
+        "season",
+        "material",
+        "membrane",
+        "gender"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "footwear_gaiters",
+      "name": "Гамаші та бахіли",
+      "parent_id": "footwear",
+      "path": "Взуття / Гамаші та бахіли",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "size",
+        "season",
+        "material",
+        "membrane",
+        "gender"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "footwear_insoles",
+      "name": "Устілки",
+      "parent_id": "footwear",
+      "path": "Взуття / Устілки",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "size",
+        "season",
+        "material",
+        "membrane",
+        "gender"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "armor",
+      "name": "Бронезахист",
+      "parent_id": null,
+      "path": "Бронезахист",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "armor_plate_carriers",
+      "name": "Плитоноски",
+      "parent_id": "armor",
+      "path": "Бронезахист / Плитоноски",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "protection_class",
+        "plate_size",
+        "plate_size_supported",
+        "material",
+        "quick_release",
+        "molle"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "armor_vests",
+      "name": "Бронежилети",
+      "parent_id": "armor",
+      "path": "Бронезахист / Бронежилети",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "protection_class",
+        "plate_size",
+        "plate_size_supported",
+        "material",
+        "quick_release",
+        "molle"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "armor_plates",
+      "name": "Бронеплити",
+      "parent_id": "armor",
+      "path": "Бронезахист / Бронеплити",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "protection_class",
+        "plate_size",
+        "plate_size_supported",
+        "material",
+        "quick_release",
+        "molle"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "armor_soft",
+      "name": "М'які балістичні пакети",
+      "parent_id": "armor",
+      "path": "Бронезахист / М'які балістичні пакети",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "protection_class",
+        "plate_size",
+        "plate_size_supported",
+        "material",
+        "quick_release",
+        "molle"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "armor_sets",
+      "name": "Бронекомплекти",
+      "parent_id": "armor",
+      "path": "Бронезахист / Бронекомплекти",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "protection_class",
+        "plate_size",
+        "plate_size_supported",
+        "material",
+        "quick_release",
+        "molle"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "armor_accessories",
+      "name": "Аксесуари бронезахисту",
+      "parent_id": "armor",
+      "path": "Бронезахист / Аксесуари бронезахисту",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "protection_class",
+        "plate_size",
+        "plate_size_supported",
+        "material",
+        "quick_release",
+        "molle"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "helmets",
+      "name": "Шоломи та захист голови",
+      "parent_id": null,
+      "path": "Шоломи та захист голови",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "helmets_ballistic",
+      "name": "Балістичні шоломи",
+      "parent_id": "helmets",
+      "path": "Шоломи та захист голови / Балістичні шоломи",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "helmet_size",
+        "helmet_rail_type",
+        "helmet_shell_type",
+        "protection_class"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "helmets_covers",
+      "name": "Кавери на шоломи",
+      "parent_id": "helmets",
+      "path": "Шоломи та захист голови / Кавери на шоломи",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "helmet_size",
+        "helmet_rail_type",
+        "helmet_shell_type",
+        "protection_class"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "helmets_padding",
+      "name": "Подушки та підвісні системи",
+      "parent_id": "helmets",
+      "path": "Шоломи та захист голови / Подушки та підвісні системи",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "helmet_size",
+        "helmet_rail_type",
+        "helmet_shell_type",
+        "protection_class"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "helmets_rails",
+      "name": "Рейки для шоломів",
+      "parent_id": "helmets",
+      "path": "Шоломи та захист голови / Рейки для шоломів",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "helmet_size",
+        "helmet_rail_type",
+        "helmet_shell_type",
+        "protection_class"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "helmets_mounts",
+      "name": "Кріплення для шоломів",
+      "parent_id": "helmets",
+      "path": "Шоломи та захист голови / Кріплення для шоломів",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "helmet_size",
+        "helmet_rail_type",
+        "helmet_shell_type",
+        "protection_class"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "helmets_accessories",
+      "name": "Аксесуари шоломів",
+      "parent_id": "helmets",
+      "path": "Шоломи та захист голови / Аксесуари шоломів",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "helmet_size",
+        "helmet_rail_type",
+        "helmet_shell_type",
+        "protection_class"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "communications",
+      "name": "Тактичний зв'язок та слух",
+      "parent_id": null,
+      "path": "Тактичний зв'язок та слух",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "communications_headsets",
+      "name": "Навушники",
+      "parent_id": "communications",
+      "path": "Тактичний зв'язок та слух / Навушники",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "connector",
+        "radio_connector",
+        "ptt_connector",
+        "mount_standard"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "communications_radios",
+      "name": "Рації",
+      "parent_id": "communications",
+      "path": "Тактичний зв'язок та слух / Рації",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "connector",
+        "radio_connector",
+        "ptt_connector",
+        "mount_standard"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "communications_ptt",
+      "name": "Кнопки PTT",
+      "parent_id": "communications",
+      "path": "Тактичний зв'язок та слух / Кнопки PTT",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "connector",
+        "radio_connector",
+        "ptt_connector",
+        "mount_standard"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "communications_antennas",
+      "name": "Антени",
+      "parent_id": "communications",
+      "path": "Тактичний зв'язок та слух / Антени",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "connector",
+        "radio_connector",
+        "ptt_connector",
+        "mount_standard"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "communications_accessories",
+      "name": "Аксесуари зв'язку",
+      "parent_id": "communications",
+      "path": "Тактичний зв'язок та слух / Аксесуари зв'язку",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "connector",
+        "radio_connector",
+        "ptt_connector",
+        "mount_standard"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "bags",
+      "name": "Рюкзаки, сумки та баули",
+      "parent_id": null,
+      "path": "Рюкзаки, сумки та баули",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "bags_backpacks",
+      "name": "Рюкзаки",
+      "parent_id": "bags",
+      "path": "Рюкзаки, сумки та баули / Рюкзаки",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "volume_l",
+        "material",
+        "molle"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "bags_assault_backpacks",
+      "name": "Штурмові рюкзаки",
+      "parent_id": "bags",
+      "path": "Рюкзаки, сумки та баули / Штурмові рюкзаки",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "volume_l",
+        "material",
+        "molle"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "bags_hydration",
+      "name": "Гідратори",
+      "parent_id": "bags",
+      "path": "Рюкзаки, сумки та баули / Гідратори",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "volume_l",
+        "material",
+        "molle"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "bags_duffels",
+      "name": "Баули та транспортні сумки",
+      "parent_id": "bags",
+      "path": "Рюкзаки, сумки та баули / Баули та транспортні сумки",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "volume_l",
+        "material",
+        "molle"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "bags_tactical",
+      "name": "Тактичні сумки",
+      "parent_id": "bags",
+      "path": "Рюкзаки, сумки та баули / Тактичні сумки",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "volume_l",
+        "material",
+        "molle"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "bags_waist",
+      "name": "Поясні сумки",
+      "parent_id": "bags",
+      "path": "Рюкзаки, сумки та баули / Поясні сумки",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "volume_l",
+        "material",
+        "molle"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "bags_shoulder",
+      "name": "Сумки через плече",
+      "parent_id": "bags",
+      "path": "Рюкзаки, сумки та баули / Сумки через плече",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "volume_l",
+        "material",
+        "molle"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "bags_organizers",
+      "name": "Сумки-органайзери",
+      "parent_id": "bags",
+      "path": "Рюкзаки, сумки та баули / Сумки-органайзери",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "volume_l",
+        "material",
+        "molle"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "pouches",
+      "name": "Підсумки",
+      "parent_id": null,
+      "path": "Підсумки",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "pouches_magazine",
+      "name": "Для магазинів",
+      "parent_id": "pouches",
+      "path": "Підсумки / Для магазинів",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "pouches_grenade",
+      "name": "Для гранат",
+      "parent_id": "pouches",
+      "path": "Підсумки / Для гранат",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "pouches_tourniquet",
+      "name": "Для турнікетів",
+      "parent_id": "pouches",
+      "path": "Підсумки / Для турнікетів",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "pouches_medical",
+      "name": "Медичні підсумки",
+      "parent_id": "pouches",
+      "path": "Підсумки / Медичні підсумки",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "pouches_radio",
+      "name": "Для рацій",
+      "parent_id": "pouches",
+      "path": "Підсумки / Для рацій",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "pouches_phone",
+      "name": "Для телефонів",
+      "parent_id": "pouches",
+      "path": "Підсумки / Для телефонів",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "pouches_utility",
+      "name": "Утилітарні підсумки",
+      "parent_id": "pouches",
+      "path": "Підсумки / Утилітарні підсумки",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "pouches_dump",
+      "name": "Скидання магазинів",
+      "parent_id": "pouches",
+      "path": "Підсумки / Скидання магазинів",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "pouches_dangler",
+      "name": "Напашні підсумки",
+      "parent_id": "pouches",
+      "path": "Підсумки / Напашні підсумки",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "pouches_panels",
+      "name": "Панелі підсумків",
+      "parent_id": "pouches",
+      "path": "Підсумки / Панелі підсумків",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "pouches_other",
+      "name": "Інші підсумки",
+      "parent_id": "pouches",
+      "path": "Підсумки / Інші підсумки",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "load_bearing",
+      "name": "РПС та розвантаження",
+      "parent_id": null,
+      "path": "РПС та розвантаження",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "load_bearing_rps",
+      "name": "Ремінно-плечові системи",
+      "parent_id": "load_bearing",
+      "path": "РПС та розвантаження / Ремінно-плечові системи",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "load_bearing_belts",
+      "name": "Розвантажувальні пояси",
+      "parent_id": "load_bearing",
+      "path": "РПС та розвантаження / Розвантажувальні пояси",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "load_bearing_systems",
+      "name": "Розвантажувальні системи",
+      "parent_id": "load_bearing",
+      "path": "РПС та розвантаження / Розвантажувальні системи",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "load_bearing_harness",
+      "name": "Плечові лямки",
+      "parent_id": "load_bearing",
+      "path": "РПС та розвантаження / Плечові лямки",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "load_bearing_accessories",
+      "name": "Аксесуари розвантаження",
+      "parent_id": "load_bearing",
+      "path": "РПС та розвантаження / Аксесуари розвантаження",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "protection_knee_elbow",
+      "name": "Захист колін та ліктів",
+      "parent_id": null,
+      "path": "Захист колін та ліктів",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "protection_knee",
+      "name": "Наколінники",
+      "parent_id": "protection_knee_elbow",
+      "path": "Захист колін та ліктів / Наколінники",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "protection_elbow",
+      "name": "Налокітники",
+      "parent_id": "protection_knee_elbow",
+      "path": "Захист колін та ліктів / Налокітники",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "protection_kits",
+      "name": "Комплекти захисту",
+      "parent_id": "protection_knee_elbow",
+      "path": "Захист колін та ліктів / Комплекти захисту",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "medical",
+      "name": "Тактична медицина",
+      "parent_id": null,
+      "path": "Тактична медицина",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "medical_tourniquets",
+      "name": "Турнікети та джгути",
+      "parent_id": "medical",
+      "path": "Тактична медицина / Турнікети та джгути",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "medical_hemostatic",
+      "name": "Гемостатичні засоби",
+      "parent_id": "medical",
+      "path": "Тактична медицина / Гемостатичні засоби",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "medical_bandages",
+      "name": "Бандажі та бинти",
+      "parent_id": "medical",
+      "path": "Тактична медицина / Бандажі та бинти",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "medical_ifak",
+      "name": "Укомплектовані аптечки IFAK",
+      "parent_id": "medical",
+      "path": "Тактична медицина / Укомплектовані аптечки IFAK",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "medical_scissors",
+      "name": "Медичні ножиці",
+      "parent_id": "medical",
+      "path": "Тактична медицина / Медичні ножиці",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "medical_occlusive",
+      "name": "Оклюзійні наліпки",
+      "parent_id": "medical",
+      "path": "Тактична медицина / Оклюзійні наліпки",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "medical_other",
+      "name": "Інші медичні засоби",
+      "parent_id": "medical",
+      "path": "Тактична медицина / Інші медичні засоби",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "medical_training",
+      "name": "Навчальні медичні засоби",
+      "parent_id": "medical",
+      "path": "Тактична медицина / Навчальні медичні засоби",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "camouflage",
+      "name": "Маскування",
+      "parent_id": null,
+      "path": "Маскування",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "camouflage_nets",
+      "name": "Маскувальні сітки",
+      "parent_id": "camouflage",
+      "path": "Маскування / Маскувальні сітки",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "camouflage_antidrone",
+      "name": "Антидронові сітки",
+      "parent_id": "camouflage",
+      "path": "Маскування / Антидронові сітки",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "camouflage_suits",
+      "name": "Маскувальні костюми",
+      "parent_id": "camouflage",
+      "path": "Маскування / Маскувальні костюми",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "camouflage_materials",
+      "name": "Матеріали маскування",
+      "parent_id": "camouflage",
+      "path": "Маскування / Матеріали маскування",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "field_gear",
+      "name": "Туризм та польове спорядження",
+      "parent_id": null,
+      "path": "Туризм та польове спорядження",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "field_sleeping_bags",
+      "name": "Спальні мішки",
+      "parent_id": "field_gear",
+      "path": "Туризм та польове спорядження / Спальні мішки",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "field_mats",
+      "name": "Каремати",
+      "parent_id": "field_gear",
+      "path": "Туризм та польове спорядження / Каремати",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "field_seats",
+      "name": "Сидушки",
+      "parent_id": "field_gear",
+      "path": "Туризм та польове спорядження / Сидушки",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "field_thermal_blankets",
+      "name": "Термоковдри",
+      "parent_id": "field_gear",
+      "path": "Туризм та польове спорядження / Термоковдри",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "field_cookware",
+      "name": "Польовий посуд",
+      "parent_id": "field_gear",
+      "path": "Туризм та польове спорядження / Польовий посуд",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "field_thermos",
+      "name": "Термоси",
+      "parent_id": "field_gear",
+      "path": "Туризм та польове спорядження / Термоси",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "field_burners",
+      "name": "Пальники",
+      "parent_id": "field_gear",
+      "path": "Туризм та польове спорядження / Пальники",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "field_carabiners",
+      "name": "Карабіни та кріплення",
+      "parent_id": "field_gear",
+      "path": "Туризм та польове спорядження / Карабіни та кріплення",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "field_hygiene",
+      "name": "Гігієна",
+      "parent_id": "field_gear",
+      "path": "Туризм та польове спорядження / Гігієна",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "field_other",
+      "name": "Інше польове спорядження",
+      "parent_id": "field_gear",
+      "path": "Туризм та польове спорядження / Інше польове спорядження",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "electronics",
+      "name": "Електроніка та спостереження",
+      "parent_id": null,
+      "path": "Електроніка та спостереження",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "electronics_action_cameras",
+      "name": "Екшн-камери",
+      "parent_id": "electronics",
+      "path": "Електроніка та спостереження / Екшн-камери",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "electronics_monoculars",
+      "name": "Монокуляри",
+      "parent_id": "electronics",
+      "path": "Електроніка та спостереження / Монокуляри",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "electronics_mounts",
+      "name": "Кріплення електроніки",
+      "parent_id": "electronics",
+      "path": "Електроніка та спостереження / Кріплення електроніки",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "electronics_memory",
+      "name": "Карти пам'яті",
+      "parent_id": "electronics",
+      "path": "Електроніка та спостереження / Карти пам'яті",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "electronics_accessories",
+      "name": "Аксесуари електроніки",
+      "parent_id": "electronics",
+      "path": "Електроніка та спостереження / Аксесуари електроніки",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "lighting",
+      "name": "Освітлення",
+      "parent_id": null,
+      "path": "Освітлення",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "lighting_handheld",
+      "name": "Ручні ліхтарі",
+      "parent_id": "lighting",
+      "path": "Освітлення / Ручні ліхтарі",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "lighting_headlamps",
+      "name": "Налобні ліхтарі",
+      "parent_id": "lighting",
+      "path": "Освітлення / Налобні ліхтарі",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "lighting_tactical",
+      "name": "Тактичні ліхтарі",
+      "parent_id": "lighting",
+      "path": "Освітлення / Тактичні ліхтарі",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "lighting_accessories",
+      "name": "Аксесуари освітлення",
+      "parent_id": "lighting",
+      "path": "Освітлення / Аксесуари освітлення",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "power",
+      "name": "Автономне живлення",
+      "parent_id": null,
+      "path": "Автономне живлення",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "power_banks",
+      "name": "Павербанки",
+      "parent_id": "power",
+      "path": "Автономне живлення / Павербанки",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "power_stations",
+      "name": "Зарядні станції",
+      "parent_id": "power",
+      "path": "Автономне живлення / Зарядні станції",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "power_solar",
+      "name": "Сонячні панелі",
+      "parent_id": "power",
+      "path": "Автономне живлення / Сонячні панелі",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "power_batteries",
+      "name": "Акумулятори та батарейки",
+      "parent_id": "power",
+      "path": "Автономне живлення / Акумулятори та батарейки",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "power_cables",
+      "name": "Кабелі живлення",
+      "parent_id": "power",
+      "path": "Автономне живлення / Кабелі живлення",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "power_accessories",
+      "name": "Аксесуари живлення",
+      "parent_id": "power",
+      "path": "Автономне живлення / Аксесуари живлення",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "weapon_accessories",
+      "name": "Збройові аксесуари",
+      "parent_id": null,
+      "path": "Збройові аксесуари",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "weapon_slings",
+      "name": "Ремені для зброї",
+      "parent_id": "weapon_accessories",
+      "path": "Збройові аксесуари / Ремені для зброї",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "weapon_magazines",
+      "name": "Магазини для зброї",
+      "parent_id": "weapon_accessories",
+      "path": "Збройові аксесуари / Магазини для зброї",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "weapon_grips",
+      "name": "Руків'я та упори",
+      "parent_id": "weapon_accessories",
+      "path": "Збройові аксесуари / Руків'я та упори",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "weapon_stocks",
+      "name": "Приклади та щоки",
+      "parent_id": "weapon_accessories",
+      "path": "Збройові аксесуари / Приклади та щоки",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "weapon_bipods",
+      "name": "Сошки",
+      "parent_id": "weapon_accessories",
+      "path": "Збройові аксесуари / Сошки",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "weapon_holsters",
+      "name": "Кобури",
+      "parent_id": "weapon_accessories",
+      "path": "Збройові аксесуари / Кобури",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "weapon_cases",
+      "name": "Чохли для зброї",
+      "parent_id": "weapon_accessories",
+      "path": "Збройові аксесуари / Чохли для зброї",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "weapon_cleaning",
+      "name": "Догляд за зброєю",
+      "parent_id": "weapon_accessories",
+      "path": "Збройові аксесуари / Догляд за зброєю",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "weapon_other",
+      "name": "Інші збройові аксесуари",
+      "parent_id": "weapon_accessories",
+      "path": "Збройові аксесуари / Інші збройові аксесуари",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "eye_face",
+      "name": "Захист очей та обличчя",
+      "parent_id": null,
+      "path": "Захист очей та обличчя",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "eye_glasses",
+      "name": "Окуляри",
+      "parent_id": "eye_face",
+      "path": "Захист очей та обличчя / Окуляри",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "eye_masks",
+      "name": "Маски",
+      "parent_id": "eye_face",
+      "path": "Захист очей та обличчя / Маски",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "eye_accessories",
+      "name": "Аксесуари окулярів",
+      "parent_id": "eye_face",
+      "path": "Захист очей та обличчя / Аксесуари окулярів",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "tools",
+      "name": "Інструменти та ножі",
+      "parent_id": null,
+      "path": "Інструменти та ножі",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "tools_knives",
+      "name": "Ножі",
+      "parent_id": "tools",
+      "path": "Інструменти та ножі / Ножі",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "tools_multitools",
+      "name": "Мультитули",
+      "parent_id": "tools",
+      "path": "Інструменти та ножі / Мультитули",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "tools_other",
+      "name": "Інші інструменти",
+      "parent_id": "tools",
+      "path": "Інструменти та ножі / Інші інструменти",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "tools_accessories",
+      "name": "Аксесуари інструментів",
+      "parent_id": "tools",
+      "path": "Інструменти та ножі / Аксесуари інструментів",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "symbols",
+      "name": "Символіка",
+      "parent_id": null,
+      "path": "Символіка",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "armor_ballistic_blankets",
+      "name": "Балістичні ковдри",
+      "parent_id": "armor",
+      "path": "Бронезахист / Балістичні ковдри",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "protection_class",
+        "plate_size",
+        "plate_size_supported",
+        "material",
+        "quick_release",
+        "molle"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "clothing_insulated_vests",
+      "name": "Утеплені жилети",
+      "parent_id": "clothing",
+      "path": "Одяг та форма / Утеплені жилети",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "size",
+        "season",
+        "material",
+        "membrane",
+        "gender"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "footwear_care",
+      "name": "Догляд за взуттям",
+      "parent_id": "footwear",
+      "path": "Взуття / Догляд за взуттям",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "size",
+        "season",
+        "material",
+        "membrane",
+        "gender"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "footwear_shoes",
+      "name": "Туфлі та лофери",
+      "parent_id": "footwear",
+      "path": "Взуття / Туфлі та лофери",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "size",
+        "season",
+        "material",
+        "membrane",
+        "gender"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "communications_earplugs",
+      "name": "Пасивні беруші",
+      "parent_id": "communications",
+      "path": "Тактичний зв'язок та слух / Пасивні беруші",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "connector",
+        "radio_connector",
+        "ptt_connector",
+        "mount_standard"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "electronics_rf_detectors",
+      "name": "Детектори радіосигналів та РЕР",
+      "parent_id": "electronics",
+      "path": "Електроніка та спостереження / Детектори радіосигналів та РЕР",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "symbols_flags",
+      "name": "Прапори",
+      "parent_id": "symbols",
+      "path": "Символіка / Прапори",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    },
+    {
+      "id": "field_watches",
+      "name": "Польові та тактичні годинники",
+      "parent_id": "field_gear",
+      "path": "Туризм та польове спорядження / Польові та тактичні годинники",
+      "filter_schema": [
+        "brand",
+        "color",
+        "camouflage",
+        "material"
+      ],
+      "banner_asset": null,
+      "banner_active": false,
+      "banner_version": 0
+    }
+  ],
+  "products": [
+    {
+      "pricing_policy_version": 1,
+      "id": "m-belt",
+      "product_id": "m-belt",
+      "product_model_version": 1,
+      "simple_policy_version": 1,
+      "slug": "remin-fixture-duty",
+      "name": "Ремінь Fixture Duty",
+      "marketing_name_uk": "Ремінь Fixture Duty",
+      "brand": "FIXTURE",
+      "category": "Одяг та форма / Ремені одягу",
+      "category_path": [
+        "Одяг та форма",
+        "Ремені одягу"
+      ],
+      "canonical_category_id": "clothing_belts",
+      "primary_product_type": "clothing",
+      "description": "<p>Тактичний ремінь.</p><p>Ширина 45 мм.</p>",
+      "photos": [
+        "https://rubizh.shop/media/fixture/belt-1.webp"
+      ],
+      "attributes": {},
+      "filter_attributes": {},
+      "variants": [
+        {
+          "sku": "RUB-F0030",
+          "color_id": "clr-27adf418ad3a8bbb",
+          "color": "Чорний",
+          "camouflage": null,
+          "photos": [
+            "https://rubizh.shop/media/fixture/belt-1.webp"
+          ],
+          "size": "",
+          "size_raw": "",
+          "size_display": "",
+          "size_normalized": null,
+          "size_system": "NONE",
+          "size_status": "NO_SIZE_REQUIRED",
+          "size_confidence_tier": "SAFE_AUTO",
+          "size_unconfirmed": false,
+          "required": false,
+          "source_binding_status": "CONFIRMED",
+          "price": 1120,
+          "site_price": 1120,
+          "wholesale": [
+            {
+              "discount": 11.6,
+              "price": 990,
+              "requested_discount": 12,
+              "capped": false
+            },
+            {
+              "discount": 16,
+              "price": 940,
+              "requested_discount": 18,
+              "capped": true
+            }
+          ],
+          "pricing_policy_version": 1,
+          "discount_margin_floor_pct": 15,
+          "minimum_sale_price": 940,
+          "kit_price": 960,
+          "availability": "UNKNOWN",
+          "stock": null,
+          "stock_quantity": null,
+          "stock_status": "UNKNOWN",
+          "availability_status": "UNKNOWN",
+          "availability_source": null,
+          "availability_confirmation": "UNKNOWN",
+          "inventory_mode": "QUANTITY",
+          "inventory_policy_id": "tactical-belt-quantity-candidate-v1",
+          "inventory_policy_version": 1,
+          "inventory_policy_confirmed": false,
+          "delivery_lead_time_days": null,
+          "ready_to_dispatch": false,
+          "price_ready": true,
+          "binding_confirmation_required": false,
+          "size_confirmation_required": false,
+          "stock_observed_at": 1791525600000,
+          "source_updated_at": null,
+          "stock_data_age_hours": 6,
+          "stale_source": false,
+          "stock_warning_hours": 36,
+          "expires_at": null,
+          "order_submission_allowed": false,
+          "payment_allowed": false,
+          "requires_order_confirmation": true,
+          "lead_time_days": null,
+          "fulfillment_supplier_id": "s4p9slmnn0ki",
+          "fulfillment_supplier": "Tactical Belt",
+          "fulfillment_supplier_sku": "TB-D-BK"
+        }
+      ],
+      "site_price": 1120,
+      "availability": "UNKNOWN",
+      "kit_component": null,
+      "kit_component_tags": [],
+      "kit_eligible": true,
+      "kit_priority": 0,
+      "budget_tier": null,
+      "compatibility": {
+        "compatible_product_ids": [],
+        "incompatible_product_ids": []
+      },
+      "recommended_with": [],
+      "alternative_group": null,
+      "relations": [],
+      "ads_allowed": false,
+      "links": {},
+      "model_colors_version": 1,
+      "model_id": "m-belt",
+      "model_name": "Ремінь Fixture Duty",
+      "source_product_ids": [
+        "m-belt"
+      ],
+      "colors": [
+        {
+          "id": "clr-27adf418ad3a8bbb",
+          "color": "Чорний",
+          "camouflage": null,
+          "photos": [
+            "https://rubizh.shop/media/fixture/belt-1.webp"
+          ],
+          "variant_skus": [
+            "RUB-F0030"
+          ],
+          "photo_assignment": "source_associated"
+        }
+      ],
+      "unassigned_photos": [],
+      "classification_version": 1,
+      "size_catalog_version": 1,
+      "order_policy_version": 1,
+      "inventory_policy_version": 1,
+      "order_submission_allowed": false,
+      "payment_allowed": false,
+      "requires_order_confirmation": true,
+      "size_catalogs": [],
+      "size_options": [],
+      "publication_state": "ACTIVE",
+      "publication": {
+        "state": "READY",
+        "decision_version": 1
+      }
+    },
+    {
+      "pricing_policy_version": 1,
+      "id": "m-jacket",
+      "product_id": "m-jacket",
+      "product_model_version": 1,
+      "simple_policy_version": 1,
+      "slug": "kurtka-fixture-softshell",
+      "name": "Куртка Fixture Softshell",
+      "marketing_name_uk": "Куртка Fixture Softshell",
+      "brand": "FIXTURE",
+      "category": "Одяг та форма / Куртки",
+      "category_path": [
+        "Одяг та форма",
+        "Куртки"
+      ],
+      "canonical_category_id": "clothing_jackets",
+      "primary_product_type": "jacket",
+      "description": "<p>Софтшел куртка.</p><p>Матеріал: поліестер.</p>",
+      "photos": [
+        "https://rubizh.shop/media/fixture/jacket-black-1.webp",
+        "https://rubizh.shop/media/fixture/jacket-black-2.webp",
+        "https://rubizh.shop/media/fixture/jacket-olive-1.webp"
+      ],
+      "attributes": {
+        "material": "Поліестер"
+      },
+      "filter_attributes": {
+        "material": "Поліестер"
+      },
+      "variants": [
+        {
+          "sku": "RUB-F0001",
+          "color_id": "clr-27adf418ad3a8bbb",
+          "color": "Чорний",
+          "camouflage": null,
+          "photos": [
+            "https://rubizh.shop/media/fixture/jacket-black-1.webp",
+            "https://rubizh.shop/media/fixture/jacket-black-2.webp"
+          ],
+          "size": "M",
+          "size_raw": "M",
+          "size_display": "M",
+          "size_normalized": "M",
+          "size_system": "letter_clothing",
+          "size_status": "EXACT_SIZE",
+          "size_confidence_tier": "SAFE_AUTO",
+          "size_unconfirmed": false,
+          "required": true,
+          "source_binding_status": "CONFIRMED",
+          "price": 2860,
+          "site_price": 2860,
+          "wholesale": [
+            {
+              "discount": 11.8,
+              "price": 2520,
+              "requested_discount": 12,
+              "capped": false
+            },
+            {
+              "discount": 15.7,
+              "price": 2410,
+              "requested_discount": 18,
+              "capped": true
+            }
+          ],
+          "pricing_policy_version": 1,
+          "discount_margin_floor_pct": 15,
+          "minimum_sale_price": 2410,
+          "kit_price": 2470,
+          "availability": "IN_STOCK",
+          "stock": null,
+          "stock_quantity": null,
+          "stock_status": "CONFIRMED_BY_STATUS",
+          "availability_status": "IN_STOCK",
+          "availability_source": "STATUS",
+          "availability_confirmation": "CONFIRMED",
+          "inventory_mode": "STATUS",
+          "inventory_policy_id": "m-win-status-v1",
+          "inventory_policy_version": 1,
+          "inventory_policy_confirmed": true,
+          "delivery_lead_time_days": null,
+          "ready_to_dispatch": false,
+          "price_ready": true,
+          "binding_confirmation_required": false,
+          "size_confirmation_required": false,
+          "stock_observed_at": 1791525600000,
+          "source_updated_at": null,
+          "stock_data_age_hours": 6,
+          "stale_source": false,
+          "stock_warning_hours": 36,
+          "expires_at": null,
+          "order_submission_allowed": true,
+          "payment_allowed": true,
+          "requires_order_confirmation": false,
+          "lead_time_days": null,
+          "barcode": null,
+          "fulfillment_supplier_id": "sf0t3l7jegf9",
+          "fulfillment_supplier_sku": "MW-J-BK-M",
+          "fulfillment_origin": {
+            "city": "с. Ксаверівка, Вінницька область",
+            "branch": "1",
+            "address": "вул. Хмельницьке шосе, 40б",
+            "cityRef": "2679f4ca-ce22-11e8-ad0d-005056b24375",
+            "warehouseRefs": {
+              "1": "666e7ce8-d632-11e8-ad0d-005056b24375"
+            },
+            "verifiedAt": "2026-10-05",
+            "weight_rule": "",
+            "warehouseRef": "666e7ce8-d632-11e8-ad0d-005056b24375"
+          },
+          "fulfillment_supplier": "M-WIN"
+        },
+        {
+          "sku": "RUB-F0002",
+          "color_id": "clr-27adf418ad3a8bbb",
+          "color": "Чорний",
+          "camouflage": null,
+          "photos": [
+            "https://rubizh.shop/media/fixture/jacket-black-1.webp",
+            "https://rubizh.shop/media/fixture/jacket-black-2.webp"
+          ],
+          "size": "L",
+          "size_raw": "L",
+          "size_display": "L",
+          "size_normalized": "L",
+          "size_system": "letter_clothing",
+          "size_status": "EXACT_SIZE",
+          "size_confidence_tier": "SAFE_AUTO",
+          "size_unconfirmed": false,
+          "required": true,
+          "source_binding_status": "CONFIRMED",
+          "price": 2860,
+          "site_price": 2860,
+          "wholesale": [
+            {
+              "discount": 11.8,
+              "price": 2520,
+              "requested_discount": 12,
+              "capped": false
+            },
+            {
+              "discount": 15.7,
+              "price": 2410,
+              "requested_discount": 18,
+              "capped": true
+            }
+          ],
+          "pricing_policy_version": 1,
+          "discount_margin_floor_pct": 15,
+          "minimum_sale_price": 2410,
+          "kit_price": 2470,
+          "availability": "IN_STOCK",
+          "stock": null,
+          "stock_quantity": null,
+          "stock_status": "CONFIRMED_BY_STATUS",
+          "availability_status": "IN_STOCK",
+          "availability_source": "STATUS",
+          "availability_confirmation": "CONFIRMED",
+          "inventory_mode": "STATUS",
+          "inventory_policy_id": "m-win-status-v1",
+          "inventory_policy_version": 1,
+          "inventory_policy_confirmed": true,
+          "delivery_lead_time_days": null,
+          "ready_to_dispatch": false,
+          "price_ready": true,
+          "binding_confirmation_required": false,
+          "size_confirmation_required": false,
+          "stock_observed_at": 1791525600000,
+          "source_updated_at": null,
+          "stock_data_age_hours": 6,
+          "stale_source": false,
+          "stock_warning_hours": 36,
+          "expires_at": null,
+          "order_submission_allowed": true,
+          "payment_allowed": true,
+          "requires_order_confirmation": false,
+          "lead_time_days": null,
+          "barcode": null,
+          "fulfillment_supplier_id": "sf0t3l7jegf9",
+          "fulfillment_supplier_sku": "MW-J-BK-L",
+          "fulfillment_origin": {
+            "city": "с. Ксаверівка, Вінницька область",
+            "branch": "1",
+            "address": "вул. Хмельницьке шосе, 40б",
+            "cityRef": "2679f4ca-ce22-11e8-ad0d-005056b24375",
+            "warehouseRefs": {
+              "1": "666e7ce8-d632-11e8-ad0d-005056b24375"
+            },
+            "verifiedAt": "2026-10-05",
+            "weight_rule": "",
+            "warehouseRef": "666e7ce8-d632-11e8-ad0d-005056b24375"
+          },
+          "fulfillment_supplier": "M-WIN"
+        },
+        {
+          "sku": "RUB-F0003",
+          "color_id": "clr-6b7f5cf49de7e040",
+          "color": "Олива",
+          "camouflage": null,
+          "photos": [
+            "https://rubizh.shop/media/fixture/jacket-olive-1.webp"
+          ],
+          "size": "L",
+          "size_raw": "L",
+          "size_display": "L",
+          "size_normalized": "L",
+          "size_system": "letter_clothing",
+          "size_status": "EXACT_SIZE",
+          "size_confidence_tier": "SAFE_AUTO",
+          "size_unconfirmed": false,
+          "required": true,
+          "source_binding_status": "CONFIRMED",
+          "price": 2860,
+          "site_price": 2860,
+          "wholesale": [
+            {
+              "discount": 11.8,
+              "price": 2520,
+              "requested_discount": 12,
+              "capped": false
+            },
+            {
+              "discount": 15.7,
+              "price": 2410,
+              "requested_discount": 18,
+              "capped": true
+            }
+          ],
+          "pricing_policy_version": 1,
+          "discount_margin_floor_pct": 15,
+          "minimum_sale_price": 2410,
+          "kit_price": 2470,
+          "availability": "IN_STOCK",
+          "stock": null,
+          "stock_quantity": null,
+          "stock_status": "CONFIRMED_BY_STATUS",
+          "availability_status": "IN_STOCK",
+          "availability_source": "STATUS",
+          "availability_confirmation": "CONFIRMED",
+          "inventory_mode": "STATUS",
+          "inventory_policy_id": "m-win-status-v1",
+          "inventory_policy_version": 1,
+          "inventory_policy_confirmed": true,
+          "delivery_lead_time_days": null,
+          "ready_to_dispatch": false,
+          "price_ready": true,
+          "binding_confirmation_required": false,
+          "size_confirmation_required": false,
+          "stock_observed_at": 1791525600000,
+          "source_updated_at": null,
+          "stock_data_age_hours": 6,
+          "stale_source": false,
+          "stock_warning_hours": 36,
+          "expires_at": null,
+          "order_submission_allowed": true,
+          "payment_allowed": true,
+          "requires_order_confirmation": false,
+          "lead_time_days": null,
+          "barcode": null,
+          "fulfillment_supplier_id": "sf0t3l7jegf9",
+          "fulfillment_supplier_sku": "MW-J-OL-L",
+          "fulfillment_origin": {
+            "city": "с. Ксаверівка, Вінницька область",
+            "branch": "1",
+            "address": "вул. Хмельницьке шосе, 40б",
+            "cityRef": "2679f4ca-ce22-11e8-ad0d-005056b24375",
+            "warehouseRefs": {
+              "1": "666e7ce8-d632-11e8-ad0d-005056b24375"
+            },
+            "verifiedAt": "2026-10-05",
+            "weight_rule": "",
+            "warehouseRef": "666e7ce8-d632-11e8-ad0d-005056b24375"
+          },
+          "fulfillment_supplier": "M-WIN"
+        },
+        {
+          "sku": "RUB-F0004",
+          "color_id": "clr-6b7f5cf49de7e040",
+          "color": "Олива",
+          "camouflage": null,
+          "photos": [
+            "https://rubizh.shop/media/fixture/jacket-olive-1.webp"
+          ],
+          "size": "XL",
+          "size_raw": "XL",
+          "size_display": "XL",
+          "size_normalized": "XL",
+          "size_system": "letter_clothing",
+          "size_status": "EXACT_SIZE",
+          "size_confidence_tier": "SAFE_AUTO",
+          "size_unconfirmed": false,
+          "required": true,
+          "source_binding_status": "CONFIRMED",
+          "price": 2860,
+          "site_price": 2860,
+          "wholesale": [
+            {
+              "discount": 11.8,
+              "price": 2520,
+              "requested_discount": 12,
+              "capped": false
+            },
+            {
+              "discount": 15.7,
+              "price": 2410,
+              "requested_discount": 18,
+              "capped": true
+            }
+          ],
+          "pricing_policy_version": 1,
+          "discount_margin_floor_pct": 15,
+          "minimum_sale_price": 2410,
+          "kit_price": 2470,
+          "availability": "OUT_OF_STOCK",
+          "stock": null,
+          "stock_quantity": null,
+          "stock_status": "CONFIRMED_BY_STATUS",
+          "availability_status": "OUT_OF_STOCK",
+          "availability_source": "STATUS",
+          "availability_confirmation": "CONFIRMED",
+          "inventory_mode": "STATUS",
+          "inventory_policy_id": "m-win-status-v1",
+          "inventory_policy_version": 1,
+          "inventory_policy_confirmed": true,
+          "delivery_lead_time_days": null,
+          "ready_to_dispatch": false,
+          "price_ready": true,
+          "binding_confirmation_required": false,
+          "size_confirmation_required": false,
+          "stock_observed_at": 1791525600000,
+          "source_updated_at": null,
+          "stock_data_age_hours": 6,
+          "stale_source": false,
+          "stock_warning_hours": 36,
+          "expires_at": null,
+          "order_submission_allowed": false,
+          "payment_allowed": false,
+          "requires_order_confirmation": false,
+          "lead_time_days": null,
+          "fulfillment_supplier_id": "sf0t3l7jegf9",
+          "fulfillment_supplier": "M-WIN",
+          "fulfillment_supplier_sku": "MW-J-OL-XL"
+        }
+      ],
+      "site_price": 2860,
+      "availability": "IN_STOCK",
+      "kit_component": "outer_layer",
+      "kit_component_tags": [],
+      "kit_eligible": true,
+      "kit_priority": 0,
+      "budget_tier": null,
+      "compatibility": {
+        "compatible_product_ids": [],
+        "incompatible_product_ids": []
+      },
+      "recommended_with": [],
+      "alternative_group": null,
+      "relations": [],
+      "ads_allowed": false,
+      "links": {},
+      "model_colors_version": 1,
+      "model_id": "m-jacket",
+      "model_name": "Куртка Fixture Softshell",
+      "source_product_ids": [
+        "m-jacket"
+      ],
+      "colors": [
+        {
+          "id": "clr-27adf418ad3a8bbb",
+          "color": "Чорний",
+          "camouflage": null,
+          "photos": [
+            "https://rubizh.shop/media/fixture/jacket-black-1.webp",
+            "https://rubizh.shop/media/fixture/jacket-black-2.webp"
+          ],
+          "variant_skus": [
+            "RUB-F0001",
+            "RUB-F0002"
+          ],
+          "photo_assignment": "source_associated"
+        },
+        {
+          "id": "clr-6b7f5cf49de7e040",
+          "color": "Олива",
+          "camouflage": null,
+          "photos": [
+            "https://rubizh.shop/media/fixture/jacket-olive-1.webp"
+          ],
+          "variant_skus": [
+            "RUB-F0003",
+            "RUB-F0004"
+          ],
+          "photo_assignment": "source_associated"
+        }
+      ],
+      "unassigned_photos": [],
+      "classification_version": 1,
+      "size_catalog_version": 1,
+      "order_policy_version": 1,
+      "inventory_policy_version": 1,
+      "order_submission_allowed": true,
+      "payment_allowed": true,
+      "requires_order_confirmation": false,
+      "size_catalogs": [],
+      "size_options": [],
+      "publication_state": "ACTIVE",
+      "publication": {
+        "state": "READY",
+        "decision_version": 1
+      }
+    },
+    {
+      "pricing_policy_version": 1,
+      "id": "m-pants",
+      "product_id": "m-pants",
+      "product_model_version": 1,
+      "simple_policy_version": 1,
+      "slug": "shtany-fixture-field",
+      "name": "Штани Fixture Field",
+      "marketing_name_uk": "Штани Fixture Field",
+      "brand": "FIXTURE",
+      "category": "Одяг та форма / Штани",
+      "category_path": [
+        "Одяг та форма",
+        "Штани"
+      ],
+      "canonical_category_id": "clothing_pants",
+      "primary_product_type": "pants",
+      "description": "<p>Польові штани.</p><p>Розміри 42–60.</p>",
+      "photos": [
+        "https://rubizh.shop/media/fixture/pants-1.webp"
+      ],
+      "attributes": {
+        "material": "Ріп-стоп"
+      },
+      "filter_attributes": {
+        "material": "Ріп-стоп"
+      },
+      "variants": [
+        {
+          "sku": "RUB-F0010",
+          "color_id": "clr-75ab9d2b3925f51b",
+          "color": null,
+          "camouflage": "Мультикам",
+          "photos": [
+            "https://rubizh.shop/media/fixture/pants-1.webp"
+          ],
+          "size": "",
+          "size_raw": "",
+          "size_display": "",
+          "size_normalized": null,
+          "size_system": null,
+          "size_status": "SIZE_CONFIRMATION_REQUIRED",
+          "size_confidence_tier": "SAFE_AUTO",
+          "size_unconfirmed": true,
+          "required": true,
+          "source_binding_status": "CONFIRMED",
+          "price": 1910,
+          "site_price": 1910,
+          "wholesale": [
+            {
+              "discount": 11.5,
+              "price": 1690,
+              "requested_discount": 12,
+              "capped": false
+            },
+            {
+              "discount": 15.7,
+              "price": 1610,
+              "requested_discount": 18,
+              "capped": true
+            }
+          ],
+          "pricing_policy_version": 1,
+          "discount_margin_floor_pct": 15,
+          "minimum_sale_price": 1610,
+          "kit_price": 1650,
+          "availability": "SIZE_CONFIRMATION_REQUIRED",
+          "stock": null,
+          "stock_quantity": null,
+          "stock_status": "UNKNOWN",
+          "availability_status": "IN_STOCK",
+          "availability_source": "STATUS",
+          "availability_confirmation": "CONFIRMED",
+          "inventory_mode": "STATUS",
+          "inventory_policy_id": "m-win-status-v1",
+          "inventory_policy_version": 1,
+          "inventory_policy_confirmed": true,
+          "delivery_lead_time_days": null,
+          "ready_to_dispatch": false,
+          "price_ready": true,
+          "binding_confirmation_required": false,
+          "size_confirmation_required": true,
+          "stock_observed_at": 1791525600000,
+          "source_updated_at": null,
+          "stock_data_age_hours": 6,
+          "stale_source": false,
+          "stock_warning_hours": 36,
+          "expires_at": null,
+          "order_submission_allowed": true,
+          "payment_allowed": false,
+          "requires_order_confirmation": true,
+          "lead_time_days": null,
+          "barcode": null,
+          "fulfillment_supplier_id": "sf0t3l7jegf9",
+          "fulfillment_supplier_sku": "MW-P-MC",
+          "fulfillment_origin": {
+            "city": "с. Ксаверівка, Вінницька область",
+            "branch": "1",
+            "address": "вул. Хмельницьке шосе, 40б",
+            "cityRef": "2679f4ca-ce22-11e8-ad0d-005056b24375",
+            "warehouseRefs": {
+              "1": "666e7ce8-d632-11e8-ad0d-005056b24375"
+            },
+            "verifiedAt": "2026-10-05",
+            "weight_rule": "",
+            "warehouseRef": "666e7ce8-d632-11e8-ad0d-005056b24375"
+          },
+          "fulfillment_supplier": "M-WIN"
+        }
+      ],
+      "site_price": 1910,
+      "availability": "SIZE_CONFIRMATION_REQUIRED",
+      "kit_component": "pants",
+      "kit_component_tags": [],
+      "kit_eligible": true,
+      "kit_priority": 0,
+      "budget_tier": null,
+      "compatibility": {
+        "compatible_product_ids": [],
+        "incompatible_product_ids": []
+      },
+      "recommended_with": [],
+      "alternative_group": null,
+      "relations": [],
+      "ads_allowed": false,
+      "links": {},
+      "model_colors_version": 1,
+      "model_id": "m-pants",
+      "model_name": "Штани Fixture Field",
+      "source_product_ids": [
+        "m-pants"
+      ],
+      "colors": [
+        {
+          "id": "clr-75ab9d2b3925f51b",
+          "color": null,
+          "camouflage": "Мультикам",
+          "photos": [
+            "https://rubizh.shop/media/fixture/pants-1.webp"
+          ],
+          "variant_skus": [
+            "RUB-F0010"
+          ],
+          "photo_assignment": "source_associated"
+        }
+      ],
+      "unassigned_photos": [],
+      "classification_version": 1,
+      "size_catalog_version": 1,
+      "order_policy_version": 1,
+      "inventory_policy_version": 1,
+      "order_submission_allowed": true,
+      "payment_allowed": false,
+      "requires_order_confirmation": true,
+      "size_catalogs": [
+        {
+          "catalog_id": "bfcecce4c4a53f7a",
+          "scope": "MODEL",
+          "color_id": null,
+          "size_system": "clothing_numeric",
+          "allowed_sizes": [
+            "42",
+            "44",
+            "46",
+            "48",
+            "50",
+            "52",
+            "54",
+            "56",
+            "58",
+            "60"
+          ],
+          "size_range_min": 42,
+          "size_range_max": 60
+        }
+      ],
+      "size_options": [
+        {
+          "option_id": "bfcecce4c4a53f7a:42",
+          "catalog_id": "bfcecce4c4a53f7a",
+          "scope": "MODEL",
+          "color_id": null,
+          "size": "42",
+          "size_system": "clothing_numeric",
+          "variant_sku": null,
+          "supplier_sku": null,
+          "stock": null,
+          "stock_quantity": null,
+          "stock_status": "UNKNOWN",
+          "availability_status": "UNKNOWN",
+          "availability_source": null,
+          "availability_confirmation": "UNKNOWN",
+          "availability": "SIZE_CONFIRMATION_REQUIRED",
+          "order_submission_allowed": true,
+          "payment_allowed": false,
+          "requires_order_confirmation": true,
+          "selectable_for_request": true
+        },
+        {
+          "option_id": "bfcecce4c4a53f7a:44",
+          "catalog_id": "bfcecce4c4a53f7a",
+          "scope": "MODEL",
+          "color_id": null,
+          "size": "44",
+          "size_system": "clothing_numeric",
+          "variant_sku": null,
+          "supplier_sku": null,
+          "stock": null,
+          "stock_quantity": null,
+          "stock_status": "UNKNOWN",
+          "availability_status": "UNKNOWN",
+          "availability_source": null,
+          "availability_confirmation": "UNKNOWN",
+          "availability": "SIZE_CONFIRMATION_REQUIRED",
+          "order_submission_allowed": true,
+          "payment_allowed": false,
+          "requires_order_confirmation": true,
+          "selectable_for_request": true
+        },
+        {
+          "option_id": "bfcecce4c4a53f7a:46",
+          "catalog_id": "bfcecce4c4a53f7a",
+          "scope": "MODEL",
+          "color_id": null,
+          "size": "46",
+          "size_system": "clothing_numeric",
+          "variant_sku": null,
+          "supplier_sku": null,
+          "stock": null,
+          "stock_quantity": null,
+          "stock_status": "UNKNOWN",
+          "availability_status": "UNKNOWN",
+          "availability_source": null,
+          "availability_confirmation": "UNKNOWN",
+          "availability": "SIZE_CONFIRMATION_REQUIRED",
+          "order_submission_allowed": true,
+          "payment_allowed": false,
+          "requires_order_confirmation": true,
+          "selectable_for_request": true
+        },
+        {
+          "option_id": "bfcecce4c4a53f7a:48",
+          "catalog_id": "bfcecce4c4a53f7a",
+          "scope": "MODEL",
+          "color_id": null,
+          "size": "48",
+          "size_system": "clothing_numeric",
+          "variant_sku": null,
+          "supplier_sku": null,
+          "stock": null,
+          "stock_quantity": null,
+          "stock_status": "UNKNOWN",
+          "availability_status": "UNKNOWN",
+          "availability_source": null,
+          "availability_confirmation": "UNKNOWN",
+          "availability": "SIZE_CONFIRMATION_REQUIRED",
+          "order_submission_allowed": true,
+          "payment_allowed": false,
+          "requires_order_confirmation": true,
+          "selectable_for_request": true
+        },
+        {
+          "option_id": "bfcecce4c4a53f7a:50",
+          "catalog_id": "bfcecce4c4a53f7a",
+          "scope": "MODEL",
+          "color_id": null,
+          "size": "50",
+          "size_system": "clothing_numeric",
+          "variant_sku": null,
+          "supplier_sku": null,
+          "stock": null,
+          "stock_quantity": null,
+          "stock_status": "UNKNOWN",
+          "availability_status": "UNKNOWN",
+          "availability_source": null,
+          "availability_confirmation": "UNKNOWN",
+          "availability": "SIZE_CONFIRMATION_REQUIRED",
+          "order_submission_allowed": true,
+          "payment_allowed": false,
+          "requires_order_confirmation": true,
+          "selectable_for_request": true
+        },
+        {
+          "option_id": "bfcecce4c4a53f7a:52",
+          "catalog_id": "bfcecce4c4a53f7a",
+          "scope": "MODEL",
+          "color_id": null,
+          "size": "52",
+          "size_system": "clothing_numeric",
+          "variant_sku": null,
+          "supplier_sku": null,
+          "stock": null,
+          "stock_quantity": null,
+          "stock_status": "UNKNOWN",
+          "availability_status": "UNKNOWN",
+          "availability_source": null,
+          "availability_confirmation": "UNKNOWN",
+          "availability": "SIZE_CONFIRMATION_REQUIRED",
+          "order_submission_allowed": true,
+          "payment_allowed": false,
+          "requires_order_confirmation": true,
+          "selectable_for_request": true
+        },
+        {
+          "option_id": "bfcecce4c4a53f7a:54",
+          "catalog_id": "bfcecce4c4a53f7a",
+          "scope": "MODEL",
+          "color_id": null,
+          "size": "54",
+          "size_system": "clothing_numeric",
+          "variant_sku": null,
+          "supplier_sku": null,
+          "stock": null,
+          "stock_quantity": null,
+          "stock_status": "UNKNOWN",
+          "availability_status": "UNKNOWN",
+          "availability_source": null,
+          "availability_confirmation": "UNKNOWN",
+          "availability": "SIZE_CONFIRMATION_REQUIRED",
+          "order_submission_allowed": true,
+          "payment_allowed": false,
+          "requires_order_confirmation": true,
+          "selectable_for_request": true
+        },
+        {
+          "option_id": "bfcecce4c4a53f7a:56",
+          "catalog_id": "bfcecce4c4a53f7a",
+          "scope": "MODEL",
+          "color_id": null,
+          "size": "56",
+          "size_system": "clothing_numeric",
+          "variant_sku": null,
+          "supplier_sku": null,
+          "stock": null,
+          "stock_quantity": null,
+          "stock_status": "UNKNOWN",
+          "availability_status": "UNKNOWN",
+          "availability_source": null,
+          "availability_confirmation": "UNKNOWN",
+          "availability": "SIZE_CONFIRMATION_REQUIRED",
+          "order_submission_allowed": true,
+          "payment_allowed": false,
+          "requires_order_confirmation": true,
+          "selectable_for_request": true
+        },
+        {
+          "option_id": "bfcecce4c4a53f7a:58",
+          "catalog_id": "bfcecce4c4a53f7a",
+          "scope": "MODEL",
+          "color_id": null,
+          "size": "58",
+          "size_system": "clothing_numeric",
+          "variant_sku": null,
+          "supplier_sku": null,
+          "stock": null,
+          "stock_quantity": null,
+          "stock_status": "UNKNOWN",
+          "availability_status": "UNKNOWN",
+          "availability_source": null,
+          "availability_confirmation": "UNKNOWN",
+          "availability": "SIZE_CONFIRMATION_REQUIRED",
+          "order_submission_allowed": true,
+          "payment_allowed": false,
+          "requires_order_confirmation": true,
+          "selectable_for_request": true
+        },
+        {
+          "option_id": "bfcecce4c4a53f7a:60",
+          "catalog_id": "bfcecce4c4a53f7a",
+          "scope": "MODEL",
+          "color_id": null,
+          "size": "60",
+          "size_system": "clothing_numeric",
+          "variant_sku": null,
+          "supplier_sku": null,
+          "stock": null,
+          "stock_quantity": null,
+          "stock_status": "UNKNOWN",
+          "availability_status": "UNKNOWN",
+          "availability_source": null,
+          "availability_confirmation": "UNKNOWN",
+          "availability": "SIZE_CONFIRMATION_REQUIRED",
+          "order_submission_allowed": true,
+          "payment_allowed": false,
+          "requires_order_confirmation": true,
+          "selectable_for_request": true
+        }
+      ],
+      "publication_state": "ACTIVE",
+      "publication": {
+        "state": "READY",
+        "decision_version": 1
+      }
+    },
+    {
+      "pricing_policy_version": 1,
+      "id": "m-pouch",
+      "product_id": "m-pouch",
+      "product_model_version": 1,
+      "simple_policy_version": 1,
+      "slug": "pidsumok-fixture-utility",
+      "name": "Підсумок Fixture Utility",
+      "marketing_name_uk": "Підсумок Fixture Utility",
+      "brand": "FIXTURE",
+      "category": "Рюкзаки, сумки та баули / Рюкзаки",
+      "category_path": [
+        "Рюкзаки, сумки та баули",
+        "Рюкзаки"
+      ],
+      "canonical_category_id": "bags_backpacks",
+      "primary_product_type": "backpack",
+      "description": "<p>Рюкзак 25 л.</p><p>Матеріал: кордура.</p>",
+      "photos": [
+        "https://rubizh.shop/media/fixture/pack-1.webp",
+        "https://rubizh.shop/media/fixture/pack-black-1.webp",
+        "https://rubizh.shop/media/fixture/pack-coyote-1.webp"
+      ],
+      "attributes": {
+        "volume_l": 25
+      },
+      "filter_attributes": {
+        "volume_l": 25
+      },
+      "variants": [
+        {
+          "sku": "RUB-F0020",
+          "color_id": "clr-66de4b2ce708066c",
+          "color": "Койот",
+          "camouflage": null,
+          "photos": [
+            "https://rubizh.shop/media/fixture/pack-coyote-1.webp"
+          ],
+          "size": "",
+          "size_raw": "",
+          "size_display": "",
+          "size_normalized": null,
+          "size_system": "NONE",
+          "size_status": "NO_SIZE_REQUIRED",
+          "size_confidence_tier": "SAFE_AUTO",
+          "size_unconfirmed": false,
+          "required": false,
+          "source_binding_status": "CONFIRMED",
+          "price": 1430,
+          "site_price": 1430,
+          "wholesale": [
+            {
+              "discount": 11.8,
+              "price": 1260,
+              "requested_discount": 12,
+              "capped": false
+            },
+            {
+              "discount": 15.3,
+              "price": 1210,
+              "requested_discount": 18,
+              "capped": true
+            }
+          ],
+          "pricing_policy_version": 1,
+          "discount_margin_floor_pct": 15,
+          "minimum_sale_price": 1210,
+          "kit_price": 1240,
+          "availability": "PREORDER",
+          "stock": null,
+          "stock_quantity": null,
+          "stock_status": "CONFIRMED_BY_STATUS",
+          "availability_status": "PREORDER",
+          "availability_source": "STATUS",
+          "availability_confirmation": "CONFIRMED",
+          "inventory_mode": "STATUS",
+          "inventory_policy_id": "ukr-tec-prom-status-v1",
+          "inventory_policy_version": 1,
+          "inventory_policy_confirmed": true,
+          "delivery_lead_time_days": 3,
+          "ready_to_dispatch": false,
+          "price_ready": true,
+          "binding_confirmation_required": false,
+          "size_confirmation_required": false,
+          "stock_observed_at": 1791525600000,
+          "source_updated_at": null,
+          "stock_data_age_hours": 6,
+          "stale_source": false,
+          "stock_warning_hours": 36,
+          "expires_at": null,
+          "order_submission_allowed": true,
+          "payment_allowed": false,
+          "requires_order_confirmation": true,
+          "lead_time_days": null,
+          "barcode": null,
+          "fulfillment_supplier_id": "s2akya7xoafn",
+          "fulfillment_supplier_sku": "UT-P-CY",
+          "fulfillment_origin": {
+            "city": "Хмельницький",
+            "branch": "8",
+            "address": "вул. Князя Святослава Хороброго, 5",
+            "cityRef": "db5c88ac-391c-11dd-90d9-001a92567626",
+            "warehouseRefs": {
+              "8": "1ec09d9f-e1c2-11e3-8c4a-0050568002cf"
+            },
+            "verifiedAt": "2026-10-05",
+            "weight_rule": "",
+            "warehouseRef": "1ec09d9f-e1c2-11e3-8c4a-0050568002cf"
+          },
+          "fulfillment_supplier": "UKR-TEC"
+        },
+        {
+          "sku": "RUB-F0021",
+          "color_id": "clr-27adf418ad3a8bbb",
+          "color": "Чорний",
+          "camouflage": null,
+          "photos": [
+            "https://rubizh.shop/media/fixture/pack-black-1.webp"
+          ],
+          "size": "",
+          "size_raw": "",
+          "size_display": "",
+          "size_normalized": null,
+          "size_system": "NONE",
+          "size_status": "NO_SIZE_REQUIRED",
+          "size_confidence_tier": "SAFE_AUTO",
+          "size_unconfirmed": false,
+          "required": false,
+          "source_binding_status": "CONFIRMED",
+          "price": 1430,
+          "site_price": 1430,
+          "wholesale": [
+            {
+              "discount": 11.8,
+              "price": 1260,
+              "requested_discount": 12,
+              "capped": false
+            },
+            {
+              "discount": 15.3,
+              "price": 1210,
+              "requested_discount": 18,
+              "capped": true
+            }
+          ],
+          "pricing_policy_version": 1,
+          "discount_margin_floor_pct": 15,
+          "minimum_sale_price": 1210,
+          "kit_price": 1240,
+          "availability": "IN_STOCK",
+          "stock": null,
+          "stock_quantity": null,
+          "stock_status": "CONFIRMED_BY_STATUS",
+          "availability_status": "IN_STOCK",
+          "availability_source": "STATUS",
+          "availability_confirmation": "CONFIRMED",
+          "inventory_mode": "STATUS",
+          "inventory_policy_id": "ukr-tec-prom-status-v1",
+          "inventory_policy_version": 1,
+          "inventory_policy_confirmed": true,
+          "delivery_lead_time_days": null,
+          "ready_to_dispatch": true,
+          "price_ready": true,
+          "binding_confirmation_required": false,
+          "size_confirmation_required": false,
+          "stock_observed_at": 1791525600000,
+          "source_updated_at": null,
+          "stock_data_age_hours": 6,
+          "stale_source": false,
+          "stock_warning_hours": 36,
+          "expires_at": null,
+          "order_submission_allowed": true,
+          "payment_allowed": true,
+          "requires_order_confirmation": false,
+          "lead_time_days": null,
+          "barcode": null,
+          "fulfillment_supplier_id": "s2akya7xoafn",
+          "fulfillment_supplier_sku": "UT-P-BK",
+          "fulfillment_origin": {
+            "city": "Хмельницький",
+            "branch": "8",
+            "address": "вул. Князя Святослава Хороброго, 5",
+            "cityRef": "db5c88ac-391c-11dd-90d9-001a92567626",
+            "warehouseRefs": {
+              "8": "1ec09d9f-e1c2-11e3-8c4a-0050568002cf"
+            },
+            "verifiedAt": "2026-10-05",
+            "weight_rule": "",
+            "warehouseRef": "1ec09d9f-e1c2-11e3-8c4a-0050568002cf"
+          },
+          "fulfillment_supplier": "UKR-TEC"
+        }
+      ],
+      "site_price": 1430,
+      "availability": "IN_STOCK",
+      "kit_component": "backpack",
+      "kit_component_tags": [],
+      "kit_eligible": true,
+      "kit_priority": 0,
+      "budget_tier": null,
+      "compatibility": {
+        "compatible_product_ids": [],
+        "incompatible_product_ids": []
+      },
+      "recommended_with": [],
+      "alternative_group": null,
+      "relations": [],
+      "ads_allowed": false,
+      "links": {},
+      "model_colors_version": 1,
+      "model_id": "m-pouch",
+      "model_name": "Підсумок Fixture Utility",
+      "source_product_ids": [
+        "m-pouch"
+      ],
+      "colors": [
+        {
+          "id": "clr-66de4b2ce708066c",
+          "color": "Койот",
+          "camouflage": null,
+          "photos": [
+            "https://rubizh.shop/media/fixture/pack-coyote-1.webp"
+          ],
+          "variant_skus": [
+            "RUB-F0020"
+          ],
+          "photo_assignment": "source_associated"
+        },
+        {
+          "id": "clr-27adf418ad3a8bbb",
+          "color": "Чорний",
+          "camouflage": null,
+          "photos": [
+            "https://rubizh.shop/media/fixture/pack-black-1.webp"
+          ],
+          "variant_skus": [
+            "RUB-F0021"
+          ],
+          "photo_assignment": "source_associated"
+        }
+      ],
+      "unassigned_photos": [
+        "https://rubizh.shop/media/fixture/pack-1.webp"
+      ],
+      "classification_version": 1,
+      "size_catalog_version": 1,
+      "order_policy_version": 1,
+      "inventory_policy_version": 1,
+      "order_submission_allowed": true,
+      "payment_allowed": true,
+      "requires_order_confirmation": false,
+      "size_catalogs": [],
+      "size_options": [],
+      "publication_state": "ACTIVE",
+      "publication": {
+        "state": "READY",
+        "decision_version": 1
+      }
+    }
+  ],
+  "hide_ids": []
+}
