@@ -27,6 +27,20 @@ NO_DESCRIPTION 13. 15 позиций остались в очереди импо
 Наличие SKU: IN_STOCK 4695 · OUT_OF_STOCK 928 · UNKNOWN 1349 (Тактикал Белт, политика не подтверждена) ·
 нужно подтвердить размер 1215. Один SKU READY-модели без цены (`price_ready:false`) — заказать нельзя.
 
+## Обновление: clean import hardening (финальный прогон r5)
+
+Тот же сброс и импорт, PIM `82e4fb2` (отчёт: PIM `releases/pim-10.9.3/CLEAN-IMPORT-HARDENING-REPORT.md`),
+SITE `d40ec38` (QA: `docs/SITE-QA-20261010.md`).
+
+| Поле | Было | Стало |
+|---|---|---|
+| READY / MODERATION / REJECTED / ARCHIVED | 1528 / 2670 / 29 | **1698 / 2393 / 31 / 110** |
+| Модерация grouping / category / color / photo | 2191 / 843 / 95 / 3 | 2046 / 520 / 72 / 3 (+ price_unit 47, variant_cell 39) |
+| SIZE_CONFIRMATION_REQUIRED | 1215 | 1112 |
+| SITE_MODELS / SITE_SKU | 1528 / 2820 | **1698 / 3458** |
+| legacy · URL `-N` · дубли названий | 0 · 0 · 0 | 0 · 0 · 0 |
+| E2E | 14/14 | **14/14 PASS** |
+
 ## Что исправлено по ходу репетиции
 
 1. **Ложные «нет фото».** Проверка новых позиций искала фото по ключу контента, который вырезает размер
@@ -54,13 +68,13 @@ PAID. UNKNOWN → отказ; OUT_OF_STOCK → отказ; PREORDER → подт
 
 ```bash
 # 1. Backup БД SITE вне webroot (как в docs/PIM-V3-RELEASE-REPORT-20261009.md, шаг 1) → $B
-# 2. Код: SITE — install-pim-v3.sh (коммит 752451d5ba3acb6f5b2866a85626df0cfec23c1a); PIM — архив ниже
-curl -fsSL -o /tmp/install-pim-v3.sh https://raw.githubusercontent.com/alexalixmanov-del/rubizh/752451d5ba3acb6f5b2866a85626df0cfec23c1a/dev/install-pim-v3.sh
-echo '4e48080a90f97e6da2686002c7351a8d948ef8510ee82b152e70a4a416b885c7  /tmp/install-pim-v3.sh' | sha256sum -c -
+# 2. Код: SITE — install-pim-v3.sh (коммит d40ec38ae0f091b933aebd6b4a143d9360bc5e8f); PIM — архив ниже
+curl -fsSL -o /tmp/install-pim-v3.sh https://raw.githubusercontent.com/alexalixmanov-del/rubizh/d40ec38ae0f091b933aebd6b4a143d9360bc5e8f/dev/install-pim-v3.sh
+echo '02c440b733eb16d4afb7121627f871ac8afdc329c166696e8d8684f2cc914497  /tmp/install-pim-v3.sh' | sha256sum -c -
 bash /tmp/install-pim-v3.sh /home/xk589064/rubizh.shop/www "$B" "$(sha256sum "$B" | cut -d' ' -f1)"
 mkdir -p /home/xk589064/.pim-release && cd /home/xk589064/.pim-release
-curl -fsSL -o pim.zip https://raw.githubusercontent.com/alexalixmanov-del/pim.rubizh/6117c97c1623adeaf939dd9275200e87799e0a70/releases/pim-10.9.3/rubizh-pim-10.9.3-final-workflow.zip
-echo 'd05711fedd9cb7a705db9a2f65c021b758abe1355e5a068d5703dbcfcba76427  pim.zip' | sha256sum -c -
+curl -fsSL -o pim.zip https://raw.githubusercontent.com/alexalixmanov-del/pim.rubizh/82e4fb2d46dcc04f19691af93b7a6447413f7b9e/releases/pim-10.9.3/rubizh-pim-10.9.3-final-workflow.zip
+echo 'a98dfb74ac06b0bc10ab3492f1e5983409f2beae3908418e8f8919514e414d05  pim.zip' | sha256sum -c -
 unzip -o -q pim.zip tools/install-production.py
 python3 tools/install-production.py install --archive pim.zip --target /home/xk589064/rubizh.shop/pim \
   --data-backup /home/xk589064/.pim-deploy-backups/input/<ПОЛНЫЙ_BACKUP>.json.gz --backup-root /home/xk589064/.pim-deploy-backups
