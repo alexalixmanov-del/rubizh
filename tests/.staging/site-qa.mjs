@@ -36,6 +36,7 @@ for(const w of widths){
   const sku=await page.locator('[data-product-sku]').first().innerText().catch(()=>'');
   const cta=page.locator('text=/^До кошика/i >> visible=true').first();if(await cta.count()){await cta.click();await page.waitForTimeout(500);await audit(page,'modal',w);}
   const cart=await page.evaluate(()=>{try{return JSON.parse(localStorage.getItem('rubizh.cart')||'[]')}catch{return []}});
+  const go=page.locator('[data-mobile-dialog="mini"] >> text=/Оформити/i').first();if(await go.count()){await go.click();await page.waitForTimeout(900);await audit(page,'checkout',w);}
   result.pages.push({name:'sku',w,product_sku:sku,cart_sku:cart[0]?.sku||null});
  }
  result.pages.push({name:'errors',w,errors});await ctx.close();
