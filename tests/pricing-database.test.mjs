@@ -38,7 +38,7 @@ test('HTTP PIM pricing sync, private projection, atomic failure, checkout replay
   const quote=await send('/shop/checkout-quote.php',{csrf,lines},h);assert.equal(quote.status,200,JSON.stringify(quote));assert.equal(quote.data.quote.total,2740);assert.doesNotMatch(JSON.stringify(quote),/minimum_cents|_pricing/);
   const other=await send('/shop/checkout-quote.php',{csrf,lines:[{product_id:'jacket',sku:'jacket-M',qty:2,price_mode:'kit',kit_group:'custom'}]},h);assert.equal(other.data.quote.total,2980.5);
   assert.equal((await send('/shop/checkout-quote.php',{csrf,lines,promo:'SAFE'},h)).data.error_code,'DISCOUNT_NOT_ALLOWED');
-  assert.equal((await send('/shop/checkout-quote.php',{csrf,lines:[{...lines[0],color:'Олива'}]},h)).data.error_code,'INVALID_VARIANT');
+  assert.equal((await send('/shop/checkout-quote.php',{csrf,lines:[{...lines[0],color:'Олива'}]},h)).data.error_code,'SKU_UNAVAILABLE');
   const order={csrf,request_id:'a'.repeat(32),contact:{name:'Тест Покупець',recipient:'Тест Покупець',phone:'+380671234567',city:'Київ',address:'Відділення 1',delivery_type:'branch'},payment:'invoice',lines,expected_total:2740,catalog_version:quote.data.quote.catalog_version};
   const saved=await send('/shop/order.php',order,h);assert.equal(saved.status,200,JSON.stringify(saved));const replay=await send('/shop/order.php',order,h);assert.equal(replay.status,200);assert.equal(replay.data.order.id,saved.data.order.id);assert.equal(replay.data.repeated,true);
   assert.equal((await send('/api/pim/sync',{...payload,products:[changed]},auth)).status,200);

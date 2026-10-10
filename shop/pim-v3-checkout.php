@@ -16,7 +16,7 @@ function pimV3Published(PDO $db,array $model): void {
     if(!$q->fetchColumn())throw new ShopPricingException('UNAVAILABLE','Товар зараз не опублікований. Оновіть кошик.');
 }
 /** Resolve one cart line of a v3 MODEL: either a real SKU or a size request option without SKU. */
-function pimV3ResolveLine(PDO $db,array $line,array $model,bool $lock,array &$totals): array {
+function pimV3ResolveLine(PDO $db,array $line,array $model,bool $lock,array &$totals,int $excludeOrder=0,?string $buyer=null): array {
     pimV3Published($db,$model);
     $colorId=pimV3Field($line,'color_id',64);$optionId=pimV3Field($line,'option_id',64);$sku=pimV3Field($line,'sku',64);
     $colors=$db->prepare('SELECT color_id FROM rubizh_product_colors WHERE product_id=? AND active=1');$colors->execute([$model['id']]);$active=$colors->fetchAll(PDO::FETCH_COLUMN);
@@ -56,13 +56,13 @@ function pimV3ResolveLine(PDO $db,array $line,array $model,bool $lock,array &$to
     $totals[$sku]=($totals[$sku]??0)+$qty;
     // Numeric reservations only for a confirmed QUANTITY; STATUS null is never turned into a number.
     $numeric=$payable&&$v['pim_stock_quantity']!==null;
-    if($numeric&&$totals[$sku]+shopReservedQty($db,$sku)>(float)$v['pim_stock_quantity'])throw new ShopPricingException('UNAVAILABLE','Недостатньо товару на складі: '.$model['name']);
-    $grants=cfg('shop_wholesale_customers');$buyer=function_exists('customerId')?customerId():null;$tier=is_array($grants)&&$buyer!==null?($grants[$buyer]??null):null;
+    if($numeric&&$totals[$sku]+shopReservedQty($db,$sku,$excludeOrder)>(float)$v['pim_stock_quantity'])throw new ShopPricingException('UNAVAILABLE','Недостатньо товару на складі: '.$model['name']);
+    $grants=cfg('shop_wholesale_customers');$tier=is_array($grants)&&$buyer!==null?($grants[$buyer]??null):null;
     $color=(string)$v['color'];
     return $base+['sku'=>$sku,'variant_id'=>$sku,'option_id'=>null,'color_id'=>$v['pim_color_id'],'selection_type'=>'SKU','size'=>$v['pim_size_status']==='NO_SIZE_REQUIRED'?'':$size,'color'=>$color,
         'variant'=>trim(($v['pim_size_status']==='NO_SIZE_REQUIRED'?'':$size).' · '.$color,' ·'),'price'=>shopMoneyValue($policy['price_cents']),'kit_price'=>$policy['kit_cents']===null?null:shopMoneyValue($policy['kit_cents']),
         '_pricing'=>$policy,'_approved_wholesale_tier'=>$tier,'price_mode'=>$mode,'retail_price'=>shopMoneyValue($policy['price_cents']),'price_pending'=>false,'stock_confirmed'=>$numeric,
-        'availability'=>$payable?'in':'order','availability_v3'=>$v['pim_effective_availability'],'payment_allowed'=>$payable,'requires_order_confirmation'=>!$payable,
+        'availability'=>$payable?'in':'order','availability_v3'=>$v['pim_effective_availability'],'payment_allowed'=>$payable,'requires_order_confirmation'=>(int)$v['pim_requires_order_confirmation']===1,
         'delivery_lead_time_days'=>$v['pim_delivery_lead_time_days']===null?null:(int)$v['pim_delivery_lead_time_days'],
         'request_state'=>$payable?'stock_check':($v['pim_effective_availability']==='PREORDER'?'confirmed_preorder':'order_on_request'),
         'fulfillment_supplier'=>npSupplierCode($sku,$model['id'],(string)($v['fulfillment_supplier_name']??''))];
@@ -72,7 +72,7 @@ function pimV3ResolveLine(PDO $db,array $line,array $model,bool $lock,array &$to
 function pimV3OrderDecision(array $lines,string $payment): array {
     $v3=(bool)array_filter($lines,fn($l)=>($l['contract_version']??null)===3);
     if(!$v3)return ['contract_version'=>null,'order_state'=>null,'legacy_status'=>'new','payment_now'=>false];
-    $confirm=(bool)array_filter($lines,fn($l)=>($l['contract_version']??null)!==3||empty($l['payment_allowed']))||$payment==='cod';
+    $confirm=(bool)array_filter($lines,fn($l)=>($l['contract_version']??null)!==3||empty($l['payment_allowed'])||!empty($l['requires_order_confirmation']))||$payment==='cod';
     return ['contract_version'=>3,'order_state'=>$confirm?'WAITING_CONFIRMATION':'CONFIRMED','legacy_status'=>$confirm?'new':'confirmed','payment_now'=>!$confirm];
 }
 function pimV3RecordOrder(PDO $db,int $id,array $lines,array $decision,string $revision): void {
@@ -86,45 +86,20 @@ function pimV3Order(PDO $db,int $id): ?array {
     $q=$db->prepare('SELECT * FROM rubizh_customer_orders WHERE id=? AND pim_contract_version=3');$q->execute([$id]);return $q->fetch(PDO::FETCH_ASSOC)?:null;
 }
 /** Revalidate an order against the current catalog right before an invoice. Saved amount is never rewritten here. */
-function pimV3RevalidateForPayment(PDO $db,array $order): void {
-    $o=pimV3Order($db,(int)$order['id']);if(!$o)return;
-    if($o['pim_order_state']!=='CONFIRMED')throw new RuntimeException('Замовлення очікує підтвердження менеджера; оплата поки недоступна.');
-    $managerConfirmed=(bool)$db->query('SELECT COUNT(*) FROM rubizh_np_order_confirmations WHERE availability_confirmed=1 AND order_id='.(int)$o['id'])->fetchColumn();
-    foreach(json_decode((string)$o['items_json'],true)?:[] as $l){
-        if(($l['contract_version']??null)!==3)continue;
-        if(($l['sku']??'')==='')throw new RuntimeException('Розмір ще не підтверджено менеджером.');
-        $model=pimV3LineProduct($db,(string)$l['product_id'],true);if(!$model)throw new RuntimeException('Товар більше недоступний. Зверніться до менеджера.');
-        pimV3Published($db,$model);
-        $q=$db->prepare('SELECT * FROM variants WHERE sku=? AND product_id=? AND pim_active=1 FOR UPDATE');$q->execute([$l['sku'],$l['product_id']]);$v=$q->fetch(PDO::FETCH_ASSOC);
-        if(!$v||($l['color_id']??null)!==null&&$v['pim_color_id']!==$l['color_id'])throw new RuntimeException('SKU змінився. Зверніться до менеджера.');
-        // Without a manager confirmation only a currently payable SKU may be paid.
-        if(!$managerConfirmed&&(int)$v['pim_payment_allowed']!==1)throw new RuntimeException('Наявність змінилася; оплата можлива після підтвердження менеджера.');
-        if(in_array($v['pim_effective_availability'],['UNKNOWN','OUT_OF_STOCK'],true)||(int)$v['pim_order_submission_allowed']!==1)throw new RuntimeException('Товар зараз недоступний. Зверніться до менеджера.');
-        $policy=shopPricingRead($db,(string)$l['sku'],(string)$l['product_id']);
-        if($policy===null||shopMoney($l['retail_price']??$l['price'])!==$policy['price_cents'])throw new ShopPricingException('PRICE_CHANGED','Ціна змінилася. Менеджер погодить новий розрахунок перед оплатою.',409);
-    }
+function pimV3RevalidateForPayment(PDO $db,array $order): array {
+    $state=shopCanonicalOrder($order,npShipments($db,(int)$order['id']));
+    if($state['order_status']!=='CONFIRMED'||$state['review_required'])throw new ShopOrderConflict('PAYMENT_NOT_ALLOWED',['canonical'=>$state],'Замовлення потребує підтвердження або звірки.');
+    $v=shopValidateOrder($db,$order['items'],'invoice',$order);
+    shopAssertPriceUnchanged($v,$order);
+    return $v;
 }
 /** Manager resolves every size request to a real owned SKU; the whole order then gets one total and one payment. */
-function pimV3ConfirmRequests(PDO $db,int $id,array $resolution,string $actor): void {
-    $o=pimV3Order($db,$id);if(!$o||$o['pim_order_state']!=='WAITING_CONFIRMATION')return;
-    $q=$db->prepare('SELECT * FROM rubizh_order_request_selections WHERE order_id=? ORDER BY line_no');$q->execute([$id]);$requests=$q->fetchAll(PDO::FETCH_ASSOC);
-    $lines=json_decode((string)$o['items_json'],true)?:[];
-    foreach($requests as $r){
-        $no=(int)$r['line_no'];$sku=$resolution[$no]??'';if(!is_string($sku)||$sku==='')throw new RuntimeException('Оберіть реальний SKU для кожного запиту розміру.');
-        $sel=json_decode($r['original_selection_json'],true);
-        $v=$db->prepare('SELECT v.*,cp.policy_json FROM variants v JOIN rubizh_catalog_pricing cp ON cp.sku=v.sku AND cp.product_id=v.product_id WHERE v.sku=? AND v.product_id=? AND v.pim_active=1 FOR UPDATE');$v->execute([$sku,$r['product_id']]);$row=$v->fetch(PDO::FETCH_ASSOC);
-        if(!$row||$sel['color_id']!==null&&$row['pim_color_id']!==$sel['color_id'])throw new RuntimeException('SKU не належить вибраній моделі/кольору.');
-        if(in_array($row['pim_effective_availability'],['UNKNOWN','OUT_OF_STOCK'],true))throw new RuntimeException('Цей SKU зараз недоступний.');
-        $policy=json_decode($row['policy_json'],true,32,JSON_THROW_ON_ERROR);$size=trim((string)$row['pim_size_display'])?:trim((string)$row['pim_size_normalized']);
-        $line=$lines[$no];$unit=shopMoneyValue($policy['price_cents']);$amount=shopMoneyValue(shopLineMoney($policy['price_cents'],$line['qty']));
-        $lines[$no]=array_replace($line,['sku'=>$sku,'variant_id'=>$sku,'selection_type'=>'SKU','resolved_from_option'=>$r['option_id'],'size'=>$size,'variant'=>trim($size.' · '.$row['color'],' ·'),'price'=>$unit,'retail_price'=>$unit,'amount'=>$amount,'price_pending'=>false]);
-        $db->prepare('UPDATE rubizh_order_request_selections SET resolved_sku=?,resolution_revision=? WHERE order_id=? AND line_no=?')->execute([$sku,hash('sha256',$sku.'|'.$policy['price_cents'].'|'.$actor),$id,$no]);
-        $db->prepare('UPDATE rubizh_order_fulfillment_lines SET sku=?,line_amount=? WHERE order_id=? AND line_no=?')->execute([$sku,$amount,$id,$no]);
-    }
-    $total=0;foreach($lines as $l)$total+=shopMoney($l['amount']??0);
-    $revision=hash('sha256',json_encode($lines,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR));
-    $db->prepare("UPDATE rubizh_customer_orders SET items_json=?,total=?,pim_order_state='CONFIRMED',pim_confirmation_revision=?,updated_at=UTC_TIMESTAMP() WHERE id=?")->execute([json_encode($lines,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),shopMoneyValue($total),$revision,$id]);
-    $db->prepare('UPDATE rubizh_order_details SET subtotal=? WHERE order_id=?')->execute([shopMoneyValue($total),$id]);
+function pimV3ConfirmRequests(PDO $db,int $id,array $resolution,string $actor,array $approval=[]): array {
+    $order=npOrder($db,$id);
+    $v=shopValidateOrder($db,$order['items'],'confirmation',$order,$resolution);
+    if($v['price_changed']&&!isset($approval['quote_hash']))shopAssertPriceUnchanged($v,$order);
+    shopAcceptOrderQuote($db,$order,$v,$actor,$approval);
+    return $v;
 }
 
 /** Manager form data: each open size request with the owned real SKU of its model/color. */

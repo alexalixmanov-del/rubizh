@@ -14,6 +14,7 @@ function npOrigins(): array {
       'kiborg'=>['name'=>'Кіборг','city'=>'Вінниця','region'=>'Вінницька','branch'=>'9','cargo_branch'=>'36','address'=>''],
     ];
     $customOrigins=function_exists('cfg')?cfg('np_custom_origins'):null;if(is_array($customOrigins))foreach($customOrigins as $code=>$o)if(preg_match('/^[a-z][a-z0-9_]{1,31}$/D',(string)$code)&&is_array($o)&&trim((string)($o['city']??''))!==''&&trim((string)($o['branch']??''))!==''&&!isset($origins[$code]))$origins[$code]=array_intersect_key($o,array_flip(['name','city','region','branch','cargo_branch','address']))+['name'=>$code,'region'=>'','address'=>''];
+    $staff=function_exists('cfg')?cfg('np_staff_origin'):null;if(is_array($staff))foreach($staff as $code=>$o)if(isset($origins[$code])&&is_array($o))$origins[$code]=array_replace($origins[$code],array_intersect_key($o,array_flip(['name','city','region','branch','cargo_branch'])));
     $refs=function_exists('cfg')?cfg('np_origin_refs'):null;
     if(is_array($refs))foreach($origins as $code=>&$o){$r=$refs[$code]??[];if(!is_array($r))continue;
       foreach(['city_ref','warehouse_ref','cargo_warehouse_ref'] as $f)if(npRef($r[$f]??''))$o[$f]=strtolower($r[$f]);
@@ -38,7 +39,7 @@ function npSupplierCode(string $sku,string $productId,string $name=''): string {
     $s=function_exists('cfg')?cfg('np_supplier_by_sku'):[];$p=function_exists('cfg')?cfg('np_supplier_by_product'):[];
     $value=(is_array($s)?($s[$sku]??null):null)??(is_array($p)?($p[$productId]??null):null);
     if($value!==null)return is_string($value)&&isset(npOrigins()[$value])?$value:'';
-    $names=['м він'=>'m_vin','м вин'=>'m_vin','м-він'=>'m_vin','м-вин'=>'m_vin','укр тек'=>'ukr_tek','укр-тек'=>'ukr_tek','укртек'=>'ukr_tek','ukr-tec'=>'ukr_tek','армолайн'=>'armoline','armoline'=>'armoline','тактикал белт'=>'tactical_belt','tactical belt'=>'tactical_belt','кіборг'=>'kiborg','киборг'=>'kiborg','kiborg'=>'kiborg'];
+    $names=['m-win'=>'m_vin','м він'=>'m_vin','м вин'=>'m_vin','м-він'=>'m_vin','м-вин'=>'m_vin','укр тек'=>'ukr_tek','укр-тек'=>'ukr_tek','укртек'=>'ukr_tek','ukr-tec'=>'ukr_tek','армолайн'=>'armoline','armoline'=>'armoline','тактикал белт'=>'tactical_belt','tactical belt'=>'tactical_belt','кіборг'=>'kiborg','киборг'=>'kiborg','kiborg'=>'kiborg'];
     $custom=function_exists('cfg')?cfg('np_supplier_names'):[];
     if(is_array($custom))foreach($custom as $n=>$c)if(is_string($n)&&is_string($c)&&isset(npOrigins()[$c]))$names[npNormalize($n)]=$c;
     return $names[npNormalize($name)]??'';

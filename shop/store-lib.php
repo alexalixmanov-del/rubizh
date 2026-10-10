@@ -11,6 +11,12 @@ require_once __DIR__.'/order-lifecycle.php';
 require_once __DIR__.'/customer-ui.php';
 require_once __DIR__.'/cart-reminders-lib.php';
 require_once __DIR__.'/pim-v3-checkout.php';
+require_once __DIR__.'/order-p0-schema.php';
+require_once __DIR__.'/financial-permissions.php';
+require_once __DIR__.'/reservations.php';
+require_once __DIR__.'/order-validation.php';
+require_once __DIR__.'/order-state.php';
+require_once __DIR__.'/crm-bridge.php';
 
 function shopStoreDatabase(): PDO {
     $db=database();migrate($db);pimV3DetectColumns($db);if(rubizhSchemaPrepared($db))return $db;
@@ -62,7 +68,7 @@ function shopLimit(PDO $db,string $kind,int $max,int $window=3600): void {
 function shopFavoriteIds(PDO $db,string $id): array {
     $q=$db->prepare('SELECT product_id FROM rubizh_favorites WHERE customer_id=? ORDER BY created_at DESC');$q->execute([$id]);return $q->fetchAll(PDO::FETCH_COLUMN);
 }
-function shopResolvedLines(PDO $db,array $input,bool $lock=false): array {
+function shopResolveCatalogLines(PDO $db,array $input,bool $lock=false,int $excludeOrder=0,?string $buyer=null): array {
     if($lock)shopPricingCatalogVersion($db,true);
     if(!$input || count($input)>100)throw new RuntimeException('У кошику має бути від 1 до 100 позицій.');
     // Lock variants in the same order for all carts, even if customers add items
@@ -77,7 +83,7 @@ function shopResolvedLines(PDO $db,array $input,bool $lock=false): array {
     $resolved=[];$totals=[];
     foreach($input as $line){
         if(!is_array($line))throw new RuntimeException('Перевірте кошик.');
-        if(($model=pimV3LineProduct($db,customerField($line,'product_id',64),$lock))!==null){$resolved[]=pimV3ResolveLine($db,$line,$model,$lock,$totals);continue;}
+        if(($model=pimV3LineProduct($db,customerField($line,'product_id',64),$lock))!==null){$resolved[]=pimV3ResolveLine($db,$line,$model,$lock,$totals,$excludeOrder,$buyer);continue;}
         $sku=customerField($line,'sku',64);$productId=customerField($line,'product_id',64);
         $qty=null;
         if($sku==='' || $productId==='')throw new RuntimeException('Перевірте товар і кількість у кошику.');
@@ -88,20 +94,21 @@ function shopResolvedLines(PDO $db,array $input,bool $lock=false): array {
         $unit=shopSaleUnit($product+['name'=>$v['name']]);$qty=shopQuantity($line['qty']??null,$unit);
         if(!empty($extra['size_unconfirmed']))throw new RuntimeException('Розмір товару не підтверджено. Уточніть у менеджера.');
         $totals[$sku]=($totals[$sku] ?? 0)+$qty;
-        if($v['availability']==='in' && isset($extra['stock']) && $totals[$sku]+shopReservedQty($db,$sku)>(float)$extra['stock'])throw new ShopPricingException('UNAVAILABLE','Недостатньо товару на складі: '.$v['name']);
+        if($v['availability']==='in' && isset($extra['stock']) && $totals[$sku]+shopReservedQty($db,$sku,$excludeOrder)>(float)$extra['stock'])throw new ShopPricingException('UNAVAILABLE','Недостатньо товару на складі: '.$v['name']);
         $policy=shopPricingRead($db,$sku,$productId);
         $mode=$line['price_mode']??(!empty($line['kit_group'])?'kit':'retail');
         if(!is_string($mode)||!in_array($mode,['retail','kit','wholesale'],true))throw new ShopPricingException('DISCOUNT_NOT_ALLOWED','Невідомий режим ціни.');
-        if(isset($line['color'])&&(!is_string($line['color'])||shopColor($line['color'])!==shopColor($v['color']))||isset($line['size'])&&$line['size']!==$v['size'])throw new ShopPricingException('INVALID_VARIANT','Колір або розмір не відповідає SKU.');
+        $size=trim((string)($extra['size_display']??''))?:trim((string)($extra['size_native']??''));$size=$size?:trim((string)$v['size']);$size=preg_replace('/^\s*:\s*/u','',$size);
+        if(isset($line['color'])&&(!is_string($line['color'])||shopColor($line['color'])!==shopColor($v['color']))||isset($line['size'])&&$line['size']!==$size)throw new ShopPricingException('INVALID_VARIANT','Колір або розмір не відповідає SKU.');
         $maxAge=max(3600,(int)(cfg('catalog_checkout_max_age_seconds')??172800));
         $fresh=$db->prepare('SELECT synced_at FROM products WHERE id=?');$fresh->execute([$productId]);
         if(strtotime((string)$fresh->fetchColumn().' UTC')<time()-$maxAge)throw new ShopPricingException('UNAVAILABLE','Наявність потребує актуального підтвердження постачальника.');
-        $grants=cfg('shop_wholesale_customers');$buyer=function_exists('customerId')?customerId():null;$tier=is_array($grants)&&$buyer!==null?($grants[$buyer]??null):null;
+        $grants=cfg('shop_wholesale_customers');$tier=is_array($grants)&&$buyer!==null?($grants[$buyer]??null):null;
         $group=customerField($line,'kit_group',64);$size=trim((string)($extra['size_display']??''))?:trim((string)($extra['size_native']??''));$size=$size?:trim((string)$v['size']);$size=preg_replace('/^\s*:\s*/u','',$size);
         $resolved[]=['product_id'=>$productId,'sku'=>$sku,'variant_id'=>(string)($extra['variant_id'] ?? $sku),'name'=>$v['name'],'slug'=>$v['slug'],
             'has_docs'=>!empty($v['has_docs']),'docs_note'=>!empty($v['has_docs'])?'Протокол випробувань додається до замовлення; до покупки надаємо за запитом':'','size'=>$size,'color'=>shopColor($v['color']),'variant'=>trim($size.' · '.$v['color'],' ·'),
             'qty'=>$qty,'sale_unit'=>$unit,'qty_label'=>$qty.($unit==='m2'?' м²':' шт.'),'price'=>shopMoneyValue(shopMoney($v['price'])),'kit_price'=>$policy===null||$policy['kit_cents']===null?null:shopMoneyValue($policy['kit_cents']),
-            '_pricing'=>$policy,'_approved_wholesale_tier'=>$tier,'price_mode'=>$mode,'catalog_version'=>shopPricingCatalogVersion($db),'kit_group'=>$group,'stock_confirmed'=>isset($extra['stock'])&&is_numeric($extra['stock']),'request_state'=>$v['availability']==='order'?(!empty($extra['preorder_confirmed'])?'confirmed_preorder':'order_on_request'):'stock_check','availability'=>$v['availability'],'fulfillment_supplier'=>npSupplierCode($sku,$productId,(string)($v['fulfillment_supplier_name']??''))];
+            '_pricing'=>$policy,'_approved_wholesale_tier'=>$tier,'price_mode'=>$mode,'catalog_version'=>shopPricingCatalogVersion($db),'kit_group'=>$group,'stock_confirmed'=>isset($extra['stock'])&&is_numeric($extra['stock']),'request_state'=>$v['availability']==='order'?(!empty($extra['preorder_confirmed'])?'confirmed_preorder':'order_on_request'):'stock_check','availability'=>$v['availability'],'payment_allowed'=>$v['availability']==='in','requires_order_confirmation'=>$v['availability']!=='in','fulfillment_supplier'=>npSupplierCode($sku,$productId,(string)($v['fulfillment_supplier_name']??''))];
     }
     $definitions=json_decode((string)$db->query("SELECT v FROM meta WHERE k='site_kits'")->fetchColumn(),true)?:[];
     shopPricingKitComposition($resolved,array_column($definitions,null,'id'));
@@ -130,15 +137,15 @@ function shopMayReadOrder(PDO $db,int $order): bool {
  $q=$db->prepare('SELECT scope_hash FROM rubizh_checkout_requests WHERE order_id=?');$q->execute([$order]);$hash=$q->fetchColumn();return is_string($hash)&&hash_equals($hash,hash('sha256',$scope));
 }
 function shopNoOpenCardInvoice(PDO $db,int $order): bool {
- $q=$db->prepare("SELECT COUNT(*) FROM rubizh_mono_invoices WHERE order_id=? AND status IN ('creating','unknown','created','processing','hold')");$q->execute([$order]);return (int)$q->fetchColumn()===0;
+ $q=$db->prepare("SELECT COUNT(*) FROM rubizh_mono_invoices WHERE order_id=? AND status IN ('creating','unknown','created','processing','hold','awaiting_webhook')");$q->execute([$order]);return (int)$q->fetchColumn()===0;
 }
 function shopUseInvoice(PDO $db,int $id): void {
  npLocked($db,$id,function()use($db,$id){$o=npOrder($db,$id);if(!shopNoOpenCardInvoice($db,$id)||!in_array($o['payment_status'],['pending','failed'],true)||!in_array($o['status'],['new','confirmed','processing'],true))throw new RuntimeException('Спосіб оплати зараз змінити не можна.');
  $c=$o['contact'];$c['payment']='invoice';$db->beginTransaction();try{$db->prepare('UPDATE rubizh_order_details SET contact_json=? WHERE order_id=?')->execute([json_encode($c,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),$id]);$db->prepare("UPDATE rubizh_customer_orders SET payment_status='pending',updated_at=UTC_TIMESTAMP() WHERE id=?")->execute([$id]);npAudit($db,str_repeat('0',32),'customer_invoice',$id);$db->commit();}catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}});
 }
-function shopCancelOrder(PDO $db,int $id): void {
- npLocked($db,$id,function()use($db,$id){$o=npOrder($db,$id);if($o['status']==='cancelled')return;
+function shopCancelOrder(PDO $db,int $id,bool $expired=false): void {
+ npLocked($db,$id,function()use($db,$id,$expired){$o=npOrder($db,$id);if($o['status']==='cancelled'){$db->beginTransaction();try{shopReservationTransition($db,$id,$expired?'EXPIRED':'RELEASED','SYSTEM');$db->commit();}catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}return;}
  if(!in_array($o['status'],['new','confirmed','processing'],true)||in_array($o['payment_status'],['paid','refunded'],true)||!shopNoOpenCardInvoice($db,$id))throw new RuntimeException('Для цього замовлення потрібне скасування через менеджера.');
  foreach(npShipments($db,$id) as $s)if(!in_array($s['status'],['draft','error','cancelled'],true))throw new RuntimeException('Посилку вже передано на оформлення. Зверніться до менеджера.');
- $db->beginTransaction();try{$db->prepare("UPDATE rubizh_customer_orders SET status='cancelled',updated_at=UTC_TIMESTAMP() WHERE id=?")->execute([$id]);if(!empty($GLOBALS['rubizh_pim_v3_columns']))$db->prepare("UPDATE rubizh_customer_orders SET pim_order_state='CANCELLED' WHERE id=? AND pim_contract_version=3")->execute([$id]);$db->prepare("UPDATE rubizh_order_shipments SET status='cancelled',updated_at=UTC_TIMESTAMP() WHERE order_id=? AND status IN ('draft','error')")->execute([$id]);shopQueueEvent($db,$id,'cancelled');shopQueueBuyerMail($db,$id,'cancelled');npAudit($db,str_repeat('0',32),'customer_cancelled',$id);$db->commit();}catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}});
+ $db->beginTransaction();try{$db->prepare("UPDATE rubizh_customer_orders SET status='cancelled',updated_at=UTC_TIMESTAMP() WHERE id=?")->execute([$id]);shopReservationTransition($db,$id,$expired?'EXPIRED':'RELEASED','SYSTEM');if(!empty($GLOBALS['rubizh_pim_v3_columns']))$db->prepare("UPDATE rubizh_customer_orders SET pim_order_state='CANCELLED' WHERE id=? AND pim_contract_version=3")->execute([$id]);$db->prepare("UPDATE rubizh_order_shipments SET status='cancelled',updated_at=UTC_TIMESTAMP() WHERE order_id=? AND status IN ('draft','error')")->execute([$id]);shopQueueEvent($db,$id,'cancelled');shopQueueBuyerMail($db,$id,'cancelled');npAudit($db,str_repeat('0',32),'customer_cancelled',$id);$db->commit();}catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}});
 }
