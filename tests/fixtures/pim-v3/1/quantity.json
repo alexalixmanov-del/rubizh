@@ -1,0 +1,144 @@
+{
+  "contract_version": 3,
+  "pricing_policy_version": 1,
+  "models": [
+    {
+      "id": "fixture-jacket",
+      "model_id": "fixture-jacket",
+      "marketing_name_uk": "Тестова куртка",
+      "brand": "Fixture",
+      "description": "Synthetic fixture only.",
+      "publication_state": "ACTIVE",
+      "classification_version": 1,
+      "size_catalog_version": 1,
+      "canonical_category_id": "clothing_jackets",
+      "order_policy_version": 1,
+      "inventory_policy_version": 1,
+      "pricing_policy_version": 1,
+      "availability": "IN_STOCK",
+      "order_submission_allowed": true,
+      "payment_allowed": true,
+      "requires_order_confirmation": false,
+      "size_catalogs": [
+        {
+          "catalog_id": "catalog-alpha",
+          "scope": "MODEL",
+          "color_id": null,
+          "size_system": "ALPHA",
+          "allowed_sizes": [
+            "M",
+            "L"
+          ]
+        }
+      ],
+      "size_options": [
+        {
+          "option_id": "catalog-alpha:L",
+          "catalog_id": "catalog-alpha",
+          "scope": "MODEL",
+          "color_id": null,
+          "size": "L",
+          "size_system": "ALPHA",
+          "variant_sku": null,
+          "supplier_sku": null,
+          "stock": null,
+          "stock_quantity": null,
+          "stock_status": "UNKNOWN",
+          "availability": "SIZE_CONFIRMATION_REQUIRED",
+          "availability_status": "UNKNOWN",
+          "availability_source": null,
+          "availability_confirmation": "UNKNOWN",
+          "order_submission_allowed": true,
+          "payment_allowed": false,
+          "requires_order_confirmation": true,
+          "evidence": "PRIVATE_OPTION_CANARY"
+        }
+      ],
+      "colors": [
+        {
+          "id": "clr_black",
+          "color": "Чорний",
+          "camouflage": null,
+          "photos": [
+            "https://cdn.example.com/black.webp"
+          ],
+          "variant_skus": [
+            "fixture-jacket-black-M"
+          ],
+          "sources": [
+            {
+              "supplier_id": "PRIVATE_COLOR_CANARY",
+              "supplier_sku": "PRIVATE_COLOR_SKU"
+            }
+          ]
+        }
+      ],
+      "variants": [
+        {
+          "sku": "fixture-jacket-black-M",
+          "color_id": "clr_black",
+          "photos": [
+            "https://cdn.example.com/black.webp"
+          ],
+          "size_raw": "M",
+          "size_display": "M",
+          "size_normalized": "M",
+          "size_system": "ALPHA",
+          "size_type": "ALPHA",
+          "size_status": "EXACT_SIZE",
+          "size_confidence_tier": "SAFE_AUTO",
+          "source_binding_status": "CONFIRMED",
+          "stock": 4,
+          "stock_quantity": 4,
+          "stock_status": "CONFIRMED",
+          "availability": "IN_STOCK",
+          "availability_status": "IN_STOCK",
+          "availability_source": "QUANTITY",
+          "availability_confirmation": "CONFIRMED",
+          "inventory_mode": "QUANTITY",
+          "inventory_policy_id": "fixture-policy",
+          "inventory_policy_version": 1,
+          "inventory_policy_confirmed": true,
+          "stock_observed_at": 1791500000000,
+          "source_updated_at": 1791500000000,
+          "stock_data_age_hours": 72,
+          "stale_source": true,
+          "stock_warning_hours": 36,
+          "expires_at": null,
+          "delivery_lead_time_days": null,
+          "ready_to_dispatch": true,
+          "price_ready": true,
+          "binding_confirmation_required": false,
+          "size_confirmation_required": false,
+          "order_submission_allowed": true,
+          "payment_allowed": true,
+          "requires_order_confirmation": false,
+          "pricing_policy_version": 1,
+          "price": 4350.25,
+          "site_price": 4350.25,
+          "minimum_sale_price": 4100,
+          "discount_margin_floor_pct": 15,
+          "kit_price": 4200.15,
+          "wholesale": [
+            {
+              "price": 4250.25,
+              "requested_discount": 3,
+              "capped": false
+            }
+          ],
+          "supplier_bindings": [
+            {
+              "supplier_id": "PRIVATE_SUPPLIER_CANARY",
+              "supplier_sku": "PRIVATE_ARTICLE_CANARY"
+            }
+          ],
+          "purchase_price": 2000,
+          "evidence": "PRIVATE_EVIDENCE_CANARY"
+        }
+      ],
+      "raw_private": {
+        "api_key": "PRIVATE_KEY_CANARY"
+      }
+    }
+  ]
+}

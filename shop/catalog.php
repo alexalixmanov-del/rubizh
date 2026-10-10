@@ -13,7 +13,7 @@ try {
     if($action==='product') {
         $slug=(string)($_GET['slug'] ?? '');$id=(string)($_GET['id'] ?? '');
         $p=shopCached('product-'.md5($slug.'|'.$id),function()use($db,$slug,$id){
-            $q=$db->prepare('SELECT * FROM products WHERE visible=1 AND '.($slug!=='' ? 'slug' : 'id').'=?');$q->execute([$slug!=='' ? $slug : $id]);$r=$q->fetch(PDO::FETCH_ASSOC);
+            $q=$db->prepare('SELECT * FROM products p WHERE visible=1 AND '.shopUsablePhotoSql('p').' AND '.($slug!=='' ? 'slug' : 'id').'=?');$q->execute([$slug!=='' ? $slug : $id]);$r=$q->fetch(PDO::FETCH_ASSOC);
             if(!$r)return null;
             $p=shopProduct($db,$r,product_photos($db,[$r['id']]));try{$p['related']=shopRelated($db,$r,$p);}catch(Throwable $e){error_log('rubizh related: '.get_class($e).' code '.(string)$e->getCode());$p['related']=[];}
             return $p;

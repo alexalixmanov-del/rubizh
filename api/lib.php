@@ -12,6 +12,7 @@ require_once __DIR__.'/../shop/pricing-policy.php';
 require_once __DIR__.'/../shop/units.php';
 require_once __DIR__.'/../shop/normalization.php';
 require_once __DIR__.'/../shop/taxonomy.php';
+require_once __DIR__.'/../shop/pim-v3-read.php';
 
 function cfg(string $k = null) {
   static $c = null;
@@ -23,6 +24,7 @@ function cfg(string $k = null) {
     $monoPrivate=__DIR__.'/mono-private.php';if(is_file($monoPrivate)){if(!defined('RUBIZH_PRIVATE_CONFIG'))define('RUBIZH_PRIVATE_CONFIG',true);$c=array_replace($c,require $monoPrivate);}
     require_once __DIR__.'/../shop/settings-lib.php';$settings=shopSettingsRead();if(isset($settings['seller']))$settings['seller']=array_replace(is_array($c['seller']??null)?$c['seller']:[],$settings['seller']);$c=array_replace($c,$settings);
   }
+  if($k!==null&&in_array($k,['np_origin_refs','np_sender','np_staff_origin'],true)&&array_key_exists($k,$GLOBALS['crm_domain_config']??[]))return $GLOBALS['crm_domain_config'][$k];
   return $k === null ? $c : ($c[$k] ?? null);
 }
 
@@ -42,6 +44,7 @@ function db(): PDO {
     catch(PDOException $e){error_log('rubizh public SQL deadline unavailable');}
   }
   migrate($pdo);
+  pimV3DetectColumns($pdo);
   return $pdo;
 }
 

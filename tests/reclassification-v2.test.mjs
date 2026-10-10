@@ -28,7 +28,7 @@ test('360 labelled real products across 18 roots retain their independently spec
  assert.equal(result.length,360);
  const wrong=result.filter(p=>p.expected!==p.after);assert.deepEqual(wrong,[]);
  const metrics={label_source:'Reviewed regression fixture; not a calibrated whole-catalogue accuracy estimate',products:result.length,correct_before:result.filter(x=>x.expected===x.before).length,correct_after:result.filter(x=>x.expected===x.after).length,fixed:result.filter(x=>x.expected!==x.before&&x.expected===x.after).length,regressions:result.filter(x=>x.expected===x.before&&x.expected!==x.after).length,false_conflicts:result.filter(x=>x.status==='REAL_CONFLICT').length};
- mkdirSync('/workspace/output/rubizh-reclassification-v2-20261008',{recursive:true});writeFileSync('/workspace/output/rubizh-reclassification-v2-20261008/golden-regression.json',JSON.stringify(metrics,null,2));
+ const outDir=path.join(process.env.RUBIZH_TEST_OUTPUT||tmpdir(),'rubizh-reclassification-v2-20261008');mkdirSync(outDir,{recursive:true});writeFileSync(path.join(outDir,'golden-regression.json'),JSON.stringify(metrics,null,2));
 });
 test('V2 dry-run is read-only; reviewed apply preserves data, manual locks and PIM authority across imports',{skip:!process.env.RUBIZH_TEST_MYSQL_SOCKET},()=>{
  const d=mkdtempSync(path.join(tmpdir(),'rubizh-v2-test-')),site=path.join(d,'www'),schema='fixture_v2_'+Math.random().toString(16).slice(2);mkdirSync(site);

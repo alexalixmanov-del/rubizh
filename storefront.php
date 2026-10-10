@@ -16,7 +16,7 @@ try{
     $boot['categories']=shopCategories($db);
     if(shopTaxonomyActive($db))$boot['taxonomyVersion']=shopTaxonomySpec()['version'];
     if(preg_match('~^/product/([a-z0-9-]{1,191})/?$~',$uri,$m)){
-        $q=$db->prepare('SELECT * FROM products WHERE visible=1 AND slug=?');$q->execute([$m[1]]);$row=$q->fetch(PDO::FETCH_ASSOC);
+        $q=$db->prepare('SELECT * FROM products p WHERE visible=1 AND '.shopUsablePhotoSql('p').' AND slug=?');$q->execute([$m[1]]);$row=$q->fetch(PDO::FETCH_ASSOC);
         if(!$row){$status=404;$fallback='<h1>Товар не знайдено</h1><p>Товар знято з публікації або адреса змінилася.</p><a href="/catalog">До каталогу</a>';}
         else{$p=shopCached('product-'.md5($m[1].'|'),function()use($db,$row){$p=shopProduct($db,$row,product_photos($db,[$row['id']]));try{$p['related']=shopRelated($db,$row,$p);}catch(Throwable $e){error_log('rubizh related: '.get_class($e).' code '.(string)$e->getCode());$p['related']=[];}return $p;});$boot['product']=$p;$boot['slug']=$p['slug'];$canonical='https://rubizh.shop/product/'.$p['slug'];
             $title=$p['name'].' — РУБІЖ';$description=mb_substr($p['description'] ?: 'Замовити '.$p['name'].' у РУБІЖ. Розміри, ціна та доставка по Україні.',0,160);

@@ -198,11 +198,13 @@ test('Kit mobile parameters expand and selectors close with Escape without layou
     await page.keyboard.press('Escape');await page.locator('.rz-kit-modal').waitFor({state:'detached'});
   }
 },{width:390,height:900}));
-test('Responsive hero uses distinct images and places the extra logo only on desktop',()=>withPage(async page=>{
+test('Responsive hero uses distinct images and places the extra logo only on wide desktop, off the product',()=>withPage(async page=>{
   await loaded(page);await page.waitForFunction(()=>document.querySelector('.rz-hero-image')?.complete);
   assert.match(await page.locator('.rz-hero-image').evaluate(e=>e.currentSrc),/hero-desktop/);
+  // QA 2026-10-10: the badge covered the boots (lower right); it sits in the empty upper-right corner and only from 1440px.
   const logo=await page.locator('.rz-hero-logo').boundingBox();const hero=await page.locator('.rz-hero').boundingBox();
-  assert.ok(logo.x>hero.x+hero.width/2&&logo.y>hero.y+hero.height/2);
+  assert.ok(logo.x>hero.x+hero.width/2&&logo.y+logo.height<hero.y+hero.height/2);
+  await page.setViewportSize({width:1280,height:900});assert.equal(await page.locator('.rz-hero-logo').isVisible(),false);
   await page.setViewportSize({width:390,height:844});
   await page.waitForFunction(()=>document.querySelector('.rz-hero-image')?.currentSrc.includes('hero-mobile')&&document.querySelector('.rz-hero-image')?.naturalWidth>0);
   assert.equal(await page.locator('.rz-hero-logo').isVisible(),false);

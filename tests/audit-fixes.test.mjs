@@ -28,7 +28,9 @@ test('Real unknown stock has no false scarcity; confirmed sizes sort logically e
   await page.route('**/shop/catalog.php*',route=>{const action=new URL(route.request().url()).searchParams.get('action');if(action==='product')return route.fulfill({contentType:'application/json',body:JSON.stringify({ok:true,product})});if(action==='storefront')return route.fulfill({contentType:'application/json',body:JSON.stringify({ok:true,products:[product],kits:[]})});return route.continue();});
   await page.goto(base+'/product/demo-uniform');await page.locator('[data-size-grid]').waitFor();
   assert.deepEqual(await page.locator('[data-size-grid] [role=button]>span:first-child').allTextContents(),['S','M','L','XL','2XL','3XL']);
-  assert.doesNotMatch(await page.locator('body').innerText(),/Мало залишилось/);assert.match(await page.locator('body').innerText(),/За даними постачальника/i);
+  assert.doesNotMatch(await page.locator('body').innerText(),/Мало залишилось/);assert.match(await page.locator('body').innerText(),/В наявності/i);
+  // Provenance stays internal: the buyer never sees «За даними постачальника» as an availability badge.
+  assert.doesNotMatch(await page.locator('body').innerText(),/За даними постачальника/i);
  }finally{await page.close();}
 });
 test('Canonical size matching combines heights, variants and footwear without guessing missing sizes',()=>{

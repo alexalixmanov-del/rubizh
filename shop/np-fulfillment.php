@@ -20,15 +20,12 @@ function npAddColumn(PDO $db,string $table,string $column,string $type): void {
     $q=$db->prepare('SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name=? AND column_name=?');$q->execute([$table,$column]);if(!(int)$q->fetchColumn())$db->exec("ALTER TABLE `$table` ADD COLUMN `$column` $type");
 }
 function npManagerId(): string {
-    $id=customerId();$allowed=cfg('np_manager_emails');
-    if($id!==null && is_array($allowed)){
-      $allowed=array_map(fn($e)=>strtolower(trim((string)$e)),$allowed);
-      // Editable profile/email contact alone never grants manager permissions.
-      foreach(customerIdentities($id) as $i)if(in_array($i['provider'],['email','google'],true)){
-        $email=$i['provider']==='email'?$i['subject']:$i['contact_email'];
-        if($email!=='' && in_array(strtolower($email),$allowed,true))return $id;
-      }
-    }throw new RuntimeException('Увійдіть із підтвердженим email уповноваженого менеджера.');
+    $id=customerId();if($id!==null&&shopStaffRole($id)!=='')return $id;
+    throw new ShopPermissionException('Увійдіть до уповноваженого облікового запису.');
+}
+function shopShipmentActor(string $actor): void {
+    if($actor===str_repeat('0',32)&&PHP_SAPI==='cli')return;
+    shopRequirePermission($actor,'shipment.manage');
 }
 function npAudit(PDO $db,string $actor,string $action,int $order=0,int $shipment=0,string $note=''): void {
     $db->prepare('INSERT INTO rubizh_np_audit(actor_id,action,order_id,shipment_id,note,created_at) VALUES(?,?,?,?,?,UTC_TIMESTAMP())')->execute([$actor,$action,$order,$shipment,mb_substr($note,0,400)]);
@@ -73,6 +70,7 @@ function npAllocation(array $lines,array $shipments,string $code,array $selected
     if(!$out)throw new RuntimeException('Оберіть позиції цієї посилки.');return $out;
 }
 function npDraft(PDO $db,int $order,string $actor,string $op,string $code,array $selected,array $package): int {
+    shopShipmentActor($actor);
     if(!preg_match('/^[a-f0-9]{32}$/D',$op))throw new RuntimeException('Оновіть форму посилки.');
     return npLocked($db,$order,function()use($db,$order,$actor,$op,$code,$selected,$package){
       $q=$db->prepare('SELECT id,order_id FROM rubizh_order_shipments WHERE operation_key=?');$q->execute([$op]);if($r=$q->fetch(PDO::FETCH_ASSOC)){if((int)$r['order_id']!==$order)throw new RuntimeException('Ключ належить іншому замовленню.');return (int)$r['id'];}
@@ -82,21 +80,31 @@ function npDraft(PDO $db,int $order,string $actor,string $op,string $code,array 
       $db->prepare("INSERT INTO rubizh_order_shipments(order_id,supplier_code,operation_key,lines_json,package_json,declared_value,status,created_at,updated_at) VALUES(?,?,?,?,?,?,'draft',UTC_TIMESTAMP(),UTC_TIMESTAMP())")->execute([$order,$code,$op,json_encode($items,JSON_THROW_ON_ERROR),json_encode($pack,JSON_THROW_ON_ERROR),$value]);$id=(int)$db->lastInsertId();npAudit($db,$actor,'shipment_draft',$order,$id);return $id;
     });
 }
-function npConfirm(PDO $db,int $order,string $actor,bool $availability,bool $extra,string $proof): void {
+function npConfirm(PDO $db,int $order,string $actor,bool $availability,bool $extra,string $proof,array $approval=[]): void {
+    shopRequirePermission($actor,'order.confirm');
     if(!$availability)throw new RuntimeException('Підтвердьте наявність і комплектацію всіх позицій.');
-    npLocked($db,$order,function()use($db,$order,$actor,$availability,$extra,$proof){$fresh=npOrder($db,$order);$method=$fresh['contact']['payment']??'';
-    if(in_array($fresh['status'],['cancelled','returned','completed'],true))throw new RuntimeException('Замовлення закрите.');
-    if($method==='invoice' && trim($proof)!=='' && mb_strlen(trim($proof))<6)throw new RuntimeException('Вкажіть підтвердження надходження коштів на рахунок ФОП.');
-    if($method==='cod' && (cfg('np_cod_contract_confirmed')!==true||cfg('np_cod_service')!=='afterpayment'))throw new RuntimeException('Післяплату не підтверджено за договором ФОП.');
-    if(!in_array($method,['invoice','card','cod'],true))throw new RuntimeException('Немає підтвердженого способу оплати.');
-    $first=$fresh['status']==='new';$db->beginTransaction();try{
-      $db->prepare('INSERT INTO rubizh_np_order_confirmations(order_id,availability_confirmed,extra_delivery_agreed,confirmed_at,confirmed_by,payment_proof,updated_at) VALUES(?,?,?,UTC_TIMESTAMP(),?,?,UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE availability_confirmed=VALUES(availability_confirmed),extra_delivery_agreed=VALUES(extra_delivery_agreed),confirmed_at=VALUES(confirmed_at),confirmed_by=VALUES(confirmed_by),payment_proof=IF(LENGTH(VALUES(payment_proof))=0,payment_proof,VALUES(payment_proof)),updated_at=VALUES(updated_at)')->execute([$order,1,$extra?1:0,$actor,mb_substr($proof,0,240)]);
-      if($method==='invoice'&&trim($proof)!=='')$db->prepare("UPDATE rubizh_customer_orders SET payment_status='paid',updated_at=UTC_TIMESTAMP() WHERE id=? AND payment_status IN ('pending','failed')")->execute([$order]);
-      $db->prepare("UPDATE rubizh_customer_orders SET status='confirmed',updated_at=UTC_TIMESTAMP() WHERE id=? AND status='new'")->execute([$order]);
-      if($first&&$fresh['payment_status']!=='paid')shopStartPaymentTiming($db,$fresh);
-      if($method==='invoice'&&trim($proof)!==''&&function_exists('shopQueueEvent'))shopQueueEvent($db,$order,'paid');
-      npAudit($db,$actor,'order_confirmed',$order,0,$method==='invoice'?'Підтвердження банку: '.mb_substr($proof,0,200):'Наявність та спосіб оплати підтверджено');$db->commit();
-    }catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}});
+    if(trim($proof)!==''){shopRequirePermission($actor,'payment.manual_reconcile');shopFinancialReason((string)($approval['reason']??''));}
+    npLocked($db,$order,function()use($db,$order,$actor,$extra,$proof,$approval){
+        $db->beginTransaction();
+        try{
+            $fresh=npOrder($db,$order);$method=$fresh['contact']['payment']??'';
+            if(in_array($fresh['status'],['cancelled','returned','completed'],true)||in_array($fresh['payment_status'],['paid','refunded'],true))throw new RuntimeException('Замовлення оплачене або закрите.');
+            if(!in_array($method,['invoice','card'],true))throw new ShopOrderConflict('PAYMENT_NOT_ALLOWED',[],'Спосіб оплати потребує окремої звірки.');
+            $v=pimV3ConfirmRequests($db,$order,is_array($GLOBALS['rubizh_request_resolution']??null)?$GLOBALS['rubizh_request_resolution']:[],$actor,$approval);
+            $db->prepare('INSERT INTO rubizh_np_order_confirmations(order_id,availability_confirmed,extra_delivery_agreed,confirmed_at,confirmed_by,payment_proof,updated_at) VALUES(?,1,?,UTC_TIMESTAMP(),?,?,UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE availability_confirmed=1,extra_delivery_agreed=VALUES(extra_delivery_agreed),confirmed_at=VALUES(confirmed_at),confirmed_by=VALUES(confirmed_by),payment_proof=IF(LENGTH(VALUES(payment_proof))=0,payment_proof,VALUES(payment_proof)),updated_at=VALUES(updated_at)')->execute([$order,$extra?1:0,$actor,mb_substr($proof,0,240)]);
+            $db->prepare("UPDATE rubizh_customer_orders SET status='confirmed',updated_at=UTC_TIMESTAMP() WHERE id=?")->execute([$order]);
+            if(!empty($GLOBALS['rubizh_pim_v3_columns']))$db->prepare("UPDATE rubizh_customer_orders SET pim_order_state='CONFIRMED',pim_confirmation_revision=? WHERE id=? AND pim_contract_version=3")->execute([$v['quote_hash'],$order]);
+            shopStartPaymentTiming($db,$fresh);$timing=shopEnsureTiming($db,$fresh);
+            shopReserveLines($db,$order,$v['raw'],$timing['payment_due']);
+            if($method==='invoice'&&trim($proof)!==''){
+                $db->prepare("UPDATE rubizh_customer_orders SET payment_status='paid' WHERE id=?")->execute([$order]);
+                if(!empty($GLOBALS['rubizh_pim_v3_columns']))$db->prepare("UPDATE rubizh_customer_orders SET pim_payment_state='PAID',pim_fulfillment_state='READY_TO_SHIP' WHERE id=? AND pim_contract_version=3")->execute([$order]);
+                shopReservationTransition($db,$order,'COMMITTED','BANK_RECONCILIATION');
+                shopOrderAudit($db,$order,$actor,'payment.manual_reconcile',['payment_status'=>$fresh['payment_status']],['payment_status'=>'paid','evidence'=>trim($proof)],shopFinancialReason((string)$approval['reason']));shopQueueEvent($db,$order,'paid');
+            }
+            npAudit($db,$actor,'order_confirmed',$order);$db->commit();
+        }catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}
+    });
 }
 function npAssertReady(array $order,array $confirmation,array $lines,array $shipments,array $shipment): void {
     if(cfg('np_ttn_enabled')!==true)throw new RuntimeException('Випуск ТТН ще не увімкнено власником після перевірки налаштувань.');
@@ -124,7 +132,7 @@ function npSaveProperties(array $shipment,array $origin,array $sender,array $del
 }
 function npRecipient(array $contact,array $delivery): array {
     $name=trim((string)(($contact['recipient']??'')?:$contact['name']));$parts=preg_split('/\s+/u',$name);
-    if(count($parts)<2)throw new RuntimeException('Для НП потрібні імʼя та прізвище одержувача.');
+    if(count($parts)<2)throw new RuntimeException('Для НП потрібні ім’я та прізвище одержувача.');
     $result=npApiCall('Counterparty','save',['FirstName'=>$parts[0],'LastName'=>$parts[1],'MiddleName'=>implode(' ',array_slice($parts,2)),'Phone'=>preg_replace('/\D/','',$contact['phone']),'Email'=>$contact['email'],'CounterpartyType'=>'PrivatePerson','CounterpartyProperty'=>'Recipient','CityRef'=>$delivery['city_ref']]);
     $r=$result[0]??[];if(!npRef($r['Ref']??''))throw new NpUnknownResult('НП не повернула ідентифікатор одержувача.');
     $persons=$r['ContactPerson']['data']??null;
@@ -138,6 +146,7 @@ function npRecipient(array $contact,array $delivery): array {
     return ['ref'=>$r['Ref'],'contact_ref'=>$person['Ref'],'address_ref'=>$address];
 }
 function npCreate(PDO $db,int $order,int $id,string $actor): array {
+    shopShipmentActor($actor);
     return npLocked($db,$order,function()use($db,$order,$id,$actor){
       $q=$db->prepare('SELECT * FROM rubizh_order_shipments WHERE id=? AND order_id=?');$q->execute([$id,$order]);$s=$q->fetch(PDO::FETCH_ASSOC);if(!$s)throw new RuntimeException('Посилку не знайдено.');
       if(!empty($s['tracking_number']))return $s;
@@ -154,7 +163,7 @@ function npCreate(PDO $db,int $order,int $id,string $actor): array {
         $rows=npApiCall('InternetDocument','save',$props);$r=$rows[0]??[];
         if(!npRef($r['Ref']??'')||!preg_match('/^[0-9]{14}$/D',(string)($r['IntDocNumber']??'')))throw new NpUnknownResult('НП не підтвердила номер ТТН.');
         $db->prepare("UPDATE rubizh_order_shipments SET status='created',np_document_ref=?,tracking_number=?,result_json=?,delivery_cost=?,error='',updated_at=UTC_TIMESTAMP() WHERE id=?")->execute([$r['Ref'],$r['IntDocNumber'],json_encode($r,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),is_numeric($r['CostOnSite']??null)?$r['CostOnSite']:null,$id]);
-        npAudit($db,$actor,'shipment_created',$order,$id,$r['IntDocNumber']);return array_merge($s,['tracking_number'=>$r['IntDocNumber'],'np_document_ref'=>$r['Ref'],'status'=>'created']);
+        npAggregateOrder($db,$order);npAudit($db,$actor,'shipment_created',$order,$id,$r['IntDocNumber']);return array_merge($s,['tracking_number'=>$r['IntDocNumber'],'np_document_ref'=>$r['Ref'],'status'=>'created']);
       }catch(Throwable $e){
         // Even a local persistence error after a successful save has an unknown remote result.
         $state=$e instanceof NpRejected?'error':'unknown';$message=($e instanceof NpRejected||$e instanceof NpUnknownResult)?$e->getMessage():'Результат операції потребує звірки з НП.';
@@ -163,6 +172,7 @@ function npCreate(PDO $db,int $order,int $id,string $actor): array {
     });
 }
 function npReconcile(PDO $db,int $order,int $id,string $actor): bool {
+    shopShipmentActor($actor);
     return npLocked($db,$order,function()use($db,$order,$id,$actor){
       $q=$db->prepare('SELECT * FROM rubizh_order_shipments WHERE id=? AND order_id=?');$q->execute([$id,$order]);$s=$q->fetch(PDO::FETCH_ASSOC);if(!$s)throw new RuntimeException('Посилку не знайдено.');if(!empty($s['tracking_number']))return true;
       if(!in_array($s['status'],['unknown','creating'],true))throw new RuntimeException('Цій посилці звірка не потрібна.');
@@ -174,10 +184,11 @@ function npReconcile(PDO $db,int $order,int $id,string $actor): bool {
         }if(count($rows)<100)break;
       }
       if(count($matches)!==1){$db->prepare("UPDATE rubizh_order_shipments SET status='unknown',error='Немає однозначного збігу у НП. Повтор заблоковано.',checked_at=UTC_TIMESTAMP(),updated_at=UTC_TIMESTAMP() WHERE id=?")->execute([$id]);npAudit($db,$actor,'shipment_reconcile_manual',$order,$id);return false;}
-      $r=$matches[0];$db->prepare("UPDATE rubizh_order_shipments SET status='created',np_document_ref=?,tracking_number=?,result_json=?,error='',checked_at=UTC_TIMESTAMP(),updated_at=UTC_TIMESTAMP() WHERE id=?")->execute([$r['Ref'],$r['IntDocNumber'],json_encode($r,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),$id]);npAudit($db,$actor,'shipment_reconciled',$order,$id,$r['IntDocNumber']);return true;
+      $r=$matches[0];$db->prepare("UPDATE rubizh_order_shipments SET status='created',np_document_ref=?,tracking_number=?,result_json=?,error='',checked_at=UTC_TIMESTAMP(),updated_at=UTC_TIMESTAMP() WHERE id=?")->execute([$r['Ref'],$r['IntDocNumber'],json_encode($r,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),$id]);npAggregateOrder($db,$order);npAudit($db,$actor,'shipment_reconciled',$order,$id,$r['IntDocNumber']);return true;
     });
 }
 function npCancelDraft(PDO $db,int $order,int $id,string $actor): void {
+    shopShipmentActor($actor);
     npLocked($db,$order,function()use($db,$order,$id,$actor){$q=$db->prepare("UPDATE rubizh_order_shipments SET status='cancelled',updated_at=UTC_TIMESTAMP() WHERE order_id=? AND id=? AND status IN ('draft','error') AND tracking_number IS NULL");$q->execute([$order,$id]);if(!$q->rowCount())throw new RuntimeException('Можна скасувати лише чернетку або явно відхилений запит. Невідомий результат потребує звірки.');npAudit($db,$actor,'shipment_draft_cancelled',$order,$id);});
 }
 function npTrackingState(string $code): string {
@@ -185,6 +196,7 @@ function npTrackingState(string $code): string {
 }
 function npDeliveryMailEvent(string $code): string {return match($code){'4','5','6','41'=>'shipped','7','8'=>'arrived','9','10','11'=>'received',default=>''};}
 function npRefresh(PDO $db,int $order,string $actor): void {
+    shopShipmentActor($actor);
     npLocked($db,$order,function()use($db,$order,$actor){$o=npOrder($db,$order);$ships=npShipments($db,$order);$to=[];
       foreach($ships as $s)if(!empty($s['tracking_number'])&&(!in_array($s['status'],['delivered','cancelled','returned'],true))&&($s['checked_at']===null||strtotime($s['checked_at'].' UTC')<time()-900))$to[]=['DocumentNumber'=>$s['tracking_number'],'Phone'=>preg_replace('/\D/','',$o['contact']['phone']??'')];
       if($to){$rows=npApiCall('TrackingDocument','getStatusDocuments',['Documents'=>$to]);$allowed=array_column($to,'DocumentNumber');foreach($rows as $r){$number=(string)($r['Number']??'');if(!in_array($number,$allowed,true))continue;$db->prepare('UPDATE rubizh_order_shipments SET status=?,checked_at=UTC_TIMESTAMP(),updated_at=UTC_TIMESTAMP() WHERE order_id=? AND tracking_number=?')->execute([npTrackingState((string)($r['StatusCode']??'')),$order,$number]);$code=(string)($r['StatusCode']??'');$mailEvent=npDeliveryMailEvent($code);if($mailEvent!=='')shopQueueBuyerMail($db,$order,$mailEvent,$number);if(function_exists('shopTimelineEvent')){$time=gmdate('Y-m-d H:i:s');$detail=['tracking'=>$number,'address'=>(string)($r['WarehouseRecipient']??$o['delivery_label']),'storage_until'=>(string)($r['DateFreeStorage']??''),'observed'=>true];if(in_array($code,['4','5','6','7','8','9','10','11','41'],true)){shopTimelineEvent($db,$order,'sent',$number,$time,$detail);}if(in_array($code,['7','8'],true)){shopTimelineEvent($db,$order,'arrived',$number,$time,$detail);}if(in_array($code,['9','10','11'],true)){shopTimelineEvent($db,$order,'received',$number,$time,$detail);}if(in_array($code,['102','103','108'],true))shopTimelineEvent($db,$order,'returned',$number,$time,$detail);}}}
@@ -200,4 +212,10 @@ function npAggregateOrder(PDO $db,int $order): void {
     elseif($covered&&count(array_filter($states,fn($s)=>$s==='delivered'))===count($ships))$status='delivered';
     elseif($covered&&$moving===count($ships))$status='shipped';elseif($moving>0)$status='partially_shipped';
     if($status)$db->prepare('UPDATE rubizh_customer_orders SET status=?,updated_at=UTC_TIMESTAMP() WHERE id=?')->execute([$status,$order]);
+    // PIM v3 orders keep fulfillment separate from order/payment state.
+    if(!empty($GLOBALS['rubizh_pim_v3_columns'])&&(int)($o['pim_contract_version']??0)===3){
+        $delivered=count(array_filter($states,fn($s)=>$s==='delivered'));$ttn=count(array_filter($ships,fn($s)=>trim((string)($s['tracking_number']??''))!==''));
+        $f=$covered&&$delivered===count($ships)?'DELIVERED':($moving>0?'IN_TRANSIT':($ttn>0?'TTN_CREATED':null));
+        if($f!==null)$db->prepare('UPDATE rubizh_customer_orders SET pim_fulfillment_state=?,pim_order_state=IF(?=\'DELIVERED\' AND payment_status=\'paid\' AND pim_order_state=\'CONFIRMED\',\'COMPLETED\',pim_order_state) WHERE id=?')->execute([$f,$f,$order]);
+    }
 }

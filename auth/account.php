@@ -52,7 +52,7 @@ function customerSaveProfile(string $email, array $input): void {
     $first = customerField($input, 'first_name', 80);
     $last = customerField($input, 'last_name', 80);
     $phone = customerField($input, 'phone', 30);
-    if ($first === '') { throw new RuntimeException('Вкажіть ваше імʼя.'); }
+    if ($first === '') { throw new RuntimeException('Вкажіть ваше ім’я.'); }
     if ($phone !== '') {
         if (!preg_match('/^[+0-9() .\-]+$/D', $phone)) { throw new RuntimeException('Вкажіть український номер у форматі +380XXXXXXXXX.'); }
         $phone = preg_replace('/[^0-9]/', '', $phone);

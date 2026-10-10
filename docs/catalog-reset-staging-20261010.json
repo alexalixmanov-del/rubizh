@@ -1,0 +1,232 @@
+{
+ "site_reset": {
+  "removed": {
+   "rubizh_pim_history": 0,
+   "rubizh_pim_batch_chunks": 0,
+   "rubizh_pim_batches": 0,
+   "rubizh_pim_legacy_mappings": 0,
+   "rubizh_pim_category_mappings": 0,
+   "rubizh_order_request_selections": 0,
+   "rubizh_color_photos": 0,
+   "rubizh_model_photos": 0,
+   "rubizh_size_options": 0,
+   "rubizh_size_catalogs": 0,
+   "rubizh_catalog_pricing": 0,
+   "rubizh_catalog_fulfillment": 0,
+   "rubizh_catalog_supplier_articles": 0,
+   "rubizh_product_categories": 3103,
+   "rubizh_category_sync_errors": 0,
+   "rubizh_favorites": 0,
+   "rubizh_shared_kits": 0,
+   "rubizh_cart_reminders": 1,
+   "rubizh_stock_reservations": 1,
+   "variants": 8682,
+   "rubizh_product_colors": 0,
+   "photos": 19025,
+   "products": 3103,
+   "sync_log": 22
+  },
+  "kept": {
+   "categories": 348,
+   "rubizh_canonical_categories": 137,
+   "rubizh_category_aliases": 348,
+   "rubizh_pim_categories": 0,
+   "rubizh_customer_orders": 3,
+   "rubizh_accounts": 4,
+   "meta": 12
+  }
+ },
+ "catalog": {
+  "SITE_MODELS": 1528,
+  "visible": 1528,
+  "legacy": 0,
+  "SITE_SKU": 2820,
+  "variants_total": 2820,
+  "colors": 1790,
+  "size_options": 820,
+  "legacy_mappings": 0,
+  "category_mappings": 0,
+  "duplicate_names": 0,
+  "pim_categories": 143,
+  "slug_mismatch": 0,
+  "suffixed_urls": 0,
+  "wire_duplicate_skus": 0
+ },
+ "steps": [
+  {
+   "name": "SITE catalog reset: catalog tables empty, taxonomy/orders kept",
+   "ok": true,
+   "products_before": 3103,
+   "variants_before": 8682,
+   "kept": {
+    "categories": 348,
+    "rubizh_canonical_categories": 137,
+    "rubizh_category_aliases": 348,
+    "rubizh_pim_categories": 0,
+    "rubizh_customer_orders": 3,
+    "rubizh_accounts": 4,
+    "meta": 12
+   },
+   "err": ""
+  },
+  {
+   "name": "fresh publication COMMITTED, every READY model created",
+   "ok": true,
+   "ms": 19896,
+   "kinds": {
+    "created": 1528
+   },
+   "error": null
+  },
+  {
+   "name": "no legacy products, no -N URLs, no old mappings, one card per READY model",
+   "ok": true,
+   "SITE_MODELS": 1528,
+   "visible": 1528,
+   "legacy": 0,
+   "SITE_SKU": 2820,
+   "variants_total": 2820,
+   "colors": 1790,
+   "size_options": 820,
+   "legacy_mappings": 0,
+   "category_mappings": 0,
+   "duplicate_names": 0,
+   "pim_categories": 143,
+   "slug_mismatch": 0,
+   "suffixed_urls": 0,
+   "wire_duplicate_skus": 0
+  },
+  {
+   "name": "catalog lists exactly the published models",
+   "ok": true,
+   "total": 1528,
+   "ms": 208,
+   "in_stock_total": 724,
+   "in_ms": 1814
+  },
+  {
+   "name": "browser 390: colour → gallery → size → real SKU → price → availability → cart",
+   "ok": true,
+   "gallery": true,
+   "urlColor": true,
+   "priceShown": true,
+   "available": true,
+   "cart_sku": "RUB-23465",
+   "overflow": false,
+   "errors": []
+  },
+  {
+   "name": "browser 768: colour → gallery → size → real SKU → price → availability → cart",
+   "ok": true,
+   "gallery": true,
+   "urlColor": true,
+   "priceShown": true,
+   "available": true,
+   "cart_sku": "RUB-23465",
+   "overflow": false,
+   "errors": []
+  },
+  {
+   "name": "browser 1440: colour → gallery → size → real SKU → price → availability → cart",
+   "ok": true,
+   "gallery": true,
+   "urlColor": true,
+   "priceShown": true,
+   "available": true,
+   "cart_sku": "RUB-23465",
+   "overflow": false,
+   "errors": []
+  },
+  {
+   "name": "checkout: IN_STOCK real SKU → CONFIRMED, price from PIM",
+   "ok": true,
+   "total": 480,
+   "site_price": 480,
+   "from_cart": true
+  },
+  {
+   "name": "payment: invoice (mock bank) → signed webhook → PAID",
+   "ok": true
+  },
+  {
+   "name": "UNKNOWN real SKU → order and payment denied",
+   "ok": true,
+   "sku": "RUB-18989",
+   "code": "UNAVAILABLE"
+  },
+  {
+   "name": "OUT_OF_STOCK real SKU → no ordinary checkout",
+   "ok": true,
+   "sku": "RUB-21054"
+  },
+  {
+   "name": "PREORDER real SKU → manager confirmation",
+   "ok": true,
+   "sku": "RUB-20293"
+  },
+  {
+   "name": "size without SKU → request, no fake SKU, payment denied",
+   "ok": true,
+   "model": "p00i4ah8dodm",
+   "size": "42"
+  },
+  {
+   "name": "mixed cart → whole order WAITING_CONFIRMATION, one payment later",
+   "ok": true
+  }
+ ],
+ "e2e_models": {
+  "payable": {
+   "id": "pdu4dfkwhswn",
+   "sku": "RUB-23465",
+   "color": "clr-a4bed6a19452ad6f",
+   "size": "XL"
+  },
+  "unknown": "RUB-18989",
+  "out": "RUB-21054",
+  "preorder": "RUB-20293",
+  "size_request": "p00i4ah8dodm"
+ },
+ "ok": true,
+ "sql_profile": {
+  "pim_v3_only_catalog": true,
+  "runs": [
+   {
+    "input": [],
+    "total": 1528,
+    "items": 24,
+    "ms": 244,
+    "handler_rows_read": 89037
+   },
+   {
+    "input": {
+     "availability": "in"
+    },
+    "total": 724,
+    "items": 24,
+    "ms": 266.1,
+    "handler_rows_read": 81238
+   },
+   {
+    "input": {
+     "q": "куртка"
+    },
+    "total": 70,
+    "items": 24,
+    "ms": 228.8,
+    "handler_rows_read": 107021
+   },
+   {
+    "input": {
+     "sort": "cheap"
+    },
+    "total": 1528,
+    "items": 24,
+    "ms": 239.2,
+    "handler_rows_read": 85442
+   }
+  ],
+  "regexp": false,
+  "json": false
+ }
+}

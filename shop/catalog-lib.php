@@ -16,6 +16,7 @@ function shopVariantRows(PDO $db,array $ids): array {
     $q->execute($ids);$out=[];foreach($q->fetchAll(PDO::FETCH_ASSOC) as $v)$out[$v['product_id']][]=$v;return $out;
 }
 function shopProduct(PDO $db, array $row, array $photos=[],?array $variantRows=null): array {
+    if(pimV3IsModel($row))return pimV3ProductDto($db,$row);
     $data=json_decode((string)$row['data'],true) ?: [];
     $variantRows ??= shopVariantRows($db,[$row['id']])[$row['id']] ?? [];
     $variants=[];
@@ -45,7 +46,7 @@ function shopProduct(PDO $db, array $row, array $photos=[],?array $variantRows=n
 function shopProductsByIds(PDO $db,array $ids): array {
     $ids=array_slice(array_values(array_unique(array_filter($ids,'is_string'))),0,200);
     if (!$ids) return [];
-    $q=$db->prepare('SELECT * FROM products WHERE visible=1 AND id IN ('.implode(',',array_fill(0,count($ids),'?')).')');
+    $q=$db->prepare('SELECT * FROM products p WHERE visible=1 AND '.shopUsablePhotoSql('p').' AND id IN ('.implode(',',array_fill(0,count($ids),'?')).')');
     $q->execute($ids);$rows=$q->fetchAll(PDO::FETCH_ASSOC);$photos=product_photos($db,array_column($rows,'id'));
     $variants=shopVariantRows($db,array_column($rows,'id'));
     return array_map(fn($r)=>shopProduct($db,$r,$photos,$variants[$r['id']] ?? []),$rows);
@@ -70,8 +71,10 @@ function shopSizeRequiredProductSql(PDO $db): string {
 }
 function shopCatalogBuild(PDO $db,array $input): array {
     $taxonomyActive=shopTaxonomyActive($db);$GLOBALS['rubizhTaxonomySqlActive']=$taxonomyActive;
-    $sizeRequired=shopSizeRequiredProductSql($db);
-    $where=['p.visible=1'];$args=[];$buyable=shopBuyableSql('av',$sizeRequired);if($db->query("SELECT v FROM meta WHERE k='hide_unavailable'")->fetchColumn()!=='0')$where[]="EXISTS(SELECT 1 FROM variants av WHERE av.product_id=p.id AND $buyable)";
+    $pure=pimV3OnlyCatalog($db);$sizeRequired=$pure?'0=1':shopSizeRequiredProductSql($db);
+    $where=['p.visible=1',shopUsablePhotoSql('p')];$args=[];$buyable=shopBuyableSql('av',$sizeRequired);
+    // Inventory affects buyability, not presence, for PIM v3 MODELs; legacy rows keep the old switch.
+    if($db->query("SELECT v FROM meta WHERE k='hide_unavailable'")->fetchColumn()!=='0')$where[]=$pure?'p.pim_contract_version=3':(!empty($GLOBALS['rubizh_pim_v3_columns'])?"(p.pim_contract_version=3 OR EXISTS(SELECT 1 FROM variants av WHERE av.product_id=p.id AND $buyable))":"EXISTS(SELECT 1 FROM variants av WHERE av.product_id=p.id AND $buyable)");
     $category=trim((string)($input['category'] ?? ''),'/');
     if ($category!=='') {
         if($taxonomyActive){
@@ -88,10 +91,11 @@ function shopCatalogBuild(PDO $db,array $input): array {
     if(isset($patterns[$slot])){
         $where[]=shopKitSlotSql().'=?';$args[]=$slot;$where[]=shopKitPrimarySql($slot);
         // У конструктор потрапляє лише те, що можна додати в кошик: з фото й хоча б одним розміром у наявності.
-        $where[]='EXISTS(SELECT 1 FROM photos sph WHERE sph.product_id=p.id)';
+        // Slot listings already carry the shared usable-photo predicate from the base where.
         $where[]='EXISTS(SELECT 1 FROM variants sv WHERE sv.product_id=p.id AND '.shopBuyableSql('sv',$sizeRequired).')';
     }
-    $leafSql=$taxonomyActive?"COALESCE((SELECT cc.display_name_uk FROM rubizh_product_categories pc JOIN rubizh_canonical_categories cc ON cc.category_id=pc.category_id WHERE pc.product_id=p.id AND cc.status='active'),SUBSTRING_INDEX(p.category_path,' / ',-1))":"SUBSTRING_INDEX(p.category_path,' / ',-1)";
+    if($pure)$leafSql="COALESCE((SELECT cc.name FROM rubizh_product_categories pc JOIN rubizh_pim_categories cc ON cc.category_id=pc.category_id WHERE pc.product_id=p.id),'')";
+    else $leafSql=$taxonomyActive?"COALESCE((SELECT cc.display_name_uk FROM rubizh_product_categories pc JOIN rubizh_canonical_categories cc ON cc.category_id=pc.category_id WHERE pc.product_id=p.id AND cc.status='active'),SUBSTRING_INDEX(p.category_path,' / ',-1))":"SUBSTRING_INDEX(p.category_path,' / ',-1)";
     $leaf=trim((string)($input['leaf'] ?? ''));if($leaf!==''){$where[]="$leafSql=?";$args[]=$leaf;}
     $words=preg_split('/\s+/u',mb_strtolower(mb_substr(str_replace(['берци','Берци'],['берці','Берці'],trim((string)($input['q'] ?? ''))),0,160))) ?: [];
     foreach (array_slice(array_filter($words),0,6) as $word) {
@@ -100,7 +104,7 @@ function shopCatalogBuild(PDO $db,array $input): array {
     }
     $brands=array_slice(array_filter(explode('|',(string)($input['brands'] ?? ''))),0,20);if($brands)$brands=array_values(array_unique(array_merge(...array_map('shopBrandAliases',$brands))));
     if ($brands) {$where[]='p.brand IN ('.implode(',',array_fill(0,count($brands),'?')).')';array_push($args,...$brands);}
-    if (($input['availability'] ?? '')==='in') $where[]="EXISTS(SELECT 1 FROM variants av WHERE av.product_id=p.id AND av.availability='in' AND $buyable)";
+    if (($input['availability'] ?? '')==='in') $where[]="EXISTS(SELECT 1 FROM variants av WHERE av.product_id=p.id AND av.availability='in' AND $buyable".(!empty($GLOBALS['rubizh_pim_v3_columns'])?" AND (av.pim_active IS NULL OR av.pim_payment_allowed=1)":'').")";
     elseif (($input['availability'] ?? '')==='available') $where[]="EXISTS(SELECT 1 FROM variants av WHERE av.product_id=p.id AND $buyable)";
     $sizes=array_slice(array_filter(explode('|',(string)($input['sizes'] ?? ''))),0,20);
     $camo=array_slice(array_filter(explode('|',(string)($input['camo'] ?? ''))),0,20);
@@ -143,6 +147,8 @@ function shopCatalogBuild(PDO $db,array $input): array {
     $facets['brands']=array_values(array_unique(array_filter(array_map('shopBrand',$facets['brands']))));
     $facets['camo']=array_values(array_unique(array_map('shopColor',$facets['camo'])));
     $facets['price']=shopPriceFacet($db,implode(' AND ',$whereNP),$argsNP);
+    // Search facets: category counts of the current result (query + filters), one GROUP BY over the normalized path.
+    if(trim((string)($input['q']??''))!==''){$q=$db->prepare("SELECT p.category_path AS path,COUNT(*) AS n FROM products p WHERE $sql GROUP BY p.category_path");$q->execute($args);$facets['category_counts']=array_map('intval',$q->fetchAll(PDO::FETCH_KEY_PAIR));}
     return ['ok'=>true,'items'=>array_map(fn($r)=>shopProduct($db,$r,$photos,$variants[$r['id']] ?? []),$rows),'total'=>$total,'page'=>$page,'pages'=>$pages,'facets'=>$facets];
 }
 
@@ -183,8 +189,13 @@ function shopModelKey(string $name): string {
 }
 function shopRelated(PDO $db,array $row,array $product): array {
     $data=json_decode((string)($row['data']??''),true)?:[];
+    if(pimV3IsModel($row)){
+        $ids=array_slice(array_values(array_filter(array_map('strval',(array)($data['related']??[])),fn($id)=>$id!==$row['id'])),0,8);if(!$ids)return [];
+        $q=$db->prepare('SELECT p.* FROM products p WHERE p.visible=1 AND '.shopUsablePhotoSql('p').' AND p.id IN ('.implode(',',array_fill(0,count($ids),'?')).')');$q->execute($ids);
+        return array_map(fn($r)=>shopProduct($db,$r),array_slice($q->fetchAll(PDO::FETCH_ASSOC),0,4));
+    }
     $price=(int)($product['price_min']??0);$cap=$price>0?$price*2:PHP_INT_MAX;$self=(string)$row['id'];$key=shopModelKey((string)$row['name']);
-    $base="p.visible=1 AND p.id<>? AND p.price_min>0 AND EXISTS(SELECT 1 FROM photos rph WHERE rph.product_id=p.id) AND EXISTS(SELECT 1 FROM variants rv WHERE rv.product_id=p.id AND ".shopBuyableSql('rv').")";
+    $base="p.visible=1 AND p.id<>? AND p.price_min>0 AND ".shopUsablePhotoSql('p')." AND EXISTS(SELECT 1 FROM variants rv WHERE rv.product_id=p.id AND ".shopBuyableSql('rv').")";
     $order="ORDER BY FIELD(p.availability,'in','order','out'),ABS(p.price_min-?)";
     $pick=[];$seen=[$self=>true];
     $gloves=(bool)preg_match('/рукавич|рукавиц|перчат/iu',(string)$row['name']);

@@ -11,6 +11,7 @@ function shopDonationUpload(array $file): array {
  if(!$info||!in_array($mime,['image/png','image/jpeg','image/webp'],true)||($info['mime']??'')!==$mime||$info[0]>16000||$info[1]>16000)throw new RuntimeException('Файл має бути зображенням PNG, JPG або WebP.');return ['mime'=>$mime,'bytes'=>$bytes];
 }
 function shopDonationBatch(PDO $db,string $actor,array $input,array $image): int {
+ shopRequirePermission($actor,'payment.manual_reconcile');
  $op=trim((string)($input['operation_key']??''));if(!preg_match('/^[a-f0-9]{32}$/D',$op))throw new RuntimeException('Оновіть форму.');$ref=trim((string)($input['reference']??''));if(mb_strlen($ref)<4||mb_strlen($ref)>240)throw new RuntimeException('Вкажіть номер або реквізит фактичного переказу.');if(($input['transfer_confirmed']??'')!=='yes')throw new RuntimeException('Підтвердьте фактичний переказ на бригаду обраних замовлень.');
  $raw=$input['orders']??[];if(!is_array($raw))throw new RuntimeException('Оберіть замовлення.');$ids=array_values(array_unique(array_filter(array_map('intval',$raw),fn($v)=>$v>0)));sort($ids);if(!$ids||count($ids)>500)throw new RuntimeException('Оберіть до 500 замовлень.');
  // Serialize batches, refunds and payment/fulfillment actions on the same order locks.
@@ -24,6 +25,7 @@ function shopDonationBatch(PDO $db,string $actor,array $input,array $image): int
  }finally{foreach(array_reverse($locks) as $name)$db->prepare('SELECT RELEASE_LOCK(?)')->execute([$name]);}
 }
 function shopDonationMarkSent(PDO $db,int $id,string $actor): void {
+ shopRequirePermission($actor,'order.confirm');
  npLocked($db,$id,function()use($db,$id,$actor){$db->beginTransaction();try{$q=$db->prepare("UPDATE rubizh_order_donations d JOIN rubizh_customer_orders o ON o.id=d.order_id SET d.sent_at=UTC_TIMESTAMP(),d.sent_by=? WHERE d.order_id=? AND d.batch_id IS NOT NULL AND d.sent_at IS NULL AND ".shopDonationEligibleSql());$q->execute([$actor,$id]);if(!$q->rowCount())throw new RuntimeException('Скрін уже позначений надісланим або замовлення виключене.');npAudit($db,$actor,'donation_sent',$id);$db->commit();}catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}});
 }
 function shopDonationChat(array $contact,int $amount): array {
