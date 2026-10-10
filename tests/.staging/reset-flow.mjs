@@ -23,10 +23,19 @@ try{
  const done=apply.status===0?JSON.parse(apply.out):null;
  report.site_reset={removed:plan.remove,kept:plan.keep};
  step('SITE catalog reset: catalog tables empty, taxonomy/orders kept',done?.reset==='COMMITTED'&&+sql('SELECT COUNT(*) FROM products')===0&&+sql('SELECT COUNT(*) FROM variants')===0&&JSON.stringify(done.kept)===JSON.stringify(plan.keep),{products_before:plan.remove.products,variants_before:plan.remove.variants,kept:done?.kept,err:apply.err.slice(0,300)});
+ // 2a. Intake switched on only through the guarded owner command (config starts without pim_v3_sync).
+ const before=await get('/api/pim/status',auth);
+ const enablePlan=JSON.parse(php(['dev/pim-v3-enable.php','--plan','--backup-dir='+S+'/private/config-backups']).out);
+ const enable=enablePlan.result==='NO_CHANGE'?enablePlan:JSON.parse(php(['dev/pim-v3-enable.php','--apply','--expect-sha256='+enablePlan.config_sha256,'--backup-dir='+S+'/private/config-backups']).out);
+ const status=await get('/api/pim/status',auth),contracts=JSON.stringify(status.data||{});
+ step('v3 enabled by dev/pim-v3-enable.php; /api/pim/status announces contract 3',enable.result==='APPLIED'&&!/"contract_version":3/.test(JSON.stringify(before.data||{}))&&status.status===200&&/"contract_version":3|"contracts":\[[^\]]*3/.test(contracts),{before:JSON.stringify(before.data||{}).slice(0,160),enable:enable.result,plan_before:enablePlan.current_pim_v3_sync,status:contracts.slice(0,200)});
  // 2. One fresh publication, PIM publisher chunking (100 models).
- let ack;const t0=performance.now();for(const body of chunksFor(wire,{size:100})){ack=await post('/api/pim/sync',body,auth);if(ack.status!==200)break;}
+ let ack,lastBody;const t0=performance.now();for(const body of chunksFor(wire,{size:100})){lastBody=body;ack=await post('/api/pim/sync',body,auth);if(ack.status!==200)break;}
  const kinds=(ack.data?.results||[]).reduce((m,r)=>(m[r.status]=(m[r.status]||0)+1,m),{});
  step('fresh publication COMMITTED, every READY model created',ack.status===200&&ack.data.status==='COMMITTED'&&kinds.created===wire.products.length,{ms:Math.round(performance.now()-t0),kinds,error:ack.status===200?null:JSON.stringify(ack.data).slice(0,300)});
+ // 2b. Replay of the final chunk (lost ACK / retry): the stored ACK comes back, nothing is created twice.
+ const productsBefore=sql('SELECT COUNT(*) FROM products'),replay=await post('/api/pim/sync',lastBody,auth);
+ step('replay of the final chunk returns the same COMMITTED ACK, no duplicates',replay.status===200&&replay.data?.status==='COMMITTED'&&sql('SELECT COUNT(*) FROM products')===productsBefore,{replay_status:replay.data?.status,products:productsBefore});
  // 3. Catalog checks.
  const wireSkus=wire.products.flatMap(p=>p.variants.map(v=>v.sku));
  const c={SITE_MODELS:+sql('SELECT COUNT(*) FROM products'),visible:+sql('SELECT COUNT(*) FROM products WHERE visible=1'),legacy:+sql('SELECT COUNT(*) FROM products WHERE pim_contract_version IS NULL'),

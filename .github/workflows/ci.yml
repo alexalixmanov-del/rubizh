@@ -37,6 +37,11 @@ jobs:
         run: |
           npx playwright install --with-deps chromium
           sudo ln -sf "$(find ~/.cache/ms-playwright -path '*chrome-linux*/chrome' -type f | head -1)" /usr/bin/chromium
+      - name: Test PHP runtime layout (tests address /workspace/php-runtime/root/usr/bin/php8.4 with explicit -n/-d extension flags)
+        run: |
+          sudo mkdir -p /workspace/php-runtime/root/usr/bin /workspace/php-runtime/root/usr/lib/php/20240924
+          sudo install -m755 tests/helpers/php-runtime-shim.sh /workspace/php-runtime/root/usr/bin/php8.4
+          /workspace/php-runtime/root/usr/bin/php8.4 -n -d extension=/x/pdo.so -d extension=/x/mysqlnd.so -d extension=/x/pdo_mysql.so -r 'echo implode(",",PDO::getAvailableDrivers()),"\n";'
       - name: PHP syntax
         run: git ls-files '*.php' | xargs -n1 -P4 php -l > /dev/null
       - name: Tests (MariaDB over the service socket)
