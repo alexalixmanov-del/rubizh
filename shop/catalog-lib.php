@@ -147,6 +147,8 @@ function shopCatalogBuild(PDO $db,array $input): array {
     $facets['brands']=array_values(array_unique(array_filter(array_map('shopBrand',$facets['brands']))));
     $facets['camo']=array_values(array_unique(array_map('shopColor',$facets['camo'])));
     $facets['price']=shopPriceFacet($db,implode(' AND ',$whereNP),$argsNP);
+    // Search facets: category counts of the current result (query + filters), one GROUP BY over the normalized path.
+    if(trim((string)($input['q']??''))!==''){$q=$db->prepare("SELECT p.category_path AS path,COUNT(*) AS n FROM products p WHERE $sql GROUP BY p.category_path");$q->execute($args);$facets['category_counts']=array_map('intval',$q->fetchAll(PDO::FETCH_KEY_PAIR));}
     return ['ok'=>true,'items'=>array_map(fn($r)=>shopProduct($db,$r,$photos,$variants[$r['id']] ?? []),$rows),'total'=>$total,'page'=>$page,'pages'=>$pages,'facets'=>$facets];
 }
 

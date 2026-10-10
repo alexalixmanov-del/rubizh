@@ -10,12 +10,12 @@ try{
     $contact=is_array($input['contact'] ?? null)?$input['contact']:[];
     $name=customerField($contact,'name',160);$phone=customerField($contact,'phone',30);$email=strtolower(customerField($contact,'email',254));
     $phone=preg_replace('/[^0-9]/','',$phone);if(preg_match('/^0\d{9}$/D',$phone))$phone='38'.$phone;
-    if($name==='' || !preg_match('/^380\d{9}$/D',$phone))throw new RuntimeException('Вкажіть імʼя та український телефон.');
-    // Email необовʼязковий: якщо вказаний — має бути коректним.
+    if($name==='' || !preg_match('/^380\d{9}$/D',$phone))throw new RuntimeException('Вкажіть ім’я та український телефон.');
+    // Email необов’язковий: якщо вказаний — має бути коректним.
     if($email!=='' && !filter_var($email,FILTER_VALIDATE_EMAIL))throw new RuntimeException('Перевірте email або залиште поле порожнім.');
     $city=customerField($contact,'city',120);$address=customerField($contact,'address',240);$type=customerField($contact,'delivery_type',12);$comment=shopComment($contact);$recipient=customerField($contact,'recipient',160);
     if($city==='' || $address==='' || !in_array($type,['branch','postomat','courier'],true))throw new RuntimeException('Вкажіть місто та місце отримання.');
-    if(count(preg_split('/\s+/u',trim($recipient?:$name)))<2)throw new RuntimeException('Вкажіть імʼя та прізвище одержувача.');
+    if(count(preg_split('/\s+/u',trim($recipient?:$name)))<2)throw new RuntimeException('Вкажіть ім’я та прізвище одержувача.');
     $brigade=shopDonationTarget($contact['brigade']??'');
     $donationChannel=customerField($contact,'donation_channel',12)?:'viber';if(!in_array($donationChannel,['viber','telegram'],true))throw new RuntimeException('Оберіть Viber або Telegram.');$donationPhone=preg_replace('/\D/','',customerField($contact,'donation_phone',30))?:$phone;if(preg_match('/^0\d{9}$/D',$donationPhone))$donationPhone='38'.$donationPhone;if(!preg_match('/^380\d{9}$/D',$donationPhone))throw new RuntimeException('Перевірте номер для скріна донату.');
     $pay=customerField($input,'payment',24);if(!in_array($pay,['cod','card','invoice'],true))throw new RuntimeException('Оберіть спосіб оплати.');
@@ -39,7 +39,7 @@ try{
         try{$expectedCents=shopMoney($expected);}catch(ShopPricingException $e){$expectedCents=null;}
         if($expectedCents!==shopMoney($total)||isset($input['catalog_version'])&&$input['catalog_version']!==$quote['catalog_version']){$db->rollBack();shopJson(['ok'=>false,'error_code'=>'PRICE_CHANGED','error'=>'Ціна або версія каталогу змінилася. Перевірте новий розрахунок та підтвердьте.','quote'=>$quote],409);}
         $decision=pimV3OrderDecision($raw,$pay);
-        $number='RB-'.gmdate('ymd').'-'.strtoupper(bin2hex(random_bytes(4)));$label=['branch'=>'Нова пошта · відділення','postomat'=>'Нова пошта · поштомат','courier'=>'Нова пошта · курʼєр'][$type].' · '.$city.' · '.$address;
+        $number='RB-'.gmdate('ymd').'-'.strtoupper(bin2hex(random_bytes(4)));$label=['branch'=>'Нова пошта · відділення','postomat'=>'Нова пошта · поштомат','courier'=>'Нова пошта · кур’єр'][$type].' · '.$city.' · '.$address;
         $db->prepare("INSERT INTO rubizh_customer_orders(external_id,email,order_number,status,payment_status,total,currency,items_json,delivery_label,created_at,updated_at) VALUES(?,?,?,?,?,?,'UAH',?,?,UTC_TIMESTAMP(),UTC_TIMESTAMP())")->execute(['web:'.$key,$email,$number,$decision['legacy_status'],$pay==='cod'?'cod':'pending',$total,json_encode($calc['lines'],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),$label]);
         $id=(int)$db->lastInsertId();pimV3RecordOrder($db,$id,$raw,$decision,(string)$quote['catalog_version']);
         $fulfillment=$db->prepare('INSERT INTO rubizh_order_fulfillment_lines(order_id,line_no,product_id,sku,qty,supplier_code,line_amount,sale_unit,created_at) VALUES(?,?,?,?,?,?,?,?,UTC_TIMESTAMP())');

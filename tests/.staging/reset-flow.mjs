@@ -63,12 +63,13 @@ try{
   const urlColor=page.url().includes('color='+v.color_id);
   await page.getByText(v.size_display,{exact:true}).first().click({timeout:5000}).catch(()=>{});await page.waitForTimeout(300);
   const text=await page.evaluate(()=>document.body.innerText);const priceShown=text.replace(/\s/g,'').includes(String(v.site_price).replace(/\B(?=(\d{3})+(?!\d))/g,''))||text.replace(/\s/g,'').includes(String(v.site_price));
+  const shownSku=(await page.locator('[data-product-sku]').first().innerText().catch(()=>'')).trim();
   const available=/В наявності/.test(await page.evaluate(()=>document.body.innerText));await page.locator('text=/^До кошика/i >> visible=true').first().click({timeout:5000}).catch(()=>{});await page.waitForTimeout(500);
   const cart=await page.evaluate(()=>{try{return JSON.parse(localStorage.getItem('rubizh.cart')||'null');}catch{return null;}});
   const items=Array.isArray(cart)?cart:(cart?.items||cart?.lines||[]);const hit=items.find(x=>x.sku===v.sku||x.variant===v.sku||x.v===v.sku);
   if(hit&&!cartLines)cartLines=[{product_id:hit.product_id||hit.id||hit.p||p.id,color_id:hit.color_id||hit.colorId||v.color_id,sku:v.sku,qty:1}];
   const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth);
-  step(`browser ${vp.width}: colour → gallery → size → real SKU → price → availability → cart`,gallery&&urlColor&&priceShown&&available&&!!hit&&!overflow&&!errors.length,{gallery,urlColor,priceShown,available,cart_raw:JSON.stringify(cart).slice(0,160),cart_sku:hit?.sku||hit?.variant||null,overflow,errors:errors.slice(0,2)});
+  step(`browser ${vp.width}: colour → gallery → size → real SKU (shown = cart) → price → availability → cart`,gallery&&urlColor&&priceShown&&available&&!!hit&&shownSku===v.sku&&!overflow&&!errors.length,{gallery,urlColor,priceShown,available,shown_sku:shownSku,cart_raw:JSON.stringify(cart).slice(0,160),cart_sku:hit?.sku||hit?.variant||null,overflow,errors:errors.slice(0,2)});
   await page.screenshot({path:S+'/private/reset-e2e-'+vp.width+'.png'});await page.close();}}
  finally{await browser.close();}
  // Checkout from the browser cart line → CONFIRMED → invoice → signed webhook → PAID.

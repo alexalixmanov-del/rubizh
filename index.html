@@ -9,8 +9,8 @@
 <script defer src="/assets/react.5e73fabcd0d0.js"></script>
 <script defer src="/assets/react-dom.c5c970a9cf36.js"></script>
 <script defer src="/assets/category-directory.2026100802.js"></script>
-<script defer src="/assets/pim-v3-product.2026101001.js?v=2026101001"></script>
-<script defer src="/assets/shop-client.2026101001.js?v=2026101001"></script>
+<script defer src="/assets/pim-v3-product.2026101002.js?v=2026101002"></script>
+<script defer src="/assets/shop-client.2026101002.js?v=2026101002"></script>
 <script defer src="/assets/store-runtime.4b6bbf46ca4c.js"></script>
 
 <link rel="icon" href="/favicon.ico?v=2" sizes="any">
@@ -40,6 +40,8 @@
 <link rel="stylesheet" href="/assets/catalog-redesign.2026100605.css">
 <link rel="stylesheet" href="/assets/kit-parameters.2026100606.css">
 <link rel="stylesheet" href="/assets/mobile-polish.2026100702.css?v=2026100703">
+<link rel="stylesheet" href="/assets/site-qa.2026101001.css">
+<script src="/assets/site-qa.2026101001.js" defer></script>
 </head>
 <body>
 <a class="rz-skip" href="#main-content">Перейти до вмісту</a>
@@ -351,12 +353,12 @@
 
       <section class="rz-section" aria-labelledby="guides-title">
         <div class="rz-section-head"><div><div class="rz-eyebrow">03 / БАЗА ЗНАНЬ</div><h2 id="guides-title">Обирай <span>усвідомлено.</span></h2></div><a class="rz-text-link" href="/porady" sc-camel-on-click="{{ goGuides }}">Усі поради <svg width="18" height="18" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 18 18 6M6 6h12v12"></path></svg></a></div>
-        <div class="rz-guide-grid"><sc-for list="{{ homeGuides }}" as="gc" hint-placeholder-count="3"><article class="rz-guide"><a class="rz-guide-art" href="{{ gc.href }}" sc-camel-on-click="{{ gc.open }}" tabindex="-1" aria-hidden="true"><img sc-camel-src="{{ gc.src }}" alt="" width="800" height="520" loading="lazy" decoding="async"><svg width="18" height="18" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 18 18 6M6 6h12v12"></path></svg></a><div class="rz-guide-copy"><div class="rz-guide-meta"><span>{{ gc.topic }}</span><span>{{ gc.min }}</span></div><h3><a href="{{ gc.href }}" sc-camel-on-click="{{ gc.open }}">{{ gc.title }}</a></h3><p>{{ gc.desc }}</p></div></article></sc-for></div>
+        <div class="rz-guide-grid"><sc-for list="{{ homeGuides }}" as="gc" hint-placeholder-count="3"><article class="rz-guide"><a class="rz-guide-art" href="{{ gc.href }}" sc-camel-on-click="{{ gc.open }}" tabindex="-1" aria-hidden="true"><img sc-camel-src="{{ gc.src }}" alt="{{ gc.title }}" width="800" height="520" loading="lazy" decoding="async"><svg width="18" height="18" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 18 18 6M6 6h12v12"></path></svg></a><div class="rz-guide-copy"><div class="rz-guide-meta"><span>{{ gc.topic }}</span><span>{{ gc.min }}</span></div><h3><a href="{{ gc.href }}" sc-camel-on-click="{{ gc.open }}">{{ gc.title }}</a></h3><p>{{ gc.desc }}</p></div></article></sc-for></div>
       </section>
 
       <section class="rz-section rz-purchase-info" aria-label="Умови покупки">
         <div><div class="rz-eyebrow">БЕЗ НЕПРИЄМНИХ СЮРПРИЗІВ</div><h2>Просто обрати.<br><span>Спокійно замовити.</span></h2><a class="rz-text-link" href="/#page?id=delivery" sc-camel-on-click="{{ goDelivery }}">Доставка та оплата →</a></div>
-        <div class="rz-info-grid"><article><span class="rz-info-number">01</span><h3>Замовлення без реєстрації</h3><p>Контактні дані та адреса доставки. Кабінет — за бажанням.</p></article><article><span class="rz-info-number">02</span><h3>Перевірка перед оплатою</h3><p>Менеджер підтверджує наявність, розмір і строк відправлення.</p></article><article><span class="rz-info-number">03</span><h3>Зручний спосіб оплати</h3><p>Картка monobank або рахунок ФОП після підтвердження наявності.</p></article><article><span class="rz-info-number">04</span><h3>Доставка Новою поштою</h3><p>Відділення, поштомат або курʼєр. Вартість — за тарифом перевізника.</p></article></div>
+        <div class="rz-info-grid"><article><span class="rz-info-number">01</span><h3>Замовлення без реєстрації</h3><p>Контактні дані та адреса доставки. Кабінет — за бажанням.</p></article><article><span class="rz-info-number">02</span><h3>Перевірка перед оплатою</h3><p>Менеджер підтверджує наявність, розмір і строк відправлення.</p></article><article><span class="rz-info-number">03</span><h3>Зручний спосіб оплати</h3><p>Картка monobank або рахунок ФОП після підтвердження наявності.</p></article><article><span class="rz-info-number">04</span><h3>Доставка Новою поштою</h3><p>Відділення, поштомат або кур’єр. Вартість — за тарифом перевізника.</p></article></div>
       </section>
 
       <section class="rz-section rz-faq" aria-labelledby="faq-title"><div><div class="rz-eyebrow">04 / ВІДПОВІДІ ПОРУЧ</div><h2 id="faq-title">Є питання?<br><span>Є відповіді.</span></h2><p>Не знайшов свого? <a href="tel:+380976867892">Зателефонуй нам ↗</a></p></div><div class="rz-faq-list"><sc-for list="{{ faq }}" as="f"><div class="rz-faq-item"><button type="button" class="rz-faq-question" aria-expanded="{{ f.open }}" sc-camel-on-click="{{ f.toggle }}"><span>{{ f.q }}</span><span aria-hidden="true">{{ f.mark }}</span></button><sc-if value="{{ f.open }}"><p>{{ f.a }}</p></sc-if></div></sc-for></div></section>
@@ -368,9 +370,6 @@
             <h2 style="font-family:'UAH','Oswald',sans-serif;font-weight:600;font-size:clamp(24px,3vw,38px);text-transform:uppercase;margin:0;letter-spacing:.03em;line-height:1.1">Ціну рахуємо індивідуально</h2>
             <p style="margin:0;color:var(--legacy-a9b3a6);font-size:15px;line-height:1.6;max-width:58ch;text-wrap:pretty">Знижка залежить від складу замовлення: на формі, взутті та спорядженні вона більша, на бронезахисті ціна вже мінімальна. Підтримку війська плануємо з власного прибутку. Прорахунок у межах робочого дня.</p>
             <div style="display:flex"><div tabindex="0" role="button" sc-camel-on-click="{{ scrollB2BForm }}" style="padding:15px 22px;background:var(--legacy-f2a33c);color:var(--button-text);font-family:'UAH','Oswald',sans-serif;font-size:15px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;cursor:pointer" style-hover="background:var(--legacy-ffc36b)">Отримати прорахунок</div></div>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:1px;background:var(--legacy-2a322b);border:1px solid var(--legacy-2a322b)">
-              <div style="background:var(--legacy-141815);padding:12px 14px;font-size:14px;color:var(--legacy-edefea)">Рахунок на ФОП або ТОВ</div><div style="background:var(--legacy-141815);padding:12px 14px;font-size:14px;color:var(--legacy-edefea)">Безготівкова оплата</div><div style="background:var(--legacy-141815);padding:12px 14px;font-size:14px;color:var(--legacy-edefea)">Закріплений менеджер</div>
-            </div>
             <div>
               <div style="font-family:'UAH','Oswald',sans-serif;font-size:13.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--legacy-99a398);margin-bottom:4px">Що даємо</div>
               <ul style="margin:0;padding:0;list-style:none;color:var(--legacy-c7cec3);font-size:14px;line-height:1.5">
@@ -582,8 +581,8 @@
           <div data-cat-grid="1" data-hide="{{ loadingAttr }}" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(228px,1fr));gap:12px">
             <sc-for list="{{ products }}" as="p" hint-placeholder-count="10">
             <div data-tile="1" style="border:1px solid var(--legacy-2a322b);background:var(--legacy-141815);display:flex;flex-direction:column;min-width:0;height:100%" style-hover="border-color:var(--legacy-4c5a36)">
-              <div style="position:relative;aspect-ratio:4/5;background:var(--photo-bg);border-radius:4px;overflow:hidden;margin:0;box-shadow:0 0 0 1px var(--legacy-3a423b)">
-                <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--legacy-6b706a);pointer-events:none">
+              <div data-photo-box="1" style="position:relative;aspect-ratio:4/5;background:var(--photo-bg);border-radius:4px;overflow:hidden;margin:0;box-shadow:0 0 0 1px var(--legacy-3a423b)">
+                <div data-photo-ph="1" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--legacy-6b706a);pointer-events:none">
                   <svg width="46" height="46" sc-camel-view-box="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path sc-camel-d="{{ p.silPath }}"></path></svg>
                   <div aria-hidden="true" style="font-size:12px;letter-spacing:.02em">Фото готується</div>
                 </div>
@@ -621,8 +620,8 @@
               <div data-cat-grid="1" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(228px,1fr));gap:12px">
             <sc-for list="{{ sqSimilar }}" as="p" hint-placeholder-count="0">
             <div data-tile="1" style="border:1px solid var(--legacy-2a322b);background:var(--legacy-141815);display:flex;flex-direction:column;min-width:0;height:100%" style-hover="border-color:var(--legacy-4c5a36)">
-              <div style="position:relative;aspect-ratio:4/5;background:var(--photo-bg);border-radius:4px;overflow:hidden;margin:0;box-shadow:0 0 0 1px var(--legacy-3a423b)">
-                <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--legacy-6b706a);pointer-events:none">
+              <div data-photo-box="1" style="position:relative;aspect-ratio:4/5;background:var(--photo-bg);border-radius:4px;overflow:hidden;margin:0;box-shadow:0 0 0 1px var(--legacy-3a423b)">
+                <div data-photo-ph="1" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--legacy-6b706a);pointer-events:none">
                   <svg width="46" height="46" sc-camel-view-box="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path sc-camel-d="{{ p.silPath }}"></path></svg>
                   <div aria-hidden="true" style="font-size:12px;letter-spacing:.02em">Фото готується</div>
                 </div>
@@ -773,7 +772,7 @@
         </div>
       </sc-if>
       <div data-hide="{{ loadingAttr }}" style="display:flex;gap:clamp(16px,2.4vw,32px);flex-wrap:wrap;align-items:flex-start">
-        <div style="flex:1 1 380px;min-width:280px;display:flex;flex-direction:column;gap:10px">
+        <div data-product-gallery="1" style="flex:1 1 380px;min-width:280px;display:flex;flex-direction:column;gap:10px">
           <div style="display:flex;gap:10px;align-items:flex-start">
             <div data-gal-thumbs="1" style="flex:0 0 72px;display:flex;flex-direction:column;gap:8px">
               <sc-for list="{{ gal.thumbs }}" as="t" hint-placeholder-count="8">
@@ -802,11 +801,11 @@
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
             <span style="{{ item.stockBadgeStyle }}">{{ item.stockLabel }}</span>
             <sc-if value="{{ item.cert }}" hint-placeholder-val="{{ true }}"><span style="background:var(--legacy-1e2618);border:1px solid var(--legacy-4c5a36);color:var(--legacy-c6d3a8);font-family:'UAH','Oswald',sans-serif;font-size:11.5px;letter-spacing:.1em;padding:4px 8px;text-transform:uppercase">{{ item.cert }}</span></sc-if>
-            <span style="border:1px solid var(--legacy-2a322b);color:var(--legacy-99a398);font-family:'UAH','Oswald',sans-serif;font-size:11.5px;letter-spacing:.1em;padding:4px 8px;text-transform:uppercase">Арт. {{ item.sku }}</span>
+            <sc-if value="{{ item.sku }}"><span style="border:1px solid var(--legacy-2a322b);color:var(--legacy-99a398);font-family:'UAH','Oswald',sans-serif;font-size:11.5px;letter-spacing:.1em;padding:4px 8px;text-transform:uppercase">{{ item.skuShort }} {{ item.sku }}</span></sc-if>
           </div>
           <h1 style="font-family:'UAH','Oswald',sans-serif;font-weight:600;font-size:clamp(26px,3.4vw,42px);text-transform:uppercase;line-height:1.05;margin:0 0 10px;letter-spacing:.02em">{{ item.name }}</h1>
           <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0 0 12px;font-size:13px;color:var(--legacy-99a398)">
-            <span>Артикул <span style="font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--legacy-edefea)">{{ item.sku }}</span></span>
+            <sc-if value="{{ item.sku }}"><span>{{ item.skuTitle }} <span data-product-sku style="font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--legacy-edefea)">{{ item.sku }}</span></span></sc-if>
             <span tabindex="0" role="button" sc-camel-on-click="{{ copySku }}" style="color:var(--link);cursor:pointer;font-family:'UAH','Oswald',sans-serif;font-size:12px;letter-spacing:.08em;text-transform:uppercase">{{ copyLabel }}</span>
             <sc-if value="{{ hasWeight }}" hint-placeholder-val="{{ false }}"><span style="color:var(--legacy-8a9487)">·</span><span>Вага <span style="color:var(--legacy-edefea)">{{ itemWeight }}</span></span></sc-if>
           </div>
@@ -830,11 +829,12 @@
             </sc-if>
           </div>
 
+          <sc-if value="{{ hasProductColors }}"><div data-color-row="1" style="font-family:'UAH','Oswald',sans-serif;font-size:13.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--legacy-99a398);margin-bottom:8px">Колір</div><div data-product-colors="1" style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 16px"><sc-for list="{{ productColors }}" as="c"><button type="button" aria-pressed="{{ c.selected }}" sc-camel-on-click="{{ c.pick }}" style="{{ c.style }}">{{ c.name }}</button></sc-for></div></sc-if>
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
             <div data-size-row="1" style="font-family:'UAH','Oswald',sans-serif;font-size:13.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--legacy-99a398)">{{ sizeHead }}</div>
             <sc-if value="{{ hasChart }}" hint-placeholder-val="{{ true }}"><div tabindex="0" role="button" sc-camel-on-click="{{ toggleSizeGrid }}" style="color:var(--link);font-size:13px;cursor:pointer;border-bottom:1px dashed var(--legacy-f2a33c)">Розмірна сітка</div></sc-if>
           </div>
-          <sc-if value="{{ hasProductColors }}"><div style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 16px"><sc-for list="{{ productColors }}" as="c"><button type="button" sc-camel-on-click="{{ c.pick }}" style="{{ c.style }}">{{ c.name }}</button></sc-for></div></sc-if><sc-if value="{{ isArea }}"><label class="area-control">Потрібна площа, м²<input type="number" min="0.01" max="10000" step="0.01" inputmode="decimal" value="{{ areaQty }}" sc-camel-on-change="{{ onAreaQty }}"></label><p class="area-summary">{{ areaSummary }}</p></sc-if>
+          <sc-if value="{{ isArea }}"><label class="area-control">Потрібна площа, м²<input type="number" min="0.01" max="10000" step="0.01" inputmode="decimal" value="{{ areaQty }}" sc-camel-on-change="{{ onAreaQty }}"></label><p class="area-summary">{{ areaSummary }}</p></sc-if>
 <sc-if value="{{ sizeButtons }}" hint-placeholder-val="{{ true }}">
           <div data-size-grid="1" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:8px;margin-bottom:10px;max-width:480px">
             <sc-for list="{{ item.sizes }}" as="s" hint-placeholder-count="5">
@@ -870,7 +870,7 @@
               <div tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ addProduct }}" style="flex:1 1 220px;min-height:50px;display:grid;place-items:center;background:var(--legacy-f2a33c);color:var(--button-text);font-family:'UAH','Oswald',sans-serif;font-size:16px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;cursor:pointer" style-hover="background:var(--legacy-ffc36b)">{{ addLabel }}</div>
             </sc-if>
             <sc-if value="{{ buyOff }}" hint-placeholder-val="{{ false }}">
-              <div aria-disabled="true" style="flex:1 1 220px;min-height:50px;display:grid;place-items:center;background:var(--legacy-1c221d);border:1px solid var(--legacy-2a322b);color:var(--legacy-5c6659);font-family:'UAH','Oswald',sans-serif;font-size:16px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;cursor:not-allowed">Немає в наявності</div>
+              <div aria-disabled="true" style="flex:1 1 220px;min-height:50px;display:grid;place-items:center;background:var(--legacy-1c221d);border:1px solid var(--legacy-2a322b);color:var(--legacy-5c6659);font-family:'UAH','Oswald',sans-serif;font-size:16px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;cursor:not-allowed">{{ addLabel }}</div>
             </sc-if>
           </div>
 
@@ -921,7 +921,7 @@
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">
             <div style="border:1px solid var(--legacy-2a322b);background:var(--legacy-141815);padding:14px">
               <div style="font-family:'UAH','Oswald',sans-serif;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--legacy-99a398);margin-bottom:6px">Доставка</div>
-              <div style="font-size:13.5px;color:var(--legacy-d3d9cf);line-height:1.55">Нова пошта: відділення, поштомат або курʼєр. Строк відправлення підтверджує менеджер; доставка за тарифом перевізника.</div>
+              <div style="font-size:13.5px;color:var(--legacy-d3d9cf);line-height:1.55">Нова пошта: відділення, поштомат або кур’єр. Строк відправлення підтверджує менеджер; доставка за тарифом перевізника.</div>
             </div>
             <div style="border:1px solid var(--legacy-2a322b);background:var(--legacy-141815);padding:14px">
               <div style="font-family:'UAH','Oswald',sans-serif;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--legacy-99a398);margin-bottom:6px">Обмін</div>
@@ -1023,16 +1023,16 @@
           <div style="border:1px solid var(--legacy-2a322b);background:var(--legacy-141815);padding:18px">
             <div style="font-family:'UAH','Oswald',sans-serif;font-size:13.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--legacy-99a398);margin-bottom:12px">Отримувач</div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">
-              <input name="name" aria-label="Імʼя та прізвище" autocomplete="name" value="{{ checkoutName }}" sc-camel-on-input="{{ onCheckoutName }}" placeholder="Імʼя та прізвище" style="min-width:0;background:var(--legacy-0f120f);border:1px solid var(--legacy-2a322b);padding:13px;color:var(--legacy-edefea);outline:none;font-size:14px;font-family:'IBM Plex Sans',sans-serif">
+              <input name="name" aria-label="Ім’я та прізвище" autocomplete="name" value="{{ checkoutName }}" sc-camel-on-input="{{ onCheckoutName }}" placeholder="Ім’я та прізвище" style="min-width:0;background:var(--legacy-0f120f);border:1px solid var(--legacy-2a322b);padding:13px;color:var(--legacy-edefea);outline:none;font-size:14px;font-family:'IBM Plex Sans',sans-serif">
               <input name="phone" aria-label="Телефон отримувача" type="tel" inputmode="tel" autocomplete="tel" value="{{ checkoutPhone }}" sc-camel-on-input="{{ onCheckoutPhone }}" placeholder="+380" style="min-width:0;background:var(--legacy-0f120f);border:1px solid var(--legacy-2a322b);padding:13px;color:var(--legacy-edefea);outline:none;font-size:14px;font-family:'IBM Plex Sans',sans-serif">
-              <input name="email" aria-label="Email (необовʼязково)" autocomplete="email" value="{{ checkoutEmail }}" sc-camel-on-input="{{ onCheckoutEmail }}" placeholder="Email (необовʼязково)" type="email" style="min-width:0;background:var(--legacy-0f120f);border:1px solid var(--legacy-2a322b);padding:13px;color:var(--legacy-edefea);outline:none;font-size:14px;font-family:'IBM Plex Sans',sans-serif">
-              <input name="recipient" value="{{ checkoutRecipient }}" sc-camel-on-input="{{ onCheckoutRecipient }}" placeholder="Отримувач інший? Вкажіть його ПІБ" style="min-width:0;background:var(--legacy-0f120f);border:1px solid var(--legacy-2a322b);padding:13px;color:var(--legacy-edefea);outline:none;font-size:14px;font-family:'IBM Plex Sans',sans-serif">
+              <input name="email" aria-label="Email (необов’язково)" autocomplete="email" value="{{ checkoutEmail }}" sc-camel-on-input="{{ onCheckoutEmail }}" placeholder="Email (необов’язково)" type="email" style="min-width:0;background:var(--legacy-0f120f);border:1px solid var(--legacy-2a322b);padding:13px;color:var(--legacy-edefea);outline:none;font-size:14px;font-family:'IBM Plex Sans',sans-serif">
+              <label data-checkout-recipient style="display:flex;flex-direction:column;gap:4px;min-width:0;font-size:12.5px;line-height:1.3;color:var(--legacy-99a398)"><span>Інший отримувач (необов’язково)</span><input name="recipient" aria-label="Інший отримувач, ПІБ (необов’язково)" value="{{ checkoutRecipient }}" sc-camel-on-input="{{ onCheckoutRecipient }}" placeholder="ПІБ отримувача" style="min-width:0;background:var(--legacy-0f120f);border:1px solid var(--legacy-2a322b);padding:13px;color:var(--legacy-edefea);outline:none;font-size:14px;font-family:'IBM Plex Sans',sans-serif"></label>
             </div>
             <sc-if value="{{ cartReminderAvailable }}"><div class="cart-reminder" data-cart-reminder="1"><label><input type="checkbox" checked="{{ cartReminderActive }}" sc-camel-on-change="{{ onCartReminderToggle }}">Нагадати про кошик на цей email, якщо не оформлю замовлення</label><small>Один лист через 24 години після останньої зміни кошика.</small></div></sc-if>
             <sc-if value="{{ cartReminderNotice }}"><p class="cart-reminder-note" role="status" data-cart-reminder-note="1">{{ cartReminderNotice }}</p></sc-if>
             <div style="color:var(--legacy-8a9487);font-size:12.5px;margin-top:8px;line-height:1.5">На цю адресу надійде підтвердження замовлення та посилання до особистого кабінету.</div>
             <textarea name="comment" value="{{ checkoutComment }}" sc-camel-on-input="{{ onCheckoutComment }}" placeholder="Коментар до замовлення: розміри, побажання, що уточнити" rows="2" style="width:100%;margin-top:10px;background:var(--legacy-0f120f);border:1px solid var(--legacy-2a322b);padding:13px;color:var(--legacy-edefea);outline:none;font-size:14px;font-family:'IBM Plex Sans',sans-serif;resize:vertical"></textarea>
-            <div style="margin-top:12px;padding:13px;border:1px solid var(--legacy-2a322b);background:var(--legacy-0f120f);color:var(--legacy-99a398);font-size:12.5px;line-height:1.55">На email надішлемо підтвердження замовлення. Дані використовуємо для його оформлення, доставки та звʼязку з вами.</div>
+            <div style="margin-top:12px;padding:13px;border:1px solid var(--legacy-2a322b);background:var(--legacy-0f120f);color:var(--legacy-99a398);font-size:12.5px;line-height:1.55">На email надішлемо підтвердження замовлення. Дані використовуємо для його оформлення, доставки та зв’язку з вами.</div>
           </div>
 
           <div style="border:1px solid var(--legacy-2a322b);background:var(--legacy-141815);padding:18px">
@@ -1149,7 +1149,7 @@
           <p style="font-size:12px;color:var(--legacy-99a398);line-height:1.5;margin:0">Натискаючи кнопку, ви приймаєте <a href="/offer" target="_blank" rel="noopener" style="color:var(--legacy-c7cec3)">публічну оферту</a>. Обробка даних для замовлення описана в <a href="/privacy" target="_blank" rel="noopener" style="color:var(--legacy-c7cec3)">політиці конфіденційності</a>.</p>
           <div tabindex="0" role="button" data-ui-button="center" aria-disabled="{{ orderSending }}" sc-camel-on-click="{{ placeOrder }}" style="padding:16px;background:var(--legacy-f2a33c);color:var(--button-text);text-align:center;font-family:'UAH','Oswald',sans-serif;letter-spacing:.1em;text-transform:uppercase;font-weight:600;font-size:16px;cursor:pointer" style-hover="background:var(--legacy-ffc36b)">{{ orderButtonLabel }}</div>
           
-          <div style="color:var(--legacy-8a9487);font-size:12px;line-height:1.5">Менеджер звʼяжеться з вами, щоб підтвердити наявність, розміри та строк відправлення. Оплачуйте після підтвердження замовлення.</div>
+          <div style="color:var(--legacy-8a9487);font-size:12px;line-height:1.5">Менеджер зв’яжеться з вами, щоб підтвердити наявність, розміри та строк відправлення. Оплачуйте після підтвердження замовлення.</div>
         </aside>
       </div>
       </sc-if>
@@ -1187,8 +1187,8 @@
       <div data-cat-grid="1" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(228px,1fr));gap:12px">
         <sc-for list="{{ searchResults }}" as="p" hint-placeholder-count="4">
             <div data-tile="1" style="border:1px solid var(--legacy-2a322b);background:var(--legacy-141815);display:flex;flex-direction:column;min-width:0;height:100%" style-hover="border-color:var(--legacy-4c5a36)">
-              <div style="position:relative;aspect-ratio:4/5;background:var(--photo-bg);border-radius:4px;overflow:hidden;margin:0;box-shadow:0 0 0 1px var(--legacy-3a423b)">
-                <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--legacy-6b706a);pointer-events:none">
+              <div data-photo-box="1" style="position:relative;aspect-ratio:4/5;background:var(--photo-bg);border-radius:4px;overflow:hidden;margin:0;box-shadow:0 0 0 1px var(--legacy-3a423b)">
+                <div data-photo-ph="1" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--legacy-6b706a);pointer-events:none">
                   <svg width="46" height="46" sc-camel-view-box="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path sc-camel-d="{{ p.silPath }}"></path></svg>
                   <div aria-hidden="true" style="font-size:12px;letter-spacing:.02em">Фото готується</div>
                 </div>
@@ -1232,8 +1232,8 @@
       <div data-cat-grid="1" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(228px,1fr));gap:12px">
         <sc-for list="{{ favItems }}" as="p" hint-placeholder-count="3">
             <div data-tile="1" style="border:1px solid var(--legacy-2a322b);background:var(--legacy-141815);display:flex;flex-direction:column;min-width:0;height:100%" style-hover="border-color:var(--legacy-4c5a36)">
-              <div style="position:relative;aspect-ratio:4/5;background:var(--photo-bg);border-radius:4px;overflow:hidden;margin:0;box-shadow:0 0 0 1px var(--legacy-3a423b)">
-                <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--legacy-6b706a);pointer-events:none">
+              <div data-photo-box="1" style="position:relative;aspect-ratio:4/5;background:var(--photo-bg);border-radius:4px;overflow:hidden;margin:0;box-shadow:0 0 0 1px var(--legacy-3a423b)">
+                <div data-photo-ph="1" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--legacy-6b706a);pointer-events:none">
                   <svg width="46" height="46" sc-camel-view-box="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path sc-camel-d="{{ p.silPath }}"></path></svg>
                   <div aria-hidden="true" style="font-size:12px;letter-spacing:.02em">Фото готується</div>
                 </div>

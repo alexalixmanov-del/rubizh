@@ -125,7 +125,7 @@ function npSaveProperties(array $shipment,array $origin,array $sender,array $del
 }
 function npRecipient(array $contact,array $delivery): array {
     $name=trim((string)(($contact['recipient']??'')?:$contact['name']));$parts=preg_split('/\s+/u',$name);
-    if(count($parts)<2)throw new RuntimeException('Для НП потрібні імʼя та прізвище одержувача.');
+    if(count($parts)<2)throw new RuntimeException('Для НП потрібні ім’я та прізвище одержувача.');
     $result=npApiCall('Counterparty','save',['FirstName'=>$parts[0],'LastName'=>$parts[1],'MiddleName'=>implode(' ',array_slice($parts,2)),'Phone'=>preg_replace('/\D/','',$contact['phone']),'Email'=>$contact['email'],'CounterpartyType'=>'PrivatePerson','CounterpartyProperty'=>'Recipient','CityRef'=>$delivery['city_ref']]);
     $r=$result[0]??[];if(!npRef($r['Ref']??''))throw new NpUnknownResult('НП не повернула ідентифікатор одержувача.');
     $persons=$r['ContactPerson']['data']??null;
