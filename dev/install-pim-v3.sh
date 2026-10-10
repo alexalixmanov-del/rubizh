@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # PIM contract 3 SITE update. Pinned archive + SHA256, private source backup with rollback command,
-# runtime schema, additive PIM v3 schema (only with a verified off-webroot DB backup), LOST_* identity
+# guarded order (P0) migration, runtime schema, additive PIM v3 schema (only with a verified off-webroot DB backup), LOST_* identity
 # compare and smoke checks. It never enables PIM v3 sync, payments or cron: those are separate commands.
 # Usage: install-pim-v3.sh SITE_ROOT DB_BACKUP_FILE DB_BACKUP_SHA256
 set -euo pipefail
@@ -30,6 +30,10 @@ unzip -p "$RUBIZH_TEMP/update.zip" rubizh/dev/catalog-inventory.php > "$RUBIZH_I
 unzip -p "$RUBIZH_TEMP/update.zip" rubizh/dev/deploy-update.sh > "$RUBIZH_TEMP/deploy.sh"
 bash "$RUBIZH_TEMP/deploy.sh" "$RUBIZH_ROOT" "$RUBIZH_TEMP/update.zip" "$RUBIZH_SHA" | tee "$RUBIZH_REPORTS/deploy.log"
 cd "$RUBIZH_ROOT"
+# Existing orders need the guarded order (P0) migration before runtime preparation; same verified backup.
+"$RUBIZH_PHP" dev/migrate-order-p0.php --plan > "$RUBIZH_REPORTS/order-p0-plan.json"
+RUBIZH_P0_DB=$("$RUBIZH_PHP" -r 'echo json_decode(file_get_contents($argv[1]),true)["database"];' "$RUBIZH_REPORTS/order-p0-plan.json")
+"$RUBIZH_PHP" dev/migrate-order-p0.php --apply --database="$RUBIZH_P0_DB" --backup-file="$RUBIZH_DB_REAL" --backup-sha256="$RUBIZH_DB_SHA" > "$RUBIZH_REPORTS/order-p0-apply.json"
 "$RUBIZH_PHP" dev/prepare-runtime.php
 "$RUBIZH_PHP" dev/migrate-pim-v3.php --site-config --plan > "$RUBIZH_REPORTS/pim-v3-plan.json"
 RUBIZH_DB_NAME=$("$RUBIZH_PHP" -r 'echo json_decode(file_get_contents($argv[1]),true)["database"];' "$RUBIZH_REPORTS/pim-v3-plan.json")

@@ -27,7 +27,9 @@ try{
  const before=await get('/api/pim/status',auth);
  const enablePlan=JSON.parse(php(['dev/pim-v3-enable.php','--plan','--backup-dir='+S+'/private/config-backups']).out);
  const enable=enablePlan.result==='NO_CHANGE'?enablePlan:JSON.parse(php(['dev/pim-v3-enable.php','--apply','--expect-sha256='+enablePlan.config_sha256,'--backup-dir='+S+'/private/config-backups']).out);
- const status=await get('/api/pim/status',auth),contracts=JSON.stringify(status.data||{});
+ // PHP OPcache revalidates the replaced config file within opcache.revalidate_freq (2 s by default): wait for it.
+ let status;for(let i=0;i<50;i++){status=await get('/api/pim/status',auth);if(/"contract_version":3/.test(JSON.stringify(status.data||{})))break;await new Promise(r=>setTimeout(r,200));}
+ const contracts=JSON.stringify(status.data||{});
  step('v3 enabled by dev/pim-v3-enable.php; /api/pim/status announces contract 3',enable.result==='APPLIED'&&!/"contract_version":3/.test(JSON.stringify(before.data||{}))&&status.status===200&&/"contract_version":3|"contracts":\[[^\]]*3/.test(contracts),{before:JSON.stringify(before.data||{}).slice(0,160),enable:enable.result,plan_before:enablePlan.current_pim_v3_sync,status:contracts.slice(0,200)});
  // 2. One fresh publication, PIM publisher chunking (100 models).
  let ack,lastBody;const t0=performance.now();for(const body of chunksFor(wire,{size:100})){lastBody=body;ack=await post('/api/pim/sync',body,auth);if(ack.status!==200)break;}

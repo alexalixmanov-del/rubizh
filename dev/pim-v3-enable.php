@@ -66,5 +66,5 @@ try{
         if(function_exists('opcache_invalidate'))opcache_invalidate($file,true);
         lint($php,$file);$after=readConfig($php,$file);if(($after[PIM_V3_KEY]??null)!==$want)throw new RuntimeException('REREAD_FAILED');
     }catch(Throwable $e){file_put_contents($file,$text,LOCK_EX);throw new RuntimeException('ROLLED_BACK: '.$e->getMessage());}
-    out($report+['result'=>'APPLIED','backup'=>$backup,'new_config_sha256'=>hash_file('sha256',$file),'rollback'=>'cp '.escapeshellarg($backup).' '.escapeshellarg($file)]);
+    out($report+['result'=>'APPLIED','backup'=>$backup,'new_config_sha256'=>hash_file('sha256',$file),'rollback'=>'cp '.escapeshellarg($backup).' '.escapeshellarg($file),'note'=>'The web server picks the new value up within opcache.revalidate_freq (usually 2 s); check GET /api/pim/status before publishing.']);
 }catch(Throwable $e){out(['result'=>'ERROR','error'=>$e->getMessage()],1);}

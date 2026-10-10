@@ -6,6 +6,7 @@ $MY -e "DROP DATABASE IF EXISTS prodcopy; CREATE DATABASE prodcopy CHARACTER SET
 zcat $S/private/backup-before.sql.gz | $MY prodcopy
 rm -rf $S/cache/*; cd $S/www
 $P dev/catalog-inventory.php > $S/private/inventory-before.json
+$P dev/migrate-order-p0.php --apply --database=prodcopy --backup-file=$S/private/backup-before.sql.gz --backup-sha256=$(sha256sum $S/private/backup-before.sql.gz|cut -d' ' -f1) > $S/private/order-p0.json
 $P dev/prepare-runtime.php >/dev/null
 $P dev/migrate-pim-v3.php --site-config --apply --database=prodcopy --backup-file=$S/private/backup-before.sql.gz --backup-sha256=$(sha256sum $S/private/backup-before.sql.gz|cut -d' ' -f1) > $S/private/apply.json
 $P dev/catalog-inventory.php --compare=$S/private/inventory-before.json > $S/private/inventory-after.json
