@@ -91,8 +91,8 @@ try{
  const raw=JSON.stringify({invoiceId:inv.invoice_id,status:'success',amount:inv.amount,ccy:980,reference:inv.reference,modifiedDate:new Date().toISOString()});
  const hook=await post('/shop/mono-webhook.php',raw,{'X-Sign':createSign('SHA256').update(raw).sign(privateKey).toString('base64')});
  step('payment: invoice (mock bank) → signed webhook → PAID',start.status===200&&hook.status===200&&sql(`SELECT CONCAT(payment_status,'/',pim_payment_state) FROM rubizh_customer_orders WHERE id=${pay.o?.data?.order?.id||0}`)==='paid/PAID');
- if(unknown){const r=await order([line(unknown.p,unknown.v)]);step('UNKNOWN real SKU → order and payment denied',r.q.status===400,{sku:unknown.v.sku,code:r.q.data?.error_code});}
- if(outOfStock){const r=await order([line(outOfStock.p,outOfStock.v)]);step('OUT_OF_STOCK real SKU → no ordinary checkout',r.q.status===400,{sku:outOfStock.v.sku});}
+ if(unknown){const r=await order([line(unknown.p,unknown.v)]);step('UNKNOWN real SKU → order and payment denied',[400,409].includes(r.q.status)&&r.q.data?.ok===false&&!r.o,{sku:unknown.v.sku,code:r.q.data?.error_code});}
+ if(outOfStock){const r=await order([line(outOfStock.p,outOfStock.v)]);step('OUT_OF_STOCK real SKU → no ordinary checkout',[400,409].includes(r.q.status)&&r.q.data?.ok===false&&!r.o,{sku:outOfStock.v.sku,status:r.q.status,code:r.q.data?.error_code});}
  if(preorder){const r=await order([line(preorder.p,preorder.v)]);step('PREORDER real SKU → manager confirmation',r.o?.data?.order?.order_state==='WAITING_CONFIRMATION',{sku:preorder.v.sku});}
  if(sizeReq){const opt=sizeReq.size_options[0],col=sizeReq.colors.find(c=>!opt.color_id||c.id===opt.color_id)||sizeReq.colors[0];const before=+sql(`SELECT COUNT(*) FROM variants WHERE product_id='${sizeReq.id}'`);
   const r=await order([{product_id:sizeReq.id,color_id:col.id,option_id:opt.option_id,size:opt.size,qty:1}]);

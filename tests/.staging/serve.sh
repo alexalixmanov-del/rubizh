@@ -20,7 +20,9 @@ if ! $M/root/usr/bin/mysql --socket=$M/mysql.sock -uroot -e 'select 1' >/dev/nul
   for i in $(seq 60); do $M/root/usr/bin/mysql --socket=$M/mysql.sock -uroot -e 'select 1' >/dev/null 2>&1 && break; timeout 1 tail -f /dev/null || true; done
 fi
 cat > $S/www/router.php <<'PHP'
-<?php $p=parse_url($_SERVER['REQUEST_URI'],PHP_URL_PATH);if(str_starts_with($p,'/api/')){require __DIR__.'/api/index.php';return;}if(preg_match('~^/product/~',$p)||$p==='/'){require __DIR__.'/storefront.php';return;}return false;
+<?php // Mirrors the production .htaccess routes.
+$p=parse_url($_SERVER['REQUEST_URI'],PHP_URL_PATH);if(str_starts_with($p,'/api/')){require __DIR__.'/api/index.php';return;}if($p==='/sitemap.xml'){require __DIR__.'/sitemap.php';return;}
+if($p==='/'||preg_match('~^/(?:product|catalog|kit|categories|porady)(?:/.*)?$|^/(?:offer|privacy)/?$~',$p)){require __DIR__.'/storefront.php';return;}return false;
 PHP
 [ -f $S/php.pid ] && kill "$(cat $S/php.pid)" 2>/dev/null || true
 (cd $S/www && PHP_CLI_SERVER_WORKERS=4 nohup php -d pdo_mysql.default_socket=$M/mysql.sock -d session.save_path=$S/cache -d memory_limit=2G -d max_execution_time=0 \
