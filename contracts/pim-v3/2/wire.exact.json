@@ -10,7 +10,7 @@
   "pim_version": "10.9.3",
   "currency": "UAH",
   "generated_at": "2026-10-09T12:00:00.000Z",
-  "catalog_revision": "bee08d9f3c05103a",
+  "catalog_revision": "828486bbbed51386",
   "category_catalog_hash": "0058a062ebd411c2",
   "categories": [
     {
@@ -2404,8 +2404,8 @@
           "availability_status": "UNKNOWN",
           "availability_source": null,
           "availability_confirmation": "UNKNOWN",
-          "inventory_mode": "QUANTITY",
-          "inventory_policy_id": "tactical-belt-quantity-candidate-v1",
+          "inventory_mode": "STATUS",
+          "inventory_policy_id": "tactical-belt-status-v1",
           "inventory_policy_version": 1,
           "inventory_policy_confirmed": false,
           "delivery_lead_time_days": null,

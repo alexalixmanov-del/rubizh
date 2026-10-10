@@ -1,0 +1,45 @@
+name: SITE CI
+# Reproducible checks only: unit, PIM v3 contract/sync/DTO, checkout and payment states, static QA, SEO,
+# release archive safety. Production dumps, supplier files and real-data rehearsals stay outside Git.
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: '1'
+        volumes:
+          - /tmp/mysqld:/run/mysqld
+        options: --health-cmd="healthcheck.sh --connect --innodb_initialized" --health-interval=5s --health-timeout=5s --health-retries=30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_mysql, mbstring, gd, curl, openssl, fileinfo, intl, zip, sodium
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci
+      - name: Chromium for browser checks (tests expect /usr/bin/chromium)
+        run: |
+          npx playwright install --with-deps chromium
+          sudo ln -sf "$(find ~/.cache/ms-playwright -path '*chrome-linux*/chrome' -type f | head -1)" /usr/bin/chromium
+      - name: PHP syntax
+        run: git ls-files '*.php' | xargs -n1 -P4 php -l > /dev/null
+      - name: Tests (MariaDB over the service socket)
+        env:
+          RUBIZH_TEST_MYSQL_SOCKET: /tmp/mysqld/mysqld.sock
+        run: sudo chmod 777 /tmp/mysqld && npm test

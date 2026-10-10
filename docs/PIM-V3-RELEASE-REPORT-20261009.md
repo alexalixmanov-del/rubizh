@@ -1,3 +1,8 @@
+> **SUPERSEDED. DO NOT USE FOR PRODUCTION.**
+> The only production procedure is **`docs/CATALOG-RESET-20261010.md`** (final release, clean catalog reset,
+> guarded `dev/pim-v3-enable.php`). This file is kept as history of the 09.10 release candidate; its commands
+> (including the whole-file config rewrite) must not be run.
+
 # PIM contract 3 → SITE: release report (09.10.2026)
 
 Статус: **подготовлено и проверено на staging-копии production SITE с реальным экспортом PIM.
