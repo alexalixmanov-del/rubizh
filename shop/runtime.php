@@ -47,7 +47,9 @@ function rubizhRateAllow(string $kind,string $identity,int $limit,int $window,?i
     // Fixed 4096 files; each holds at most 64 short-lived identities. Random URLs/IPs
     // cannot create an unlimited number of files on a shared disk.
     $file=rubizhRuntimeDir().'/rate-'.substr($hash,0,3).'.json';$handle=@fopen($file,'c+');
-    $locked=false;$deadline=microtime(true)+0.01;
+    // Concurrent requests from one address (one NAT, one page with parallel fetches) share this file: wait briefly
+    // for the sub-millisecond critical section instead of refusing them.
+    $locked=false;$deadline=microtime(true)+0.25;
     if($handle)do{if(flock($handle,LOCK_EX|LOCK_NB)){$locked=true;break;}usleep(1000);}while(microtime(true)<$deadline);
     if(!$locked){if($handle)fclose($handle);throw new RubizhHttpException(503,'Спробуйте за кілька секунд.',2);}
     try {
