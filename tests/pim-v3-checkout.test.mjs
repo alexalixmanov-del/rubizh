@@ -11,7 +11,7 @@ async function order(site,s,lines,payment='card'){
 }
 const sku=(id,s,qty=1)=>({product_id:id,color_id:colorOf(id,s),sku:s,qty});
 async function setup(){
- const site=await startSite({extraConfig:",'mono_mock'=>true,'environment'=>'staging'"});
+ const site=await startSite({extraConfig:",'mono_mock'=>true,'environment'=>'staging','staff_roles'=>['aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'=>'OWNER']"});
  assert.equal((await publish(site,wire)).status,200);
  const {publicKey,privateKey}=generateKeyPairSync('ec',{namedCurve:'prime256v1'});
  site.sql(`INSERT INTO meta(k,v) VALUES('mono_public_key','${Buffer.from(publicKey.export({type:'spki',format:'pem'})).toString('base64')}') ON DUPLICATE KEY UPDATE v=VALUES(v)`);
@@ -42,8 +42,8 @@ test('IN_STOCK real SKU: immediate CONFIRMED order, one invoice, browser return 
 test('negative paths: UNKNOWN and OUT_OF_STOCK refused; PREORDER and size option need confirmation; no fake SKU; forged data rejected',{skip,timeout:180000},async()=>{
  const site=await setup();
  try{const s=await shopper(site);const orders=()=>site.sql('SELECT COUNT(*) n FROM rubizh_customer_orders')[0].n;
-  for(const [name,line,code] of [['UNKNOWN',{...sku('m-belt','RUB-F0030'),payment_allowed:true,price:1},'UNAVAILABLE'],['OUT_OF_STOCK',sku('m-jacket','RUB-F0004'),'UNAVAILABLE'],['wrong color for SKU',{...sku('m-jacket','RUB-F0001'),color_id:colorOf('m-jacket','RUB-F0003')},'INVALID_VARIANT'],['no color on a multi-color model',{product_id:'m-jacket',sku:'RUB-F0001',qty:1},'INVALID_VARIANT'],['option with invented SKU',{product_id:'m-pants',color_id:colorOf('m-pants','RUB-F0010'),option_id:model('m-pants').size_options[3].option_id,sku:'FAKE-48',qty:1},'INVALID_VARIANT'],['SKU of another model',{product_id:'m-belt',sku:'RUB-F0001',qty:1},'INVALID_VARIANT']]){
-   const before=orders();const r=await order(site,s,[line]);assert.equal(r.quote.status,400,name);assert.equal(r.quote.data.error_code,code,name+' '+JSON.stringify(r.quote.data));assert.equal(orders(),before,name);
+  for(const [name,line,code] of [['UNKNOWN',{...sku('m-belt','RUB-F0030'),payment_allowed:true,price:1},'SKU_UNAVAILABLE'],['OUT_OF_STOCK',sku('m-jacket','RUB-F0004'),'SKU_UNAVAILABLE'],['wrong color for SKU',{...sku('m-jacket','RUB-F0001'),color_id:colorOf('m-jacket','RUB-F0003')},'SKU_UNAVAILABLE'],['no color on a multi-color model',{product_id:'m-jacket',sku:'RUB-F0001',qty:1},'SKU_UNAVAILABLE'],['option with invented SKU',{product_id:'m-pants',color_id:colorOf('m-pants','RUB-F0010'),option_id:model('m-pants').size_options[3].option_id,sku:'FAKE-48',qty:1},'SKU_UNAVAILABLE'],['SKU of another model',{product_id:'m-belt',sku:'RUB-F0001',qty:1},'SKU_UNAVAILABLE']]){
+   const before=orders();const r=await order(site,s,[line]);assert.equal(r.quote.status,409,name);assert.equal(r.quote.data.error_code,code,name+' '+JSON.stringify(r.quote.data));assert.equal(orders(),before,name);
   }
   const option=model('m-pants').size_options.find(o=>o.size==='48');
   const req=await order(site,s,[{product_id:'m-pants',color_id:colorOf('m-pants','RUB-F0010'),option_id:option.option_id,size:'48',qty:1}]);
@@ -59,7 +59,7 @@ test('negative paths: UNKNOWN and OUT_OF_STOCK refused; PREORDER and size option
   site.sql("UPDATE variants SET pim_stock_data_age_hours=500,pim_stale_source=1 WHERE sku='RUB-F0002'");
   assert.equal((await order(site,s,[sku('m-jacket','RUB-F0002')])).order.data.order.order_state,'CONFIRMED');
   site.sql("UPDATE variants SET pim_expires_at=1000 WHERE sku='RUB-F0002'");
-  assert.equal((await order(site,s,[sku('m-jacket','RUB-F0002')])).quote.data.error_code,'UNAVAILABLE');
+  assert.equal((await order(site,s,[sku('m-jacket','RUB-F0002')])).quote.data.error_code,'SKU_UNAVAILABLE');
  }finally{site.stop();}
 });
 
@@ -70,7 +70,11 @@ test('mixed cart: whole order WAITING_CONFIRMATION, manager resolves the size re
   assert.equal(r.quote.data.quote.order_mode,'REQUEST');assert.equal(r.order.status,200,JSON.stringify(r.order.data));
   const id=r.order.data.order.id;assert.equal(r.order.data.order.order_state,'WAITING_CONFIRMATION');
   assert.equal((await site.post('/shop/payment-start.php',{csrf:s.csrf,order_id:id},s.h)).status,400);
-  const confirm=php(`define('RUBIZH_AUTH_NO_SESSION',true);require '${site.site}/auth/bootstrap.php';$db=shopStoreDatabase();$GLOBALS['rubizh_request_resolution']=[1=>'RUB-F0010'];npConfirm($db,${id},str_repeat('a',32),true,false,'');echo 'ok';`);
+  // PIM must authorize the real SKU before a staff member can confirm payment.
+  const updated=structuredClone(wire),v=updated.products.find(p=>p.id==='m-pants').variants[0];
+  Object.assign(v,{size_status:'EXACT_SIZE',size_normalized:'50',size_display:'50',availability:'IN_STOCK',availability_status:'IN_STOCK',payment_allowed:true,requires_order_confirmation:false,source_binding_status:'CONFIRMED',binding_confirmation_required:false,size_confirmation_required:false});
+  assert.equal((await publish(site,updated)).status,200);
+  const confirm=php(`define('RUBIZH_AUTH_NO_SESSION',true);require '${site.site}/auth/bootstrap.php';$db=shopStoreDatabase();$GLOBALS['rubizh_request_resolution']=[1=>'RUB-F0010'];$db->beginTransaction();$o=npOrder($db,${id});$v=shopValidateOrder($db,$o['items'],'confirmation',$o,[1=>'RUB-F0010']);$db->rollBack();npConfirm($db,${id},str_repeat('a',32),true,false,'',['quote_hash'=>$v['quote_hash'],'reason'=>'Розмір і ціну погоджено']);echo 'ok';`);
   assert.match(confirm.stdout,/ok/);
   const row=site.sql('SELECT total,status,pim_order_state,items_json FROM rubizh_customer_orders WHERE id='+id)[0];
   assert.equal(row.pim_order_state,'CONFIRMED');assert.equal(row.status,'confirmed');assert.equal(+row.total,2860+1910);
@@ -87,7 +91,7 @@ test('price change after order: payment refused until a new agreed total; saved 
   const {order:o}=await order(site,s,[sku('m-jacket','RUB-F0003')]);const id=o.data.order.id;
   const changed=structuredClone(wire);const v=changed.products.find(p=>p.id==='m-jacket').variants.find(v=>v.sku==='RUB-F0003');v.price=v.site_price=2990;
   assert.equal((await publish(site,changed)).status,200);
-  const pay=await site.post('/shop/payment-start.php',{csrf:s.csrf,order_id:id},s.h);assert.equal(pay.status,400);assert.match(pay.data.error,/Ціна змінилася/);
+  const pay=await site.post('/shop/payment-start.php',{csrf:s.csrf,order_id:id},s.h);assert.equal(pay.status,409);assert.equal(pay.data.error_code,'PRICE_CHANGED');assert.match(pay.data.error,/Ціна змінилася/);
   assert.equal(+site.sql('SELECT total FROM rubizh_customer_orders WHERE id='+id)[0].total,2860);assert.equal(site.sql('SELECT COUNT(*) n FROM rubizh_mono_invoices WHERE order_id='+id)[0].n,0);
  }finally{site.stop();}
 });

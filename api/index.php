@@ -4,6 +4,7 @@
 //   Сайт (открыто):  GET /api/categories · GET /api/catalog · GET /api/product/{slug} · GET /api/health
 //   Планировщик:     GET /api/cron/photos?key=...
 declare(strict_types=1);
+if(preg_match('~^/api/staff(?:/|$)~',parse_url($_SERVER['REQUEST_URI']??'/',PHP_URL_PATH)?:'/')){require __DIR__.'/staff/index.php';exit;}
 require __DIR__ . '/lib.php';
 ini_set('display_errors', '0');
 set_exception_handler(function (Throwable $e) { error_log('rubizh api: '.get_class($e).' code '.(string)$e->getCode());header('Cache-Control: no-store');if($e instanceof RubizhHttpException){if($e->retryAfter)header('Retry-After: '.$e->retryAfter);fail($e->status,$e->getMessage());}fail(500,'Ошибка сервера. Попробуйте позже.'); });

@@ -10,6 +10,9 @@ jobs:
   test:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: site
     services:
       mariadb:
         image: mariadb:11.4
@@ -20,6 +23,16 @@ jobs:
         options: --health-cmd="healthcheck.sh --connect --innodb_initialized" --health-interval=5s --health-timeout=5s --health-retries=30
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: site
+          # The rollback rehearsal reads this repository's pre-CRM revision.
+          fetch-depth: 0
+      - name: Pinned CRM frontend used by the real API browser tests
+        uses: actions/checkout@v4
+        with:
+          repository: alexalixmanov-del/crm.rubizh
+          ref: b0e2f9359a05ec835a83d64bb9bcdc2c97487a50
+          path: crm
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
@@ -29,10 +42,17 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: site/package-lock.json
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - run: npm ci
+      - name: CRM frozen dependencies, TypeScript build and formatting
+        working-directory: crm
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build
+          npm run format:check
       - name: Chromium for browser checks (tests expect /usr/bin/chromium)
         run: |
           npx playwright install --with-deps chromium
@@ -40,6 +60,9 @@ jobs:
       - name: Test PHP runtime layout (tests address /workspace/php-runtime/root/usr/bin/php8.4 with explicit -n/-d extension flags)
         run: |
           sudo mkdir -p /workspace/php-runtime/root/usr/bin /workspace/php-runtime/root/usr/lib/php/20240924
+          sudo mkdir -p /workspace/reports
+          sudo chown "$(id -u):$(id -g)" /workspace/reports
+          sudo ln -s "$GITHUB_WORKSPACE/crm" /workspace/crm.rubizh
           sudo install -m755 tests/helpers/php-runtime-shim.sh /workspace/php-runtime/root/usr/bin/php8.4
           /workspace/php-runtime/root/usr/bin/php8.4 -n -d extension=/x/pdo.so -d extension=/x/mysqlnd.so -d extension=/x/pdo_mysql.so -r 'echo implode(",",PDO::getAvailableDrivers()),"\n";'
       - name: PHP syntax
@@ -48,3 +71,10 @@ jobs:
         env:
           RUBIZH_TEST_MYSQL_SOCKET: /tmp/mysqld/mysqld.sock
         run: sudo chmod 777 /tmp/mysqld && npm test
+      - name: Verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-crm-verification-${{ github.sha }}
+          path: /workspace/reports
+          if-no-files-found: warn
