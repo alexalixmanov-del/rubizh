@@ -61,7 +61,9 @@ test('P-6: repeat order adds current variants once — an SKU already in the car
   const cart=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('rubizh.cart')||'[]').map(l=>[l.sku,l.qty||1]));
   await page.goto(site.base+'/#cart?repeat='+ids[0]);await page.waitForFunction(()=>JSON.parse(localStorage.getItem('rubizh.cart')||'[]').length>0,null,{timeout:20000});
   assert.deepEqual(await cart(),[['RUB-F0001',1]]);
-  await page.goto(site.base+'/');await page.goto(site.base+'/#cart?repeat='+ids[0]);await page.waitForTimeout(1500);
+  await page.goto(site.base+'/');await page.goto(site.base+'/#cart?repeat='+ids[0]);
+  // Wait for the repeat request itself, not a fixed pause (slow under a loaded test run).
+  await page.waitForFunction(()=>JSON.parse(localStorage.getItem('rubizh.cart')||'[]').reduce((n,l)=>n+(l.qty||1),0)>=2,null,{timeout:20000}).catch(()=>{});
   assert.deepEqual(await cart(),[['RUB-F0001',2]],'the same SKU is merged');
  }finally{await browser?.close();site.stop();}
 });

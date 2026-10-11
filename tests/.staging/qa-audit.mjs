@@ -7,7 +7,7 @@
 import {chromium} from '/Users/l/Projects/rubizh/node_modules/playwright/index.mjs';
 import {startQaSite,png} from './qa-fixture.mjs';
 import {writeFileSync,mkdirSync,readFileSync} from 'node:fs';
-import {spawnSync} from 'node:child_process';
+import {spawn} from 'node:child_process';
 const [out,tools]=process.argv.slice(2);mkdirSync(out,{recursive:true});
 const axeSrc=readFileSync(tools+'/node_modules/axe-core/axe.min.js','utf8');
 const {site,pages}=await startQaSite();
@@ -57,7 +57,9 @@ try{
 // Lighthouse uses its own Chrome; img.test photos cannot resolve there, so image-loading audits are not meaningful.
  for(const [name,path] of pages.filter(([n])=>['home','catalog','subcategory','product','kit'].includes(n)))for(const preset of ['mobile','desktop']){
   const file=`${out}/lh-${name}-${preset}.json`;
-  const r=spawnSync(tools+'/node_modules/.bin/lighthouse',[site.base+path,'--quiet','--output=json','--output-path='+file,'--only-categories=performance,accessibility,best-practices,seo','--chrome-flags=--headless=new --no-sandbox',...(preset==='desktop'?['--preset=desktop']:[])],{env:{...process.env,CHROME_PATH:process.env.CHROMIUM_PATH},encoding:'utf8',timeout:180000});
+  // Lighthouse can stall on a page; its whole process group is killed after 3 minutes so the audit always finishes.
+  const r=await new Promise(res=>{const p=spawn(tools+'/node_modules/.bin/lighthouse',[site.base+path,'--quiet','--output=json','--output-path='+file,'--only-categories=performance,accessibility,best-practices,seo','--max-wait-for-load=30000','--chrome-flags=--headless=new --no-sandbox',...(preset==='desktop'?['--preset=desktop']:[])],{env:{...process.env,CHROME_PATH:process.env.CHROMIUM_PATH},detached:true,stdio:['ignore','ignore','pipe']});let err='';p.stderr.on('data',d=>err+=d);
+   const t=setTimeout(()=>{try{process.kill(-p.pid,'SIGKILL');}catch{}res({status:-1,stderr:'timeout after 180 s'});},180000);p.on('exit',c=>{clearTimeout(t);res({status:c,stderr:err});});});
   if(r.status!==0){report.lighthouse.push({page:name,preset,error:(r.stderr||'').slice(-300)});continue;}
   const j=JSON.parse(readFileSync(file,'utf8')),a=j.audits;
   report.lighthouse.push({page:name,preset,scores:Object.fromEntries(Object.entries(j.categories).map(([k,c])=>[k,Math.round(c.score*100)])),

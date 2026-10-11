@@ -1,6 +1,6 @@
 # 03 — DEFECT REGISTER
 
-Обновлено 2026-10-11 (сессия 2: P2/P3, QA). Статусы: **FIXED** — исправлено + regression test зелёный локально; **OPEN** — не исправлено; **DECISION** — нужен ответ владельца; **NO-DEFECT** — проверено, дефекта нет; **PIM** — только предложение, PIM не трогаем.
+Обновлено 2026-10-11 (сессия 2: P2/P3, QA, ADDENDUM №2, независимое ревью). Статусы: **FIXED** — исправлено + regression test зелёный локально; **OPEN** — не исправлено; **DECISION** — нужен ответ владельца; **NO-DEFECT** — проверено, дефекта нет; **PIM** — только предложение, PIM не трогаем.
 
 Все исправления в ветке `hardening/site-release-20261011`. Тесты: `tests/release-hardening.test.mjs`, `tests/color-gallery.test.mjs`, `tests/ui-hardening.test.mjs`, `tests/seo-hardening.test.mjs`, добавления в `tests/pim-v3-sync.test.mjs`, `tests/pim-v3-browser.test.mjs`.
 
@@ -15,7 +15,7 @@
 | D-06 | P2 | `index.html`, `recently-viewed.2026101101.css` | Recently viewed: широкие низкие карточки, crop | **FIXED**: 4:5, contain, фиксированные треки, мобильная карусель | ui-hardening |
 | D-07 | P2 | `shop-client` | Recently viewed: порядок, дубли, пустой заголовок, нет сохранения, просмотр по прямой ссылке не учитывался | **FIXED**: localStorage `rubizh.seen`, newest first, учёт в componentDidUpdate, удалённые товары вычищаются | ui-hardening |
 | D-08 | P2 | `category-carousel.2026101101.css`, `shop-client` | Нет мобильной карусели категорий; resize-обработчик ставил 4/стр | **FIXED** (≤699px; desktop без изменений) | ui-hardening (360/390/430/desktop), category-directory (обновлён) |
-| D-09 | P2 | `assets/category-directory.2026100802.js` | 19 активных категорий без баннера; на Drive нет неиспользованных файлов (все 49 сопоставлены 08.10) | **OPEN / нужны файлы** — список ниже; генерация не выполнялась | — |
+| D-09 | P2 | `assets/category-directory.2026100802.js` | 19 активных категорий без баннера; на Drive (перепроверено 11.10) те же 49 файлов, все сопоставлены | **OPEN / нужны файлы** — перечень и промпты: `11-BANNER_PROMPTS.md`; генерация не выполнялась | — |
 | D-10 | P2 | `auth/account.php` | Кабинет показывал ТТН отменённой/возвращённой/некорректной отправки | **FIXED** | release-hardening + браузерный QA кабинета |
 | D-11 | P2 | `shop/pricing-policy.php:79` | Kit-цена для произвольной `kit_group` (≥2 шт одного SKU), ограничено ценовым полом PIM | **DECISION Q-8**: правило «что считается комплектом» — бизнес-решение; переносится в ТЗ конструктора комплектов (код не менялся) | — |
 | D-12 | — | `shop/mono-lib.php` | Поздняя оплата отменённого заказа | **NO-DEFECT**: флаг `STATE_CONFLICT` (существующий тест) | p0-integration |
@@ -39,7 +39,16 @@
 | D-31 | P3 (a11y) | `index.html` | `aria-label` на `div` без роли в слотах комплекта (axe `aria-prohibited-attr`) | **FIXED**: `role=group` | a11y-hardening |
 | D-32 | P3 (a11y) | `storefront.php` | Серверная 404: ссылка цвета браузера по умолчанию на тёмном фоне (контраст 2.07) | **FIXED**: `#F2A33C` | a11y-hardening |
 | D-33 | P2 (a11y) | `index.html` | «Перейти до вмісту» без цели на странице товара и в «Порадах» (WCAG 2.4.1; Lighthouse `skip-link`) | **FIXED**: `#main-content` на всех видах | a11y-hardening |
-| D-34 | P3 | `index.html` | (а) «Шукати» с пустым запросом ничего не делает и не ставит фокус в поле; (б) `aria-label` не содержит видимый текст: «Кошик» vs «Кошик 0», логотип (WCAG 2.5.3); (в) цели < 24 px: хлебные крошки, «Налаштування cookie» (WCAG 2.5.8) | OPEN — шапка/поиск входят в будущее ТЗ главной; предлагаю решить там | — |
+| D-34 | P3 | `index.html` | (а) **FIXED** (ADDENDUM A-4, фокус в поле); (б),(в) — в рамках шапки. Исходно: «Шукати» с пустым запросом ничего не делает и не ставит фокус в поле; (б) `aria-label` не содержит видимый текст: «Кошик» vs «Кошик 0», логотип (WCAG 2.5.3); (в) цели < 24 px: хлебные крошки, «Налаштування cookie» (WCAG 2.5.8) | OPEN — шапка/поиск входят в будущее ТЗ главной; предлагаю решить там | — |
+| D-35 | P3 | `auth/index.php:193` | Ошибка загрузки кабинета перехватывается без записи в лог (диагностика вслепую) | OPEN (наблюдаемость; без изменения поведения) | — |
+| D-36 | P3 | `shop/customer-states.php` | Новый заказ до подтверждения менеджером показывал «Оплата: Очікує оплати», хотя оплата ещё недоступна | **FIXED**: «Оплата після підтвердження» | addendum-account |
+| D-37 | P2 | `shop-client` (поиск) | Пробелы вокруг запроса из URL давали 0 результатов | **FIXED** (ADDENDUM C-4) | addendum-catalog |
+| D-38 | P3 | `shop-client` (каталог) | При пустом поиске одновременно показывались два противоречивых пустых состояния | **FIXED** (ADDENDUM C-4) | addendum-catalog |
+| D-39 | P3 | `shop-client` (повтор заказа) | Повтор заказа добавлял второй строкой SKU, уже лежащий в корзине | **FIXED** (ADDENDUM P-6) | addendum-account |
+| RV-1 | P2 | `shop-client` `storeOrderKey` | Независимое ревью: после успешного заказа ключ жил 15 мин → осознанная повторная покупка возвращала старый заказ | **FIXED**: ключ освобождает только вкладка, оформившая заказ (или открытая позже); устаревшая вкладка по-прежнему получает тот же заказ | release-hardening |
+| RV-2 | P3 | `shop/mono-lib.php` `monoWorkerRun` | Независимое ревью: зависшие `awaiting_webhook` могли вытеснять новые счета из очереди воркера | **FIXED**: отдельная очередь с собственным лимитом | release-hardening |
+| RV-3 | P3 | `shop-client` `storeCardCover` | Независимое ревью: карточка legacy могла взять фото другого цвета, если у цвета по умолчанию нет своих | **FIXED**: фото не заимствуется | color-gallery |
+| RV-4 | P2 | `shop/mono-lib.php` `monoInvalidateFailed` | Независимое ревью (открытый вопрос): отказ банка в `invoice/remove` навсегда блокировал повторную оплату | **FIXED** по статусу банка: `expired` → повтор; иначе блок + аудит `mono_invoice_remove_refused` для менеджера. **Требует проверки на sandbox monobank** (реальная реакция `remove` на `failure`) | release-hardening |
 | R-1 | риск | MariaDB ≥ 11.6 | `innodb_snapshot_isolation=ON`: последняя единица → PDOException вместо `SKU_UNAVAILABLE` (локально на MariaDB 13). Проверить версию на хостинге перед обновлением СУБД | OPEN | p0-integration (REPEATABLE READ) |
 | PIM-1 | — | `pim.rubizh/app/lib/simple-ui.inc.js:95` | Вариант без своих фото получает всю галерею — SITE трактует как «неизвестно» → placeholder | PIM | — |
 | PIM-2 | — | `pim.rubizh/app/lib/final-workflow.inc.js:190` | Модель, потерявшая READY, не скрывается | PIM | — |
