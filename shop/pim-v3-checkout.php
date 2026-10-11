@@ -24,7 +24,7 @@ function pimV3ResolveLine(PDO $db,array $line,array $model,bool $lock,array &$to
     if($colorId===''&&count($active)>1)throw new ShopPricingException('INVALID_VARIANT','Оберіть колір.');
     $qty=shopQuantity($line['qty']??null,'pcs');
     $base=['product_id'=>$model['id'],'model_id'=>$model['pim_model_id']??$model['id'],'contract_version'=>3,'name'=>$model['name'],'slug'=>$model['slug'],'has_docs'=>false,'docs_note'=>'',
-        'qty'=>$qty,'sale_unit'=>'pcs','qty_label'=>$qty.' шт.','catalog_version'=>shopPricingCatalogVersion($db),'kit_group'=>customerField($line,'kit_group',64)];
+        'qty'=>$qty,'sale_unit'=>'pcs','qty_label'=>$qty.' шт.','catalog_version'=>shopPricingCatalogVersion($db),'kit_group'=>customerField($line,'kit_group',64),'kit_units'=>shopKitUnits($line)];
     if($optionId!==''){
         if($sku!=='')throw new ShopPricingException('INVALID_VARIANT','Заявка на розмір не має SKU.');
         if(($line['price_mode']??'retail')!=='retail')throw new ShopPricingException('DISCOUNT_NOT_ALLOWED','Спеціальна ціна для заявки недоступна.');

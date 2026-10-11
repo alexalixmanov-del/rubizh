@@ -38,7 +38,7 @@ try{
         $calc=['lines'=>$quote['lines'],'subtotal'=>$quote['subtotal']];$discount=$quote['discount'];$shipping=0;$total=$quote['total'];$lineAmounts=array_column($quote['lines'],'amount');
         $expected=$input['expected_total']??null;
         try{$expectedCents=shopMoney($expected);}catch(ShopPricingException $e){$expectedCents=null;}
-        if($expectedCents!==shopMoney($total)||isset($input['catalog_version'])&&$input['catalog_version']!==$quote['catalog_version']){$db->rollBack();shopJson(['ok'=>false,'error_code'=>'PRICE_CHANGED','error'=>'Ціна або версія каталогу змінилася. Перевірте новий розрахунок та підтвердьте.','quote'=>$quote],409);}
+        if($expectedCents!==shopMoney($total)||isset($input['catalog_version'])&&$input['catalog_version']!==$quote['catalog_version']){$db->rollBack();$kitNote=shopKitExplanation($quote['lines']);shopJson(['ok'=>false,'error_code'=>'PRICE_CHANGED','error'=>($kitNote!==''?$kitNote.' ':'').'Ціна або версія каталогу змінилася. Перевірте новий розрахунок та підтвердьте.','quote'=>$quote],409);}
         $decision=pimV3OrderDecision($raw,$pay);
         $number='RB-'.gmdate('ymd').'-'.strtoupper(bin2hex(random_bytes(4)));$label=['branch'=>'Нова пошта · відділення','postomat'=>'Нова пошта · поштомат','courier'=>'Нова пошта · кур’єр'][$type].' · '.$city.' · '.$address;
         $db->prepare("INSERT INTO rubizh_customer_orders(external_id,email,order_number,status,payment_status,total,currency,items_json,delivery_label,created_at,updated_at) VALUES(?,?,?,?,?,?,'UAH',?,?,UTC_TIMESTAMP(),UTC_TIMESTAMP())")->execute(['web:'.$key,$email,$number,$decision['legacy_status'],$pay==='cod'?'cod':'pending',$total,json_encode($calc['lines'],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),$label]);

@@ -108,11 +108,22 @@ function shopResolveCatalogLines(PDO $db,array $input,bool $lock=false,int $excl
         $resolved[]=['product_id'=>$productId,'sku'=>$sku,'variant_id'=>(string)($extra['variant_id'] ?? $sku),'name'=>$v['name'],'slug'=>$v['slug'],
             'has_docs'=>!empty($v['has_docs']),'docs_note'=>!empty($v['has_docs'])?'Протокол випробувань додається до замовлення; до покупки надаємо за запитом':'','size'=>$size,'color'=>shopColor($v['color']),'variant'=>trim($size.' · '.$v['color'],' ·'),
             'qty'=>$qty,'sale_unit'=>$unit,'qty_label'=>$qty.($unit==='m2'?' м²':' шт.'),'price'=>shopMoneyValue(shopMoney($v['price'])),'kit_price'=>$policy===null||$policy['kit_cents']===null?null:shopMoneyValue($policy['kit_cents']),
-            '_pricing'=>$policy,'_approved_wholesale_tier'=>$tier,'price_mode'=>$mode,'catalog_version'=>shopPricingCatalogVersion($db),'kit_group'=>$group,'stock_confirmed'=>isset($extra['stock'])&&is_numeric($extra['stock']),'request_state'=>$v['availability']==='order'?(!empty($extra['preorder_confirmed'])?'confirmed_preorder':'order_on_request'):'stock_check','availability'=>$v['availability'],'payment_allowed'=>$v['availability']==='in','requires_order_confirmation'=>$v['availability']!=='in','fulfillment_supplier'=>npSupplierCode($sku,$productId,(string)($v['fulfillment_supplier_name']??''))];
+            '_pricing'=>$policy,'_approved_wholesale_tier'=>$tier,'price_mode'=>$mode,'catalog_version'=>shopPricingCatalogVersion($db),'kit_group'=>$group,'kit_units'=>shopKitUnits($line),'stock_confirmed'=>isset($extra['stock'])&&is_numeric($extra['stock']),'request_state'=>$v['availability']==='order'?(!empty($extra['preorder_confirmed'])?'confirmed_preorder':'order_on_request'):'stock_check','availability'=>$v['availability'],'payment_allowed'=>$v['availability']==='in','requires_order_confirmation'=>$v['availability']!=='in','fulfillment_supplier'=>npSupplierCode($sku,$productId,(string)($v['fulfillment_supplier_name']??''))];
     }
     $definitions=json_decode((string)$db->query("SELECT v FROM meta WHERE k='site_kits'")->fetchColumn(),true)?:[];
-    shopPricingKitComposition($resolved,array_column($definitions,null,'id'));
-    return $resolved;
+    // Each priced line names the cart line it came from (a kit line may be split into kit + retail parts).
+    foreach($resolved as $i=>&$r)$r['input_index']=$i;unset($r);
+    // Placed orders are never re-priced by newer kit rules: kit lines stored before Q-8 carry no kit_status.
+    if($excludeOrder>0)foreach($resolved as $i=>&$r)if(($r['kit_group']??'')!==''&&!array_key_exists('kit_status',is_array($input[$i]??null)?$input[$i]:[]))$r['kit_legacy']=true;unset($r);
+    return shopPricingKitComposition(shopKitLineSlots($db,$resolved),array_column($definitions,null,'id'));
+}
+// «Для підрозділу»: number of kits (1–99) sent with every line of the kit; anything else is refused by the composition.
+function shopKitUnits(array $line): int {$n=$line['kit_units']??1;return is_int($n)?$n:(is_string($n)&&preg_match('/^[1-9][0-9]?$/D',$n)?(int)$n:-1);}
+// Q-8: each kit line's builder section, computed exactly like the kit builder's catalog filter (shopKitSlotSql).
+function shopKitLineSlots(PDO $db,array $lines): array {
+    $ids=array_values(array_unique(array_map(fn($l)=>(string)$l['product_id'],array_filter($lines,fn($l)=>($l['kit_group']??'')!==''))));if(!$ids)return $lines;
+    $q=$db->prepare('SELECT p.id,'.shopKitSlotSql().' AS slot FROM products p WHERE p.id IN ('.implode(',',array_fill(0,count($ids),'?')).')');$q->execute($ids);$slots=$q->fetchAll(PDO::FETCH_KEY_PAIR);
+    foreach($lines as &$l)if(($l['kit_group']??'')!=='')$l['kit_slot']=(string)($slots[$l['product_id']]??'small');unset($l);return $lines;
 }
 function shopSendOrderMail(PDO $db,int $orderId): string {
     $claim=$db->prepare("UPDATE rubizh_order_mail SET status='sending',attempts=attempts+1,locked_at=UTC_TIMESTAMP(),updated_at=UTC_TIMESTAMP() WHERE order_id=? AND attempts<5 AND ((status='pending' AND next_at<=UTC_TIMESTAMP()) OR (status='sending' AND locked_at<UTC_TIMESTAMP()-INTERVAL 5 MINUTE))");$claim->execute([$orderId]);

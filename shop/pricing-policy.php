@@ -71,16 +71,62 @@ function shopPricingUnit(array $line): int {
     if($amount<$p['minimum_cents'])throw new ShopPricingException('DISCOUNT_NOT_ALLOWED','Ціна нижча за дозволену PIM.');
     return $amount;
 }
-function shopPricingKitComposition(array $lines,array $definitions=[]): void {
-    $groups=[];foreach($lines as $l)if(($l['price_mode']??'retail')==='kit')$groups[$l['kit_group']??''][]=$l;
-    foreach($groups as $id=>$members){
+/** Buyer-facing reason when kit prices were not applied as the cart expected (Q-8, K6). */
+function shopKitExplanation(array $lines): string {
+    $s=array_column($lines,'kit_status');
+    if(in_array('needs_sections',$s,true))return 'Ціну комплекту не застосовано: додайте річ ще з одного розділу, щоб отримати ціну комплекту.';
+    if(in_array('extra_units',$s,true))return 'Ціна комплекту діє на одну одиницю кожної речі (або на кількість комплектів для підрозділу); решта — за звичайною ціною.';
+    return '';
+}
+// Q-8 (owner decision 2026-10-11, K1–K6): main builder sections; «Дрібниці» (small) never qualify a kit.
+const SHOP_KIT_MAIN_SLOTS=['head','body','legs','boots','armor','gear','med'];
+/** Prices kit groups and returns the lines to charge. Ready kits (definitions) keep their exact composition. A custom kit
+ * (K1) needs models from ≥2 main sections; then every member with a valid PIM kit price (K3) gets it for 1 unit of each
+ * model per kit — N units for «Для підрозділу» (kit_units) — and extra units stay retail (K2): such a line is split into
+ * a kit part and a retail remainder, so every stored line has one unit price and re-pricing a stored order is stable.
+ * Members of a kit that does not qualify are charged retail with kit_status=needs_sections for the buyer's explanation. */
+function shopPricingKitComposition(array $lines,array $definitions=[]): array {
+    $groups=[];foreach($lines as $i=>$l){$g=(string)($l['kit_group']??'');if($g!==''||($l['price_mode']??'retail')==='kit')$groups[$g][]=$i;}
+    $remainders=[];
+    foreach($groups as $id=>$idx){
+        $members=array_map(fn($i)=>$lines[$i],$idx);
         if($id==='')throw new ShopPricingException('INVALID_KIT','Вкажіть повний склад комплекту.');
+        // A placed order from before Q-8 keeps the rule it was priced with (≥2 SKUs or ≥2 units, all kit-priced).
+        if(!isset($definitions[$id])&&array_filter($members,fn($l)=>!empty($l['kit_legacy']))){
+            $skus=array_unique(array_column($members,'sku'));
+            if(count($skus)<2&&array_sum(array_column($members,'qty'))<2)throw new ShopPricingException('INVALID_KIT','Комплект має містити щонайменше дві одиниці спорядження.');
+            foreach($idx as $i)unset($lines[$i]['kit_legacy']);
+            continue;
+        }
+        if(!isset($definitions[$id])){
+            $units=array_values(array_unique(array_map(fn($l)=>$l['kit_units']??1,$members),SORT_REGULAR));
+            if(count($units)!==1||!is_int($units[0])||$units[0]<1||$units[0]>99)throw new ShopPricingException('INVALID_KIT','Кількість комплектів для підрозділу має бути однаковою для всіх речей (1–99).');
+            $sections=[];foreach($members as $l){$slot=(string)($l['kit_slot']??'small');if(in_array($slot,SHOP_KIT_MAIN_SLOTS,true))$sections[$slot]=true;}
+            $qualifies=count($sections)>=2;$left=[];
+            foreach($idx as $i){$l=$lines[$i];
+                $priced=($l['price_mode']??'retail')==='kit'&&isset($l['_pricing']['kit_cents'],$l['_pricing']['minimum_cents']);
+                if(!$qualifies||!$priced){if(($l['price_mode']??'')==='kit')$lines[$i]['price_mode']='retail';$lines[$i]['kit_status']=$qualifies?'no_kit_price':'needs_sections';continue;}
+                $left[$l['product_id']]??=$units[0];$room=$left[$l['product_id']];
+                // Area goods (m²) count as one kit unit per line.
+                $kitQty=is_int($l['qty'])?min($l['qty'],$room):($room>=1?$l['qty']:0);
+                if($kitQty<=0){$lines[$i]['price_mode']='retail';$lines[$i]['kit_status']='extra_units';continue;}
+                $left[$l['product_id']]-=is_int($l['qty'])?$kitQty:1;$lines[$i]['kit_status']='kit';
+                if($kitQty<$l['qty']){
+                    $rest=$l['qty']-$kitQty;$suffix=($l['sale_unit']??'piece')==='m2'?' м²':' шт.';
+                    $lines[$i]['qty']=$kitQty;$lines[$i]['qty_label']=$kitQty.$suffix;
+                    $remainders[$i]=['qty'=>$rest,'qty_label'=>$rest.$suffix,'price_mode'=>'retail','kit_status'=>'extra_units']+$l;
+                }
+            }
+            continue;
+        }
         $bySku=[];$byProduct=[];foreach($members as $l){$bySku[$l['sku']]=true;$byProduct[$l['product_id']]=($byProduct[$l['product_id']]??0)+$l['qty'];}
         if(count($bySku)<2&&array_sum(array_column($members,'qty'))<2)throw new ShopPricingException('INVALID_KIT','Комплект має містити щонайменше дві одиниці спорядження.');
-        if(isset($definitions[$id])){
+        {
             $spec=$definitions[$id]['items'];$expected=[];foreach($spec as $it){if(is_string($it))$it=['product_id'=>$it];$expected[$it['product_id']]=$it;}
             if(array_diff_key($expected,$byProduct)||array_diff_key($byProduct,$expected))throw new ShopPricingException('INVALID_KIT','Склад готового комплекту змінився або неповний.');
             foreach($members as $l){$it=$expected[$l['product_id']];if(isset($it['sku'])&&$it['sku']!==$l['sku']||!empty($it['color'])&&shopColor($it['color'])!==$l['color']||$byProduct[$l['product_id']]!=($it['qty']??1))throw new ShopPricingException('INVALID_KIT','Перевірте SKU, колір та кількість у готовому комплекті.');}
         }
     }
+    $out=[];foreach($lines as $i=>$l){$out[]=$l;if(isset($remainders[$i]))$out[]=$remainders[$i];}
+    return $out;
 }

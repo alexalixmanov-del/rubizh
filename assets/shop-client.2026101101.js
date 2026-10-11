@@ -885,11 +885,19 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
             brigades_count: 0,
             transfers: []
         }
-    }, ft = [], bt = () => 0, St = (t, e) => {
-        const allowed=t.length>0&&t.reduce((n,l)=>n+(l.q||1),0)>=2&&t.every(l=>l.v.pricing_policy_version===1&&Number.isFinite(l.v.kit_price)&&l.v.kit_price>0);
-        const rows=t.map(({v,q})=>{q=q||1;const unit=allowed?v.kit_price:v.price;return {price:Math.round(v.price*100*q)/100,kit:Math.round(unit*100*q)/100,unit,save:Math.round((v.price-unit)*100*q)/100,fixed:!allowed,capped:false};});
+    }, ft = [], bt = () => 0, St = (t, e, ready) => {
+        // Q-8 (owner 2026-10-11, K1–K6) — the same rules as the server (shopPricingKitComposition): a custom kit needs models
+        // from ≥2 main sections («Дрібниці» never qualify); the kit price applies to 1 unit of each model per kit (N for
+        // «Для підрозділу»), extra units are retail. Ready kits keep their own composition (ready=true).
+        const N=Math.max(1,Math.min(99,parseInt(e,10)||1)),main=['head','body','legs','boots','armor','gear','med'];
+        const info=t.map(r=>{const pid=r.pid??r.p?.id??r.l?.id,p=r.p||(pid?Z.find(x=>x.id===pid):null);return {pid,slot:r.slot??r.l?.slot??(p?storeSlot(p):'small')};});
+        const qualifies=!!ready||new Set(info.filter(i=>main.includes(i.slot)).map(i=>i.slot)).size>=2,left={};
+        const rows=t.map(({v,q},i)=>{q=q||1;const ok=qualifies&&v.pricing_policy_version===1&&Number.isFinite(v.kit_price)&&v.kit_price>0;let kq=0;
+            if(ok){if(ready)kq=q;else{const id=info[i].pid;left[id]=left[id]??N;kq=Math.min(q,left[id]);left[id]-=kq;}}
+            const retail=Math.round(v.price*100),fullC=retail*q,kitC=(ok?Math.round(v.kit_price*100):retail)*kq+retail*(q-kq);
+            return {price:fullC/100,kit:kitC/100,unit:ok&&kq===q?v.kit_price:v.price,kitQty:kq,save:(fullC-kitC)/100,fixed:!kq,capped:kq>0&&kq<q};});
         const fullCents=rows.reduce((n,l)=>n+Math.round(l.price*100),0),kitCents=rows.reduce((n,l)=>n+Math.round(l.kit*100),0),full=fullCents/100,kit=kitCents/100,pct=fullCents?Math.floor((fullCents-kitCents)*1000/fullCents)/10:0;
-        return {t:pct,rows,full,kit,save:Math.round((full-kit)*100)/100,pct,capped:0,allowed};
+        return {t:pct,rows,full,kit,save:Math.round((full-kit)*100)/100,pct,capped:0,allowed:rows.some(r=>r.kitQty>0),qualifies,needsSections:t.length>0&&!qualifies};
     }, vt = t => t.allowed ? 'Ціни обраних SKU з PIM · вигода '+t.pct+'%' : 'Без підтвердженої спеціальної ціни · роздріб',
     wt = [ [ "head", "Голова", "шолом, кепка, навушники", [ "p20", "p21", "p15" ] ], [ "body", "Тіло", "куртка, убакс, термобілизна", [ "p22", "p1", "p7", "p11", "p12", "p14" ] ], [ "legs", "Ноги", "тактичні штани", null ], [ "boots", "Взуття", "берці, черевики", [ "p26", "p3", "p10" ] ], [ "armor", "Бронезахист", "плитоноска, плити, пакети", [ "p2", "p19", "p9", "p24", "p25", "p17", "p18" ] ], [ "gear", "Спорядження", "рюкзак, підсумки", [ "p4", "p8" ] ], [ "med", "Медицина", "аптечка, турнікет", [ "p5", "p23" ] ], [ "small", "Дрібниці", "рукавички, шкарпетки", [ "p13", "p28", "p21" ] ] ], xt = t => Z.filter(e => e.storeReady && Ot(e.id) === t).map(t => t.id), Ot = t => {
         const e = Z.find(e => e.id === t);
@@ -1701,7 +1709,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
         repriceCart=t => {
             const e = t.map(t => Object.assign({}, t)), i = {};
             return e.forEach((t, e) => {
-                t.kit && t.kitId && !t.unit && (i[t.kitId] = i[t.kitId] || []).push(e);
+                t.kit && t.kitId && (i[t.kitId] = i[t.kitId] || []).push(e);
             }), Object.values(i).forEach(t => {
                 const i = t.filter(t => {
                     const i = Z.find(i => i.id === e[t].id);
@@ -1712,11 +1720,11 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                         v: Object.assign({}, s.variants[i.size], {
                             price: null != i.price ? i.price : s.variants[i.size].price
                         }),
-                        q: i.qty
+                        q: i.qty, pid: i.id, slot: i.kitSlot
                     };
-                }));
+                }), i.length ? e[i[0]].kitUnits : 1, i.length && e[i[0]].kitReady);
                 i.forEach((t, i) => {
-                    e[t].kitPrice = s.rows[i].unit;
+                    e[t].kitPrice = s.rows[i].unit;e[t].kitQty = s.rows[i].kitQty;
                 });
             }), e;
         };
@@ -1860,14 +1868,14 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
         kitToCart=() => {
             const t = this.kitLines();
             if (t.length < 2 || this.state.kit.some(l=>l.needsSize) || t.some(t => "out" === this.avail(t.p, t.l.size))) return;
-            const e = St(t.map(t => ({
+            const i = this.state.kitUnit, s = i ? Math.max(1, parseInt(this.state.kitN, 10) || 1) : 1, o = this.state.kitDefinition || "kit-" + Date.now().toString(36), ready = !!this.state.kitDefinition, e = St(t.map(t => ({
                 v: t.v,
-                q: t.l.qty || 1
-            }))), i = this.state.kitUnit, s = i ? Math.max(1, parseInt(this.state.kitN, 10) || 1) : 1, o = this.state.kitDefinition || "kit-" + Date.now().toString(36);
+                q: s * (t.l.qty || 1), pid: t.p.id, slot: t.l.slot
+            })), s, ready);
             this.setState(a => {
                 const r = a.cart.slice();
                 return t.forEach((t, a) => {
-                    const n = i ? t.v.price : e.rows[a].unit;
+                    const n = e.rows[a].unit;
                     r.push({
                         id: t.p.id,
                         size: t.l.size,
@@ -1878,9 +1886,9 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                         price: t.v.price,
                         availability: t.v.availability,
                         qty: s * (t.l.qty || 1),
-                        kit: e.allowed && !i,
-                        kitId: e.allowed && !i ? o : undefined,
-                        unit: !!i,
+                        kit: e.allowed,
+                        kitId: e.allowed ? o : undefined,
+                        unit: !!i, kitUnits: s, kitSlot: t.l.slot, kitQty: e.rows[a].kitQty, kitReady: ready,
                         kitPrice: n
                     });
                 }), {
@@ -2172,8 +2180,8 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
         kitVm=t => {
             const i = this.kitLines(), s = i.filter(t => "out" !== this.avail(t.p, t.l.size)), o = t => t.map(t => ({
                 v: t.v,
-                q: t.l.qty || 1
-            })), a = St(o(s)), r = s.length, n = 2, c = 2, l = t => ({
+                q: t.l.qty || 1, pid: t.p.id, slot: t.l.slot
+            })), a = St(o(s), 1, !!this.state.kitDefinition), r = s.length, n = 2, c = 2, l = t => ({
                 padding: "6px 10px",
                 fontSize: "12.5px",
                 cursor: "pointer",
@@ -2360,8 +2368,9 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                 kitPriceUpd: A.length > 0,
                 kitPriceNotes: A,
                 kitLimit: !!t.kitLimit,
-                kitLimitText: "Максимум 20 позицій у комплекті"
-            }, M = i.some(t => "out" === this.avail(t.p, t.l.size)), T = Math.max(1, parseInt(t.kitN, 10) || 1), q = t.kitUnit ? a.full : a.kit;
+                kitLimitText: "Максимум 20 позицій у комплекті",
+                kitPriceHint: a.needsSections ? "Додайте річ ще з одного розділу, щоб отримати ціну комплекту" : ""
+            }, M = i.some(t => "out" === this.avail(t.p, t.l.size)), T = Math.max(1, parseInt(t.kitN, 10) || 1), q = a.kit;
             let I = null;
             if (t.kitModal) {
                 const e = xt(t.kitModal), i = wt.find(e => e[0] === t.kitModal)[1], s = e.filter(e => !t.storeKitIds || t.storeKitIds.includes(e)).map(t => Z.find(e => e.id === t)).filter(Boolean), o = this._kitFacets?.leaves || [ ...new Set(s.map(t => t.path[t.path.length - 1]).filter(Boolean)) ], a = this._kitFacets?.sizes || [ ...new Set(s.flatMap(t => Object.values(t.variants).map(t => t.size_display)).filter(t => "Один розмір" !== t)) ], n = this._kitFacets?.camo || [ ...new Set(s.flatMap(t => Object.values(t.variants).map(t => t.color)).filter(Boolean)) ], c = bt(t.kitReplace ? r : r + 1), p = s.filter(product => !t.kmColor || Object.values(product.variants).some(variant => variant.color === t.kmColor)), h = (t, e, i) => ({
@@ -2536,7 +2545,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                 kitCantLabel: M ? "Замініть позиції, яких немає" : i.length ? "Додайте щонайменше " + c + " позиції для комплекту" : "Спочатку додайте хоча б один товар",
                 kitToCart: this.kitToCart,
                 kitBarTotal: B(a.kit),
-                kitBarSave: a.save > 0 ? "вигода " + B(a.save) : r ? storeGoodsCount(r) : "Спочатку додайте товар",
+                kitBarSave: a.save > 0 ? "вигода " + B(a.save) : a.needsSections && r ? "Додайте річ з іншого розділу" : r ? storeGoodsCount(r) : "Спочатку додайте товар",
                 kitSave: () => this.kitSaveLink(),
                 kitShare: this.kitShare,
                 kitLink: t.kitLink,
@@ -2631,7 +2640,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                     stockLabel: ""
                 },
                 homeKits: E.map(t => {
-                    const e = this.kitLines(this.kitFromIds(t.items)), i = St(e);
+                    const e = this.kitLines(this.kitFromIds(t.items)), i = St(e, 1, !0);
                     return {
                         name: t.name,
                         note: t.note,
@@ -2893,7 +2902,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
             });
             const o = {};
             s.forEach((t, i) => {
-                t.kit && t.kitId && !t.unit && !e[i] && (o[t.kitId] = o[t.kitId] || []).push(i);
+                t.kit && t.kitId && !e[i] && (o[t.kitId] = o[t.kitId] || []).push(i);
             });
             let a = !1;
             Object.values(o).forEach(t => {
@@ -2902,12 +2911,12 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                     return {
                         v: Object.assign({}, e.variants[s[t].size], {
                             price: s[t].price
-                        })
+                        }), q: s[t].qty, pid: s[t].id, slot: s[t].kitSlot
                     };
-                })).rows;
+                }), s[t[0]].kitUnits, s[t[0]].kitReady).rows;
                 t.forEach((t, i) => {
-                    s[t].kitPrice !== e[i].unit && (a = !0, s[t] = Object.assign({}, s[t], {
-                        kitPrice: e[i].unit
+                    (s[t].kitPrice !== e[i].unit || s[t].kitQty !== e[i].kitQty) && (a = !0, s[t] = Object.assign({}, s[t], {
+                        kitPrice: e[i].unit, kitQty: e[i].kitQty
                     }));
                 });
             }), a && i.push({
@@ -5439,7 +5448,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                 ...this.jarVm(),
                 ...this.pkVm(t),
                 bundles: E.map(e => {
-                    const i = St(this.kitLines(this.kitFromIds(e.items)));
+                    const i = St(this.kitLines(this.kitFromIds(e.items)), 1, !0);
                     return {
                         name: e.name,
                         note: e.note,
@@ -5833,7 +5842,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
             });
             return e.forEach(s), i.filter(t => t.n > 0).sort((t, e) => e.n - t.n);
         };
-        storePricingLines=cart=>cart.map(l=>{const p=Z.find(p=>p.id===l.id),v=p?.variants[l.size],v3=storeV3PricingLine(l,p,v);if(v3)return v3;const kit=!!(l.kit&&!l.unit&&v?.pricing_policy_version===1&&v.kit_price!==null);return {product_id:l.id,sku:l.sku||v?.sku,qty:l.qty,color:v?.color,price_mode:l.wh?'wholesale':kit?'kit':'retail',kit_group:kit?l.kitId||'kit':''};});
+        storePricingLines=cart=>cart.map(l=>{const p=Z.find(p=>p.id===l.id),v=p?.variants[l.size],v3=storeV3PricingLine(l,p,v);if(v3)return v3;const kit=!!(l.kit&&v?.pricing_policy_version===1&&v.kit_price!==null);return {product_id:l.id,sku:l.sku||v?.sku,qty:l.qty,color:v?.color,price_mode:l.wh?'wholesale':kit?'kit':'retail',kit_group:l.kit?l.kitId||'kit':'',...(l.kit?{kit_units:l.kitUnits||1}:{})};});
         applyPromo=async()=>{
             const seq=this._promoSeq=(this._promoSeq||0)+1,code=this.state.promoInput.trim().toUpperCase();
             if(!code){this.setState({promo:null,promoPct:0,promoBad:false,storeQuote:null,checkoutError:''});return;}
@@ -6079,7 +6088,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
         buildKit=cfg=>{const season=cfg.season||'Демісезон',have=cfg.have||[],size=cfg.formSize==='S–M'?'M':cfg.formSize==='XL–XXL'?'XL':'L',num={M:'48',L:'50',XL:'54'}[size],used=new Set(),lines=[],miss={},names=[],budget=cfg.budget>=61000?Infinity:(Number(cfg.budget)||Infinity);let sum=0;const add=(slot,test,prefs=[])=>{const candidates=Z.filter(p=>storeKitEligible(p)&&storeKitPrimary(p)&&!used.has(p.id)&&storeSlot(p)===slot&&storeSeasonOK(p,season)&&(!test||test(p))).sort((a,b)=>(storePalette(b.camo)===storePalette(cfg.camo)?1:0)-(storePalette(a.camo)===storePalette(cfg.camo)?1:0)||a.price-b.price);for(const p of candidates){const keys=Object.keys(p.variants).filter(k=>this.avail(p,k)!=='out'&&!p.variants[k].size_unconfirmed),k=prefs.length?keys.find(k=>prefs.includes(p.variants[k].size_display)||prefs.includes(p.variants[k].size_native)):keys.find(k=>/Один розмір|універс/i.test(p.variants[k].size_display))||keys[0];if(!k||sum+p.variants[k].price>budget)continue;used.add(p.id);sum+=p.variants[k].price;lines.push(this.kitLine(slot,p.id,k));names.push(p.name);delete miss[slot];return p;}miss[slot]=true;return null;};if(!have.includes('Форма')){if(season==='Зима'){add('body',p=>storeRole(p)==='thermal',[size,num]);add('body',p=>['fleece','outer'].includes(storeRole(p)),[size,num]);}else add('body',p=>storeRole(p)==='ubacs'||/сороч|костюм/i.test(p.name),[size,num]);add('legs',p=>storeRole(p)==='pants',[size,num]);}if(!have.includes('Берці'))add('boots',null,[cfg.shoe||'43']);if(!have.includes('Аптечка'))add('med',p=>storeRole(p)==='ifak'||/турнікет|джгут/i.test(p.name));if(!have.includes('Плитоноска з плитами')&&['Штурм','Розвідка'].includes(cfg.spec))add('armor',p=>storeRole(p)==='protection'&&storeHasPlates(p));if(!have.includes('Шолом')&&['Штурм','Розвідка','Оператор БпЛА'].includes(cfg.spec))add('head',p=>/шолом|каск/i.test(p.name));else add('head',p=>season==='Зима'?/шапк|балаклав/i.test(p.name):/кепк|панам|бейсбол/i.test(p.name));add('small',p=>storeRole(p)==='gloves',[size,num]);if(!have.includes('Рюкзак')&&['Штурм','Розвідка','Медик','Оператор БпЛА'].includes(cfg.spec))add('gear',p=>storeRole(p)==='backpack');return {lines,miss,names,sum};};
         storeImage=(row,p)=>{row.photoLoading='lazy';row.photoPriority='auto';if(!p)return;const cover=storeCardCover(p),urls=cover===''?[]:[...new Set([cover].concat((p.photoData||[]).flatMap(x=>[x.thumb,x.url]),p.photos||[]).filter(Boolean))];row.thumb=urls[0]||'';row.photo=urls[0]||'';row.hasThumb=row.hasPhoto=!!urls.length;row.noPhoto=!urls.length;row.photoErr=ev=>{const img=ev.currentTarget,idx=Number(img.dataset.tryIndex||0)+1;img.dataset.tryIndex=idx;if(urls[idx])img.src=urls[idx];else img.style.visibility='hidden';};};
         storeBundleLines=b=>(b.items||[]).map((it,i)=>{const id=typeof it==='string'?it:it.product_id,p=Z.find(p=>p.id===id&&p.storeReady);if(!p||!storeKitEligible(p))return null;const palette=this.state.kitPalettes?.[b.id],wanted=palette||it.color||'',keys=Object.keys(p.variants).filter(k=>this.avail(p,k)!=='out'),colors=[...new Set(keys.map(k=>p.variants[k].color))],neutral=colors.length===1&&['Койот','Олива','Чорний'].includes(storePalette(colors[0]));const exact=keys.filter(k=>!wanted||neutral||p.variants[k].color===wanted||(storePalette(wanted)&&storePalette(p.variants[k].color)===storePalette(wanted))),k=exact.find(k=>['L','50','43','Один розмір'].includes(p.variants[k].size_display))||exact[0]||keys[0];return k?Object.assign(this.kitLine(storeSlot(p),id,k),{qty:it.qty||1,color_fallback:!!wanted&&!neutral&&!exact.length}):null;}).filter(Boolean);
-        storeBundleVm=b=>{const lines=this.storeBundleLines(b),c=St(this.kitLines(lines)),ps=lines.map(l=>Z.find(p=>p.id===l.id)),sets=ps.map(p=>[...new Set(Object.values(p.variants).filter(v=>v.availability!=='out_of_stock').map(v=>storePalette(v.color)).filter(Boolean))]).filter(s=>s.length>1||!['Койот','Олива','Чорний'].includes(s[0])),palettes=sets.length?sets.reduce((a,s)=>a.filter(c=>s.includes(c))):[];const row={...b,tag:b.tag||'Готовий комплект',sub:b.note||'',count:lines.length,name:b.name,comp:lines.map(l=>{const p=Z.find(p=>p.id===l.id);return {name:p.name+' · '+p.variants[l.size].color,href:'/product/'+p.slug,priceFmt:storeMoney(p.variants[l.size].price),view:()=>this.open(p.id)};}),compLabel:'Переглянути склад ('+lines.length+')',compOpen:!!this.state.bundleComp?.[b.id],toggleComp:()=>this.setState(s=>({bundleComp:{...(s.bundleComp||{}),[b.id]:!s.bundleComp?.[b.id]}})),fullFmt:storeMoney(c.full),priceFmt:storeMoney(c.kit),saveFmt:'вигода '+storeMoney(c.save)+(vt(c)?' · '+vt(c):''),open:()=>{this.setState({kit:lines,kitDefinition:b.id,kitFromPick:false,kitMiss:{},kitSeason:b.id==='b1'?'Літо':b.id==='b3'?'Зима':'Демісезон'});this.go('kit');},go:()=>{this.setState({kit:lines,kitDefinition:b.id,kitFromPick:false,kitMiss:{},kitSeason:b.id==='b1'?'Літо':b.id==='b3'?'Зима':'Демісезон'});this.go('kit');},hasPalettes:palettes.length>=2,palettes:palettes.map(color=>({name:color,pick:ev=>{ev?.stopPropagation?.();const ps={...(this.state.kitPalettes||{}),[b.id]:color};try{localStorage.setItem('rubizh.kit.palettes',JSON.stringify(ps))}catch(e){}this.setState({kitPalettes:ps});},style:{border:'1px solid '+(this.state.kitPalettes?.[b.id]===color?'var(--legacy-f2a33c)':'var(--legacy-3a423b)'),background:'transparent',color:'var(--legacy-edefea)',padding:'7px 9px',cursor:'pointer'}})),colorFallback:lines.some(l=>l.color_fallback)};row.add=row.open;this.storeImage(row,ps[0]);return row;};
+        storeBundleVm=b=>{const lines=this.storeBundleLines(b),c=St(this.kitLines(lines),1,!0),ps=lines.map(l=>Z.find(p=>p.id===l.id)),sets=ps.map(p=>[...new Set(Object.values(p.variants).filter(v=>v.availability!=='out_of_stock').map(v=>storePalette(v.color)).filter(Boolean))]).filter(s=>s.length>1||!['Койот','Олива','Чорний'].includes(s[0])),palettes=sets.length?sets.reduce((a,s)=>a.filter(c=>s.includes(c))):[];const row={...b,tag:b.tag||'Готовий комплект',sub:b.note||'',count:lines.length,name:b.name,comp:lines.map(l=>{const p=Z.find(p=>p.id===l.id);return {name:p.name+' · '+p.variants[l.size].color,href:'/product/'+p.slug,priceFmt:storeMoney(p.variants[l.size].price),view:()=>this.open(p.id)};}),compLabel:'Переглянути склад ('+lines.length+')',compOpen:!!this.state.bundleComp?.[b.id],toggleComp:()=>this.setState(s=>({bundleComp:{...(s.bundleComp||{}),[b.id]:!s.bundleComp?.[b.id]}})),fullFmt:storeMoney(c.full),priceFmt:storeMoney(c.kit),saveFmt:'вигода '+storeMoney(c.save)+(vt(c)?' · '+vt(c):''),open:()=>{this.setState({kit:lines,kitDefinition:b.id,kitFromPick:false,kitMiss:{},kitSeason:b.id==='b1'?'Літо':b.id==='b3'?'Зима':'Демісезон'});this.go('kit');},go:()=>{this.setState({kit:lines,kitDefinition:b.id,kitFromPick:false,kitMiss:{},kitSeason:b.id==='b1'?'Літо':b.id==='b3'?'Зима':'Демісезон'});this.go('kit');},hasPalettes:palettes.length>=2,palettes:palettes.map(color=>({name:color,pick:ev=>{ev?.stopPropagation?.();const ps={...(this.state.kitPalettes||{}),[b.id]:color};try{localStorage.setItem('rubizh.kit.palettes',JSON.stringify(ps))}catch(e){}this.setState({kitPalettes:ps});},style:{border:'1px solid '+(this.state.kitPalettes?.[b.id]===color?'var(--legacy-f2a33c)':'var(--legacy-3a423b)'),background:'transparent',color:'var(--legacy-edefea)',padding:'7px 9px',cursor:'pointer'}})),colorFallback:lines.some(l=>l.color_fallback)};row.add=row.open;this.storeImage(row,ps[0]);return row;};
         storeChangeKitColor=(uid,color)=>this.setState(s=>{const kit=s.kit.map(l=>{if(l.uid!==uid)return l;const p=Z.find(p=>p.id===l.id),old=p?.variants[l.size],keys=Object.keys(p?.variants||{}).filter(k=>p.variants[k].color===color&&this.avail(p,k)!=='out'),k=keys.find(k=>p.variants[k].size_native===old?.size_native||p.variants[k].size_display===old?.size_display);return {...l,color,size:k||l.size,needsSize:!k,previousSize:old?.size_display};});return {kit};});
         storeSelectKitSize=(uid,size)=>this.setState(s=>({kit:s.kit.map(l=>l.uid===uid?{...l,size,needsSize:false}:l)}));
         bumpQty=(idx,delta)=>this.setState(s=>{const cart=s.cart.slice(),l=cart[idx];if(!l)return {};const p=Z.find(p=>p.id===l.id),v=p?.variants[l.size],isArea=(l.sale_unit||p?.sale_unit)==='m2',qty=storeQty(Number(l.qty)+delta);if(delta>0&&v?.stockKnown&&v.availability==='in_stock'&&cart.filter(x=>x.sku===l.sku).reduce((n,x)=>n+Number(x.qty),0)+delta>v.stock)return {};if(qty<(isArea?.01:1))cart.splice(idx,1);else cart[idx]={...l,qty};return {cart:this.saveCart(cart),cartIssues:{},storeQuote:null};});
@@ -6305,7 +6314,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
             checkoutError: "",
             storeQuote: null
         },()=>{if(t==="checkoutEmail"&&this.state.cartReminderActive)this.storeCartReminderSchedule();});
-        storeReminderLines=cart=>cart.map(l=>{const p=Z.find(p=>p.id===l.id),v3=storeV3PricingLine(l,p,p?.variants[l.size]);if(v3)return v3;return {product_id:l.id,sku:l.sku||p?.variants[l.size]?.sku,qty:l.qty,kit_group:l.kit&&!l.unit?l.kitId||'kit':''};});
+        storeReminderLines=cart=>cart.map(l=>{const p=Z.find(p=>p.id===l.id),v3=storeV3PricingLine(l,p,p?.variants[l.size]);if(v3)return v3;return {product_id:l.id,sku:l.sku||p?.variants[l.size]?.sku,qty:l.qty,kit_group:l.kit?l.kitId||'kit':'',...(l.kit?{kit_units:l.kitUnits||1}:{})};});
         storeCartReminderQueue=(action,cart=this.state.cart)=>{
             const generation=this._cartReminderGeneration=(this._cartReminderGeneration||0)+1;const payload=action==='save'?{action,consent:true,email:(this.state.checkoutEmail||'').trim(),lines:this.storeReminderLines(cart)}:{action};
             this._cartReminderTail=(this._cartReminderTail||Promise.resolve()).catch(()=>{}).then(async()=>{
@@ -6957,7 +6966,7 @@ this.setState(s=>{const cart=s.cart.map(l=>({...l}));for(const a of added){const
                     }
                 })), t.hasReviews = !1;
             }
-            const d = Math.round(e.cart.reduce((total,line)=>{const product=Z.find(p=>p.id===line.id),v=product?.variants[line.size],kit=line.kit&&!line.unit&&v?.pricing_policy_version===1&&v.kit_price!==null;return total+Math.round((kit?v.kit_price:v?.price??line.price??0)*100*line.qty);},0))/100, u = e.storeQuote?.discount??0, m=0;
+            const d = Math.round(e.cart.reduce((total,line)=>{const product=Z.find(p=>p.id===line.id),v=product?.variants[line.size],kit=line.kit&&v?.pricing_policy_version===1&&v.kit_price!==null,kq=kit?Math.min(line.qty,line.kitQty??line.qty):0,retail=v?.price??line.price??0;return total+Math.round(kit?v.kit_price*100*kq+retail*100*(line.qty-kq):retail*100*line.qty);},0))/100, u = e.storeQuote?.discount??0, m=0;
             t.applyPromo = this.applyPromo, t.promoBad = !!e.promoBad, t.promoCode = e.promo || "",
             t.promoOk = !!e.promo, t.discountFmt = "−" + B(u), t.storeTotal = d - u + m, t.totalFmt = storeMoney(e.storeQuote?.total ?? t.storeTotal),
             t.subtotalFmt = storeMoney(e.storeQuote?.subtotal ?? d), t.shippingFmt = B(e.storeQuote?.shipping ?? m),
@@ -7087,7 +7096,7 @@ this.setState(s=>{const cart=s.cart.map(l=>({...l}));for(const a of added){const
             t.item.sizes=t.item.sizes.filter(row=>sizeKeys.includes(row.variantKey)).map(row=>({...row,qtyLabel:s.variants[row.variantKey]?.stockKnown?row.qtyLabel:''}));t.sizeButtons=!area&&!missing&&sizeKeys.length>1;t.sizeOneRow=!area&&!missing&&sizeKeys.length===1;t.sizeOneText=sizeKeys.length===1?(s.variants[sizeKeys[0]].size_display==='Один розмір'?'Один розмір':(rt[s.size_scale]?.card||'Розмір')+': '+s.variants[sizeKeys[0]].size_display):'';t.oneClick=()=>!missing&&selected&&this.add(s.id,selected,qty)?this.go('cart'):this.setState({addErr:choice.choose});t.addProduct=()=>!missing&&selected&&this.add(s.id,selected,qty);t.mobBuy=()=>!missing&&selected?this.add(s.id,selected,qty):document.querySelector('[data-size-grid]')?.scrollIntoView({block:'center',behavior:'smooth'});
             if(s&&s.v3){this._v3Color=s.colors.find(c=>c.id===(e.productColorId||new URLSearchParams(location.search).get('color')))?.id||s.colors.find(c=>c.skus.some(k=>s.variants[k]?.payment_allowed))?.id||s.colors[0]?.id||null;storeV3ProductVm(this,t,e,s);}
             t.cartCount=e.cart.reduce((n,l)=>n+(l.sale_unit==='m2'?1:Number(l.qty)),0);
-            for(const [idx,row] of (t.cartLines||[]).entries()){const l=e.cart[idx],p=Z.find(p=>p.id===l.id);row.isArea=(l.sale_unit||p?.sale_unit)==='m2';row.areaQty=l.qty;row.onAreaQty=ev=>this.storeAreaCartQty(idx,ev.target.value);row.size=row.isArea?l.qty+' м²':row.size;const variant=p?.variants[l.size],special=l.kit&&!l.unit&&variant?.pricing_policy_version===1&&variant.kit_price!==null,currentUnit=special?variant.kit_price:variant?.price??l.price??p?.price??0,quoted=e.storeQuote?.lines?.[idx];row.sumFmt=storeMoney(quoted?.sku===l.sku?quoted.amount:Math.round(currentUnit*100*l.qty)/100);}
+            for(const [idx,row] of (t.cartLines||[]).entries()){const l=e.cart[idx],p=Z.find(p=>p.id===l.id);row.isArea=(l.sale_unit||p?.sale_unit)==='m2';row.areaQty=l.qty;row.onAreaQty=ev=>this.storeAreaCartQty(idx,ev.target.value);row.size=row.isArea?l.qty+' м²':row.size;const variant=p?.variants[l.size],special=l.kit&&variant?.pricing_policy_version===1&&variant.kit_price!==null,retailUnit=variant?.price??l.price??p?.price??0,kq=special?Math.min(l.qty,l.kitQty??l.qty):0,quoted=(e.storeQuote?.lines||[]).filter(q=>q.input_index===idx);row.sumFmt=storeMoney(quoted.length?quoted.reduce((n,q)=>Math.round((n+Number(q.amount))*100)/100,0):Math.round(special?variant.kit_price*100*kq+retailUnit*100*(l.qty-kq):retailUnit*100*l.qty)/100);}
             if(t.mini&&e.miniCart){const l=e.miniCart,p=Z.find(p=>p.id===l.id),v=p?.variants[l.size];t.mini.priceFmt=storeMoney((v?.price||p?.price||0)*(l.qty||1));if(p?.sale_unit==='m2')t.mini.size=(l.qty||1)+' м²';}
 
             t.onCityInput=this.npCityInput;t.onPointInput=this.npPointInput;t.clearCity=this.npClear;

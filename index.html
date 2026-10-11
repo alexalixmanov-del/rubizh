@@ -1910,6 +1910,7 @@
           <div class="rz-kit-summary-heading"><span>Твій комплект</span><span class="rz-kit-summary-icon" aria-hidden="true"><svg width="24" height="24" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 7h14v14H5zM9 7V3h6v4"></path></svg></span></div>
           <div class="rz-kit-count" style="color:var(--legacy-c7cec3);font-size:14px">{{ kitCount }}</div>
           <div class="rz-kit-sum-row"><span>Вартість товарів</span><span data-kit-goods="1">{{ kitFullFmt }}</span></div>
+          <sc-if value="{{ kitPriceHint }}" hint-placeholder-val="{{ false }}"><p class="rz-kit-hint" role="status" data-kit-price-hint="1" style="margin:0;padding:10px 12px;border:1px solid var(--legacy-4e4524);background:var(--legacy-211e14);color:var(--legacy-e8dfbf);font-size:14px;line-height:1.4">{{ kitPriceHint }}</p></sc-if>
           <sc-if value="{{ kitHasSave }}" hint-placeholder-val="{{ false }}"><div class="rz-kit-sum-row rz-kit-sum-discount"><span>Знижка на комплект <small>{{ kitPct }}</small></span><span data-kit-discount="1">−{{ kitSaveFmt }}</span></div></sc-if>
           <div class="rz-kit-total">
             <div style="color:var(--legacy-c7cec3);font-size:15px">Разом</div>
