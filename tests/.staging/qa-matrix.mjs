@@ -15,6 +15,7 @@ try{
    const mobile=w<768&&bname!=='firefox';
    const context=await browser.newContext({viewport:{width:w,height:w<768?844:900},...(mobile?{isMobile:true,hasTouch:true}:{})});
    await context.route('https://img.test/**',r=>r.fulfill({contentType:'image/png',body:png}));
+   await context.route(/^https:\/\/pay\.(?:mbnk\.biz|monobank\.ua)\//,r=>r.fulfill({contentType:'text/html',body:'<title>MonoPay stub</title>'}));// never leave the machine
    for(const [name,path] of pages){
     const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message.slice(0,160)));page.on('console',m=>{if(m.type()==='error'&&!/favicon|googletagmanager|facebook|ERR_NAME_NOT_RESOLVED|net::ERR/.test(m.text()))errors.push('console: '+m.text().slice(0,160));});
     let status=0;try{const r=await page.goto(site.base+path,{waitUntil:'load',timeout:30000});status=r?.status()||0;await page.waitForTimeout(500);}catch(e){errors.push('nav: '+e.message.slice(0,120));}

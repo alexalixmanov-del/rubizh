@@ -43,7 +43,7 @@ test('MonoPay webhook contract: forged signature, wrong amount, wrong currency, 
   assert.equal((await site.hook(inv,{ccy:840})).status,200,'wrong currency is acknowledged and parked');
   assert.equal((await site.hook(inv,{invoiceId:'someone-else-invoice'})).status,503,'unknown invoice stays retryable');
   assert.equal((await site.hook(inv,{status:'failure'})).status,200);
-  assert.equal(site.paid(id),'failed');assert.equal(+site.sql(`SELECT COUNT(*) n FROM rubizh_np_audit WHERE order_id=${id} AND action='mono_event_rejected'`)[0].n,2);
+  assert.equal(site.paid(id),'failed');assert.equal(+site.sql(`SELECT COUNT(*) n FROM rubizh_np_audit WHERE order_id=${id} AND action='mono_event_rejected'`)[0].n,2);assert.equal(+site.sql(`SELECT COUNT(*) n FROM rubizh_np_audit WHERE order_id=${id} AND action='mono_parked_reconcile'`)[0].n,2,'each parked event is reconciled by a status read');
  }finally{site.stop();}
 });
 
@@ -63,5 +63,17 @@ test('MonoPay webhook contract: expiry or a stale non-final event on a closed in
   assert.equal((await site.hook(inv,{status:'expired'})).status,200);
   assert.notEqual(site.paid(id),'paid');assert.equal(site.sql('SELECT status FROM rubizh_customer_orders WHERE id='+id)[0].status,'cancelled','an expired invoice releases the order');
   assert.equal((await site.hook(inv,{status:'processing',at:new Date(Date.now()-60000)})).status,200);assert.notEqual(site.paid(id),'paid');
+ }finally{site.stop();}
+});
+
+test('MonoPay webhook contract: an unknown status is parked, then the site reads the invoice status from the bank and audits it',{skip,timeout:180000},async()=>{
+ const site=await fixture();try{
+  const {id,inv}=await site.newInvoice(5);
+  assert.equal((await site.hook(inv,{status:'chargeback_new'})).status,200,'acknowledged and parked, no endless bank retries');
+  assert.notEqual(site.paid(id),'paid');
+  const audit=site.sql(`SELECT action,note FROM rubizh_np_audit WHERE order_id=${id} AND action IN ('mono_event_rejected','mono_parked_reconcile') ORDER BY id`);
+  assert.deepEqual(audit.map(a=>a.action),['mono_event_rejected','mono_parked_reconcile'],'parked, then reconciled by a pull read');
+  assert.match(audit[1].note,/^bank status=created .*local=created$/,'the bank answer (mock) and the local state are recorded');
+  assert.equal(site.sql(`SELECT status FROM rubizh_mono_invoices WHERE order_id=${id}`)[0].status,'created','the pull read moves no money state');
  }finally{site.stop();}
 });

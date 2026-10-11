@@ -56,6 +56,14 @@ function monoPublicKey(PDO $db,bool $fresh=false): string {
 }
 // A bank event that can never apply to its invoice (retrying cannot fix it), unlike a transient failure.
 final class MonoEventRejected extends RuntimeException {}
+/** A parked signed webhook triggers one authenticated status read of the same invoice; the bank's answer (or the read
+ * failure) goes to the order audit for the manager. Diagnostic only: money states move by signed webhook / monoRefresh. */
+function monoParkedReconcile(PDO $db,array $invoice): void {
+ try{$r=monoApi('invoice/status?invoiceId='.rawurlencode((string)$invoice['invoice_id']));
+  $note=($r['invoiceId']??$invoice['invoice_id'])!==$invoice['invoice_id']?'bank answered for another invoice':'bank status='.substr(preg_replace('/[^a-z_]/','',(string)($r['status']??'')),0,24).' amount='.substr(json_encode($r['amount']??null),0,24).' ccy='.substr(json_encode($r['ccy']??null),0,8);}
+ catch(Throwable $read){$note='status read failed: '.get_class($read);}
+ npAudit($db,str_repeat('0',32),'mono_parked_reconcile',(int)$invoice['order_id'],0,$note.' local='.substr((string)$invoice['status'],0,24));
+}
 function monoValidateEvent(array $event,array $invoice): void {
  if(!is_string($event['invoiceId']??null)||$event['invoiceId']!==$invoice['invoice_id']||!is_int($event['amount']??null)||$event['amount']!==(int)$invoice['amount']||($event['ccy']??null)!==980)throw new MonoEventRejected('Рахунок, валюта або сума не збігаються.');
  if(!in_array($event['status']??'', ['created','processing','hold','success','failure','reversed','expired'],true))throw new MonoEventRejected('Невідомий статус оплати.');
@@ -64,7 +72,7 @@ function monoValidateEvent(array $event,array $invoice): void {
 function monoApplyEvent(PDO $db,array $event,string $hash,bool $signedWebhook=false,bool $bankConfirmed=false): void {
  $q=$db->prepare('SELECT * FROM rubizh_mono_invoices WHERE invoice_id=?');$q->execute([(string)($event['invoiceId']??'')]);$invoice=$q->fetch(PDO::FETCH_ASSOC);if(!$invoice)throw new RuntimeException('Рахунок ще не записаний. Повторіть callback.');
  // A signed callback that fails validation is parked in the order audit for a manager; money states stay untouched.
- try{monoValidateEvent($event,$invoice);}catch(MonoEventRejected $e){if($signedWebhook)npAudit($db,str_repeat('0',32),'mono_event_rejected',(int)$invoice['order_id'],0,$e->getMessage().' status='.substr((string)($event['status']??''),0,24).' amount='.substr(json_encode($event['amount']??null),0,24));throw $e;}
+ try{monoValidateEvent($event,$invoice);}catch(MonoEventRejected $e){if($signedWebhook){npAudit($db,str_repeat('0',32),'mono_event_rejected',(int)$invoice['order_id'],0,$e->getMessage().' status='.substr((string)($event['status']??''),0,24).' amount='.substr(json_encode($event['amount']??null),0,24));monoParkedReconcile($db,$invoice);}throw $e;}
  // Only a signed webhook may move money states; bank status reads stay diagnostic, except the
  // lost-webhook confirmation in monoRefresh (authenticated server read after the grace period).
  // updated_at keeps the first observation so the grace period is not restarted by every poll.

@@ -191,7 +191,7 @@ test('two tabs submitting the same checkout create one order and both show its r
   php(`define('RUBIZH_AUTH_NO_SESSION',true);require '${site.site}/auth/bootstrap.php';require_once '${site.site}/api/lib.php';save_product(db(),json_decode(${JSON.stringify(JSON.stringify(p))},true));`);
   writeFileSync(site.site+'/router.php',`<?php $p=parse_url($_SERVER['REQUEST_URI'],PHP_URL_PATH);if(str_starts_with($p,'/api/')){require __DIR__.'/api/index.php';return;}if($p==='/'||preg_match('~^/(?:product|catalog)(?:/.*)?$~',$p)){require __DIR__.'/storefront.php';return;}return false;`);
   browser=await chromium.launch({executablePath:(process.env.CHROMIUM_PATH||'/usr/bin/chromium'),args:['--no-sandbox']});
-  const context=await browser.newContext({viewport:{width:1280,height:900}});
+  const context=await browser.newContext({viewport:{width:1280,height:900}});await context.route(/^https:\/\/pay\.(?:mbnk\.biz|monobank\.ua)\//,r=>r.fulfill({contentType:'text/html',body:'<title>MonoPay stub</title>'}));// never leave the machine
   await context.route('https://img.test/**',r=>r.fulfill({contentType:'image/png',body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==','base64')}));
   const a=await context.newPage();await a.goto(site.base+'/product/tab-cap');
   await a.locator('[data-size-grid]').getByText('M',{exact:true}).click();await a.getByRole('button',{name:/До кошика/}).first().click();
@@ -247,7 +247,7 @@ test('buying the same item again after a successful order creates a new order, w
   php(`define('RUBIZH_AUTH_NO_SESSION',true);require '${site.site}/auth/bootstrap.php';require_once '${site.site}/api/lib.php';save_product(db(),json_decode(${JSON.stringify(JSON.stringify(p))},true));`);
   writeFileSync(site.site+'/router.php',`<?php $p=parse_url($_SERVER['REQUEST_URI'],PHP_URL_PATH);if(str_starts_with($p,'/api/')){require __DIR__.'/api/index.php';return;}if($p==='/'||preg_match('~^/(?:product|catalog)(?:/.*)?$~',$p)){require __DIR__.'/storefront.php';return;}return false;`);
   browser=await chromium.launch({executablePath:(process.env.CHROMIUM_PATH||'/usr/bin/chromium'),args:['--no-sandbox']});
-  const context=await browser.newContext({viewport:{width:1280,height:900}});
+  const context=await browser.newContext({viewport:{width:1280,height:900}});await context.route(/^https:\/\/pay\.(?:mbnk\.biz|monobank\.ua)\//,r=>r.fulfill({contentType:'text/html',body:'<title>MonoPay stub</title>'}));// never leave the machine
   await context.route('https://img.test/**',r=>r.fulfill({contentType:'image/png',body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==','base64')}));
   const a=await context.newPage();
   const add=async page=>{await page.goto(site.base+'/product/tab-cap');await page.locator('[data-size-grid]').getByText('M',{exact:true}).click();await page.getByRole('button',{name:/До кошика/}).first().click();await page.waitForFunction(()=>JSON.parse(localStorage.getItem('rubizh.cart')||'[]').length===1);};

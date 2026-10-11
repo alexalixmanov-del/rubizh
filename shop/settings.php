@@ -2,7 +2,9 @@
 declare(strict_types=1);
 require __DIR__.'/../auth/bootstrap.php';require_once __DIR__.'/settings-lib.php';require_once __DIR__.'/../api/seller.php';
 header("Content-Security-Policy: default-src 'none'; style-src 'self' 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");header('Cache-Control: no-store');
-try{$db=shopStoreDatabase();$actor=npManagerId();shopRequirePermission($actor,'payment.manual_reconcile',false);}catch(Throwable $e){http_response_code(403);echo '<p>Увійдіть із підтвердженим email менеджера.</p><a href="/auth/">Вхід</a>';exit;}
+try{$db=shopStoreDatabase();$actor=npManagerId();shopRequirePermission($actor,'payment.manual_reconcile');}catch(Throwable $e){http_response_code(403);
+ // Seller IBAN/bank details, supplier contacts and the donation share are money/delivery settings: OWNER with a fresh login (Q-5).
+ echo '<p>'.esc($e instanceof ShopPermissionException&&str_contains($e->getMessage(),'вхід')?$e->getMessage():'Увійдіть із підтвердженим email менеджера.').'</p><a href="/auth/">Вхід</a>';exit;}
 $error='';
 if(($_SERVER['REQUEST_METHOD']??'GET')==='POST')try{
  if(!is_string($_POST['csrf']??null)||!hash_equals($_SESSION['csrf'],$_POST['csrf']))throw new RuntimeException('Оновіть сторінку.');

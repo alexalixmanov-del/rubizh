@@ -38,6 +38,7 @@ test('Q-7: unknown stock or a FOP invoice keeps the manager step, and a direct p
   site.save(product('q7-unknown',[v('Q7U-M','M',{stock:null})]));site.save(product('q7-fop',[v('Q7F-M','M')]));const b=await site.buyer();
   const unknown=await site.order(b,[line('q7-unknown','Q7U-M','M')]);assert.equal(unknown.status,200,JSON.stringify(unknown.data));
   assert.equal(site.row(unknown.data.order.id).status,'new');
+  assert.equal(unknown.data.payment,null,'no payment link while the manager has to confirm');
   const direct=await site.pay(b,unknown.data.order.id);assert.notEqual(direct.status,200,'no invoice before the manager confirms');assert.equal(site.invoices(unknown.data.order.id),0);
   const fop=await site.order(b,[line('q7-fop','Q7F-M','M')],{payment:'invoice'});assert.equal(site.row(fop.data.order.id).status,'new','a FOP invoice is prepared by the manager');
   const mixed=await site.order(b,[line('q7-fop','Q7F-M','M'),line('q7-unknown','Q7U-M','M')]);assert.equal(site.row(mixed.data.order.id).status,'new','one unconfirmed line keeps the whole order with the manager');

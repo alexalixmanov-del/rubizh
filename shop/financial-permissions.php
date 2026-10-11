@@ -27,14 +27,13 @@ function shopStaffRole(string $actor): string {
     }
     return '';
 }
-/** $stepUp=false only for pages that check the role but move no money themselves (site settings view/save). */
-function shopRequirePermission(string $actor,string $permission,bool $stepUp=true): void {
+function shopRequirePermission(string $actor,string $permission): void {
     $role=shopStaffRole($actor);
     if(!in_array($permission,shopRolePermissions($role),true))throw new ShopPermissionException('Недостатньо прав: '.$permission);
     if(in_array($permission,['payment.manual_reconcile','order.price_override','order.total_override'],true)&&$role!=='OWNER')throw new ShopPermissionException('Потрібні права власника.');
     // Q-5 step-up: high-risk money actions need the same person's login within the last 15 minutes (existing login system;
     // re-login refreshes it). Workers and CLI tools act as the system and are exempt.
-    if(in_array($permission,['payment.refund.execute','payment.manual_reconcile','order.price_override','order.total_override'],true)&&$stepUp&&PHP_SAPI!=='cli'){
+    if(in_array($permission,['payment.refund.execute','payment.manual_reconcile','order.price_override','order.total_override'],true)&&PHP_SAPI!=='cli'){
         // The acting session's own login time: CRM staff (password login, rubizh_staff) or a site manager session.
         $loginAt=($GLOBALS['crm_staff_actor']['id']??null)===$actor?(int)($_SESSION['staff_login_at']??0):(($_SESSION['customer_id']??null)===$actor?(int)($_SESSION['login_time']??0):0);
         $fresh=time()-$loginAt<=max(60,(int)(cfg('staff_stepup_seconds')??900));

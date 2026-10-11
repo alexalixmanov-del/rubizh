@@ -42,9 +42,13 @@ test('Q-5: high-risk actions need a fresh login; low-risk ones do not',{skip,tim
   assert.notEqual(fresh.status,403,'a fresh owner passes the identity check (the unpaid order is then refused by state)');assert.match(fresh.data.error||'',/не оплачене/i);
   const old=site.as(OWNER,{age:3600});// rewrites the owner session with an hour-old login
   assert.equal((await old({action:'invoice.create',order_id:id})).status,200,'invoice creation is not high-risk');
-  // The settings page checks the owner role only; it moves no money, so an older login still opens it.
-  const settings=await site.get('/shop/settings.php',{Cookie:'rubizh_customer='+('s'+OWNER).slice(0,32)});
-  assert.equal(settings.status,200,'owner settings page without step-up: '+settings.text.slice(0,120));
+  // Owner settings hold the seller IBAN/bank details, supplier contacts and the donation share: step-up applies, and the
+  // page says why instead of a generic refusal.
+  const cookie={Cookie:'rubizh_customer='+('s'+OWNER).slice(0,32)};
+  const locked=await site.get('/shop/settings.php',cookie);
+  assert.equal(locked.status,403,'an hour-old login cannot open money/delivery settings');assert.match(locked.text,/підтвердьте вхід/);
+  site.as(OWNER);const settings=await site.get('/shop/settings.php',cookie);
+  assert.equal(settings.status,200,'a fresh owner login opens settings: '+settings.text.slice(0,120));assert.match(settings.text,/IBAN|iban/);
  }finally{site.stop();}
 });
 
