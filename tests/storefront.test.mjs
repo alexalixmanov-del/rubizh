@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {existsSync} from 'node:fs';
 import {chromium} from 'playwright';
 import {startPreview} from '../dev/preview.mjs';
+import {kitGuideSeen} from './helpers/visitor.mjs';
 let browser,server,base;
 before(async()=>{
   server=await startPreview(0);base='http://127.0.0.1:'+server.address().port;
@@ -11,7 +12,7 @@ before(async()=>{
 });
 after(async()=>{await browser?.close();await new Promise(resolve=>server?.close(resolve));});
 async function withPage(run,viewport={width:1440,height:1000}) {
-  const context=await browser.newContext({viewport});const page=await context.newPage();
+  const context=await browser.newContext({viewport});await context.addInitScript(kitGuideSeen);const page=await context.newPage();
   page.setDefaultTimeout(8000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
   try{await run(page);assert.deepEqual(errors,[],'No uncaught browser errors');}finally{await context.close();}
 }

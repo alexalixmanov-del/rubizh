@@ -14,6 +14,10 @@ function storeDigest(str){let h1=0xdeadbeef,h2=0x41c6ce57;for(let i=0;i<str.leng
 function storeOrderKey(fingerprint){const h=storeDigest(fingerprint);
  try{const v=JSON.parse(localStorage.getItem(STORE_ORDER_KEY)||'null');if(v&&v.h===h&&/^[a-f0-9]{32}$/.test(v.k)&&Date.now()-v.t>=0&&Date.now()-v.t<STORE_ORDER_KEY_TTL)return v.k;}catch(e){}
  const k=Array.from(crypto.getRandomValues(new Uint8Array(16)),t=>t.toString(16).padStart(2,'0')).join('');try{localStorage.setItem(STORE_ORDER_KEY,JSON.stringify({h,k,t:Date.now()}));}catch(e){}return k;}
+// Kit builder guide (ADDENDUM K-1): shown on the first plain visit, once per guide version; storage errors only mean it may show again.
+const STORE_KIT_INTRO_KEY='rubizh.kitIntro',STORE_KIT_INTRO_VERSION='1';
+function storeKitIntroSeen(){try{return localStorage.getItem(STORE_KIT_INTRO_KEY)===STORE_KIT_INTRO_VERSION;}catch(e){return false;}}
+function storeKitIntroRemember(){try{localStorage.setItem(STORE_KIT_INTRO_KEY,STORE_KIT_INTRO_VERSION);}catch(e){}}
 function storeCheckoutPay(e){return e.pay==='invoice'||(e.pay==='card'&&e.monoEnabled)?e.pay:(e.monoEnabled?'card':'invoice');}
 // Legacy product colour on the product page, and the gallery that belongs to it (server color_photos).
 // A colour without confirmed photos gets [] → "Фото кольору готується"; never another colour's photos.
@@ -1135,6 +1139,16 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
             const t = document.documentElement, e = document.querySelector("header"), i = e && "sticky" === getComputedStyle(e).position ? Math.ceil(e.getBoundingClientRect().height) : 0, s = [ ...document.querySelectorAll("[data-mob-buy],[data-mob-bar],[data-kit-bar]") ].filter(t => "none" !== getComputedStyle(t).display), o = s.length ? Math.ceil(Math.max(...s.map(t => t.getBoundingClientRect().height))) + 16 : 0;
             for (const [e, s] of [ [ "--rubizh-header-height", i + "px" ], [ "--rubizh-bottom-space", o + "px" ] ]) t.style.getPropertyValue(e) !== s && t.style.setProperty(e, s);
         };
+        // Guide dialog: no scroll lock; focus on «Почати збір», Tab stays inside, Escape/«Пропустити» return focus to the opener.
+        kitIntroCheck=()=>{if(this.state.screen!=='kit'||this._kitIntroChecked||this.state.kitFriend||this.state.kitFromPick)return;this._kitIntroChecked=true;if(!storeKitIntroSeen())this.setState({kitIntro:true});};
+        kitIntroOpen=()=>{this._kitIntroReturn=document.activeElement;this.setState({kitIntro:true});};
+        kitIntroClose=start=>{storeKitIntroRemember();const back=this._kitIntroReturn;this._kitIntroReturn=null;
+            this.setState(start?{kitIntro:false,kitParOpen:true}:{kitIntro:false},()=>{if(start){const p=document.querySelector('.rz-kit-parameters');if(p){p.setAttribute('tabindex','-1');p.focus({preventScroll:true});p.scrollIntoView({block:'start'});}}else (back?.isConnected?back:document.querySelector('[data-kit-howto]'))?.focus({preventScroll:true});});};
+        kitIntroKey=ev=>{if(!this.state.kitIntro)return;const d=document.querySelector('[data-kit-intro]');if(!d)return;
+            if(ev.key==='Escape'){ev.preventDefault();this.kitIntroClose(false);return;}
+            if(ev.key!=='Tab')return;const f=[...d.querySelectorAll('button,a[href],[tabindex="0"]')].filter(x=>!x.disabled&&x.getBoundingClientRect().height>0);if(!f.length)return;
+            const first=f[0],last=f.at(-1),inside=d.contains(document.activeElement);
+            if(ev.shiftKey&&(document.activeElement===first||!inside)){ev.preventDefault();last.focus();}else if(!ev.shiftKey&&(document.activeElement===last||!inside)){ev.preventDefault();first.focus();}};
         mobileKey=t => {
             const e = this._mobileOverlayKey, i = this._mobileDialog;
             if (e && i) {
@@ -1269,6 +1283,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
             kmStock: !1,
             kitFriend: !1,
             kitFromPick: !1,
+            kitIntro: !1,
             kitUnit: !1,
             kitN: 12,
             kitInvoice: !1,
@@ -1565,7 +1580,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                 passive: !0
             }), window.visualViewport?.addEventListener("scroll", this.mobileViewport, {
                 passive: !0
-            }), document.addEventListener("keydown", this.mobileKey), this.storeInit(), this.customerUnmounted = !1,
+            }), document.addEventListener("keydown", this.mobileKey), document.addEventListener("keydown", this.kitIntroKey), this.kitIntroCheck(), this.storeInit(), this.customerUnmounted = !1,
             this.refreshCustomerSession(), this.refreshAccountFocus = () => {this.refreshCustomerSession();if(this.state.screen==='done')this.storeLoadReceipt();},
             window.addEventListener("focus", this.refreshAccountFocus), this.historyInit(), this._receiptTimer=setInterval(()=>{if(this.state.screen==='done'&&!this.state.receiptLoading)this.storeLoadReceipt();},30000),
             this.outside = t => {
@@ -1600,6 +1615,8 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
         }
         componentDidUpdate() {
             this.mobileSync();
+            this.kitIntroCheck();
+            if(this.state.kitIntro&&!this._kitIntroFocused){this._kitIntroFocused=true;document.querySelector('[data-kit-intro-start]')?.focus({preventScroll:true});}else if(!this.state.kitIntro)this._kitIntroFocused=false;
             // A product page counts as viewed however it was reached: card click, direct link, reload or back/forward.
             if(this.state.screen==='product'&&this.state.current&&this._seenTracked!==this.state.current&&Z.some(p=>p.id===this.state.current&&p.storeReady)){this._seenTracked=this.state.current;if((this.state.seen||[])[0]!==this.state.current)this.setState(s=>({seen:storeSeenSave([s.current].concat((s.seen||[]).filter(id=>id!==s.current)))}));}
             if(this.state.screen==='done'&&this._receiptKey!==this.storeReceiptNumber()){this._receiptKey=this.storeReceiptNumber();this.storeLoadReceipt();}
@@ -1644,7 +1661,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
             clearInterval(this._receiptTimer);clearTimeout(this._cartReminderTimer);
             this.mobileUnlock(), this._mobileResize?.disconnect(), window.removeEventListener("resize", this._mobileViewportChange),
             window.visualViewport?.removeEventListener("resize", this._mobileViewportChange),
-            window.visualViewport?.removeEventListener("scroll", this.mobileViewport), document.removeEventListener("keydown", this.mobileKey),
+            window.visualViewport?.removeEventListener("scroll", this.mobileViewport), document.removeEventListener("keydown", this.mobileKey), document.removeEventListener("keydown", this.kitIntroKey),
             clearTimeout(this._kitSearchTimer);
             for (const t of this._requestControllers || []) t.abort();
             this.customerUnmounted = !0, window.removeEventListener("focus", this.refreshAccountFocus),
@@ -5232,6 +5249,10 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                 isDone: "done" === t.screen,
                 isPicker: "picker" === t.screen,
                 isKit: "kit" === t.screen,
+                kitIntro: "kit" === t.screen && !!t.kitIntro,
+                kitIntroOpen: this.kitIntroOpen,
+                kitIntroStart: () => this.kitIntroClose(!0),
+                kitIntroSkip: () => this.kitIntroClose(!1),
                 isReports: "reports" === t.screen,
                 donTotalFmt: B(mt.total),
                 donLast: mt.last,

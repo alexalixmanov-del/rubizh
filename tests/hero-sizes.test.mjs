@@ -5,10 +5,11 @@ import {spawnSync} from 'node:child_process';
 import {chromium} from 'playwright';
 import {startPreview} from '../dev/preview.mjs';
 import {products} from '../dev/fixtures.mjs';
+import {kitGuideSeen} from './helpers/visitor.mjs';
 let browser,server,base;
 before(async()=>{server=await startPreview(0);base='http://127.0.0.1:'+server.address().port;browser=await chromium.launch({executablePath:(process.env.CHROMIUM_PATH||'/usr/bin/chromium'),args:['--no-sandbox']});});
 after(async()=>{await browser?.close();await new Promise(resolve=>server?.close(resolve));});
-async function pageTest(run){const context=await browser.newContext({viewport:{width:1440,height:1000}});const page=await context.newPage();page.setDefaultTimeout(10000);const errors=[];page.on('pageerror',e=>errors.push(e.message));try{await run(page);assert.deepEqual(errors,[]);}finally{await context.close();}}
+async function pageTest(run){const context=await browser.newContext({viewport:{width:1440,height:1000}});await context.addInitScript(kitGuideSeen);const page=await context.newPage();page.setDefaultTimeout(10000);const errors=[];page.on('pageerror',e=>errors.push(e.message));try{await run(page);assert.deepEqual(errors,[]);}finally{await context.close();}}
 async function hero(page,layout,theme){await page.waitForFunction(({layout,theme})=>{const image=document.querySelector('.rz-hero-image');return image?.complete&&image.naturalWidth>0&&image.currentSrc.includes(`hero-${layout}-${theme}.`);},{layout,theme});}
 test('A cold kit page reserves bandwidth for equipment instead of downloading homepage hero artwork',()=>pageTest(async page=>{
   const images=[];page.on('request',r=>{if(/\/assets\/hero-(?:mobile|desktop)-(?:light|dark)\./.test(r.url()))images.push(r.url());});

@@ -2,6 +2,7 @@ import {test,before,after} from 'node:test';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 import {startPreview} from '../dev/preview.mjs';
+import {kitGuideSeen} from './helpers/visitor.mjs';
 let browser,server,base;
 before(async()=>{server=await startPreview(0);base='http://127.0.0.1:'+server.address().port;browser=await chromium.launch({executablePath:(process.env.CHROMIUM_PATH||'/usr/bin/chromium'),args:['--no-sandbox']});});
 after(async()=>{await browser?.close();await new Promise(r=>server?.close(r));});
@@ -12,7 +13,7 @@ async function centered(locator){
 test('Mobile category controls, product actions and checkout actions stay centered and usable',async()=>{
  for(const width of [320,390,430])for(const theme of ['dark','light']){
   const context=await browser.newContext({viewport:{width,height:900},isMobile:true,hasTouch:true});
-  await context.addInitScript(t=>localStorage.setItem('rubizh.theme',t),theme);const page=await context.newPage();
+  await context.addInitScript(t=>localStorage.setItem('rubizh.theme',t),theme);await context.addInitScript(kitGuideSeen);const page=await context.newPage();
   try{
    await page.goto(base+'/catalog');await page.locator('[data-catalog-section]').first().waitFor();
    for(const control of await page.locator('[data-mob-bar]>[role=button],.rz-sections-pager button').all())await centered(control);
@@ -28,6 +29,6 @@ test('Mobile category controls, product actions and checkout actions stay center
  }
 });
 test('Account order tabs and catalog action remain centered on mobile',async()=>{
- const page=await browser.newPage({viewport:{width:390,height:844}});
+ const page=await browser.newPage({viewport:{width:390,height:844}});await page.addInitScript(kitGuideSeen);
  try{await page.goto(base+'/auth/preview-account?tab=orders');await page.locator('.order-tabs').waitFor();for(const control of await page.locator('.order-tabs a,.empty-orders .inline-button').all())await centered(control);}finally{await page.close();}
 });

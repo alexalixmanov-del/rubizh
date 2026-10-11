@@ -1737,6 +1737,24 @@
   </sc-if>
   <sc-if value="{{ isKit }}" hint-placeholder-val="{{ false }}">
     <section id="main-content" tabindex="-1" class="rz-kit-builder" style="max-width:1320px;margin:0 auto;padding:clamp(18px,2.4vw,30px) clamp(16px,4vw,40px) 0">
+      <sc-if value="{{ kitIntro }}" hint-placeholder-val="{{ false }}">
+        <div class="rz-kit-intro-overlay">
+          <div class="rz-kit-intro-panel" data-kit-intro="1" role="dialog" aria-modal="true" aria-labelledby="kit-intro-title" aria-describedby="kit-intro-lead">
+            <h2 id="kit-intro-title">ЗБЕРИ СВІЙ КОМПЛЕКТ ЗА 4 КРОКИ</h2>
+            <p id="kit-intro-lead">Обирай потрібні речі в одному місці. Ми допоможемо з розмірами, складом комплекту та підсумковою ціною.</p>
+            <ol class="rz-kit-intro-steps">
+              <li><strong>Вкажи свої параметри</strong><span>Обери розмір одягу, взуття та бажаний колір. Якщо ще не визначився — зможеш уточнити їх під час вибору.</span></li>
+              <li><strong>Додай спорядження</strong><span>Відкривай потрібні розділи та обирай товари. Необов’язкові розділи можна пропустити.</span></li>
+              <li><strong>Перевір комплект</strong><span>Переглянь вибрані товари, розміри та загальну вартість. Якщо діє знижка — побачиш економію.</span></li>
+              <li><strong>Перейди до кошика</strong><span>Перевір усе ще раз та продовжуй оформлення замовлення.</span></li>
+            </ol>
+            <div class="rz-kit-intro-actions">
+              <button type="button" class="rz-btn rz-btn-primary" data-kit-intro-start="1" sc-camel-on-click="{{ kitIntroStart }}">ПОЧАТИ ЗБІР</button>
+              <button type="button" class="rz-kit-intro-skip" sc-camel-on-click="{{ kitIntroSkip }}">Пропустити</button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
       
       <sc-if value="{{ kitFriend }}" hint-placeholder-val="{{ false }}">
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;border:1px solid var(--legacy-4c5a36);background:var(--legacy-1e2618);padding:12px 16px;margin-bottom:14px">
@@ -1754,7 +1772,7 @@
       <div class="rz-kit-intro"><div class="rz-eyebrow">СПОРЯДЖЕННЯ, ЩО ПРАЦЮЄ РАЗОМ</div>
       <h1 class="rz-page-title" style="font-family:'UAH','Oswald',sans-serif;font-weight:600;font-size:clamp(26px,3.4vw,40px);text-transform:uppercase;margin:0 0 6px;letter-spacing:.03em;line-height:1.15">Конструктор комплекту</h1>
       <p class="rz-kit-instructions"><strong>Обирай лише те, що потрібно.</strong> Задай розміри, додай речі — і одразу побачиш склад, ціну та свою вигоду.</p>
-<div class="rz-kit-steps"><span><b>01</b> Твої параметри</span><span><b>02</b> Обирай спорядження</span><span><b>03</b> Комплект готовий</span></div></div>
+<div class="rz-kit-steps"><span><b>01</b> Твої параметри</span><span><b>02</b> Обирай спорядження</span><span><b>03</b> Комплект готовий</span></div><button type="button" class="rz-kit-howto" data-kit-howto="1" sc-camel-on-click="{{ kitIntroOpen }}">Як це працює?</button></div>
 
       <sc-if value="{{ kitRestoredShow }}" hint-placeholder-val="{{ false }}">
         <div style="border:1px solid var(--legacy-35502f);background:var(--legacy-17241a);padding:12px 16px;margin-bottom:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">

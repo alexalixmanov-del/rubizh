@@ -3,12 +3,13 @@ import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 import {startPreview} from '../dev/preview.mjs';
 import {products,catalog} from '../dev/fixtures.mjs';
+import {kitGuideSeen} from './helpers/visitor.mjs';
 let server,browser,base;
 before(async()=>{server=await startPreview(0);base='http://127.0.0.1:'+server.address().port;browser=await chromium.launch({executablePath:(process.env.CHROMIUM_PATH||'/usr/bin/chromium'),args:['--no-sandbox']});});
 after(async()=>{await browser?.close();await new Promise(resolve=>server?.close(resolve));});
 const bodyButton=page=>page.locator('.rz-kit-slot').filter({has:page.locator('.rz-kit-slot-head', {hasText:'Тіло'})}).locator('.rz-slot-select');
 test('Picker immediately shows preloaded products, exposes API failure and retries; reopening reuses the response',async()=>{
- const page=await browser.newPage({viewport:{width:390,height:844}});let fail=true,calls=0;
+ const page=await browser.newPage({viewport:{width:390,height:844}});await page.addInitScript(kitGuideSeen);let fail=true,calls=0;
  try{
   await page.route('**/shop/catalog.php*',async route=>{const url=new URL(route.request().url());if(!url.searchParams.has('slot'))return route.continue();calls++;
    await new Promise(resolve=>setTimeout(resolve,700));return route.fulfill({status:fail?503:200,contentType:'application/json',body:JSON.stringify(fail?{ok:false,error:'Каталог тимчасово недоступний.'}:catalog(url.searchParams))});});
@@ -24,7 +25,7 @@ test('Picker immediately shows preloaded products, exposes API failure and retri
  }finally{await page.close();}
 });
 test('Search displays loading before a real empty result, reset restores products, and confirmed sizes can add to a slot',async()=>{
- const page=await browser.newPage();try{
+ const page=await browser.newPage();await page.addInitScript(kitGuideSeen);try{
   await page.route('**/shop/catalog.php*',async route=>{const url=new URL(route.request().url());if(!url.searchParams.has('slot'))return route.continue();await new Promise(resolve=>setTimeout(resolve,400));return route.fulfill({contentType:'application/json',body:JSON.stringify(catalog(url.searchParams))});});
   await page.goto(base+'/kit');await page.locator('.rz-kit-rec').first().waitFor();await bodyButton(page).click();const dialog=page.getByRole('dialog',{name:'Вибір товару в комплект'});
   await dialog.getByRole('status').waitFor({state:'hidden'});await dialog.getByRole('searchbox').fill('неіснуючий');await dialog.getByRole('status').waitFor();
@@ -36,7 +37,7 @@ test('Search displays loading before a real empty result, reset restores product
  }finally{await page.close();}
 });
 test('Instructions and selection buttons are highlighted in both themes without mobile overflow',async()=>{
- const page=await browser.newPage({viewport:{width:360,height:800}});try{
+ const page=await browser.newPage({viewport:{width:360,height:800}});await page.addInitScript(kitGuideSeen);try{
   await page.goto(base+'/kit');await bodyButton(page).waitFor();
   for(const theme of ['dark','light']){
    await page.evaluate(theme=>document.documentElement.dataset.theme=theme,theme);
