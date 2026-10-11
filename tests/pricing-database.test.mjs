@@ -1,6 +1,6 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
 import {mkdtempSync,mkdirSync,copyFileSync,writeFileSync,readdirSync,rmSync} from 'node:fs';import {spawnSync,spawn} from 'node:child_process';import {tmpdir} from 'node:os';import path from 'node:path';import {createServer} from 'node:net';
-const root=path.resolve(import.meta.dirname,'..'),runtime='/workspace/php-runtime/root/usr',ext=runtime+'/lib/php/20240924/';
+const root=path.resolve(import.meta.dirname,'..'),runtime=(process.env.RUBIZH_PHP_RUNTIME||'/workspace/php-runtime/root/usr')+'',ext=runtime+'/lib/php/20240924/';
 const args=['-n','-d','error_reporting=24575','-d','pdo_mysql.default_socket='+process.env.RUBIZH_TEST_MYSQL_SOCKET,...['pdo','mysqlnd','pdo_mysql','mbstring','curl'].flatMap(x=>['-d','extension='+ext+x+'.so'])],env={...process.env,LD_LIBRARY_PATH:runtime+'/lib/x86_64-linux-gnu'};
 function php(code){const r=spawnSync(runtime+'/bin/php8.4',[...args,'-r',code],{env,encoding:'utf8',timeout:20000});assert.equal(r.status,0,r.stdout+'\n'+r.stderr);return r.stdout;}
 const port=()=>new Promise(r=>{const s=createServer().listen(0,'127.0.0.1',()=>{const p=s.address().port;s.close(()=>r(p));});});

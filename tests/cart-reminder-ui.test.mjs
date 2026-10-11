@@ -4,7 +4,7 @@ import {chromium} from 'playwright';
 import {startPreview} from '../dev/preview.mjs';
 import {products} from '../dev/fixtures.mjs';
 let browser,server,base;
-before(async()=>{server=await startPreview(0);base='http://127.0.0.1:'+server.address().port;browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox']});});
+before(async()=>{server=await startPreview(0);base='http://127.0.0.1:'+server.address().port;browser=await chromium.launch({executablePath:(process.env.CHROMIUM_PATH||'/usr/bin/chromium'),args:['--no-sandbox']});});
 after(async()=>{await browser?.close();await new Promise(resolve=>server?.close(resolve));});
 async function scenario(run,{restore=false}={}){
  const context=await browser.newContext({viewport:{width:1440,height:1000}}),page=await context.newPage();page.setDefaultTimeout(8000);const errors=[],requests=[];let active=false,email='',restorePending=restore;

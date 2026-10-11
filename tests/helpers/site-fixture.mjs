@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {mkdtempSync,mkdirSync,copyFileSync,writeFileSync,readdirSync,readFileSync,statSync} from 'node:fs';
 import {spawnSync,spawn} from 'node:child_process';import {tmpdir} from 'node:os';import path from 'node:path';import {createServer} from 'node:net';
 export const root=path.resolve(import.meta.dirname,'../..');
-export const runtime='/workspace/php-runtime/root/usr';
+export const runtime=(process.env.RUBIZH_PHP_RUNTIME||'/workspace/php-runtime/root/usr')+'';
 const ext=runtime+'/lib/php/20240924/';
 export const phpArgs=['-n','-d','error_reporting=24575','-d','pdo_mysql.default_socket='+process.env.RUBIZH_TEST_MYSQL_SOCKET,...['pdo','mysqlnd','pdo_mysql','mbstring','curl'].flatMap(x=>['-d','extension='+ext+x+'.so'])];
 export const phpEnv={...process.env,LD_LIBRARY_PATH:runtime+'/lib/x86_64-linux-gnu'};

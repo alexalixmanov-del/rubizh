@@ -13,7 +13,7 @@ const categories=roots.flatMap((name,index)=>[
 ]);
 before(async()=>{
  server=await startPreview(0);base='http://127.0.0.1:'+server.address().port;
- browser=await chromium.launch({executablePath:existsSync('/usr/bin/chromium')?'/usr/bin/chromium':undefined,headless:true,args:['--no-sandbox']});
+ browser=await chromium.launch({executablePath:existsSync((process.env.CHROMIUM_PATH||'/usr/bin/chromium'))?(process.env.CHROMIUM_PATH||'/usr/bin/chromium'):undefined,headless:true,args:['--no-sandbox']});
 });
 after(async()=>{await browser?.close();await new Promise(resolve=>server?.close(resolve));});
 async function pageRun(fn,viewport={width:1440,height:1000}){

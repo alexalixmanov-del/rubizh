@@ -7,7 +7,7 @@ import {products} from '../dev/fixtures.mjs';
 const spec=JSON.parse(readFileSync(new URL('../shop/canonical-taxonomy.json',import.meta.url))),banners=JSON.parse(readFileSync(new URL('../docs/category-banners.json',import.meta.url)));
 test('Canonical categories navigate with stable IDs and their own banners on phone and desktop in both themes',async()=>{
  const server=await startPreview(0),base='http://127.0.0.1:'+server.address().port;
- const browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox']});
+ const browser=await chromium.launch({executablePath:(process.env.CHROMIUM_PATH||'/usr/bin/chromium'),args:['--no-sandbox']});
  try{
   const definitions=structuredClone(spec.categories).filter(c=>['clothing','clothing_costumes','clothing_pants','footwear','footwear_boots','armor','armor_carriers'].includes(c.category_id));
   const costumes=definitions.find(c=>c.category_id==='clothing_costumes');costumes.display_name_uk='Костюми та комплекти';costumes.path='Одяг та форма / Костюми та комплекти';

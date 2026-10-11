@@ -4,7 +4,7 @@ import {chromium} from 'playwright';
 import {startPreview} from '../dev/preview.mjs';
 import {products,catalog} from '../dev/fixtures.mjs';
 let server,browser,base;
-before(async()=>{server=await startPreview(0);base='http://127.0.0.1:'+server.address().port;browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox']});});
+before(async()=>{server=await startPreview(0);base='http://127.0.0.1:'+server.address().port;browser=await chromium.launch({executablePath:(process.env.CHROMIUM_PATH||'/usr/bin/chromium'),args:['--no-sandbox']});});
 after(async()=>{await browser?.close();await new Promise(resolve=>server?.close(resolve));});
 const bodyButton=page=>page.locator('.rz-kit-slot').filter({has:page.locator('.rz-kit-slot-head', {hasText:'Тіло'})}).locator('.rz-slot-select');
 test('Picker immediately shows preloaded products, exposes API failure and retries; reopening reuses the response',async()=>{

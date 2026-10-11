@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 const root=path.resolve(import.meta.dirname,'..');
-const retained='/workspace/php-runtime/root/usr';
+const retained=(process.env.RUBIZH_PHP_RUNTIME||'/workspace/php-runtime/root/usr')+'';
 const php=process.env.PHP_PATH||(existsSync(retained+'/bin/php8.4')?retained+'/bin/php8.4':'php');
 const env={...process.env,LD_LIBRARY_PATH:process.env.LD_LIBRARY_PATH||retained+'/lib/x86_64-linux-gnu'};
 for(const key of Object.keys(env))if(key.startsWith('RUBIZH_'))delete env[key];

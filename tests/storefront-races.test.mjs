@@ -84,7 +84,7 @@ test('Changing city before the directory debounce expires prevents the obsolete 
  await new Promise(r=>setTimeout(r,310));assert.equal(calls,0);assert.equal(c.state.npLoading,false);
 });
 test('Home kit actions fit narrow screens in both themes',async()=>{
- const server=await startPreview(0),browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox']});
+ const server=await startPreview(0),browser=await chromium.launch({executablePath:(process.env.CHROMIUM_PATH||'/usr/bin/chromium'),args:['--no-sandbox']});
  try{for(const theme of ['light','dark'])for(const width of [320,360,390]){
   const page=await browser.newPage({viewport:{width,height:900}});await page.addInitScript(t=>localStorage.setItem('rubizh.theme',t),theme);
   await page.goto('http://127.0.0.1:'+server.address().port+'/');const button=page.getByRole('button',{name:'Допомогти з вибором →',exact:true});

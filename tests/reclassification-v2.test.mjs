@@ -4,7 +4,7 @@ import {readFileSync,writeFileSync,mkdtempSync,mkdirSync,readdirSync,copyFileSyn
 import {spawnSync} from 'node:child_process';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
-const root=path.resolve(import.meta.dirname,'..'),runtime='/workspace/php-runtime/root/usr';
+const root=path.resolve(import.meta.dirname,'..'),runtime=(process.env.RUBIZH_PHP_RUNTIME||'/workspace/php-runtime/root/usr')+'';
 const phpArgs=['-n','-d','error_reporting=24575',...['pdo','mysqlnd','pdo_mysql','mbstring'].flatMap(e=>['-d',`${'extension='+runtime}/lib/php/20240924/${e}.so`]),'-d','pdo_mysql.default_socket='+process.env.RUBIZH_TEST_MYSQL_SOCKET];
 function php(code){const r=spawnSync(runtime+'/bin/php8.4',[...phpArgs,'-r',code],{encoding:'utf8',timeout:120000,env:{...process.env,LD_LIBRARY_PATH:runtime+'/lib/x86_64-linux-gnu'}});assert.equal(r.status,0,r.stderr+r.stdout);return r.stdout;}
 test('Semantic parsing resolves relations and complete phrases, while real primary-type conflicts remain for review',()=>{

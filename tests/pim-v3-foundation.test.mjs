@@ -7,7 +7,7 @@ import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {createServer} from 'node:net';
 
-const root=path.resolve(import.meta.dirname,'..'),runtime='/workspace/php-runtime/root/usr';
+const root=path.resolve(import.meta.dirname,'..'),runtime=(process.env.RUBIZH_PHP_RUNTIME||'/workspace/php-runtime/root/usr')+'';
 const args=['-n','-d','error_reporting=24575','-d','pdo_mysql.default_socket='+process.env.RUBIZH_TEST_MYSQL_SOCKET,...['pdo','mysqlnd','pdo_mysql','mbstring','curl'].flatMap(x=>['-d','extension='+runtime+'/lib/php/20240924/'+x+'.so'])];
 const env={...process.env,LD_LIBRARY_PATH:runtime+'/lib/x86_64-linux-gnu'};
 function run(code,input=''){return spawnSync(runtime+'/bin/php8.4',[...args,'-r',code],{env,input,encoding:'utf8',timeout:30000});}

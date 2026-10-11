@@ -7,7 +7,7 @@ import {tmpdir} from 'node:os';
 import {createServer} from 'node:net';
 import {chromium} from 'playwright';
 import {products} from '../dev/fixtures.mjs';
-const root=path.resolve(import.meta.dirname,'..'),runtime='/workspace/php-runtime/root/usr';
+const root=path.resolve(import.meta.dirname,'..'),runtime=(process.env.RUBIZH_PHP_RUNTIME||'/workspace/php-runtime/root/usr')+'';
 const args=['-n','-d','error_reporting=24575','-d','pdo_mysql.default_socket='+process.env.RUBIZH_TEST_MYSQL_SOCKET,...['pdo','mysqlnd','pdo_mysql','mbstring','curl','gd'].flatMap(x=>['-d','extension='+runtime+'/lib/php/20240924/'+x+'.so'])];
 const env={...process.env,LD_LIBRARY_PATH:runtime+'/lib/x86_64-linux-gnu'};
 function php(code){const p=spawnSync(runtime+'/bin/php8.4',[...args,'-r',code],{env,encoding:'utf8',timeout:180000});assert.equal(p.status,0,p.stderr+p.stdout);return p.stdout;}
@@ -46,7 +46,7 @@ test('Real HTTP: nonce CSP, banner loading, bounded reads, duplicate checkout an
   const stale=await fetch(base+'/health.php');assert.equal(stale.status,503);assert.deepEqual(await stale.json(),{ready:false});php(`require '${site}/shop/cache-worker.php';`);
   const initial=await (await fetch(base+'/shop/catalog.php?action=storefront')).json();assert.equal(initial.ok,true);assert.ok(initial.products.length<=96);
   report.initial_recommendations={products:initial.products.length,json_bytes:Buffer.byteLength(JSON.stringify(initial))};
-  browser=await chromium.launch({executablePath:existsSync('/usr/bin/chromium')?'/usr/bin/chromium':undefined,headless:true,args:['--no-sandbox']});
+  browser=await chromium.launch({executablePath:existsSync((process.env.CHROMIUM_PATH||'/usr/bin/chromium'))?(process.env.CHROMIUM_PATH||'/usr/bin/chromium'):undefined,headless:true,args:['--no-sandbox']});
   for(const theme of ['light','dark']){
    const page=await browser.newPage({viewport:{width:390,height:844}}),violations=[],jsErrors=[];page.on('pageerror',e=>jsErrors.push(e.message));
    await page.addInitScript(t=>{localStorage.setItem('rubizh.theme',t);window.cspViolations=[];document.addEventListener('securitypolicyviolation',e=>window.cspViolations.push(e.violatedDirective+' '+e.blockedURI));},theme);

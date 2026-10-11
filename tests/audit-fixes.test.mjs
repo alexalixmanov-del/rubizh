@@ -7,10 +7,10 @@ import path from 'node:path';
 import {chromium} from 'playwright';
 import {startPreview} from '../dev/preview.mjs';
 import {products} from '../dev/fixtures.mjs';
-const root=path.resolve(import.meta.dirname,'..'),runtime='/workspace/php-runtime/root/usr',ext=runtime+'/lib/php/20240924/';
+const root=path.resolve(import.meta.dirname,'..'),runtime=(process.env.RUBIZH_PHP_RUNTIME||'/workspace/php-runtime/root/usr')+'',ext=runtime+'/lib/php/20240924/';
 function php(source){const r=spawnSync(runtime+'/bin/php8.4',['-n','-d','error_reporting=24575',...['pdo','mysqlnd','pdo_mysql','mbstring'].flatMap(x=>['-d','extension='+ext+x+'.so']),'-r',source],{env:{...process.env,LD_LIBRARY_PATH:runtime+'/lib/x86_64-linux-gnu'},encoding:'utf8',timeout:20000});assert.equal(r.status,0,r.stderr+'\n'+r.stdout);return r.stdout;}
 let server,browser,base;
-before(async()=>{server=await startPreview(0);base='http://127.0.0.1:'+server.address().port;browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox']});});
+before(async()=>{server=await startPreview(0);base='http://127.0.0.1:'+server.address().port;browser=await chromium.launch({executablePath:(process.env.CHROMIUM_PATH||'/usr/bin/chromium'),args:['--no-sandbox']});});
 after(async()=>{await browser?.close();await new Promise(resolve=>server?.close(resolve));});
 test('Empty checkout hides recipient, delivery and submit; comparison survives reload and can be cleared',async()=>{
  const page=await browser.newPage({viewport:{width:390,height:844}});try{

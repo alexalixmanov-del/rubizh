@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {products} from '../dev/fixtures.mjs';
-const root=path.resolve(import.meta.dirname,'..'),runtime='/workspace/php-runtime/root/usr';
+const root=path.resolve(import.meta.dirname,'..'),runtime=(process.env.RUBIZH_PHP_RUNTIME||'/workspace/php-runtime/root/usr')+'';
 test('All picker slots, pagination, combined filters, stock and source sizes work against MySQL', {skip:!process.env.RUBIZH_TEST_MYSQL_SOCKET},()=>{
  const dir=mkdtempSync(path.join(tmpdir(),'rubizh-kit-db-')),schema='fixture_picker_'+Math.random().toString(16).slice(2);
  try{

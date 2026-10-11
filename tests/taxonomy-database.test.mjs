@@ -4,7 +4,7 @@ import {mkdtempSync,mkdirSync,readdirSync,copyFileSync,writeFileSync,rmSync} fro
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
-const root=path.resolve(import.meta.dirname,'..'),runtime='/workspace/php-runtime/root/usr';
+const root=path.resolve(import.meta.dirname,'..'),runtime=(process.env.RUBIZH_PHP_RUNTIME||'/workspace/php-runtime/root/usr')+'';
 test('Category migration is reversible, preserves full rows/media, filters old URLs and rejects unknown PIM IDs',{skip:!process.env.RUBIZH_TEST_MYSQL_SOCKET},()=>{
  const dir=mkdtempSync(path.join(tmpdir(),'rubizh-taxonomy-test-')),backup=mkdtempSync(path.join(tmpdir(),'rubizh-taxonomy-backup-')),schema='fixture_taxonomy_'+Math.random().toString(16).slice(2);
  try{

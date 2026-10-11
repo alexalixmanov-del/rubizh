@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {spawnSync,spawn} from 'node:child_process';
 import {createHash} from 'node:crypto';
-const root=path.resolve(import.meta.dirname,'..'),runtime='/workspace/php-runtime/root/usr';
+const root=path.resolve(import.meta.dirname,'..'),runtime=(process.env.RUBIZH_PHP_RUNTIME||'/workspace/php-runtime/root/usr')+'';
 const php=runtime+'/bin/php8.4',options=['-n','-d','error_reporting=24575',...['pdo','mysqlnd','pdo_mysql','mbstring'].flatMap(x=>['-d','extension='+runtime+'/lib/php/20240924/'+x+'.so'])];
 const env={...process.env,LD_LIBRARY_PATH:runtime+'/lib/x86_64-linux-gnu'};
 function run(source){const p=spawnSync(php,[...options,'-r',source],{env,encoding:'utf8'});assert.equal(p.status,0,p.stderr+p.stdout);return p.stdout;}

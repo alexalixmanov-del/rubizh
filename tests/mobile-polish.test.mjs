@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 import {startPreview} from '../dev/preview.mjs';
 let browser,server,base;
-before(async()=>{server=await startPreview(0);base='http://127.0.0.1:'+server.address().port;browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox']});});
+before(async()=>{server=await startPreview(0);base='http://127.0.0.1:'+server.address().port;browser=await chromium.launch({executablePath:(process.env.CHROMIUM_PATH||'/usr/bin/chromium'),args:['--no-sandbox']});});
 after(async()=>{await browser?.close();await new Promise(r=>server?.close(r));});
 async function centered(locator){
  const metrics=await locator.evaluate(e=>{const box=e.getBoundingClientRect(),range=document.createRange();range.selectNodeContents(e);const content=range.getBoundingClientRect();return {height:box.height,dx:Math.abs(content.x+content.width/2-box.x-box.width/2),dy:Math.abs(content.y+content.height/2-box.y-box.height/2)};});

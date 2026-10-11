@@ -6,7 +6,7 @@ import {spawnSync} from 'node:child_process';
 import path from 'node:path';
 import {chromium} from 'playwright';
 import {startPreview} from '../dev/preview.mjs';
-const root=path.resolve(import.meta.dirname,'..'),runtime='/workspace/php-runtime/root/usr';
+const root=path.resolve(import.meta.dirname,'..'),runtime=(process.env.RUBIZH_PHP_RUNTIME||'/workspace/php-runtime/root/usr')+'';
 function php(code){const args=['-n','-d','error_reporting=24575',...['pdo','mysqlnd','pdo_mysql','mbstring','gd'].flatMap(e=>['-d','extension='+runtime+'/lib/php/20240924/'+e+'.so']),'-r',code];const r=spawnSync(runtime+'/bin/php8.4',args,{env:{...process.env,LD_LIBRARY_PATH:runtime+'/lib/x86_64-linux-gnu'},encoding:'utf8'});assert.equal(r.status,0,r.stderr+r.stdout);return JSON.parse(r.stdout);}
 test('Public WebP and thumbnails are readable under private cron umask; permission repair never touches private files or symlinks',()=>{
  const dir=mkdtempSync(path.join(tmpdir(),'rubizh-photo-perms-'));
@@ -21,7 +21,7 @@ test('Overlapping photo processors skip without changing queue state or waiting 
  assert.equal(out.result.skipped,'worker_busy');assert.equal(out.result.processed,0);assert.ok(out.seconds<.5);
 });
 let browser,server,base;
-before(async()=>{server=await startPreview(0);base='http://127.0.0.1:'+server.address().port;browser=await chromium.launch({executablePath:existsSync('/usr/bin/chromium')?'/usr/bin/chromium':undefined,args:['--no-sandbox']});});
+before(async()=>{server=await startPreview(0);base='http://127.0.0.1:'+server.address().port;browser=await chromium.launch({executablePath:existsSync((process.env.CHROMIUM_PATH||'/usr/bin/chromium'))?(process.env.CHROMIUM_PATH||'/usr/bin/chromium'):undefined,args:['--no-sandbox']});});
 after(async()=>{await browser?.close();await new Promise(r=>server?.close(r));});
 test('First catalogue images have priority while later cards stay lazy on mobile and desktop',async()=>{
  for(const width of [390,1440]){const page=await browser.newPage({viewport:{width,height:900}});const errors=[];page.on('pageerror',e=>errors.push(e.message));try{

@@ -13,7 +13,7 @@ const sizeButtons=page=>page.evaluate(()=>[...document.querySelectorAll('button,
 
 test('storefront: one MODEL, color switch changes gallery and real sizes, size selects the real SKU, cart line is exact',{skip,timeout:240000},async()=>{
  const site=await startSite({extraConfig:",'mono_mock'=>true,'environment'=>'staging','staging_allow_loopback'=>true"});
- const browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox']});
+ const browser=await chromium.launch({executablePath:(process.env.CHROMIUM_PATH||'/usr/bin/chromium'),args:['--no-sandbox']});
  try{
   assert.equal((await publish(site,wire)).status,200);
   for(const viewport of [{width:390,height:844},{width:1440,height:900}]){

@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 const root=path.resolve(import.meta.dirname,'..');
-const retained='/workspace/php-runtime/root/usr';
+const retained=(process.env.RUBIZH_PHP_RUNTIME||'/workspace/php-runtime/root/usr')+'';
 const php=process.env.PHP_PATH||(existsSync(retained+'/bin/php8.4')?retained+'/bin/php8.4':'php');
 const env={...process.env,LD_LIBRARY_PATH:process.env.LD_LIBRARY_PATH||retained+'/lib/x86_64-linux-gnu'};
 function run(source){const options=existsSync(retained+'/lib/php/20240924/mbstring.so')?['-n','-d','extension='+retained+'/lib/php/20240924/mbstring.so']:[];const r=spawnSync(php,[...options,'-r',source],{env,encoding:'utf8',timeout:5000});assert.equal(r.status,0,r.stderr);return r.stdout;}

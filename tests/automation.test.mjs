@@ -4,8 +4,8 @@ import {mkdtempSync,mkdirSync,writeFileSync,copyFileSync,readdirSync,rmSync,read
 import {spawnSync,spawn} from 'node:child_process';
 import path from 'node:path';
 import {tmpdir} from 'node:os';
-const root=path.resolve(import.meta.dirname,'..'),php=process.env.PHP_PATH||'/workspace/php-runtime/root/usr/bin/php8.4',ext='/workspace/php-runtime/root/usr/lib/php/20240924/';
-const env={...process.env,LD_LIBRARY_PATH:'/workspace/php-runtime/root/usr/lib/x86_64-linux-gnu'};
+const root=path.resolve(import.meta.dirname,'..'),php=process.env.PHP_PATH||(process.env.RUBIZH_PHP_RUNTIME||'/workspace/php-runtime/root/usr')+'/bin/php8.4',ext=(process.env.RUBIZH_PHP_RUNTIME||'/workspace/php-runtime/root/usr')+'/lib/php/20240924/';
+const env={...process.env,LD_LIBRARY_PATH:(process.env.RUBIZH_PHP_RUNTIME||'/workspace/php-runtime/root/usr')+'/lib/x86_64-linux-gnu'};
 function run(source,args=[]){const r=spawnSync(php,['-n','-d','error_reporting=24575','-d','extension='+ext+'pdo.so','-d','extension='+ext+'mysqlnd.so','-d','extension='+ext+'pdo_mysql.so','-d','extension='+ext+'mbstring.so','-r',source,...args],{env,encoding:'utf8',timeout:20000});assert.equal(r.status,0,r.stderr+'\n'+r.stdout);return r.stdout;}
 test('Cart mail has escaped real variants, quantities and a limited recovery link; order stages include one tracking section',()=>{
  const result=JSON.parse(run(`define('RUBIZH_AUTH',true);require '${root}/auth/email-templates.php';

@@ -5,7 +5,7 @@ import {spawnSync} from 'node:child_process';
 import path from 'node:path';
 import {chromium} from 'playwright';
 import {startPreview} from '../dev/preview.mjs';
-const root=path.resolve(import.meta.dirname,'..'),retained='/workspace/php-runtime/root/usr';
+const root=path.resolve(import.meta.dirname,'..'),retained=(process.env.RUBIZH_PHP_RUNTIME||'/workspace/php-runtime/root/usr')+'';
 const php=process.env.PHP_PATH||(existsSync(retained+'/bin/php8.4')?retained+'/bin/php8.4':'php');
 function run(source){
  const options=existsSync(retained+'/lib/php/20240924/mbstring.so')?['-n',...['pdo','mbstring'].flatMap(name=>['-d','extension='+retained+'/lib/php/20240924/'+name+'.so'])]:[];
@@ -32,7 +32,7 @@ test('Donation batching rejects mixed brigades before writing a transfer',()=>{
 });
 test('Brigade is the first field in the donation block, updates the summary, and reaches the order payload',async()=>{
  const server=await startPreview(0),base='http://127.0.0.1:'+server.address().port;
- const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||(existsSync('/usr/bin/chromium')?'/usr/bin/chromium':undefined),headless:true,args:['--no-sandbox']});
+ const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||(existsSync((process.env.CHROMIUM_PATH||'/usr/bin/chromium'))?(process.env.CHROMIUM_PATH||'/usr/bin/chromium'):undefined),headless:true,args:['--no-sandbox']});
  try{for(const [theme,width] of [['light',1440],['dark',390],['light',320]]){
   const context=await browser.newContext({viewport:{width,height:900}});const page=await context.newPage();page.setDefaultTimeout(8000);let payload;
   await page.addInitScript(theme=>localStorage.setItem('rubizh.theme',theme),theme);
