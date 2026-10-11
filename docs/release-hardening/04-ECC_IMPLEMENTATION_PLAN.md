@@ -18,10 +18,10 @@
 
 ## Осталось (по порядку)
 
-1. Решения владельца: Q-4…Q-9 (03), файлы баннеров D-09/D-23.
-2. Дополнительное ТЗ владельца (главная, конструктор комплектов, каталог, кабинет 2.0, Instagram/TikTok) — сопоставить с этим планом, исключить дубли, добавить только новое.
-3. Финальный `/ecc:code-review` по диффу `59b4685..HEAD`, исправления, повтор тестов, `08-RELEASE_READINESS.md` (GO/NO-GO).
-4. CI на GitHub после каждого push.
+1. Разрешение на push → CI для итогового SHA → теги `rubizh-stage-1…6-verified` (сейчас INCOMPLETE, см. `STAGE_CHECKPOINT.md`).
+2. Q-6 SMS-защита → Q-7 прямая MonoPay при подтверждённом наличии → Q-5 step-up/RBAC/аудит → Q-4 v3 под заказ: каждый — отдельный этап с checkpoint.
+3. Решения владельца: Q-8 (`10-KIT_RULES_PROPOSAL.md`), Q-9 (`09-ASSET_INVENTORY.md`), баннеры D-09 (`11-BANNER_PROMPTS.md`), sandbox monobank/НП (RV-4, live-проверки).
+4. Повтор gate и `08-RELEASE_READINESS.md` → GO/NO-GO перед любым deploy (deploy — только с отдельного подтверждения).
 
 ## ADDENDUM №2 — сверка (Phase 1, 2026-10-11)
 
