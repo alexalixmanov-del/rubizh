@@ -71,7 +71,10 @@ function pimV3ResolveLine(PDO $db,array $line,array $model,bool $lock,array &$to
 /** Whole-order policy: any line needing confirmation → WAITING_CONFIRMATION, one payment later; no split. */
 function pimV3OrderDecision(array $lines,string $payment): array {
     $v3=(bool)array_filter($lines,fn($l)=>($l['contract_version']??null)===3);
-    if(!$v3)return ['contract_version'=>null,'order_state'=>null,'legacy_status'=>'new','payment_now'=>false];
+    // Q-7: a legacy card order whose every line is in stock with a numeric (confirmed) quantity was already re-priced and
+    // stock-checked by the server and is reserved at checkout, so it can be paid right away; anything else waits for the manager.
+    if(!$v3){$now=$payment==='card'&&$lines&&!array_filter($lines,fn($l)=>($l['availability']??'')!=='in'||empty($l['stock_confirmed'])||($l['request_state']??'')!=='stock_check');
+        return ['contract_version'=>null,'order_state'=>null,'legacy_status'=>$now?'confirmed':'new','payment_now'=>$now];}
     $confirm=(bool)array_filter($lines,fn($l)=>($l['contract_version']??null)!==3||empty($l['payment_allowed'])||!empty($l['requires_order_confirmation']))||$payment==='cod';
     return ['contract_version'=>3,'order_state'=>$confirm?'WAITING_CONFIRMATION':'CONFIRMED','legacy_status'=>$confirm?'new':'confirmed','payment_now'=>!$confirm];
 }

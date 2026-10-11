@@ -1,0 +1,67 @@
+// Q-7 MonoPay webhook contract tests with a fixture ECDSA key pair (the bank's public key is replaced in the isolated DB).
+// No negative case may mark the order paid. Isolated MySQL fixture, MonoPay mock for invoice creation; no network.
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {generateKeyPairSync,createSign} from 'node:crypto';
+import {startSite,wire,publish} from './helpers/site-fixture.mjs';
+const skip=!process.env.RUBIZH_TEST_MYSQL_SOCKET;
+async function fixture(){
+ const site=await startSite({extraConfig:",'mono_mock'=>true,'environment'=>'staging'"});
+ assert.equal((await publish(site,structuredClone(wire))).status,200);
+ const keys=generateKeyPairSync('ec',{namedCurve:'prime256v1'});
+ site.sql(`INSERT INTO meta(k,v) VALUES('mono_public_key','${Buffer.from(keys.publicKey.export({type:'spki',format:'pem'})).toString('base64')}')`);
+ const other=generateKeyPairSync('ec',{namedCurve:'prime256v1'});
+ // The bank key was refreshed a moment ago (as after any first webhook), so a forged signature is judged against it.
+ site.sql(`INSERT INTO meta(k,v) VALUES('mono_public_key_checked',UNIX_TIMESTAMP()) ON DUPLICATE KEY UPDATE v=VALUES(v)`);
+ site.hook=(inv,{status='success',amount=+inv.amount,ccy=980,invoiceId=inv.invoice_id,key=keys.privateKey,at=new Date()}={})=>{const raw=JSON.stringify({invoiceId,status,amount,ccy,reference:inv.reference,modifiedDate:at.toISOString()});
+  return site.post('/shop/mono-webhook.php',raw,{'X-Sign':createSign('SHA256').update(raw).sign(key).toString('base64')});};
+ site.forged=inv=>site.hook(inv,{key:other.privateKey});
+ const r=await fetch(site.base+'/shop/customer.php');const h={Cookie:r.headers.get('set-cookie').split(';')[0]},csrf=(await r.json()).csrf;
+ const model=wire.products.find(p=>p.id==='m-jacket'),line={product_id:'m-jacket',color_id:model.colors.find(c=>c.variant_skus.includes('RUB-F0001')).id,sku:'RUB-F0001',qty:1};
+ site.newInvoice=async(n)=>{const q=await site.post('/shop/checkout-quote.php',{csrf,lines:[line],payment:'card'},h);
+  const o=await site.post('/shop/order.php',{csrf,request_id:String(n).padStart(32,'9'),contact:{name:'Тест Покупець',recipient:'Тест Покупець',phone:'+380671234567',city:'Київ',address:'Відділення 1',delivery_type:'branch'},payment:'card',lines:[line],expected_total:q.data.quote.total,catalog_version:q.data.quote.catalog_version},h);
+  assert.equal(o.status,200,JSON.stringify(o.data));const id=o.data.order.id;assert.equal((await site.post('/shop/payment-start.php',{csrf,order_id:id},h)).status,200);
+  return {id,inv:site.sql('SELECT * FROM rubizh_mono_invoices WHERE order_id='+id)[0]};};
+ site.paid=id=>site.sql('SELECT payment_status FROM rubizh_customer_orders WHERE id='+id)[0].payment_status;
+ return site;
+}
+
+test('MonoPay webhook contract: valid signature pays once; duplicates change nothing',{skip,timeout:180000},async()=>{
+ const site=await fixture();try{
+  const {id,inv}=await site.newInvoice(1),at=new Date();// a bank retry resends the identical body
+  assert.equal((await site.hook(inv,{at})).status,200);assert.equal(site.paid(id),'paid');
+  for(let i=0;i<3;i++)assert.equal((await site.hook(inv,{at})).status,200,'the bank may retry');
+  assert.equal(site.paid(id),'paid');assert.equal(+site.sql(`SELECT COUNT(*) n FROM rubizh_mono_events WHERE invoice_id='${inv.invoice_id}'`)[0].n,1,'one applied event');
+ }finally{site.stop();}
+});
+
+test('MonoPay webhook contract: forged signature, wrong amount, wrong currency, foreign invoice and failure never mark paid',{skip,timeout:180000},async()=>{
+ const site=await fixture();try{
+  const {id,inv}=await site.newInvoice(2);
+  assert.equal((await site.forged(inv)).status,403,'forged signature');
+  assert.equal((await site.hook(inv,{amount:+inv.amount-1})).status,200,'wrong amount is acknowledged and parked');
+  assert.equal((await site.hook(inv,{ccy:840})).status,200,'wrong currency is acknowledged and parked');
+  assert.equal((await site.hook(inv,{invoiceId:'someone-else-invoice'})).status,503,'unknown invoice stays retryable');
+  assert.equal((await site.hook(inv,{status:'failure'})).status,200);
+  assert.equal(site.paid(id),'failed');assert.equal(+site.sql(`SELECT COUNT(*) n FROM rubizh_np_audit WHERE order_id=${id} AND action='mono_event_rejected'`)[0].n,2);
+ }finally{site.stop();}
+});
+
+test('MonoPay webhook contract: a webhook that arrives before the invoice is saved is retried by the bank and then pays once',{skip,timeout:180000},async()=>{
+ const site=await fixture();try{
+  const {id,inv}=await site.newInvoice(3);
+  site.sql(`UPDATE rubizh_mono_invoices SET invoice_id='pending-save' WHERE order_id=${id}`);
+  assert.equal((await site.hook(inv)).status,503,'invoice not saved yet → bank retries');assert.equal(site.paid(id),'pending');
+  site.sql(`UPDATE rubizh_mono_invoices SET invoice_id='${inv.invoice_id}' WHERE order_id=${id}`);
+  assert.equal((await site.hook(inv)).status,200);assert.equal(site.paid(id),'paid');
+ }finally{site.stop();}
+});
+
+test('MonoPay webhook contract: expiry or a stale non-final event on a closed invoice never marks paid',{skip,timeout:180000},async()=>{
+ const site=await fixture();try{
+  const {id,inv}=await site.newInvoice(4);
+  assert.equal((await site.hook(inv,{status:'expired'})).status,200);
+  assert.notEqual(site.paid(id),'paid');assert.equal(site.sql('SELECT status FROM rubizh_customer_orders WHERE id='+id)[0].status,'cancelled','an expired invoice releases the order');
+  assert.equal((await site.hook(inv,{status:'processing',at:new Date(Date.now()-60000)})).status,200);assert.notEqual(site.paid(id),'paid');
+ }finally{site.stop();}
+});
