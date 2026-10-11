@@ -50,7 +50,9 @@ test('Q-6: one address cannot spray numbers — a short burst needs the check, a
   const challenge=fourth.session.sms_check;assert.ok(challenge&&challenge.nonce,'challenge kept in the session');
   const passed=await site.req('+380672220003',{ip,session:fourth.session,pow:solve(challenge.nonce,challenge.bits)});
   assert.equal(passed.ok,true,'a solved check lets a real person through: '+passed.error);
-  const replay=await site.req('+380672220004',{ip,session:{...fourth.session},pow:solve(challenge.nonce,challenge.bits)});
+  // Sessions live on the server: after use the challenge is gone, so the same answer cannot be replayed.
+  assert.equal(passed.session.sms_check,undefined,'the challenge is consumed');
+  const replay=await site.req('+380672220004',{ip,session:passed.session,pow:solve(challenge.nonce,challenge.bits)});
   assert.equal(replay.ok,false,'a solved check is single-use');
   site.sql(`INSERT INTO rubizh_phone_challenges(id,phone,code_hash,flow_hash,ip_hash,sent_at,expires_at,state) VALUES('${'f'.repeat(32)}','+380672220099','${'0'.repeat(64)}','${'0'.repeat(64)}','${site.ipHash(ip)}',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()+300,'sent')`);
   const hard=await site.req('+380672220005',{ip,session:passed.session,pow:'0'});
@@ -65,7 +67,7 @@ test('Q-6/D-15: strangers cannot exhaust the daily budget — 30% stays reserved
   const stranger=await site.req('+380673339999',{ip:'192.0.2.50'});
   assert.equal(stranger.ok,false);assert.match(stranger.error,/email/i,'a stranger is pointed to email login');
   site.sql(`INSERT INTO rubizh_accounts(id,email,first_name,last_name,created_at,updated_at) VALUES('${'b'.repeat(32)}','c@fixture.test','Тест','Покупець',UTC_TIMESTAMP(),UTC_TIMESTAMP())`);
-  site.sql(`INSERT INTO rubizh_identities(provider,subject,account_id,created_at) VALUES('phone','+380673338888','${'b'.repeat(32)}',UTC_TIMESTAMP())`);
+  site.sql(`INSERT INTO rubizh_customer_identities(provider,subject,customer_id,created_at) VALUES('phone','+380673338888','${'b'.repeat(32)}',UTC_TIMESTAMP())`);
   const customer=await site.req('+380673338888',{ip:'192.0.2.51'});
   assert.equal(customer.ok,true,'an existing customer still gets the code: '+customer.error);
  }finally{site.stop();}
@@ -78,4 +80,23 @@ test('Q-6: too many wrong codes for one number stop new codes for that number fo
   const r=await site.req('+380674440000',{ip:'192.0.2.60'});
   assert.equal(r.ok,false);assert.match(r.error,/забагато невдалих спроб|email/i);
  }finally{site.stop();}
+});
+
+test('Q-6: in the browser the check is solved invisibly after the second press and the code page opens; no real SMS',{skip,timeout:180000},async()=>{
+ const {chromium}=await import('playwright');
+ const site=await smsSite(",'sms_test_outbox'=>__DIR__.'/../sms-outbox.jsonl'");let browser;
+ try{
+  // Two recent requests from this browser's address make the next ones suspicious (but under the hard limit).
+  for(let i=0;i<3;i++)site.sql(`INSERT INTO rubizh_phone_challenges(id,phone,code_hash,flow_hash,ip_hash,sent_at,expires_at,state) VALUES('${String(i).padStart(32,'d')}','+38067555000${i}','${'0'.repeat(64)}','${'0'.repeat(64)}','${sha('127.0.0.1')}',UNIX_TIMESTAMP()-60,UNIX_TIMESTAMP()+240,'sent')`);
+  browser=await chromium.launch({executablePath:(process.env.CHROMIUM_PATH||'/usr/bin/chromium'),args:['--no-sandbox']});
+  const page=await browser.newPage({viewport:{width:390,height:844}});
+  await page.goto(site.base+'/auth/');await page.locator('#entry-phone').fill('0675550009');
+  await page.getByRole('button',{name:/Отримати код/}).first().click();await page.waitForLoadState('load');
+  assert.match(await page.locator('body').innerText(),/Підтверджуємо, що запит робить людина[\s\S]*email/);
+  await page.locator('input[name="phone"]').first().fill('0675550009');
+  await page.getByRole('button',{name:/Отримати код/}).first().click();
+  await page.getByLabel(/Код підтвердження/).waitFor({timeout:30000});
+  const {readFileSync}=await import('node:fs');
+  assert.match(readFileSync(path.join(site.site,'sms-outbox.jsonl'),'utf8'),/\+380675550009/,'the code went to the local outbox, not to a provider');
+ }finally{await browser?.close();site.stop();}
 });
