@@ -18,7 +18,7 @@
 
 ## Осталось (по порядку)
 
-1. Разрешение на push → CI для итогового SHA → теги `rubizh-stage-1…6-verified` (сейчас INCOMPLETE, см. `STAGE_CHECKPOINT.md`).
+1. ~~CI и тег для ADDENDUM №2~~ — закрыто: тег `rubizh-addendum2-phases2-7-verified` (`bbc989a`, CI success). Теги `rubizh-stage-N-verified` относятся к **глобальным этапам 1–6 проекта** (см. `STAGE_CHECKPOINT.md`), а не к фазам ADDENDUM №2.
 2. Q-6 SMS-защита → Q-7 прямая MonoPay при подтверждённом наличии → Q-5 step-up/RBAC/аудит → Q-4 v3 под заказ: каждый — отдельный этап с checkpoint.
 3. Решения владельца: Q-8 (`10-KIT_RULES_PROPOSAL.md`), Q-9 (`09-ASSET_INVENTORY.md`), баннеры D-09 (`11-BANNER_PROMPTS.md`), sandbox monobank/НП (RV-4, live-проверки).
 4. Повтор gate и `08-RELEASE_READINESS.md` → GO/NO-GO перед любым deploy (deploy — только с отдельного подтверждения).
@@ -59,19 +59,19 @@
 | P-8 | Мої дані без обхода SMS | телефон readonly после подтверждения | DONE | — | существующие |
 | P-9 | Поддержка с номером заказа | mailto с темой «Замовлення №» | DONE | — | — |
 | S-1 | Footer «Ми в соцмережах», Instagram/TikTok из настроек (`instagram_url`, `tiktok_url`), валидация https+host, скрытие пустых | нет | NEW | `shop/settings-lib.php`, `settings.php`, `index.html`, client | addendum-social |
-| Q-4 | v3 «під замовлення»: подтверждение менеджера до оплаты, серверная проверка, без изменения PIM | v3 требует `payment_allowed` из PIM (D-25 legacy fixed) | EXTEND / возможен CONFLICT с контрактом PIM → предложение | `order-validation.php` | release-hardening |
-| Q-5 | Step-up, RBAC, audit для денежных действий менеджера (в SITE) | менеджер на клиентской сессии (D-16) | NEW | `shop/np-*.php`, auth | новый |
-| Q-6 | SMS: rate limit, cooldown, лимиты, CAPTCHA при подозрительной активности, атомарно | глобальные лимиты (D-15) | NEW | `auth/phone.php` | новый |
-| Q-7 | Legacy «в наличии» → прямая MonoPay при подтверждённом остатке; иначе менеджер | всё legacy через менеджера | NEW (финансовый поток) | `order.php`, validation | новый |
+| Q-4 | v3 «під замовлення»: заказ → подтверждение менеджера → повторная проверка SKU/цены → счёт → оплата; PIM только читается | — | **DONE** `f69bb0d` (CI 38159041894 success) | `order-validation.php`, `customer-ui.php` | q4-v3-preorder |
+| Q-5 | RBAC на сервере, step-up ≤ 15 мин для возврата/сверки/переопределения цены, версия заказа (409), аудит, CSRF; CRM не менялся | — | **DONE** `c90192d` (CI 38158149167 success) + ревью-правки `17f9c67` | `financial-permissions.php`, `financial-actions.php`, `settings.php` | q5-manager-rbac, p0-integration |
+| Q-6 | SMS: лимит на адрес, бюджет неверных кодов (номер, адрес), резерв 30% для клиентов, проверка при подозрительной активности, email-резерв | — | **DONE** `8afd937` (CI 38156005947 success) + `17f9c67` (один текст отказа, ≤ 20 бит) | `auth/phone.php`, `login.js` | sms-protection |
+| Q-7 | Legacy: подтверждённый числовой остаток → сразу MonoPay (серверная цена, резерв); неизвестный остаток/ФОП/смешанный → менеджер; контракт webhook | — | **DONE** `d7554bf` (CI 38157095357 success) | `pim-v3-checkout.php` | q7-payment-readiness, mono-webhook-contract |
 | Q-8 | Правила комплекта: исследование + предложение, расчёты не менять | D-11 | NEW (документ) | — | — |
 | Q-9 | Инвентаризация assets, удаление отдельным этапом | D-22 | NEW (документ) | — | — |
 | B-1 | Баннеры из Drive для категорий без баннера; перечень + промпты, без генерации | D-09/D-23 | EXTEND | — | — |
 
-Порядок: Phase 2 (A-1…A-4) → Phase 7 (S-1) → Phase 3 (K-1) → Phase 4 (K-2…K-10) → Phase 5 (C-*) → Phase 6 (P-*) → Q-6 → Q-7 → Q-5 → Q-4 → Q-8/Q-9 (документы) → B-1 → Phase 8 (регрессия, browser QA, документы) → финальный `/ecc:code-review` → `08-RELEASE_READINESS.md`.
+Порядок ADDENDUM №2 (выполнен): Phase 2 (A-1…A-4) → Phase 7 (S-1) → Phase 3 (K-1) → Phase 4 (K-2…K-10) → Phase 5 (C-*) → Phase 6 (P-*) → Q-6 → Q-7 → Q-5 → Q-4 → Q-8/Q-9 (документы) → B-1 → Phase 8 (регрессия, browser QA, документы) → финальный `/ecc:code-review` → `08-RELEASE_READINESS.md`.
 
 ## VERIFIED CHECKPOINT после каждого этапа (требование владельца 2026-10-11)
 
-Этапы (сопоставление, на подтверждение владельца): ADDENDUM №2 Phase 2 → **этап 1** (главная), Phase 3 → **2** (онбординг конструктора), Phase 4 → **3** (удобство конструктора), Phase 5 → **4** (каталог), Phase 6 → **5** (кабинет), Phase 7 → **6** (соцсети).
+**Исправлено 2026-10-11 (указание владельца):** прежняя запись «этапы 1–6 = фазы 2–7 ADDENDUM №2» была неверной и владельцем не подтверждалась. Фазы 2–7 ADDENDUM №2 закрыты отдельным checkpoint с тегом `rubizh-addendum2-phases2-7-verified`. **Глобальные этапы проекта:** 1 — завершение SITE (hardening, Q-4…Q-7, Quality Gate); 2 — независимый multi-agent аудит SITE + PIM; 3 — стабильный release candidate; 4 — завершение CRM; 5 — импорт пяти поставщиков; 6 — финальный E2E всей системы. Тег `rubizh-stage-N-verified` = завершение глобального этапа N.
 
 **Definition of Done этапа** — все пункты выполнены на одном и том же HEAD:
 1. Полный `npm test` (известные macOS-ограничения окружения перечислены и совпадают с исходным `59b4685`).
@@ -83,6 +83,18 @@
 7. Нет открытых P0 и блокирующих P1.
 
 **Checkpoint:** обновить 03/05/08 → `STAGE_CHECKPOINT.md` (SHA SITE и PIM, дата, результаты, восстановление) → отдельный commit → annotated tag `rubizh-stage-N-verified` (только если пункты 1–7 зелёные) → чистое дерево. Push коммитов и тегов — только с явного разрешения. Если чего-то нет (например, CI без push) — статус **INCOMPLETE**, без тега `verified`, обычный commit и перечень недостающего. Изменение кода после checkpoint отменяет его подтверждение для нового HEAD.
+
+## Глобальный этап 1 (SITE) — 2026-10-11
+
+Порядок выполнен: Q-6 → Q-7 → Q-5 → Q-4 → несколько посылок (анализ) → Quality Gate → checkpoint. Живые внешние проверки (HTTPS webhook, оплата тестовой картой, реальная SMS, тестовая ТТН, В-1…В-4) — **DEFERRED → этап 6**. Реальные API на этапе 1 не вызывались: всё через mock и контрактные тесты. Итоги — `08-RELEASE_READINESS.md`, `STAGE_CHECKPOINT.md`.
+
+### Задачи следующих этапов, возникшие на этапе 1
+
+| ID | Этап | Задача | Основание |
+|---|---|---|---|
+| CRM-4.1 | 4 (CRM) | Показ менеджеру спорных событий MonoPay: `mono_event_rejected` + результат pull-сверки `mono_parked_reconcile` (статус банка, сумма, валюта, локальный статус), фильтр «требует звірки». CRM на этапе 1 не менялся | RV-14 |
+| CRM-4.2 | 4 (CRM) | Сделать версию заказа обязательной в CRM-возврате: `crmRefund(...,$version)` проверяет её под блокировкой заказа (`staff/refunds.php:13`), но параметр необязателен. SITE `financial-actions.php` уже требует версию с этапа 1 | RV-11 |
+| PERF-2.1 | 2 (аудит) | ~200 КБ JS рисуют первый экран: серверный рендер первого экрана или разделение/минификация `shop-client` (474 КБ); адаптивные варианты изображений категорий/`kit-photo` | PERF-1 |
 
 ## Не входит без отдельного разрешения
 Production deploy, production migrations, включение v3, PIM-патчи, реальные платежи/invoice, реальные ТТН, reset/импорт каталога, изменения CRM, merge в main.

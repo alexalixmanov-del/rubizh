@@ -1,6 +1,19 @@
 # SESSION HANDOFF — RUBIZH SITE release hardening
 
-Обновлено: 2026-10-11, сессия 2 (P2/P3, браузерная матрица, a11y/SEO/Lighthouse). Продолжать с этого документа.
+Обновлено: 2026-10-11 — **глобальный этап 1 (SITE) завершён**, checkpoint `rubizh-stage-1-verified` (локальный тег). Продолжать с этого документа. **К глобальному этапу 2 без указания владельца не переходить.**
+
+## Глобальные этапы проекта (терминология владельца)
+
+1 — завершение SITE (**VERIFIED**, проверенный код `3327862`, тег `rubizh-stage-1-verified` на checkpoint-коммите (`git rev-parse rubizh-stage-1-verified`)); 2 — независимый multi-agent аудит SITE + PIM; 3 — стабильный release candidate; 4 — завершение CRM; 5 — импорт пяти поставщиков; 6 — финальный E2E (живые проверки В-1…В-4 — DEFERRED сюда). Этапы 2–6 не начаты. Фазы 2–7 ADDENDUM №2 — отдельная закрытая работа (`rubizh-addendum2-phases2-7-verified`), не этапы 1–6.
+
+## Итог глобального этапа 1 (2026-10-11)
+
+- Q-6 (SMS), Q-7 (подтверждённое наличие → MonoPay, контракт webhook, идемпотентность — ключ на попытку оформления), Q-5 (RBAC, повторный вход ≤ 15 мин, обязательная версия заказа для возврата/сверки, аудит, CSRF), Q-4 (предзаказ v3 только после подтверждения менеджера) — DONE; SHA и CI — `08-RELEASE_READINESS.md`, `STAGE_CHECKPOINT.md`.
+- Дефекты и ревью этапа: Q-4…Q-7, D-41, RV-10…RV-17, PERF-1 — `03-DEFECT_REGISTER.md`.
+- Задачи следующих этапов: CRM-4.1 (показ спорных событий MonoPay), CRM-4.2 (обязательная версия в CRM-возврате), PERF-2.1 (~200 КБ JS первого экрана) — `04`.
+- Новые тесты: `q4-v3-preorder`, `q5-manager-rbac`, `q7-payment-readiness`, `mono-webhook-contract`, `order-idempotency`, `idor-orders`, `sms-protection`.
+- Инструменты (scratch, вне репозитория): `lh-prod.mjs` (Lighthouse за прокси brotli/gzip + кеш по .htaccess), `gate-sum.mjs`, `lh-sum.mjs`; QA-матрица: `QA_WIDTHS=360,390,430,768,1024,1280,1440 QA_FLOW_ALL=1 node tests/.staging/qa-matrix.mjs OUT`, `QA_FIREFOX=1 node tests/.staging/qa-addendum.mjs OUT`.
+- Production: один разрешённый запрос заголовков `https://rubizh.shop/` — `content-encoding: br`, `cache-control: no-cache`, nginx. Больше обращений не было.
 
 ## Репозитории и ветки
 
@@ -57,8 +70,8 @@ Regression-first: каждый новый тест сначала красный
 ## Сессия 2, продолжение (ADDENDUM №2 и checkpoint)
 
 - Push `3326514` выполнен по разрешению, CI success. Дальнейшие коммиты (`7b4aa86` … `98ef261` и checkpoint) **не отправлены** — новое правило: push только с явного разрешения.
-- ADDENDUM №2: этапы 1–6 (фазы 2–7) реализованы regression-first; сверка — `04` (A-*, K-*, C-*, P-*, S-*).
-- Независимый ECC code review: P0/P1 нет; RV-1…RV-4 исправлены. Gate на `98ef261` зелёный, кроме CI → `STAGE_CHECKPOINT.md`: **INCOMPLETE**, тегов `verified` нет.
+- ADDENDUM №2: фазы 2–7 реализованы regression-first (это не глобальные этапы проекта; закрыты тегом `rubizh-addendum2-phases2-7-verified`); сверка — `04` (A-*, K-*, C-*, P-*, S-*).
+- Независимый ECC code review: P0/P1 нет; RV-1…RV-4 исправлены. Gate на `98ef261` зелёный; после push CI success на `bbc989a` → тег `rubizh-addendum2-phases2-7-verified`.
 - Документы: `08-RELEASE_READINESS.md` (NO-GO для production, блокеры B-1…B-5), `09-ASSET_INVENTORY.md` (Q-9), `10-KIT_RULES_PROPOSAL.md` (Q-8), `11-BANNER_PROMPTS.md` (D-09).
 - Следующее по решениям владельца: Q-6 (SMS), Q-7 (прямая MonoPay при подтверждённом наличии), Q-5 (step-up/RBAC/аудит), Q-4 (v3 под заказ) — каждый этапом с checkpoint; ждут разрешения/решения владельца по CI-push и этапам.
 - Новые QA-инструменты: `tests/.staging/qa-addendum.mjs` (экраны ADDENDUM), `qa-audit.mjs` (Lighthouse с жёстким таймаутом).
