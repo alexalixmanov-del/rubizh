@@ -63,6 +63,12 @@ Regression-first: каждый новый тест сначала красный
 - Следующее по решениям владельца: Q-6 (SMS), Q-7 (прямая MonoPay при подтверждённом наличии), Q-5 (step-up/RBAC/аудит), Q-4 (v3 под заказ) — каждый этапом с checkpoint; ждут разрешения/решения владельца по CI-push и этапам.
 - Новые QA-инструменты: `tests/.staging/qa-addendum.mjs` (экраны ADDENDUM), `qa-audit.mjs` (Lighthouse с жёстким таймаутом).
 
+## Сессия 2, продолжение (интеграции и Q-6)
+
+- Checkpoint ADDENDUM: тег `rubizh-addendum2-phases2-7-verified` → `bbc989a` (CI success), локальный, не отправлен.
+- Ключи провайдеров: `~/Projects/rubizh-test-secrets/` (вне Git). monobank — sandbox (тестовый мерчант), НП и TurboSMS — реальные аккаунты, только readonly. Запуск: `run-testing.sh <provider> -- node tests/.staging/qa-connectivity.mjs` и `qa-provider-sandbox.mjs`. Подробно — `INTEGRATION_TEST_READINESS.md`.
+- Q-6 (SMS) реализован и прошёл локальный gate; **INCOMPLETE** до CI (push по разрешению). Q-7 → Q-5 → Q-4 — после решения владельца.
+
 ## Не начато / в работе
 
 - Ждёт владельца: Q-4…Q-9 (03), файлы баннеров D-09/D-23, **дополнительное ТЗ** (главная, конструктор комплектов, каталог, кабинет 2.0, Instagram/TikTok) — сопоставить с 04, добавить только новое.
