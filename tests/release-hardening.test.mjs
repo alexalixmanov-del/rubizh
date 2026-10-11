@@ -263,3 +263,14 @@ test('buying the same item again after a successful order creates a new order, w
   assert.equal(+site.sql('SELECT COUNT(*) n FROM rubizh_customer_orders')[0].n,2);
  }finally{await browser?.close();site.stop();}
 });
+
+// Integration safety: sandbox invoices must not point monobank at the production webhook.
+test('MonoPay callback and return URLs come from public_base_url; production stays the default',{skip,timeout:180000},async()=>{
+ for(const [extra,base] of [['','https://rubizh.shop'],[",'public_base_url'=>'https://sandbox.rubizh.test'",'https://sandbox.rubizh.test']]){
+  const site=await fixture({extra:`,'staff_roles'=>['${owner}'=>'OWNER']`+extra});try{
+   const buyer=await shopper(site),o=await checkout(site,buyer);assert.equal(o.status,200,JSON.stringify(o.data));
+   const body=JSON.parse(call(site,`define('RUBIZH_MONO_TESTS',true);$GLOBALS['mono_test_transport']=function($p,$b){if($p==='invoice/create'){$GLOBALS['body']=$b;return ['invoiceId'=>'urlcheck','pageUrl'=>'https://pay.mbnk.biz/urlcheck'];}return [];};try{monoCreate($db,${o.data.order.id},'${owner}');}catch(Throwable $e){echo json_encode(['error'=>get_class($e).': '.$e->getMessage()]);exit;}echo json_encode($GLOBALS['body']);`).stdout);
+   assert.equal(body.error,undefined,body.error);assert.equal(body.webHookUrl,base+'/shop/mono-webhook.php');assert.match(body.redirectUrl,new RegExp('^'+base.replace(/[.]/g,'\\.')+'/shop/payment-return\\.php\\?invoice=\\d+$'));
+  }finally{site.stop();}
+ }
+});

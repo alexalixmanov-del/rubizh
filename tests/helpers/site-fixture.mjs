@@ -7,7 +7,8 @@ export const root=path.resolve(import.meta.dirname,'../..');
 export const runtime=(process.env.RUBIZH_PHP_RUNTIME||'/workspace/php-runtime/root/usr')+'';
 const ext=runtime+'/lib/php/20240924/';
 export const phpArgs=['-n','-d','error_reporting=24575','-d','pdo_mysql.default_socket='+process.env.RUBIZH_TEST_MYSQL_SOCKET,...['pdo','mysqlnd','pdo_mysql','mbstring','curl'].flatMap(x=>['-d','extension='+ext+x+'.so'])];
-export const phpEnv={...process.env,LD_LIBRARY_PATH:runtime+'/lib/x86_64-linux-gnu'};
+// Live provider keys never reach fixture servers: tests use mocks/test transports only, never real payments, TTN or SMS.
+export const phpEnv=Object.fromEntries(Object.entries({...process.env,LD_LIBRARY_PATH:runtime+'/lib/x86_64-linux-gnu'}).filter(([k])=>!['RUBIZH_MONO_TOKEN','RUBIZH_NP_API_KEY','RUBIZH_TURBOSMS_TOKEN','RUBIZH_TURBOSMS_SENDER'].includes(k)));
 export const PIM_KEY='pim-v3-fixture-key-at-least-24-characters';
 export const wire=JSON.parse(readFileSync(path.join(root,'contracts/pim-v3/2/wire.exact.json'),'utf8'));
 const port=()=>new Promise(r=>{const s=createServer().listen(0,'127.0.0.1',()=>{const p=s.address().port;s.close(()=>r(p));});});
