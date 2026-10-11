@@ -6522,7 +6522,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                     ...this.state,
                     screen: "catalog",
                     cpath: a,
-                    sq: i.get("q") || "",
+                    sq: (i.get("q") || "").trim(),
                     catPg: Math.max(1, Number(i.get("page")) || 1)
                 };
                 for (const t of [ "sort", "quick", "priceFrom", "priceTo" ]) i.has(t) && (r[t] = i.get(t));
@@ -6791,7 +6791,8 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                 onCheckoutComment: t => this.storeCheckoutField("checkoutComment", t),
                 products: (e.storePageItems || []).map(t => Z.find(e => e.id === t && e.storeReady)).filter(Boolean).map(this.cardVm),
                 resultCount: o.total,
-                noResults: !e.storeLoading && 0 === o.total,
+                // A search without results has its own block (sqZero); the filter message would contradict it.
+                noResults: !e.storeLoading && 0 === o.total && !e.sq,
                 hasPages: o.pages > 1,
                 pageInfo: "Сторінка " + o.page + " з " + Math.max(1, o.pages),
                 loading: e.loading || e.storeLoading || e.storeProductLoading,
