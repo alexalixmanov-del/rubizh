@@ -21,5 +21,5 @@ try{
     foreach(npCached($db,'Address','getStreet',['CityRef'=>$ref,'FindByString'=>$q,'Limit'=>'20','Page'=>'1'],86400) as $r)if(npRef($r['Ref']??''))$items[]=['ref'=>$r['Ref'],'name'=>trim(($r['StreetsType']??'').' '.($r['Description']??'')),'note'=>'Вулиця'];
   }else throw new InvalidArgumentException('Невідомий довідник.');
   shopJson(['ok'=>true,'enabled'=>true,'items'=>$items]);
-}catch(InvalidArgumentException $e){shopJson(['ok'=>false,'error'=>$e->getMessage()],400);// the customer's input, not a provider outage
+}catch(InvalidArgumentException|NpNotFound $e){shopJson(['ok'=>false,'error'=>$e->getMessage()],400);// the customer's input, not a provider outage
 }catch(Throwable $e){shopJson(['ok'=>false,'error'=>'Довідник НП тимчасово недоступний. Спробуйте пізніше або зверніться до менеджера.'],503);}

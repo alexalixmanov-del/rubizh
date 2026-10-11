@@ -68,7 +68,9 @@ test('Q-6/D-15: strangers cannot exhaust the daily budget — 30% stays reserved
   assert.equal(stranger.ok,false);assert.match(stranger.error,/email/i,'a stranger is pointed to email login');
   site.sql(`INSERT INTO rubizh_accounts(id,email,first_name,last_name,created_at,updated_at) VALUES('${'b'.repeat(32)}','c@fixture.test','Тест','Покупець',UTC_TIMESTAMP(),UTC_TIMESTAMP())`);
   site.sql(`INSERT INTO rubizh_customer_identities(provider,subject,customer_id,created_at) VALUES('phone','+380673338888','${'b'.repeat(32)}',UTC_TIMESTAMP())`);
-  const customer=await site.req('+380673338888',{ip:'192.0.2.51'});
+  // Above 60% everybody gets the same check (no customer/stranger difference there); a customer then still gets the code.
+  const first=await site.req('+380673338888',{ip:'192.0.2.51'});assert.equal(first.check,true,'same check for customers: '+first.error);
+  const customer=await site.req('+380673338888',{ip:'192.0.2.51',session:first.session,pow:solve(first.session.sms_check.nonce,first.session.sms_check.bits)});
   assert.equal(customer.ok,true,'an existing customer still gets the code: '+customer.error);
  }finally{site.stop();}
 });
@@ -76,9 +78,12 @@ test('Q-6/D-15: strangers cannot exhaust the daily budget — 30% stays reserved
 test('Q-6: too many wrong codes for one number stop new codes for that number for the day',{skip,timeout:120000},async()=>{
  const site=await smsSite();
  try{
-  for(let i=0;i<3;i++)site.sql(`INSERT INTO rubizh_phone_challenges(id,phone,code_hash,flow_hash,ip_hash,sent_at,expires_at,attempts,state) VALUES('${String(i).padStart(32,'c')}','+380674440000','${'0'.repeat(64)}','${'0'.repeat(64)}','${sha('y'+i)}',UNIX_TIMESTAMP()-4000-${i}*60,UNIX_TIMESTAMP()-3000,5,'sent')`);
+  for(let i=0;i<3;i++)site.sql(`INSERT INTO rubizh_phone_challenges(id,phone,code_hash,flow_hash,ip_hash,sent_at,expires_at,attempts,state) VALUES('${String(i).padStart(32,'c')}','+380674440000','${'0'.repeat(64)}','${'0'.repeat(64)}','${sha('192.0.2.60')}',UNIX_TIMESTAMP()-4000-${i}*60,UNIX_TIMESTAMP()-3000,5,'sent')`);
   const r=await site.req('+380674440000',{ip:'192.0.2.60'});
-  assert.equal(r.ok,false);assert.match(r.error,/забагато невдалих спроб|email/i);
+  assert.equal(r.ok,false);assert.match(r.error,/забагато невдалих спроб/i);
+  // Review finding: wrong codes typed from someone else's address must not lock the owner of the number out.
+  const owner=await site.req('+380674440000',{ip:'192.0.2.61'});
+  assert.equal(owner.check===true||owner.ok===true,true,'the number owner can still request a code: '+owner.error);
  }finally{site.stop();}
 });
 
@@ -99,4 +104,12 @@ test('Q-6: in the browser the check is solved invisibly after the second press a
   const {readFileSync}=await import('node:fs');
   assert.match(readFileSync(path.join(site.site,'sms-outbox.jsonl'),'utf8'),/\+380675550009/,'the code went to the local outbox, not to a provider');
  }finally{await browser?.close();site.stop();}
+});
+
+test('Q-6: repeated requests for one number within an hour ask for the check',{skip,timeout:120000},async()=>{
+ const site=await smsSite();
+ try{
+  for(const [i,ago] of [[0,1800],[1,600]])site.sql(`INSERT INTO rubizh_phone_challenges(id,phone,code_hash,flow_hash,ip_hash,sent_at,expires_at,state) VALUES('${String(i).padStart(32,'e')}','+380676660000','${'0'.repeat(64)}','${'0'.repeat(64)}','${sha('z'+i)}',UNIX_TIMESTAMP()-${ago},UNIX_TIMESTAMP()-${ago}+300,'sent')`);
+  const r=await site.req('+380676660000',{ip:'192.0.2.70'});assert.equal(r.check,true,r.error);
+ }finally{site.stop();}
 });

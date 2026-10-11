@@ -82,9 +82,10 @@ function phoneRequest(string $phone): void {
         $q->execute([$ip,$now-86400]); if ((int)$q->fetchColumn()>=20) { throw new RuntimeException('Забагато запитів. Спробуйте пізніше.'); }
         $q->execute([$ip,$now-600]); $ipBurst=(int)$q->fetchColumn();
         if ($ipBurst>=5) { throw new RuntimeException('Забагато запитів з цієї мережі. Спробуйте пізніше або увійдіть через email.'); }
-        // Wrong codes across all of today's codes for this number (brute force by re-requesting).
-        $q=$db->prepare('SELECT COALESCE(SUM(attempts),0) FROM rubizh_phone_challenges WHERE phone=? AND sent_at>? AND used_at IS NULL');
-        $q->execute([$phone,$now-86400]); if ((int)$q->fetchColumn()>=15) { throw new RuntimeException('Забагато невдалих спроб для цього номера. Спробуйте завтра або увійдіть через email.'); }
+        // Wrong codes across today's codes for this number from this address (re-requesting to brute force); counted per
+        // address so wrong codes typed elsewhere cannot lock the number's owner out.
+        $q=$db->prepare('SELECT COALESCE(SUM(attempts),0) FROM rubizh_phone_challenges WHERE phone=? AND ip_hash=? AND sent_at>? AND used_at IS NULL');
+        $q->execute([$phone,$ip,$now-86400]); if ((int)$q->fetchColumn()>=15) { throw new RuntimeException('Забагато невдалих спроб для цього номера. Спробуйте завтра або увійдіть через email.'); }
         $q=$db->prepare('SELECT COUNT(*) FROM rubizh_phone_challenges WHERE sent_at>?'); $q->execute([$now-86400]); $global=(int)$q->fetchColumn();
         $limit=max(1,(int)(authConfig()['sms_daily_limit'] ?? 100));
         if ($global>=$limit) { throw new RuntimeException('SMS-вхід тимчасово недоступний. Скористайтеся email.'); }
@@ -92,7 +93,8 @@ function phoneRequest(string $phone): void {
         $known=identityFind('phone',$phone)!==null;
         if (!$known && $global>=(int)floor($limit*0.7)) { throw new RuntimeException('SMS для нових номерів тимчасово обмежено. Увійдіть через email — це так само безпечно.'); }
         $q=$db->prepare('SELECT COUNT(*) FROM rubizh_phone_challenges WHERE phone=? AND sent_at>?'); $q->execute([$phone,$now-3600]); $phoneHour=(int)$q->fetchColumn();
-        $suspicious=$ipBurst>=3 || $phoneHour>=2 || (!$known && $global>=(int)floor($limit*0.6));
+        // The check is a deterrent (hard limits above do the protecting); above 60% it applies to every number alike.
+        $suspicious=$ipBurst>=3 || $phoneHour>=2 || $global>=(int)floor($limit*0.6);
         if ($suspicious && !phoneCheckValid($phone)) { phoneCheckIssue($phone); throw new PhoneCheckRequired('Підтверджуємо, що запит робить людина: натисніть «Надіслати код» ще раз. Якщо не виходить — увійдіть через email.'); }
         $db->prepare("UPDATE rubizh_phone_challenges SET state='cancelled' WHERE flow_hash=? AND used_at IS NULL")->execute([$flowHash]);
         $db->prepare('INSERT INTO rubizh_phone_challenges(id,phone,code_hash,flow_hash,ip_hash,sent_at,expires_at) VALUES(?,?,?,?,?,?,?)')->execute([$id,$phone,phoneCodeHash($id,$phone,$code),$flowHash,$ip,$now,$now+300]);

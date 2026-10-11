@@ -98,11 +98,13 @@ function npCached(PDO $db,string $model,string $method,array $properties,int $tt
     if(random_int(1,100)===1)$db->exec('DELETE FROM rubizh_np_cache WHERE expires_at<UTC_TIMESTAMP()-INTERVAL 1 DAY');
     return $v;
 }
+// A well-formed reference the directory does not know: the customer's choice, not a provider outage.
+final class NpNotFound extends RuntimeException {}
 function npCity(PDO $db,string $ref): array {
     if(!npRef($ref))throw new RuntimeException('Оберіть населений пункт із довідника НП.');
     $rows=npCached($db,'Address','getCities',['Ref'=>$ref]);
     foreach($rows as $r)if(($r['Ref']??'')===$ref && !empty($r['Description']))return $r;
-    throw new RuntimeException('Населений пункт не знайдено в НП.');
+    throw new NpNotFound('Населений пункт не знайдено в НП. Оберіть його зі списку ще раз.');
 }
 function npWarehouse(PDO $db,string $city,string $ref): array {
     if(!npRef($ref))throw new RuntimeException('Оберіть конкретне відділення НП.');

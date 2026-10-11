@@ -266,7 +266,7 @@ test('buying the same item again after a successful order creates a new order, w
 
 // Integration safety: sandbox invoices must not point monobank at the production webhook.
 test('MonoPay callback and return URLs come from public_base_url; production stays the default',{skip,timeout:180000},async()=>{
- for(const [extra,base] of [['','https://rubizh.shop'],[",'public_base_url'=>'https://sandbox.rubizh.test'",'https://sandbox.rubizh.test']]){
+ for(const [extra,base] of [['','https://rubizh.shop'],[",'public_base_url'=>'https://sandbox.rubizh.test'",'https://sandbox.rubizh.test'],[",'public_base_url'=>'https://sandbox.rubizh.test','environment'=>'production','mono_activation_confirmed'=>true,'mono_token'=>'fixture-token-not-sent'",'https://rubizh.shop']]){// outside staging the override is ignored
   const site=await fixture({extra:`,'staff_roles'=>['${owner}'=>'OWNER']`+extra});try{
    const buyer=await shopper(site),o=await checkout(site,buyer);assert.equal(o.status,200,JSON.stringify(o.data));
    const body=JSON.parse(call(site,`define('RUBIZH_MONO_TESTS',true);$GLOBALS['mono_test_transport']=function($p,$b){if($p==='invoice/create'){$GLOBALS['body']=$b;return ['invoiceId'=>'urlcheck','pageUrl'=>'https://pay.mbnk.biz/urlcheck'];}return [];};try{monoCreate($db,${o.data.order.id},'${owner}');}catch(Throwable $e){echo json_encode(['error'=>get_class($e).': '.$e->getMessage()]);exit;}echo json_encode($GLOBALS['body']);`).stdout);
@@ -283,5 +283,14 @@ test('Nova Poshta directory reports invalid input as 400 with its reason, withou
    const r=await fetch(site.base+'/shop/np-directory.php?'+qs),j=await r.json();
    assert.equal(r.status,400,qs+' → '+JSON.stringify(j));assert.match(j.error,reason);
   }
+ }finally{site.stop();}
+});
+
+// Review finding on D-40: a well-formed but unknown city is the customer's choice problem (400), not an outage (503).
+test('Nova Poshta directory: an unknown city reference is a 400 with a reason',{skip,timeout:120000},async()=>{
+ const site=await startSite({enableV3:false,extraConfig:",'nova_poshta_api_key'=>'fixture-key-not-used'"});
+ try{
+  const out=php(`define('RUBIZH_NP_TESTS',true);$GLOBALS['np_test_transport']=fn($m,$c,$p)=>[];$_GET=['kind'=>'warehouses','type'=>'branch','city_ref'=>'00000000-0000-0000-0000-000000000000','q'=>'1'];$_SERVER['REQUEST_METHOD']='GET';require '${site.site}/shop/np-directory.php';`,{allowFail:true}).stdout;
+  const j=JSON.parse(out.slice(out.indexOf('{')));assert.equal(j.ok,false);assert.match(j.error,/не знайдено/i);
  }finally{site.stop();}
 });
