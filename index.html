@@ -1772,7 +1772,7 @@
       <div class="rz-kit-intro"><div class="rz-eyebrow">СПОРЯДЖЕННЯ, ЩО ПРАЦЮЄ РАЗОМ</div>
       <h1 class="rz-page-title" style="font-family:'UAH','Oswald',sans-serif;font-weight:600;font-size:clamp(26px,3.4vw,40px);text-transform:uppercase;margin:0 0 6px;letter-spacing:.03em;line-height:1.15">Конструктор комплекту</h1>
       <p class="rz-kit-instructions"><strong>Обирай лише те, що потрібно.</strong> Задай розміри, додай речі — і одразу побачиш склад, ціну та свою вигоду.</p>
-<div class="rz-kit-steps"><span><b>01</b> Твої параметри</span><span><b>02</b> Обирай спорядження</span><span><b>03</b> Комплект готовий</span></div><button type="button" class="rz-kit-howto" data-kit-howto="1" sc-camel-on-click="{{ kitIntroOpen }}">Як це працює?</button></div>
+<div class="rz-kit-steps"><span><b>01</b> Твої параметри</span><span><b>02</b> Обирай спорядження</span><span><b>03</b> Комплект готовий</span></div><button type="button" class="rz-kit-howto" data-kit-howto="1" sc-camel-on-click="{{ kitIntroOpen }}">Як це працює?</button><button type="button" class="rz-kit-howto rz-kit-help" sc-camel-on-click="{{ goPicker }}">Потрібна допомога з вибором?</button></div>
 
       <sc-if value="{{ kitRestoredShow }}" hint-placeholder-val="{{ false }}">
         <div style="border:1px solid var(--legacy-35502f);background:var(--legacy-17241a);padding:12px 16px;margin-bottom:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
@@ -1909,22 +1909,19 @@
         <aside aria-label="Підсумок комплекту" data-kit-aside="1" style="flex:1 1 300px;min-width:0;max-width:420px;position:sticky;top:16px;border:1px solid var(--legacy-2a322b);background:var(--legacy-141815);padding:18px;display:flex;flex-direction:column;gap:12px">
           <div class="rz-kit-summary-heading"><span>Твій комплект</span><span class="rz-kit-summary-icon" aria-hidden="true"><svg width="24" height="24" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 7h14v14H5zM9 7V3h6v4"></path></svg></span></div>
           <div class="rz-kit-count" style="color:var(--legacy-c7cec3);font-size:14px">{{ kitCount }}</div>
-          <div style="display:flex;justify-content:space-between;gap:12px;align-items:baseline;color:var(--legacy-99a398);font-size:14px"><span>Разом окремо</span>
-            <sc-if value="{{ kitHasSave }}" hint-placeholder-val="{{ false }}"><span style="text-decoration:line-through;text-decoration-thickness:1px">{{ kitFullFmt }}</span></sc-if>
-            <sc-if value="{{ kitNoSave }}" hint-placeholder-val="{{ true }}"><span>{{ kitFullFmt }}</span></sc-if>
-          </div>
+          <div class="rz-kit-sum-row"><span>Вартість товарів</span><span data-kit-goods="1">{{ kitFullFmt }}</span></div>
+          <sc-if value="{{ kitHasSave }}" hint-placeholder-val="{{ false }}"><div class="rz-kit-sum-row rz-kit-sum-discount"><span>Знижка на комплект <small>{{ kitPct }}</small></span><span data-kit-discount="1">−{{ kitSaveFmt }}</span></div></sc-if>
           <div class="rz-kit-total">
-            <div style="color:var(--legacy-99a398);font-size:13px">Ціна комплектом</div>
-            <div style="font-family:'UAH','Oswald',sans-serif;font-size:clamp(32px,3.6vw,42px);line-height:1.05">{{ kitKitFmt }}</div>
+            <div style="color:var(--legacy-c7cec3);font-size:15px">Разом</div>
+            <div data-kit-total="1" style="font-family:'UAH','Oswald',sans-serif;font-size:clamp(32px,3.6vw,42px);line-height:1.05">{{ kitKitFmt }}</div>
           </div>
-          <div style="display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;color:var(--legacy-7eb356);font-size:15px"><span>Ваша вигода:</span><span style="font-family:'UAH','Oswald',sans-serif;font-size:20px">{{ kitSaveEl }}</span><span>{{ kitPct }}</span></div>
           <sc-if value="{{ hasKitStatus }}" hint-placeholder-val="{{ false }}"><div style="color:var(--legacy-c7cec3);font-size:13px;line-height:1.45">{{ kitStatus }}</div></sc-if>
           <div style="height:4px;background:var(--legacy-2a322b)"><div style="{{ kitProg }}"></div></div>
           <div style="color:var(--legacy-c7cec3);font-size:13px;line-height:1.45">{{ kitNext }}</div>
           <sc-if value="{{ donationEnabled }}"><div style="color:var(--legacy-c6d3a8);font-size:13px;line-height:1.45">{{ kitDonText }}</div></sc-if>
           <sc-if value="{{ hasKitWeight }}" hint-placeholder-val="{{ false }}"><div style="color:var(--legacy-c7cec3);font-size:13px">{{ kitWeight }}</div></sc-if>
           <sc-if value="{{ kitCanCart }}" hint-placeholder-val="{{ false }}">
-            <div class="rz-kit-cart" tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ kitToCart }}" style="padding:15px 22px;background:var(--legacy-f2a33c);color:var(--button-text);font-family:'UAH','Oswald',sans-serif;font-size:15px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;cursor:pointer;text-align:center" style-hover="background:var(--legacy-ffc36b)">Додати комплект у кошик</div>
+            <div class="rz-kit-cart" tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ kitToCart }}" style="padding:15px 22px;background:var(--legacy-f2a33c);color:var(--button-text);font-family:'UAH','Oswald',sans-serif;font-size:15px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;cursor:pointer;text-align:center" style-hover="background:var(--legacy-ffc36b)">Додати комплект до кошика</div>
           </sc-if>
           <sc-if value="{{ kitCantCart }}" hint-placeholder-val="{{ true }}">
             <div style="padding:15px;text-align:center;background:var(--legacy-1c221d);border:1px solid var(--legacy-2a322b);color:var(--muted);font-family:'UAH','Oswald',sans-serif;font-size:14px;letter-spacing:.1em;text-transform:uppercase;cursor:not-allowed">{{ kitCantLabel }}</div>

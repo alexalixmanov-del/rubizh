@@ -54,3 +54,63 @@ test('K-1: on a 360px phone the guide fits, its main button is reachable without
   assert.ok(await page.evaluate(()=>scrollY)>y0||await page.evaluate(()=>document.documentElement.scrollHeight<=innerHeight),'page scrolls');
  }finally{await context.close();}
 });
+
+// Phase 4: a returning visitor (guide already seen) works with the builder itself.
+async function builder(width=1280){
+ const context=await browser.newContext({viewport:{width,height:900}});await context.addInitScript(()=>localStorage.setItem('rubizh.kitIntro','1'));
+ const page=await context.newPage();await page.goto(base+'/kit');await page.locator('.rz-kit-slot').first().waitFor();await page.waitForTimeout(500);return {page,context};
+}
+const aside=page=>page.locator('[data-kit-aside]');
+const money=t=>Number(String(t).replace(/[^\d]/g,''));
+
+test('K-3/K-5/K-6: empty kit says what to do, shows no zero «savings», slots read «Не обрано» and «Необов’язково»',async()=>{
+ const {page,context}=await builder();
+ try{
+  const heads=await page.locator('.rz-kit-slot-head').allInnerTexts();
+  for(const h of heads){assert.match(h,/Не обрано/,h);assert.match(h,/Необов’язково/i,h);}
+  const a=await aside(page).innerText();
+  assert.match(a,/Спочатку додайте хоча б один товар/i);
+  assert.doesNotMatch(a,/вигода|Знижка на комплект/i,'no savings line for an empty kit');
+  assert.equal(await aside(page).evaluate(e=>[...e.querySelectorAll('*')].some(x=>getComputedStyle(x).textDecorationLine.includes('line-through'))),false,'no struck-through price');
+  assert.deepEqual((await page.locator('select[aria-label="Розмір взуття"] option').allInnerTexts())[0],'Оберіть розмір');
+ }finally{await context.close();}
+});
+
+test('K-3/K-5: chosen items are counted per slot; the summary is «Вартість товарів» → «Знижка на комплект» (only if real) → «Разом»',async()=>{
+ const {page,context}=await builder();
+ try{
+  await page.locator('.rz-kit-rec button').first().click();await page.waitForTimeout(400);
+  const body=page.locator('.rz-kit-slot').filter({has:page.locator('.rz-kit-slot-head',{hasText:'Тіло'})});
+  assert.match(await body.locator('.rz-kit-slot-head').innerText(),/Обрано: 1 товар(?![а-яіїєґ])/i);
+  await page.locator('.rz-kit-rec button').first().click();await page.waitForTimeout(600);
+  const a=await aside(page).innerText();
+  assert.match(a,/Вартість товарів/);assert.match(a,/Разом/);
+  const goods=money(await page.locator('[data-kit-goods]').innerText()),total=money(await page.locator('[data-kit-total]').innerText());
+  const discount=await page.locator('[data-kit-discount]').count()?money(await page.locator('[data-kit-discount]').innerText()):0;
+  assert.equal(total,goods-discount,'Разом = Вартість товарів − Знижка');
+  if(!discount)assert.doesNotMatch(a,/Знижка на комплект|вигода/i,'no zero discount is advertised');
+  assert.match(a,/Додати комплект до кошика/i);
+ }finally{await context.close();}
+});
+
+test('K-2: changing «Мої параметри» never changes an added SKU silently — the item keeps its size and is flagged',async()=>{
+ const {page,context}=await builder();
+ try{
+  await page.locator('.rz-kit-rec button').first().click();await page.waitForTimeout(400);
+  const item=page.locator('.rz-kit-item').first(),before=await item.innerText();const size=/Розмір (\S+)/.exec(before)[1];
+  const other=['XS','S','M','L','XL'].find(s=>s!==size);
+  const params=page.locator('.rz-kit-parameters');if(!await params.count())await page.getByRole('button',{name:/змінити/i}).click();
+  await page.locator('.rz-kit-parameters [role="button"]',{hasText:new RegExp('^'+other+'$')}).first().click();await page.waitForTimeout(400);
+  const after=await page.locator('.rz-kit-item').first().innerText();
+  assert.match(after,new RegExp('Розмір '+size+'(?![\\w])'),'the chosen SKU stays');
+  assert.match(after,new RegExp('Розмір відрізняється від ваших параметрів \\('+other+'\\)'));
+ }finally{await context.close();}
+});
+
+test('K-10: «Потрібна допомога з вибором?» opens the existing picker',async()=>{
+ const {page,context}=await builder();
+ try{
+  await page.getByRole('button',{name:/Потрібна допомога з вибором\?/i}).click();
+  await page.getByRole('heading',{name:/Підібрати комплект/i}).waitFor();
+ }finally{await context.close();}
+});

@@ -34,3 +34,12 @@
 .rz-kit-intro-actions {display:flex;gap:16px;align-items:center;flex-wrap:wrap;position:sticky;bottom:calc(-1 * clamp(20px,3vw,32px));margin:0 calc(-1 * clamp(20px,3vw,32px)) calc(-1 * clamp(20px,3vw,32px));padding:14px clamp(20px,3vw,32px) clamp(20px,3vw,32px);background:var(--legacy-141815);border-top:1px solid var(--legacy-2a322b)}
 .rz-kit-intro-skip {min-height:44px;padding:0 6px;background:none;border:0;color:var(--legacy-c7cec3);font:500 16px/1 'IBM Plex Sans',sans-serif;text-decoration:underline;text-underline-offset:4px;cursor:pointer}
 @media (max-width:767px) {.rz-kit-intro-overlay {align-items:flex-end;padding:0}.rz-kit-intro-panel {max-height:100dvh}.rz-kit-intro-actions .rz-btn {flex:1 1 100%}}
+/* Kit summary as plain bookkeeping (K-5): goods → discount (only when real) → total; no struck-through prices. */
+.rz-kit-sum-row {display:flex;justify-content:space-between;gap:12px;align-items:baseline;font-size:16px;color:var(--legacy-c7cec3)}
+.rz-kit-sum-discount {color:var(--legacy-7eb356)}
+.rz-kit-sum-discount small {font-size:14px;color:inherit;opacity:.85}
+.rz-kit-help {margin-left:18px}
+/* Readable slot status and a primary-sized «Додати комплект до кошика» (inline template styles need !important). */
+.rz-kit-slot-head>div:last-child {font-size:14px!important;color:var(--legacy-c7cec3)!important}
+.rz-kit-slot[data-filled="true"] .rz-kit-slot-head>div:last-child {color:var(--legacy-7eb356)!important}
+[data-kit-aside] .rz-kit-cart {font-size:16px!important;font-weight:800!important;min-height:52px;display:flex;align-items:center;justify-content:center}

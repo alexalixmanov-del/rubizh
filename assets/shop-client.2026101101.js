@@ -18,6 +18,8 @@ function storeOrderKey(fingerprint){const h=storeDigest(fingerprint);
 const STORE_KIT_INTRO_KEY='rubizh.kitIntro',STORE_KIT_INTRO_VERSION='1';
 function storeKitIntroSeen(){try{return localStorage.getItem(STORE_KIT_INTRO_KEY)===STORE_KIT_INTRO_VERSION;}catch(e){return false;}}
 function storeKitIntroRemember(){try{localStorage.setItem(STORE_KIT_INTRO_KEY,STORE_KIT_INTRO_VERSION);}catch(e){}}
+// «1 товар», «2 товари», «5 товарів» (Ukrainian plural).
+function storeGoodsCount(n){const t=n%10,h=n%100;return n+' '+(t===1&&h!==11?'товар':t>=2&&t<=4&&(h<12||h>14)?'товари':'товарів');}
 function storeCheckoutPay(e){return e.pay==='invoice'||(e.pay==='card'&&e.monoEnabled)?e.pay:(e.monoEnabled?'card':'invoice');}
 // Legacy product colour on the product page, and the gallery that belongs to it (server color_photos).
 // A colour without confirmed photos gets [] → "Фото кольору готується"; never another colour's photos.
@@ -2185,7 +2187,8 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                         name: i.p.name,
                         photo: "img-" + i.p.id,
                         sizeLabel: (r ? i.v.color : "Розмір " + this.sd(i.p, i.l.size) + " · " + i.v.color) + (o > 1 ? " · × " + o : ""),
-                        note: i.l.note || "",
+                        // Preferences never rewrite a chosen SKU; a mismatch is only flagged so the buyer can replace it (K-2).
+                        note: [i.l.note || "", (() => { if (r) return ""; const z = String(this.sd(i.p, i.l.size)), want = [ "body", "legs" ].includes(e) && p.cloth && h(z) !== h(p.cloth) ? p.cloth : "boots" === e && p.shoe && z !== String(p.shoe) ? p.shoe : null; return want ? "Розмір відрізняється від ваших параметрів (" + want + "). Можна замінити позицію." : ""; })()].filter(Boolean).join(" "),
                         capped: !s && n.capped,
                         rowStyle: {
                             display: "flex",
@@ -2294,7 +2297,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                 onParShoe: t => this.setPar("shoe", t.target.value || null),
                 parShoeOpts: [ {
                     v: "",
-                    t: "—"
+                    t: "Оберіть розмір"
                 } ].concat(Array.from({
                     length: 12
                 }, (t, e) => ({
@@ -2502,6 +2505,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                 kitHasSave: a.save > 0,
                 kitNoSave: 0 === a.save,
                 kitKitFmt: B(a.kit),
+                kitSaveFmt: B(a.save),
                 kitSaveEl: e.createElement(Ft, {
                     value: a.save
                 }),
@@ -2516,10 +2520,10 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                 },
                 kitCanCart: i.length >= c && !M,
                 kitCantCart: i.length < c || M,
-                kitCantLabel: M ? "Замініть позиції, яких немає" : "Додайте щонайменше " + c + " позиції для комплекту",
+                kitCantLabel: M ? "Замініть позиції, яких немає" : i.length ? "Додайте щонайменше " + c + " позиції для комплекту" : "Спочатку додайте хоча б один товар",
                 kitToCart: this.kitToCart,
                 kitBarTotal: B(a.kit),
-                kitBarSave: a.save > 0 ? "вигода " + B(a.save) : r + " поз.",
+                kitBarSave: a.save > 0 ? "вигода " + B(a.save) : r ? storeGoodsCount(r) : "Спочатку додайте товар",
                 kitSave: () => this.kitSaveLink(),
                 kitShare: this.kitShare,
                 kitLink: t.kitLink,
@@ -7034,7 +7038,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                 slot.number=String(index+1).padStart(2,'0');
                 slot.art=window.RUBIZH_CATEGORY_ART?.[slotArt[slot.key]]||'/assets/category-uniform.95312bde6e13.webp';
                 slot.description=slotDescriptions[slot.key]||'Обери потрібне спорядження.';
-                slot.status=slot.filled?'Додано ✓':'Необов’язково';
+                slot.status=slot.filled?'Обрано: '+storeGoodsCount((slot.items||[]).length):'Не обрано · необов’язково';
             }
             // UX/data corrections share the same variant and pricing source.
             t.priceRanges=[];{const pf=this._storeFacets?.price;t.hasPriceFilter=!pf||Number(pf.distinct)>1;t.pricePhFrom='від';t.pricePhTo='до';t.hasPriceSlider=false;if(pf&&Number(pf.distinct)>1){const mn=Number(pf.min)||0,mx=Number(pf.max)||0;t.priceRanges=(pf.ranges||[]).map(r=>{const a=r.from==null?'':String(r.from),b=r.to==null?'':String(r.to);return {...this.chipC(r.label,r.count,e.priceFrom===a&&e.priceTo===b,()=>this.setState(x=>x.priceFrom===a&&x.priceTo===b?{priceFrom:'',priceTo:'',catPg:1,catMore:!1}:{priceFrom:a,priceTo:b,catPg:1,catMore:!1})),count:String(r.count)};});t.pricePhFrom='від '+mn;t.pricePhTo='до '+mx;if(mx>mn){t.hasPriceSlider=true;t.priceSliderMin=mn;t.priceSliderMax=mx;t.priceSliderStep=Math.max(10,Math.round((mx-mn)/100/10)*10);t.priceSliderVal=e.priceTo?Math.min(mx,Math.max(mn,Number(e.priceTo)||mx)):mx;t.onPriceSlider=ev=>{const v=Number(ev.target.value);this.setState({priceTo:v>=mx?'':String(v),catPg:1,catMore:!1});};}}if(!(e.cpath||[]).length&&!e.sq&&!e.quick&&!(e.roots||[]).length)t.catH1='Каталог спорядження';}
