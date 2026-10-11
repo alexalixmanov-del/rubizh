@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 function shopSettingsPath(): string {return __DIR__.'/../api/site-settings.json';}
-function shopSettingsKeys(): array {return ['seller','ga4_id','meta_pixel_id','order_notification_email','supplier_contacts','supplier_sku_map','donation_enabled','donation_percent','donation_report_url','donation_schedule'];}
+function shopSettingsKeys(): array {return ['seller','ga4_id','meta_pixel_id','order_notification_email','supplier_contacts','supplier_sku_map','donation_enabled','donation_percent','donation_report_url','donation_schedule','instagram_url','tiktok_url'];}
 function shopSettingsRead(): array {
  $f=shopSettingsPath();if(!is_file($f))return [];
  $a=json_decode((string)file_get_contents($f),true);if(!is_array($a))throw new RuntimeException('Файл налаштувань пошкоджено. Відновіть його з резервної копії.');
@@ -10,8 +10,17 @@ function shopSettingsRead(): array {
 function shopSettingsText(mixed $s,int $max=240): string {
  if(!is_string($s)||!mb_check_encoding($s,'UTF-8')||mb_strlen($s)>$max||preg_match('/[\x00-\x1f\x7f]/u',$s))throw new RuntimeException('Перевірте довжину й формат налаштувань.');return trim($s);
 }
+// Public profile link of a social platform: https, exact platform host, no credentials/port/query tricks; '' = not shown.
+function shopSocialUrl(mixed $v,string $platform): string {
+ $v=shopSettingsText($v,200);if($v==='')return '';
+ $hosts=['instagram'=>['instagram.com','www.instagram.com'],'tiktok'=>['tiktok.com','www.tiktok.com']][$platform];$u=parse_url($v);
+ if(!is_array($u)||($u['scheme']??'')!=='https'||!in_array(strtolower($u['host']??''),$hosts,true)||isset($u['user'])||isset($u['pass'])||isset($u['port'])||!preg_match('~^https://[a-z.]+(?:/[A-Za-z0-9._@/-]*)?(?:\?[A-Za-z0-9=&._-]*)?$~D',$v))
+  throw new RuntimeException('Посилання на '.($platform==='instagram'?'Instagram':'TikTok').' має бути https://'.$hosts[1].'/… без зайвих параметрів.');
+ return $v;
+}
 function shopSettingsValidate(array $raw): array {
  $out=[];
+ foreach(['instagram_url'=>'instagram','tiktok_url'=>'tiktok'] as $k=>$platform)if(array_key_exists($k,$raw))$out[$k]=shopSocialUrl($raw[$k],$platform);
  if(isset($raw['seller'])){$s=$raw['seller'];if(!is_array($s))throw new RuntimeException('Перевірте реквізити.');foreach(['name','tax_id','iban','bank','mfo','bank_tax_id','address','email','phone','phone_label'] as $k){$v=shopSettingsText($s[$k]??'',500);if($v==='')continue;if($k==='email'&&!filter_var($v,FILTER_VALIDATE_EMAIL))throw new RuntimeException('Некоректний email продавця.');if($k==='iban'&&!preg_match('/^UA\d{27}$/D',str_replace(' ','',$v)))throw new RuntimeException('IBAN має починатися з UA і містити 29 символів.');$out['seller'][$k]=$v;}}
  foreach(['ga4_id','meta_pixel_id','order_notification_email','donation_report_url','donation_schedule'] as $k)if(array_key_exists($k,$raw)){$v=shopSettingsText($raw[$k],500);if($k==='ga4_id'&&$v!==''&&!preg_match('/^G-[A-Z0-9]{5,20}$/D',$v))throw new RuntimeException('Перевірте GA4 ID.');if($k==='meta_pixel_id'&&$v!==''&&!preg_match('/^\d{5,30}$/D',$v))throw new RuntimeException('Перевірте Meta Pixel ID.');if($k==='order_notification_email'&&!filter_var($v,FILTER_VALIDATE_EMAIL))throw new RuntimeException('Перевірте email замовлень.');if($k==='donation_report_url'&&$v!==''&&(!filter_var($v,FILTER_VALIDATE_URL)||!str_starts_with($v,'https://')))throw new RuntimeException('Посилання на звіти має бути HTTPS.');$out[$k]=$v;}
  if(array_key_exists('donation_enabled',$raw))$out['donation_enabled']=$raw['donation_enabled']===true;
@@ -26,5 +35,9 @@ function shopSettingsSave(array $raw): void {
  try{$all=array_replace(shopSettingsRead(),$clean);$tmp=tempnam($dir,'settings-');if(!$tmp)throw new RuntimeException('Немає прав запису в api/.');chmod($tmp,0600);if(file_put_contents($tmp,json_encode($all,JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT|JSON_THROW_ON_ERROR))===false||!rename($tmp,shopSettingsPath()))throw new RuntimeException('Не вдалося зберегти налаштування.');$tmp=null;}finally{if($tmp)@unlink($tmp);flock($lock,LOCK_UN);fclose($lock);}
 }
 function shopPublicSettings(): array {
- require_once __DIR__.'/../api/seller.php';return ['seller'=>rubizhSeller(),'donation'=>['enabled'=>true,'percent'=>3,'report_url'=>(string)cfg('donation_report_url'),'schedule'=>(string)cfg('donation_schedule')]];
+ require_once __DIR__.'/../api/seller.php';return ['seller'=>rubizhSeller(),'donation'=>['enabled'=>true,'percent'=>3,'report_url'=>(string)cfg('donation_report_url'),'schedule'=>(string)cfg('donation_schedule')],'social'=>shopPublicSocial()];
+}
+// Re-validated on every read: a hand-edited settings file can never put an unsafe link on the storefront.
+function shopPublicSocial(): array {
+ $out=[];foreach(['instagram'=>'instagram_url','tiktok'=>'tiktok_url'] as $platform=>$k){try{$out[$platform]=shopSocialUrl(cfg($k)??'',$platform);}catch(RuntimeException $e){$out[$platform]='';}}return $out;
 }

@@ -1,0 +1,21 @@
+/* ECC ADDENDUM №2: one button scale on top of experience.css (same classes and colour tokens, no parallel system).
+   Primary = main action, Secondary = .rz-btn-outline, Text link = .rz-text-link. Small service controls keep their own size. */
+.rz-btn {font-size:16px;font-weight:700;letter-spacing:.05em;min-height:52px;padding:14px 26px;gap:14px}
+.rz-btn-primary {font-weight:800}
+.rz-btn:focus-visible,.rz-text-link:focus-visible {outline:3px solid var(--accent);outline-offset:3px}
+.rz-btn-primary:active {transform:none;filter:brightness(.94)}
+.rz-btn[aria-busy="true"] {cursor:progress;opacity:.75}
+.rz-btn[disabled],.rz-btn[aria-disabled="true"] {cursor:not-allowed;opacity:.55;transform:none}
+/* The one main action of the hero and of the kit promo. */
+.rz-hero .rz-actions .rz-btn-primary,.rz-kit-copy .rz-btn-primary {min-height:58px;padding:16px 36px;font-size:17px;gap:18px}
+.rz-hero .rz-actions .rz-btn-primary svg,.rz-kit-copy .rz-btn-primary svg {width:20px;height:20px;stroke-width:2}
+.rz-kit-copy .rz-text-link {font-size:15px;font-weight:500}
+@media (max-width:767px) {
+  .rz-btn {min-height:48px}
+  .rz-hero .rz-actions .rz-btn-primary,.rz-kit-copy .rz-btn-primary {min-height:52px;padding:14px 22px;font-size:16px;width:100%;justify-content:center}
+}
+/* Footer social links (S-1): ~22px icons in 44×44 targets, brand orange on hover/focus. */
+.rz-social-links {display:flex;gap:8px;flex-wrap:wrap}
+.rz-social-links a {display:inline-grid;place-items:center;width:44px;height:44px;box-sizing:border-box;border:1px solid var(--legacy-2a322b);color:var(--legacy-c7cec3);border-radius:2px;transition:color .18s,border-color .18s}
+.rz-social-links a:hover,.rz-social-links a:focus-visible {color:var(--accent);border-color:var(--accent)}
+.rz-social-links a:focus-visible {outline:3px solid var(--accent);outline-offset:2px}

@@ -23,5 +23,51 @@
 3. Финальный `/ecc:code-review` по диффу `59b4685..HEAD`, исправления, повтор тестов, `08-RELEASE_READINESS.md` (GO/NO-GO).
 4. CI на GitHub после каждого push.
 
+## ADDENDUM №2 — сверка (Phase 1, 2026-10-11)
+
+Источник: «ECC ADDENDUM №2» владельца. Сверено с кодом на `3326514` (CI success) и реестром 03. Статусы: NEW / EXTEND / DONE / CONFLICT.
+
+| # | Требование | Существующее | Статус | Файлы | Тесты |
+|---|---|---|---|---|---|
+| A-1 | Hero: одна CTA «Обрати спорядження», крупнее | 2 CTA (`index.html` hero), `.rz-btn` 13px/500 | NEW | `index.html`, новый `ui-addendum.*.css` | addendum-home |
+| A-2 | Кнопка «Зібрати комплект» во 2-м блоке заметнее, «Допомогти з вибором» вторична | `.rz-btn-primary` + `.rz-text-link` уже есть | EXTEND | CSS | addendum-home |
+| A-3 | Единые Primary/Secondary/Text link, focus, 44×44 | `.rz-btn`, inline-стили, D-34 | EXTEND (+D-34) | CSS | addendum-home, a11y |
+| A-4 | Шапка/поиск (D-34: пустой поиск, 2.5.3, 24px) | D-34 OPEN | EXTEND | `index.html`, client | addendum-home |
+| K-1 | Onboarding «ЗБЕРИ СВІЙ КОМПЛЕКТ ЗА 4 КРОКИ», «Почати збір»/«Пропустити», «Як це працює?», localStorage с версией, Esc, focus trap, без scroll lock | нет | NEW | `index.html`, client | addendum-kit |
+| K-2 | Параметры = предпочтения; обувь «Оберіть розмір» вместо «—»; изменение не меняет добавленный SKU молча | «Мої параметри», шаг 01; поведение при смене — проверить | EXTEND | client | addendum-kit |
+| K-3 | Статус слота «Не обрано» / «Обрано: N товар» / «Необов'язково» | «Додано ✓» / «Необов’язково» | EXTEND | client | addendum-kit |
+| K-4 | Карточки выбора: фото, имя, цена, размер/цвет, наличие, disabled | модальный picker с размерами/цветом/примечаниями | DONE (проверить disabled) | — | kit-* существующие |
+| K-5 | Summary: «Вартість товарів / Знижка на комплект / Разом», без зачёркивания при 0 | «Разом окремо» (зачёркнуто только при экономии) / «Ціна комплектом» | EXTEND (подписи, строка скидки) | `index.html`, client | addendum-kit |
+| K-6 | CTA «ДОДАТИ КОМПЛЕКТ ДО КОШИКА»; пустой — «Спочатку додайте хоча б один товар» | `kitToCart`, `kitCantLabel` «Додайте щонайменше N позиції» | EXTEND (тексты; правило ≥N не меняем — Q-8) | client | addendum-kit |
+| K-7 | Проверки при добавлении в корзину, список проблем, не удалять доступное | `needsSize`, `isOut`+«Замінити», `kitPriceUpd` | DONE/проверить | — | существующие + addendum-kit |
+| K-8 | Черновик между сессиями, перепроверка на сервере | «Ми зберегли вашу збірку», цены перечитываются | DONE | — | существующие |
+| K-9 | Mobile sticky summary-бар не перекрывает safe area | `data-kit-bar` с `env(safe-area-inset-bottom)` | DONE/проверить 360 | — | browser QA |
+| K-10 | «Потрібна допомога з вибором?» → реальный сценарий | `goPicker` (подбор за 6 вопросов) + менеджер | EXTEND (заметная вторичная ссылка) | `index.html` | addendum-kit |
+| K-11 | Не менять SKU/цены/скидки/корзину/заказ | frozen | DONE (ограничение) | — | весь suite |
+| C-1 | Навигация каталога, «Каталог → Категорія → Підкатегорія» на mobile | D-08 карусель, хлебные крошки, D-28 | EXTEND (аудит переходов) | — | addendum-catalog |
+| C-2 | Карточки: единые пропорции, цена диапазоном | 4:5, D-21 | DONE/проверить диапазон | — | addendum-catalog |
+| C-3 | Фильтры совместно, reset, сортировка/пагинация не теряют выбор, мобильные «Фільтри/Показати/Скинути», без scroll lock | фильтры есть | EXTEND (аудит + исправления) | client | addendum-catalog |
+| C-4 | Поиск: кириллица/латиница/пробелы/пусто/длинный/нет результатов с полезным сообщением | `noResults` | EXTEND | client | addendum-catalog |
+| C-5 | Одна товарная модель для каталога/конструктора/корзины | общие `Z`, `storeV3Map` | DONE | — | — |
+| P-1 | Кабинет: «Огляд» (активный заказ + одна CTA, пустое состояние) | вкладка overview отключена (redirect → orders) | EXTEND | `auth/account-view.php`, `index.php` | addendum-account |
+| P-2 | История: карточки, 1–3 превью, пагинация | есть (20/стр., превью, Активні/Історія) | DONE (+ кол-во товаров, сумма — проверить) | — | qa-cabinet |
+| P-3 | Страница заказа: товары, оплата, доставка, история | есть (timeline, товары, ТТН) | EXTEND (раздельные статусы заказ/оплата/доставка) | `order-detail.php` | addendum-account |
+| P-4 | Несколько отправлений «Посилка 1 із 2» | схема поддерживает N shipments (`rubizh_order_shipments`) | EXTEND (подписи; без миграций) | `order-detail.php` | addendum-account |
+| P-5 | Человеческие статусы, без `awaiting_webhook` | `shopCustomerStatus`, `customerPayment` | DONE/проверить маппинг | — | addendum-account |
+| P-6 | Повторить заказ с перерасчётом | `shop/repeat-order.php` + `storeRepeatOrder` (владелец, текущие цены/варианты, список недоступных) | DONE; EXTEND: не дублировать строки корзины, ссылка на товар для недоступных | client | addendum-account |
+| P-7 | Обране | `tab=favorites` | DONE (проверить актуальные цены, удаление, слияние гостя) | — | addendum-account |
+| P-8 | Мої дані без обхода SMS | телефон readonly после подтверждения | DONE | — | существующие |
+| P-9 | Поддержка с номером заказа | mailto с темой «Замовлення №» | DONE | — | — |
+| S-1 | Footer «Ми в соцмережах», Instagram/TikTok из настроек (`instagram_url`, `tiktok_url`), валидация https+host, скрытие пустых | нет | NEW | `shop/settings-lib.php`, `settings.php`, `index.html`, client | addendum-social |
+| Q-4 | v3 «під замовлення»: подтверждение менеджера до оплаты, серверная проверка, без изменения PIM | v3 требует `payment_allowed` из PIM (D-25 legacy fixed) | EXTEND / возможен CONFLICT с контрактом PIM → предложение | `order-validation.php` | release-hardening |
+| Q-5 | Step-up, RBAC, audit для денежных действий менеджера (в SITE) | менеджер на клиентской сессии (D-16) | NEW | `shop/np-*.php`, auth | новый |
+| Q-6 | SMS: rate limit, cooldown, лимиты, CAPTCHA при подозрительной активности, атомарно | глобальные лимиты (D-15) | NEW | `auth/phone.php` | новый |
+| Q-7 | Legacy «в наличии» → прямая MonoPay при подтверждённом остатке; иначе менеджер | всё legacy через менеджера | NEW (финансовый поток) | `order.php`, validation | новый |
+| Q-8 | Правила комплекта: исследование + предложение, расчёты не менять | D-11 | NEW (документ) | — | — |
+| Q-9 | Инвентаризация assets, удаление отдельным этапом | D-22 | NEW (документ) | — | — |
+| B-1 | Баннеры из Drive для категорий без баннера; перечень + промпты, без генерации | D-09/D-23 | EXTEND | — | — |
+
+Порядок: Phase 2 (A-1…A-4) → Phase 7 (S-1) → Phase 3 (K-1) → Phase 4 (K-2…K-10) → Phase 5 (C-*) → Phase 6 (P-*) → Q-6 → Q-7 → Q-5 → Q-4 → Q-8/Q-9 (документы) → B-1 → Phase 8 (регрессия, browser QA, документы) → финальный `/ecc:code-review` → `08-RELEASE_READINESS.md`.
+
 ## Не входит без отдельного разрешения
 Production deploy, production migrations, включение v3, PIM-патчи, реальные платежи/invoice, реальные ТТН, reset/импорт каталога, изменения CRM, merge в main.
