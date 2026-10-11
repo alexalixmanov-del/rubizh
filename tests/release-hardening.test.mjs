@@ -274,3 +274,14 @@ test('MonoPay callback and return URLs come from public_base_url; production sta
   }finally{site.stop();}
  }
 });
+
+// D-40: invalid Nova Poshta directory input is the customer's mistake (400 + reason), not a provider outage (503).
+test('Nova Poshta directory reports invalid input as 400 with its reason, without calling the provider',{skip,timeout:120000},async()=>{
+ const site=await startSite({enableV3:false,extraConfig:",'nova_poshta_api_key'=>'fixture-key-not-used'"});
+ try{
+  for(const [qs,reason] of [['kind=cities&q='+encodeURIComponent('а'.repeat(81)),/надто довгий/],['kind=warehouses&type=drone&city_ref=00000000-0000-0000-0000-000000000000&q=1',/спосіб доставки/],['kind=unknown',/Невідомий довідник/]]){
+   const r=await fetch(site.base+'/shop/np-directory.php?'+qs),j=await r.json();
+   assert.equal(r.status,400,qs+' → '+JSON.stringify(j));assert.match(j.error,reason);
+  }
+ }finally{site.stop();}
+});
