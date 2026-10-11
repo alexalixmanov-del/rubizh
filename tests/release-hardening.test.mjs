@@ -142,6 +142,20 @@ test('legacy preorder: order waits for the manager, confirmation unlocks the Mon
  }finally{site.stop();}
 });
 
+// D-10: the customer cabinet shows a TTN only when a real one exists for a live shipment.
+test('customer cabinet shows only valid TTNs of live shipments; cancelled, returned or malformed numbers stay hidden',{skip,timeout:180000},async()=>{
+ const site=await fixture();try{
+  const o=await checkout(site,await shopper(site));assert.equal(o.status,200,JSON.stringify(o.data));const id=o.data.order.id,customer='c'.repeat(32);
+  site.sql(`INSERT INTO rubizh_accounts(id,email,first_name,last_name,created_at,updated_at) VALUES('${customer}','buyer@fixture.test','Тест','Покупець',UTC_TIMESTAMP(),UTC_TIMESTAMP())`);
+  site.sql(`INSERT INTO rubizh_account_orders(order_id,customer_id) VALUES(${id},'${customer}')`);
+  for(const [ttn,status] of [['20450000000001','created'],['20450000000002','cancelled'],['20450000000004','returned'],['TEMP-1','created'],['2045','sent']])
+   site.sql(`INSERT INTO rubizh_order_shipments(order_id,supplier_code,tracking_number,status,created_at,updated_at) VALUES(${id},'m_vin','${ttn}','${status}',UTC_TIMESTAMP(),UTC_TIMESTAMP())`);
+  const order=JSON.parse(call(site,`echo json_encode(customerOrder('${customer}',${id}));`).stdout);
+  // auth/order-detail.php renders exactly $order['shipments'].
+  assert.deepEqual(order.shipments.map(s=>s.tracking_number),['20450000000001']);
+ }finally{site.stop();}
+});
+
 test('storefront code offers no COD option, no COD default and no COD wording for new orders',()=>{
  const html=readFileSync(path.join(root,'index.html'),'utf8');
  const client=html.match(/src="\/assets\/(shop-client\.[^"?]+\.js)/)[1];

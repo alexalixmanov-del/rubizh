@@ -97,7 +97,8 @@ function customerOrder(string $key, int $orderId): ?array {
     $lines=json_decode($order['items_json'],true);
     $order['lines']=is_array($lines) ? array_values(array_filter($lines,'is_array')) : [];
     $details=shopStoreDatabase()->prepare('SELECT contact_json,subtotal,discount_amount,shipping_amount FROM rubizh_order_details WHERE order_id=?');$details->execute([$orderId]);$amounts=$details->fetch(PDO::FETCH_ASSOC);if($amounts){$order=array_merge($order,$amounts);$contact=json_decode((string)$amounts['contact_json'],true)?:[];$order['shipping_paid_to_carrier']=!empty($contact['shipping_paid_to_carrier']);unset($order['contact_json']);}
-    $shipments=shopStoreDatabase()->prepare("SELECT tracking_number,status FROM rubizh_order_shipments WHERE order_id=? AND tracking_number IS NOT NULL AND tracking_number<>'' ORDER BY id");
+    // Only a real NP number (14 digits) of a live shipment reaches the customer, as in emails and supplier notices.
+    $shipments=shopStoreDatabase()->prepare("SELECT tracking_number,status FROM rubizh_order_shipments WHERE order_id=? AND tracking_number REGEXP '^[0-9]{14}$' AND status NOT IN ('cancelled','returned') ORDER BY id");
     $shipments->execute([$orderId]);$order['shipments']=$shipments->fetchAll(PDO::FETCH_ASSOC);
     return $order;
 }
