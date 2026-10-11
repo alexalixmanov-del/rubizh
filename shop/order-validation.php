@@ -57,7 +57,10 @@ function shopValidateOrder(PDO $db,array $input,string $phase='checkout',?array 
         if($phase!=='checkout'&&($l['sku']??'')==='')throw new ShopOrderConflict('SKU_UNAVAILABLE',['line_no'=>$i],'Оберіть реальний SKU для кожного запиту розміру.');
         // PIM v3 lines carry PIM's payment permission. Legacy lines have no such flag: for an under-order
         // legacy SKU the manager's confirmation is the decision (owner rule: confirmation → invoice → MonoPay).
-        if($phase!=='checkout'&&empty($l['payment_allowed'])&&($l['contract_version']??null)===3)throw new ShopOrderConflict('PAYMENT_NOT_ALLOWED',['line_no'=>$i],'PIM ще не дозволяє оплату цього SKU. Потрібне актуальне підтвердження.');
+        // Q-4 / PIM contract: PREORDER and ORDER_ON_REQUEST (payment_allowed=false, requires_order_confirmation=true) are
+        // unlocked only by the authenticated manager confirmation; the invoice then needs that confirmation on the order.
+        $unlocked=!empty($l['requires_order_confirmation'])&&($phase==='confirmation'||($phase==='invoice'&&($order['pim_order_state']??null)==='CONFIRMED'));
+        if($phase!=='checkout'&&!$unlocked&&empty($l['payment_allowed'])&&($l['contract_version']??null)===3)throw new ShopOrderConflict('PAYMENT_NOT_ALLOWED',['line_no'=>$i],'PIM ще не дозволяє оплату цього SKU. Потрібне актуальне підтвердження.');
     }
     if($order!==null){
         $changed=shopMoney($order['total'])!==shopMoney($quote['total'])+shopMoney($order['shipping_amount']??0);
