@@ -59,10 +59,13 @@ final class MonoEventRejected extends RuntimeException {}
 /** A parked signed webhook triggers one authenticated status read of the same invoice; the bank's answer (or the read
  * failure) goes to the order audit for the manager. Diagnostic only: money states move by signed webhook / monoRefresh. */
 function monoParkedReconcile(PDO $db,array $invoice): void {
- try{$r=monoApi('invoice/status?invoiceId='.rawurlencode((string)$invoice['invoice_id']));
-  $note=($r['invoiceId']??$invoice['invoice_id'])!==$invoice['invoice_id']?'bank answered for another invoice':'bank status='.substr(preg_replace('/[^a-z_]/','',(string)($r['status']??'')),0,24).' amount='.substr(json_encode($r['amount']??null),0,24).' ccy='.substr(json_encode($r['ccy']??null),0,8);}
- catch(Throwable $read){$note='status read failed: '.get_class($read);}
- npAudit($db,str_repeat('0',32),'mono_parked_reconcile',(int)$invoice['order_id'],0,$note.' local='.substr((string)$invoice['status'],0,24));
+ // Never replaces the parked answer (200) with an error, and a replayed parked event within a minute adds no bank call.
+ try{$q=$db->prepare("SELECT 1 FROM rubizh_np_audit WHERE order_id=? AND action='mono_parked_reconcile' AND created_at>UTC_TIMESTAMP()-INTERVAL 60 SECOND LIMIT 1");$q->execute([(int)$invoice['order_id']]);if($q->fetchColumn())return;
+  try{$r=monoApi('invoice/status?invoiceId='.rawurlencode((string)$invoice['invoice_id']));
+   $note=($r['invoiceId']??$invoice['invoice_id'])!==$invoice['invoice_id']?'bank answered for another invoice':'bank status='.substr(preg_replace('/[^a-z_]/','',(string)($r['status']??'')),0,24).' amount='.substr(json_encode($r['amount']??null),0,24).' ccy='.substr(json_encode($r['ccy']??null),0,8);}
+  catch(Throwable $read){$note='status read failed: '.get_class($read);}
+  npAudit($db,str_repeat('0',32),'mono_parked_reconcile',(int)$invoice['order_id'],0,$note.' local='.substr((string)$invoice['status'],0,24));
+ }catch(Throwable $e){error_log('rubizh mono parked reconcile: '.get_class($e));}
 }
 function monoValidateEvent(array $event,array $invoice): void {
  if(!is_string($event['invoiceId']??null)||$event['invoiceId']!==$invoice['invoice_id']||!is_int($event['amount']??null)||$event['amount']!==(int)$invoice['amount']||($event['ccy']??null)!==980)throw new MonoEventRejected('Рахунок, валюта або сума не збігаються.');

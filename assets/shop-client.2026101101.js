@@ -16,13 +16,15 @@ const STORE_ATTEMPT='rubizh.orderAttempt',STORE_CART_ID='rubizh.cartId',STORE_OR
 function storeDigest(str){let h1=0xdeadbeef,h2=0x41c6ce57;for(let i=0;i<str.length;i++){const c=str.charCodeAt(i);h1=Math.imul(h1^c,2654435761);h2=Math.imul(h2^c,1597334677);}h1=Math.imul(h1^(h1>>>16),2246822507)^Math.imul(h2^(h2>>>13),3266489909);h2=Math.imul(h2^(h2>>>16),2246822507)^Math.imul(h1^(h1>>>13),3266489909);return (4294967296*(2097151&h2)+(h1>>>0)).toString(36);}
 function storeRandomKey(){return Array.from(crypto.getRandomValues(new Uint8Array(16)),t=>t.toString(16).padStart(2,'0')).join('');}
 function storeOrdered(){try{const o=JSON.parse(localStorage.getItem(STORE_ORDERED)||'null');return o&&/^[a-f0-9]{32}$/.test(o.k)&&Date.now()-o.t>=0&&Date.now()-o.t<STORE_ORDERED_TTL?o:null;}catch(e){return null;}}
-// The tab keeps its cart id while its cart has goods; an empty cart ends it. An id already consumed by an order is never reused.
-function storeCartId(items,current){try{if(!items.length){localStorage.removeItem(STORE_CART_ID);return '';}if(current)return current;
+// The tab keeps its cart id while its cart has goods; an empty cart ends it. An id already consumed by an order is never reused,
+// and a stale tab that edits an already ordered cart gets a new id (a new purchase, not a refused replay of the old key).
+function storeCartLines(items){return storeDigest(JSON.stringify((items||[]).map(l=>[l.key??l.sku??l.id,l.sku,l.size,l.color,l.qty])));}
+function storeCartId(items,current){try{if(!items.length){localStorage.removeItem(STORE_CART_ID);return '';}const o=storeOrdered();if(current&&o?.cart===current&&o.d!==storeCartLines(items))current='';if(current)return current;
  let id=localStorage.getItem(STORE_CART_ID);if(!/^[a-f0-9]{32}$/.test(id||'')||storeOrdered()?.cart===id){id=storeRandomKey();localStorage.setItem(STORE_CART_ID,id);}return id;}catch(e){return current||'';}}
 function storeAttemptKey(cart,fingerprint){const h=storeDigest(fingerprint),o=storeOrdered();if(cart&&o&&o.cart===cart)return o.k;
  try{const a=JSON.parse(sessionStorage.getItem(STORE_ATTEMPT)||'null');if(a&&a.cart===cart&&a.h===h&&/^[a-f0-9]{32}$/.test(a.k))return a.k;}catch(e){}
  const k=storeRandomKey();try{sessionStorage.setItem(STORE_ATTEMPT,JSON.stringify({k,h,cart}));}catch(e){}return k;}
-function storeAttemptDone(cart,k){try{sessionStorage.removeItem(STORE_ATTEMPT);if(cart)localStorage.setItem(STORE_ORDERED,JSON.stringify({cart,k,t:Date.now()}));}catch(e){}}
+function storeAttemptDone(cart,k,items){try{sessionStorage.removeItem(STORE_ATTEMPT);if(cart)localStorage.setItem(STORE_ORDERED,JSON.stringify({cart,k,d:storeCartLines(items),t:Date.now()}));}catch(e){}}
 // Kit builder guide (ADDENDUM K-1): shown on the first plain visit, once per guide version; storage errors only mean it may show again.
 const STORE_KIT_INTRO_KEY='rubizh.kitIntro',STORE_KIT_INTRO_VERSION='1';
 function storeKitIntroSeen(){try{return localStorage.getItem(STORE_KIT_INTRO_KEY)===STORE_KIT_INTRO_VERSION;}catch(e){return false;}}
@@ -6353,7 +6355,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                 payment: storeCheckoutPay(e),
                 promo: e.promo || ""
             }, s = JSON.stringify(i);
-            const orderCart=this._cartId||'';this._orderFingerprint !== s && (this._orderFingerprint = s, this._orderKey = storeAttemptKey(orderCart, s));
+            const orderCart=this._cartId||'',orderItems=this.state.cart;this._orderFingerprint !== s && (this._orderFingerprint = s, this._orderKey = storeAttemptKey(orderCart, s));
             const o = this.renderVals(), a = e.storeQuote?.total ?? o.storeTotal;
             clearTimeout(this._cartReminderTimer);this._cartReminderGeneration=(this._cartReminderGeneration||0)+1;this.setState({
                 orderSending: !0,
@@ -6384,7 +6386,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                     cartReminderActive:false,
                     orderEmailStatus: t.email_status || "pending",
                     checkoutDirty: !1
-                }), storeAttemptDone(orderCart, this._orderKey), this._orderFingerprint = null, this._orderKey = null, this.go("done");if(e.payment_status==='paid')this.storeTrackPaid(e);if(t.payment?.url&&/^https:\/\/(?:pay\.mbnk\.biz|pay\.monobank\.ua)\//.test(t.payment.url))window.location.assign(t.payment.url);
+                }), storeAttemptDone(orderCart, this._orderKey, orderItems), this._orderFingerprint = null, this._orderKey = null, this.go("done");if(e.payment_status==='paid')this.storeTrackPaid(e);if(t.payment?.url&&/^https:\/\/(?:pay\.mbnk\.biz|pay\.monobank\.ua)\//.test(t.payment.url))window.location.assign(t.payment.url);
                 // Q-7: an order the server already confirmed (confirmed stock, card) goes straight to MonoPay through the same
                 // validated payment start as the receipt button; a refusal leaves the receipt with its «Сплатити» button.
                 else if(e.payment_ready&&e.payment_method==='card'&&e.payment_status!=='paid'){try{const pay=await this.storeRequest('/shop/payment-start.php',{order_id:e.id});if(/^https:\/\/(?:pay\.mbnk\.biz|pay\.monobank\.ua)\//.test(pay.url||''))window.location.assign(pay.url);}catch(err){this.setState({receiptActionError:err.message});}}

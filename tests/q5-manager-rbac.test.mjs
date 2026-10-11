@@ -37,6 +37,8 @@ test('Q-5: high-risk actions need a fresh login; low-risk ones do not',{skip,tim
   assert.equal(r.status,403);assert.match(r.data.error,/увійдіть ще раз|підтвердьте вхід/i);
   const blind=await site.as(OWNER)({action:'refund.execute',order_id:id,reason:'повернення коштів покупцю'});
   assert.equal(blind.status,409,'a refund must name the order version it was prepared on');assert.equal(blind.data.error_code,'STATE_REQUIRED');
+  const blindReconcile=await site.as(OWNER)({action:'manual_reconcile',order_id:id,reason:'звірка з банком',invoice_id:'x'});
+  assert.equal(blindReconcile.status,409);assert.equal(blindReconcile.data.error_code,'STATE_REQUIRED','manual reconcile also needs the order version');
   const version=site.sql('SELECT updated_at FROM rubizh_customer_orders WHERE id='+id)[0].updated_at;
   const fresh=await site.as(OWNER)({action:'refund.execute',order_id:id,reason:'повернення коштів покупцю',expected_updated_at:version});
   assert.notEqual(fresh.status,403,'a fresh owner passes the identity check (the unpaid order is then refused by state)');assert.match(fresh.data.error||'',/не оплачене/i);

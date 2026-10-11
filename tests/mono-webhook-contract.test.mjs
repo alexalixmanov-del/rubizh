@@ -43,7 +43,7 @@ test('MonoPay webhook contract: forged signature, wrong amount, wrong currency, 
   assert.equal((await site.hook(inv,{ccy:840})).status,200,'wrong currency is acknowledged and parked');
   assert.equal((await site.hook(inv,{invoiceId:'someone-else-invoice'})).status,503,'unknown invoice stays retryable');
   assert.equal((await site.hook(inv,{status:'failure'})).status,200);
-  assert.equal(site.paid(id),'failed');assert.equal(+site.sql(`SELECT COUNT(*) n FROM rubizh_np_audit WHERE order_id=${id} AND action='mono_event_rejected'`)[0].n,2);assert.equal(+site.sql(`SELECT COUNT(*) n FROM rubizh_np_audit WHERE order_id=${id} AND action='mono_parked_reconcile'`)[0].n,2,'each parked event is reconciled by a status read');
+  assert.equal(site.paid(id),'failed');assert.equal(+site.sql(`SELECT COUNT(*) n FROM rubizh_np_audit WHERE order_id=${id} AND action='mono_event_rejected'`)[0].n,2);assert.equal(+site.sql(`SELECT COUNT(*) n FROM rubizh_np_audit WHERE order_id=${id} AND action='mono_parked_reconcile'`)[0].n,1,'parked events are reconciled by one status read; a replay within a minute adds no bank call');
  }finally{site.stop();}
 });
 

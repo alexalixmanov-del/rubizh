@@ -46,9 +46,19 @@ test('order idempotency: double click and lost-response retries (in place and af
   await page.reload();await fill();const again=await submit();assert.equal(again.ok,true,JSON.stringify(again));assert.equal(orders(),3,'retry after reload → the same order');
   await page.unroute('**/shop/order.php');
 
+  // 3b. Stale second tab: unchanged it resends the ordered cart's key (same order); after editing its cart it buys anew.
+  await add();const stale=await context.newPage();await stale.goto(site.base+'/#cart');await stale.waitForTimeout(500);
+  await fill();const ordered=await submit();assert.equal(ordered.ok,true,JSON.stringify(ordered));const before=orders();
+  await stale.goto(site.base+'/product/idem-cap');await stale.locator('[data-size-grid]').getByText('L',{exact:true}).click();await stale.getByRole('button',{name:/До кошика/}).first().click();
+  await stale.goto(site.base+'/#cart');const c=stale.getByRole('button',{name:/Оформити/}).first();if(await c.count())await c.click();
+  await stale.locator('input[name="name"]').fill('Тест Покупець');await stale.locator('input[name="phone"]').fill('+380671234567');await stale.locator('input[name="city"]').fill('Київ');await stale.locator('input[name="address"]').fill('Відділення 1');
+  const sr=stale.waitForResponse(x=>x.url().endsWith('/shop/order.php'));await stale.getByRole('button',{name:/Підтвердити замовлення/}).first().click();const edited=await (await sr).json();
+  assert.equal(edited.ok,true,'an edited stale cart is a new purchase, not a refused replay: '+JSON.stringify(edited));assert.equal(orders(),before+1);assert.notEqual(edited.order.number,ordered.order.number);
+  await stale.close();
+
   // 4. Deliberate repeat purchase of the identical item after success: a new order.
   await add();await fill();const repeat=await submit();assert.equal(repeat.ok,true,JSON.stringify(repeat));
-  assert.equal(orders(),4,'a deliberate repeat purchase is a new order');assert.notEqual(repeat.order.number,again.order.number);
+  assert.equal(orders(),6,'a deliberate repeat purchase is a new order');assert.notEqual(repeat.order.number,again.order.number);
   // Q-7: confirmed stock paid by card goes straight to MonoPay (stub page; never leaves the machine), with one invoice.
   await page.waitForURL(/^https:\/\/pay\.mbnk\.biz\//,{timeout:10000});
   assert.equal(+site.sql(`SELECT COUNT(*) n FROM rubizh_mono_invoices i JOIN rubizh_customer_orders o ON o.id=i.order_id WHERE o.order_number='${repeat.order.number}'`)[0].n,1);
