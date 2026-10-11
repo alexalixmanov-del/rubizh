@@ -15,10 +15,10 @@ const results=[];
 const social={instagram:'https://www.instagram.com/rubizh.test',tiktok:'https://www.tiktok.com/@rubizh.test'};
 try{
  // A synthetic order for the account views (real checkout API, then owned by the session customer).
- const A='q'.repeat(32),SID='qaad'+'0'.repeat(28);
+ const A='d'.repeat(32),SID='qaad'+'0'.repeat(28);// customer ids are 32 hex characters
  site.sql(`INSERT INTO rubizh_accounts(id,email,first_name,last_name,created_at,updated_at) VALUES('${A}','qa@fixture.test','Тест','Покупець',UTC_TIMESTAMP(),UTC_TIMESTAMP())`);
  const r=await fetch(site.base+'/shop/customer.php');const h={Cookie:r.headers.get('set-cookie').split(';')[0]},csrf=(await r.json()).csrf;
- const line={product_id:'qa-jacket',size:'J-B-XL',sku:'J-B-XL',qty:2};
+ const line={product_id:'qa-jacket',sku:'J-B-XL',size:'XL',color:'Чорний',qty:2};// legacy line: variant size key + colour
  const q=await site.post('/shop/checkout-quote.php',{csrf,lines:[line],payment:'card'},h);
  const o=await site.post('/shop/order.php',{csrf,request_id:'e'.repeat(32),contact:{name:'Тест Покупець',recipient:'Тест Покупець',phone:'+380671234567',city:'Київ',address:'Відділення 1',delivery_type:'branch'},payment:'card',lines:[line],expected_total:q.data?.quote?.total,catalog_version:q.data?.quote?.catalog_version},h);
  const orderId=o.data?.order?.id;
@@ -47,7 +47,9 @@ try{
    if(opt.cookie)await context.addCookies([{name:'rubizh_customer',value:opt.cookie,url:site.base,secure:false,httpOnly:true,sameSite:'Lax'}]);
    const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message.slice(0,160)));
    let status=0;try{const resp=await page.goto(url,{waitUntil:'load',timeout:30000});status=resp?.status()||0;await page.waitForTimeout(600);await act(page,w);await page.waitForTimeout(300);}catch(e){errors.push('flow: '+e.message.split('\n')[0].slice(0,160));}
-   const info=await page.evaluate(()=>({overflow:document.documentElement.scrollWidth>document.documentElement.clientWidth+1,scrollW:document.documentElement.scrollWidth,text:document.body.innerText.length})).catch(e=>({evalError:e.message.slice(0,80)}));
+   const info=await page.evaluate(()=>({overflow:document.documentElement.scrollWidth>document.documentElement.clientWidth+1,scrollW:document.documentElement.scrollWidth,text:document.body.innerText.length,
+    // A 200 page can still be an error state; these screens must show their real content.
+    errorState:/Кабінет тимчасово недоступний|Не вдалося завантажити|Сервер магазину ще не налаштований|каталог тимчасово недоступний/i.test(document.body.innerText)})).catch(e=>({evalError:e.message.slice(0,80)}));
    if(shotAt.has(w))await page.screenshot({path:`${out}/shots/${bname}-${w}-${name}.png`}).catch(()=>{});
    results.push({browser:bname,width:w,view:name,status,errors,...info});
    await Promise.race([context.close(),new Promise(r=>setTimeout(r,5000))]);

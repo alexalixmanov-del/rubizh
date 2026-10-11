@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import {writeFileSync} from 'node:fs';
 import path from 'node:path';
 import {chromium} from 'playwright';
-import {startSite,wire,publish} from './helpers/site-fixture.mjs';
+import {startSite,wire,publish,php,root} from './helpers/site-fixture.mjs';
 const skip=!process.env.RUBIZH_TEST_MYSQL_SOCKET;
 const A='a'.repeat(32),SID='acct'+'0'.repeat(28);
 async function cabinet({orders=0,qty=2}={}){
@@ -64,4 +64,12 @@ test('P-6: repeat order adds current variants once — an SKU already in the car
   await page.goto(site.base+'/');await page.goto(site.base+'/#cart?repeat='+ids[0]);await page.waitForTimeout(1500);
   assert.deepEqual(await cart(),[['RUB-F0001',2]],'the same SKU is merged');
  }finally{await browser?.close();site.stop();}
+});
+
+test('P-3: before the manager opens payment the payment state says so, instead of asking to pay',()=>{
+ const run=(o,r)=>JSON.parse(php(`require '${root}/shop/customer-states.php';echo json_encode(shopCustomerStates(json_decode(${JSON.stringify(JSON.stringify(o))},true),json_decode(${JSON.stringify(JSON.stringify(r))},true)));`).stdout);
+ assert.equal(run({status:'new',payment_status:'pending'},{stage:'pending',payment_ready:false}).payment,'Оплата після підтвердження');
+ assert.equal(run({status:'new',payment_status:'pending'},{stage:'pending',payment_ready:true}).payment,'Очікує оплати');
+ assert.equal(run({status:'confirmed',payment_status:'pending'},null).payment,'Очікує оплати');
+ assert.equal(run({status:'shipped',payment_status:'paid'},null).payment,'Оплачено');
 });
