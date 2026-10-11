@@ -1,0 +1,59 @@
+// Q-5 (owner decision 2026-10-11): money actions of staff stay in SITE with server-side RBAC, a fresh-login check for
+// high-risk actions, a current-state check and an audit trail. Real HTTP sessions on the isolated fixture; MonoPay mock.
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {writeFileSync} from 'node:fs';
+import path from 'node:path';
+import {startSite,wire,publish} from './helpers/site-fixture.mjs';
+const skip=!process.env.RUBIZH_TEST_MYSQL_SOCKET;
+const OWNER='0'.repeat(31)+'1',MANAGER='0'.repeat(31)+'2',CUSTOMER='0'.repeat(31)+'3';
+async function fixture(){
+ const site=await startSite({extraConfig:`,'mono_mock'=>true,'environment'=>'staging','staff_roles'=>['${OWNER}'=>'OWNER','${MANAGER}'=>'MANAGER']`});
+ assert.equal((await publish(site,structuredClone(wire))).status,200);
+ const csrf='c'.repeat(64);
+ site.as=(who,{age=0}={})=>{const sid=('s'+who).slice(0,32);writeFileSync(path.join(site.dir,'sess_'+sid),`csrf|s:64:"${csrf}";customer_id|s:32:"${who}";login_time|i:${Math.floor(Date.now()/1000)-age};login_method|s:5:"email";`);
+  return (body,{token=csrf}={})=>site.post('/shop/financial-actions.php',{csrf:token,...body},{Cookie:'rubizh_customer='+sid});};
+ const r=await fetch(site.base+'/shop/customer.php');const h={Cookie:r.headers.get('set-cookie').split(';')[0]},buyerCsrf=(await r.json()).csrf;
+ const model=wire.products.find(p=>p.id==='m-jacket'),line={product_id:'m-jacket',color_id:model.colors.find(c=>c.variant_skus.includes('RUB-F0001')).id,sku:'RUB-F0001',qty:1};
+ const q=await site.post('/shop/checkout-quote.php',{csrf:buyerCsrf,lines:[line],payment:'card'},h);
+ const o=await site.post('/shop/order.php',{csrf:buyerCsrf,request_id:'5'.repeat(32),contact:{name:'Тест Покупець',recipient:'Тест Покупець',phone:'+380671234567',city:'Київ',address:'Відділення 1',delivery_type:'branch'},payment:'card',lines:[line],expected_total:q.data.quote.total,catalog_version:q.data.quote.catalog_version},h);
+ assert.equal(o.status,200,JSON.stringify(o.data));site.orderId=o.data.order.id;
+ return site;
+}
+
+test('Q-5: a customer and a manager without the right get 403; nothing changes',{skip,timeout:180000},async()=>{
+ const site=await fixture();try{
+  const id=site.orderId;
+  for(const action of ['invoice.create','refund.execute','manual_reconcile'])assert.equal((await site.as(CUSTOMER)({action,order_id:id,reason:'тест причини дії'})).status,403,'customer: '+action);
+  for(const action of ['refund.execute','manual_reconcile'])assert.equal((await site.as(MANAGER)({action,order_id:id,reason:'тест причини дії',invoice_id:'x'})).status,403,'manager: '+action);
+  assert.equal(+site.sql('SELECT COUNT(*) n FROM rubizh_mono_invoices WHERE order_id='+id)[0].n,0);
+ }finally{site.stop();}
+});
+
+test('Q-5: high-risk actions need a fresh login; low-risk ones do not',{skip,timeout:180000},async()=>{
+ const site=await fixture();try{
+  const id=site.orderId,stale=site.as(OWNER,{age:3600});
+  const r=await stale({action:'refund.execute',order_id:id,reason:'повернення коштів покупцю'});
+  assert.equal(r.status,403);assert.match(r.data.error,/увійдіть ще раз|підтвердьте вхід/i);
+  const fresh=await site.as(OWNER)({action:'refund.execute',order_id:id,reason:'повернення коштів покупцю'});
+  assert.notEqual(fresh.status,403,'a fresh owner passes the identity check (the unpaid order is then refused by state)');assert.match(fresh.data.error||'',/не оплачене/i);
+  assert.equal((await stale({action:'invoice.create',order_id:id})).status,200,'invoice creation is not high-risk');
+ }finally{site.stop();}
+});
+
+test('Q-5: a repeated action does not duplicate its effect, a changed order is refused, and every action is audited',{skip,timeout:180000},async()=>{
+ const site=await fixture();try{
+  const id=site.orderId,mgr=site.as(MANAGER);
+  const before=site.sql('SELECT updated_at FROM rubizh_customer_orders WHERE id='+id)[0].updated_at;
+  site.sql(`UPDATE rubizh_customer_orders SET updated_at=UTC_TIMESTAMP()+INTERVAL 1 MINUTE WHERE id=${id}`);
+  const stale=await mgr({action:'invoice.create',order_id:id,expected_updated_at:before});
+  assert.equal(stale.status,409,JSON.stringify(stale.data));assert.match(stale.data.error,/змінилося/i);
+  const now=site.sql('SELECT updated_at FROM rubizh_customer_orders WHERE id='+id)[0].updated_at;
+  assert.equal((await mgr({action:'invoice.create',order_id:id,expected_updated_at:now})).status,200);
+  assert.equal((await mgr({action:'invoice.create',order_id:id})).status,200,'repeat');
+  assert.equal(+site.sql('SELECT COUNT(*) n FROM rubizh_mono_invoices WHERE order_id='+id)[0].n,1,'one invoice');
+  const audit=site.sql(`SELECT actor_id,action FROM rubizh_order_audit WHERE order_id=${id} AND action='payment.invoice.create'`);
+  assert.ok(audit.length>=1&&audit.every(a=>a.actor_id===MANAGER),'who and what is recorded');
+  assert.notEqual((await mgr({action:'invoice.create',order_id:id},{token:'f'.repeat(64)})).status,200,'no CSRF, no action');
+ }finally{site.stop();}
+});

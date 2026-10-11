@@ -10,6 +10,9 @@ try{
     }
     if(($_SERVER['REQUEST_METHOD']??'')!=='POST')shopJson(['ok'=>false],405);
     $input=shopBody();shopCsrf($input);shopLimit($db,'financial-actions',20,60);$id=(int)($input['order_id']??0);$action=$input['action']??'';
+    // Q-5: an action prepared on an order that changed since it was viewed is refused (optional for existing callers such as CRM).
+    if(isset($input['expected_updated_at'])){$cur=$db->prepare('SELECT updated_at FROM rubizh_customer_orders WHERE id=?');$cur->execute([$id]);$now=$cur->fetchColumn();
+        if($now===false||(string)$now!==(string)$input['expected_updated_at'])throw new ShopOrderConflict('STATE_CHANGED',['updated_at'=>$now===false?null:(string)$now],'Замовлення змінилося після перегляду. Оновіть дані та повторіть дію.');}
     if($action==='invoice.create')$result=monoCreate($db,$id,$actor);
     elseif($action==='invoice.resend'){
         shopRequirePermission($actor,'payment.invoice.resend');
