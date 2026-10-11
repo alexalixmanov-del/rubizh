@@ -6,7 +6,7 @@ import {startPreview} from '../dev/preview.mjs';
 let browser,server,base;
 before(async()=>{
   server=await startPreview(0);base='http://127.0.0.1:'+server.address().port;
-  const executable=process.env.CHROMIUM_PATH||(existsSync('/usr/bin/chromium')?'/usr/bin/chromium':undefined);
+  const executable=process.env.CHROMIUM_PATH||(existsSync((process.env.CHROMIUM_PATH||'/usr/bin/chromium'))?(process.env.CHROMIUM_PATH||'/usr/bin/chromium'):undefined);
   browser=await chromium.launch({executablePath:executable,headless:true,args:['--no-sandbox']});
 });
 after(async()=>{await browser?.close();await new Promise(resolve=>server?.close(resolve));});
@@ -55,11 +55,12 @@ test('Disabled payment methods and donation claims are absent at checkout',()=>w
   assert.equal(await page.getByText('Куди надіслати скрін донату',{exact:true}).count(),0);
   assert.equal(await page.locator('input[name="name"][aria-label]').count(),1);
 }));
-test('Card and COD options appear when the server enables them',()=>withPage(async page=>{
+test('Card appears when the server enables it; COD never appears, even with a stale server flag',()=>withPage(async page=>{
   await page.route('**/shop/customer.php',route=>route.fulfill({contentType:'application/json',body:JSON.stringify({ok:true,csrf:'preview-only',authed:false,customer_id:null,profile:null,favorites:[],items:[],mono_enabled:true,np_enabled:false,np_cod_enabled:true})}));
   await addUniform(page);
   await page.getByText('Оплата карткою',{exact:true}).waitFor();
-  await page.getByText('Післяплата',{exact:true}).waitFor();
+  assert.equal(await page.getByText('Післяплата',{exact:true}).count(),0);
+  assert.equal(await page.getByText(/Оплата при отриманні/).count(),0);
 }));
 test('Cart quantity cannot exceed the known stock',()=>withPage(async page=>{
   await addUniform(page);

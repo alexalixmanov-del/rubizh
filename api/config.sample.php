@@ -32,8 +32,6 @@ return [
   'np_supplier_names' => [],
   'np_supplier_by_sku' => [],
   'np_supplier_by_product' => [],
-  'np_cod_contract_confirmed' => false,
-  'np_cod_service' => '', // afterpayment только после проверки договора ФОП.
   'tg_bot_token' => '', // серверный токен бота
   'tg_chat_id' => '', // приватный чат менеджера
   'order_notification_email' => 'zakaz@rubizh.shop',

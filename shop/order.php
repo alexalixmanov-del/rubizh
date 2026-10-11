@@ -18,7 +18,8 @@ try{
     if(count(preg_split('/\s+/u',trim($recipient?:$name)))<2)throw new RuntimeException('Вкажіть ім’я та прізвище одержувача.');
     $brigade=shopDonationTarget($contact['brigade']??'');
     $donationChannel=customerField($contact,'donation_channel',12)?:'viber';if(!in_array($donationChannel,['viber','telegram'],true))throw new RuntimeException('Оберіть Viber або Telegram.');$donationPhone=preg_replace('/\D/','',customerField($contact,'donation_phone',30))?:$phone;if(preg_match('/^0\d{9}$/D',$donationPhone))$donationPhone='38'.$donationPhone;if(!preg_match('/^380\d{9}$/D',$donationPhone))throw new RuntimeException('Перевірте номер для скріна донату.');
-    $pay=customerField($input,'payment',24);if(!in_array($pay,['cod','card','invoice'],true))throw new RuntimeException('Оберіть спосіб оплати.');
+    // Cash on delivery is permanently forbidden: only online card payment or a FOP invoice for new orders.
+    $pay=customerField($input,'payment',24);if(!in_array($pay,['card','invoice'],true))throw new RuntimeException('Оберіть спосіб оплати: карткою онлайн або на рахунок ФОП.');
     if($pay==='card'&&!monoConfigured())throw new RuntimeException('Оплату карткою ще не підключено.');
     $hash=hash('sha256',json_encode([$input['lines'] ?? [],$contact,$pay,$input['promo'] ?? ''],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR));
     $owner=customerId();session_write_close();

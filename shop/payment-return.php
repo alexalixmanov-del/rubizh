@@ -15,7 +15,7 @@ try{
   else throw new RuntimeException('Невідома дія.');
  }
  $order=npOrder($db,$id);$q=$db->prepare('SELECT * FROM rubizh_mono_invoices WHERE order_id=? ORDER BY id DESC LIMIT 1');$q->execute([$id]);$invoice=$q->fetch(PDO::FETCH_ASSOC);
- if($invoice&&monoConfigured()&&in_array($invoice['status'],['created','processing','hold'],true)){
+ if($invoice&&monoConfigured()&&in_array($invoice['status'],['created','processing','hold','awaiting_webhook'],true)){
   try{monoRefresh($db,$invoice);$order=npOrder($db,$id);$q->execute([$id]);$invoice=$q->fetch(PDO::FETCH_ASSOC);}catch(Throwable $e){$notice='Очікуємо підтвердження банку. Повернення на сайт саме по собі не підтверджує оплату.';}
  }
  $receipt=shopOrderReceipt($db,$id);

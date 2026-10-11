@@ -114,8 +114,9 @@ function npAssertReady(array $order,array $confirmation,array $lines,array $ship
     $method=$order['contact']['payment']??'';
     if(in_array($method,['card','invoice'],true)&&$order['payment_status']!=='paid')throw new RuntimeException('Замовлення ще не оплачене.');
     if($method==='card'&&cfg('np_card_payment_verified')!==true&&!(function_exists('monoConfigured')&&monoConfigured()))throw new RuntimeException('Платіжний сервіс ще не підключено до перевірки оплати.');
-    if($method==='cod'&&(cfg('np_cod_contract_confirmed')!==true||cfg('np_cod_service')!=='afterpayment'))throw new RuntimeException('Післяплата не підтверджена в договорі ФОП.');
-    if(!in_array($method,['card','invoice','cod'],true))throw new RuntimeException('Невідомий спосіб оплати.');
+    // Cash on delivery is forbidden; a historical COD order needs an agreed online payment before any TTN.
+    if($method==='cod')throw new RuntimeException('Післяплату вимкнено. Погодьте з покупцем онлайн-оплату перед оформленням ТТН.');
+    if(!in_array($method,['card','invoice'],true))throw new RuntimeException('Невідомий спосіб оплати.');
     $active=array_filter($shipments,fn($s)=>$s['status']!=='cancelled');$codes=array_unique(array_column($lines,'supplier_code'));
     if((count($active)>1||count($codes)>1) && (int)($confirmation['extra_delivery_agreed']??0)!==1)throw new RuntimeException('Погодьте з покупцем доставку кожної окремої посилки.');
     if(!is_array($order['contact']['np_delivery']??null))throw new RuntimeException('Для цього старого замовлення адресу ще не перевірено в довіднику НП.');
@@ -127,7 +128,6 @@ function npSaveProperties(array $shipment,array $origin,array $sender,array $del
     $package=npPackage(json_decode((string)$shipment['package_json'],true)?:[]);
     $props=['PayerType'=>'Recipient','PaymentMethod'=>'Cash','DateTime'=>(new DateTimeImmutable('now',new DateTimeZone('Europe/Kyiv')))->format('d.m.Y'),'CargoType'=>$package['weight']>30?'Cargo':'Parcel','Weight'=>(string)$package['weight'],'ServiceType'=>$delivery['type']==='courier'?'WarehouseDoors':'WarehouseWarehouse','SeatsAmount'=>(string)$package['seats'],'Description'=>'Товари','Cost'=>number_format((float)$shipment['declared_value'],2,'.',''),'CitySender'=>$origin['city_ref'],'Sender'=>$sender['ref'],'SenderAddress'=>$origin['warehouse_ref'],'ContactSender'=>$sender['contact_ref'],'SendersPhone'=>preg_replace('/\D/','',$sender['phone']),'CityRecipient'=>$delivery['city_ref'],'Recipient'=>$recipientRef,'RecipientAddress'=>$recipientAddress,'ContactRecipient'=>$contactRef,'RecipientsPhone'=>preg_replace('/\D/','',$contact['phone']),'InfoRegClientBarcodes'=>'RB-'.$shipment['operation_key'],'AdditionalInformation'=>'RB-'.$shipment['operation_key']];
     $props['OptionsSeat']=array_map(fn($p)=>['weight'=>(string)$p['weight'],'volumetricVolume'=>(string)round($p['length']*$p['width']*$p['height']/1000000,6),'volumetricLength'=>(string)$p['length'],'volumetricWidth'=>(string)$p['width'],'volumetricHeight'=>(string)$p['height']],$package['places']);
-    if(($contact['payment']??'')==='cod')$props['AfterpaymentOnGoodsCost']=$props['Cost'];
     return $props;
 }
 function npRecipient(array $contact,array $delivery): array {

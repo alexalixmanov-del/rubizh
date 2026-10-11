@@ -83,6 +83,8 @@ function shopAcceptOrderQuote(PDO $db,array $order,array $v,string $actor,array 
         if(!is_string($approval['quote_hash']??null)||!hash_equals($v['quote_hash'],$approval['quote_hash']))shopAssertPriceUnchanged($v,$order);
     }else $reason='Актуальний склад і ціни перевірено';
     $id=(int)$order['id'];$lines=$v['quote']['lines'];
+    // The bank charges the invoice amount: the total may change only when no card invoice can still be paid.
+    if(round((float)$v['quote']['total'],2)!==round((float)$order['total'],2)&&!shopNoOpenCardInvoice($db,$id))throw new ShopOrderConflict('INVOICE_OPEN',['total'=>$order['total'],'quote_total'=>$v['quote']['total']],'Відкрито рахунок на попередню суму. Дочекайтеся його завершення або закриття, потім погодьте нову ціну.');
     foreach($v['resolution'] as $no=>$sku){
         $old=$order['items'][$no];$lines[$no]['resolved_from_option']=$old['option_id'];
         $db->prepare('UPDATE rubizh_order_request_selections SET resolved_sku=?,resolution_revision=? WHERE order_id=? AND line_no=?')->execute([$sku,$v['quote_hash'],$id,$no]);
