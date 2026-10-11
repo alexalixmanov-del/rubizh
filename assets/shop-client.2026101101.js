@@ -4,6 +4,15 @@ function storeApplySettings(vm,settings){const seller=settings.seller||{},defaul
 
 // Effective checkout payment: only online card (when MonoPay is on) or a FOP invoice. Cash on delivery does not exist.
 function storeCheckoutPay(e){return e.pay==='invoice'||(e.pay==='card'&&e.monoEnabled)?e.pay:(e.monoEnabled?'card':'invoice');}
+// Legacy product colour on the product page, and the gallery that belongs to it (server color_photos).
+// A colour without confirmed photos gets [] → "Фото кольору готується"; never another colour's photos.
+function storeLegacyColor(s,e,h){const all=Object.values(s.variants),confirmed=all.filter(v=>!v.size_unconfirmed),picked=e.productColor&&all.some(v=>v.color===e.productColor)?e.productColor:'';if(picked)return picked;if(h&&!h.size_unconfirmed&&h.color)return h.color;
+ // Default: a buyable colour with its own photos, then any buyable colour, then the first one.
+ const buyable=confirmed.filter(v=>v.availability!=='out_of_stock'),photo=v=>!s.colorPhotos||s.v3||(s.colorPhotos[v.color]||[]).length>0;
+ return (buyable.find(photo)||buyable[0]||confirmed[0]||all[0])?.color||'';}
+function storeGalleryPhotos(s,color){const m=s.colorPhotos;if(!m||s.v3)return s.photoData||[];return Array.isArray(m[color])?m[color]:[];}
+// A new colour starts its gallery at the first photo without animating through the old colour's slides.
+function storeGalleryReset(){try{const track=document.querySelector('[data-gal-track]');track&&track.scrollTo({left:0,behavior:'instant'});}catch{}}
 
 // Один список слотів конструктора: сервер передає його в RUBIZH_BOOT.kitSlots (shop/catalog-lib.php · shopKitSlotPatterns)
 const STORE_SLOT_NAMES=(Array.isArray(window.RUBIZH_BOOT?.kitSlots)&&window.RUBIZH_BOOT.kitSlots.length?window.RUBIZH_BOOT.kitSlots:[['gear','^(?:підсум|чохол|сумк|футляр|холдер|тримач)|рюкзак|баул|розвантаж|рпс|гідратор|бойовий пояс'],['med','аптеч|турнікет|джгут|гемостат|бандаж|ifak'],['small','шкарпет|рукавич|рукавиц|наколін|налокіт'],['head','шолом|каск|шапк|кепк|панам|бейсбол|балаклав|навушник|баф|окуляр'],['boots','берц|черевик|кросів|взутт|бахіл'],['armor','плитоноск|бронежилет|бронеплит|бронепакет|балістичн.*пакет'],['legs','штани|штанів|брюки|джогер|шорти'],['small','пояс|ремінь'],['body','курт|убакс|ubacs|сороч|футбол|поло|термобілиз|термобель|фліс|флис|кофта|худі|софтшел|пончо|костюм']]).map(([s,p])=>[s,new RegExp(p,'i')]);
@@ -972,6 +981,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
             specs: Object.entries(t.attributes || {}).map(([t, e]) => [ t, String(e) ]),
             photos: o.map(t => t.url),
             photoData: o,
+            colorPhotos: t.color_photos && typeof t.color_photos === "object" ? Object.fromEntries(Object.entries(t.color_photos).map(([c, l]) => [ c, (Array.isArray(l) ? l : []).filter(t => t && /^(https?:\/\/|\/)/.test(t.url || "")) ])) : null,
             ph: "Фото товару",
             storeReady: !0,
             sale_unit: storeAreaUnit(t),
@@ -6842,16 +6852,16 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
             s.storeReady && (t.sizeNote = e.addErr || (p ? "in_stock" === this.avail(s, p) ? "В наявності" : "on_order" === this.avail(s, p) ? "Під замовлення — строк уточнить менеджер" : "Немає в наявності" : "Оберіть розмір")),
             t.mobSizeLabel = p ? "Розмір: " + this.sd(s, p) : "Оберіть розмір", t.mobBuyLabel = p ? "out_of_stock" === h.availability ? "Немає в наявності" : "До кошика" : "Обрати розмір",
             s.storeReady) {
-                const i = s.photoData || [];
+                const galColor = storeLegacyColor(s, e, h), i = storeGalleryPhotos(s, galColor), galKey = s.colorPhotos && !s.v3 ? "-" + encodeURIComponent(galColor) : "";
                 t.gal.slides = i.length ? i.map((t, e) => ({
-                    slot: "img-" + s.id + "-" + e,
+                    slot: "img-" + s.id + galKey + "-" + e,
                     ph: s.name,
                     src: t.url,
                     hasSrc: !0,
                     eager: 0 === e
                 })) : [ {
-                    slot: "img-" + s.id,
-                    ph: "Фото готується",
+                    slot: "img-" + s.id + galKey,
+                    ph: galKey ? "Фото кольору готується" : "Фото готується",
                     hasSrc: !1
                 } ], t.gal.thumbs = i.map((i, o) => ({
                     ...t.gal.thumbs[o % t.gal.thumbs.length],
@@ -6859,7 +6869,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                         ...t.gal.thumbs[0]?.style,
                         border: "1px solid " + (o === (e.galIdx || 0) ? "var(--legacy-f2a33c)" : "var(--legacy-2a322b)")
                     },
-                    slot: "img-" + s.id + "-" + o,
+                    slot: "img-" + s.id + galKey + "-" + o,
                     src: i.thumb || i.url,
                     hasSrc: !0,
                     pick: () => this.galTo(o)
@@ -6990,11 +7000,11 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
             if(e.kit.some(l=>l.needsSize)){t.kitCanCart=false;t.kitCantCart=true;t.kitCantLabel='Оберіть розмір у вибраному кольорі';t.kitBarTotal='—';t.kitBarSave='Оберіть розмір';t.kitHasSave=false;t.kitNoSave=true;t.kitSaveEl='—';t.kitDonText='Підтримка: після вибору розміру';t.kitKitFmt='—';t.kitPriceFmt='—';t.kitSumFmt='—';t.kitFullFmt='—';t.kitSaveFmt='Оберіть розмір';}
             if(t.km){for(const row of t.km.cards||[]){decorate(row);const p=Z.find(p=>p.id===String(row.photo||'').replace(/^img-/,''))||Z.find(p=>row.href==='/product/'+p.slug);if(!p)continue;const keys=Object.keys(p.variants).filter(k=>(!e.kmColor||p.variants[k].color===e.kmColor)&&this.avail(p,k)!=='out'),only=[...new Set(keys.map(k=>p.variants[k].size_display))];row.one=only.length===1&&!storeSizeMissing(p);if(row.one){row.sizes=[];row.addOne=()=>keys.length===1?this.kitAdd(storeSlot(p),p.id,keys[0]):this.setState({qv:p.id,qvSize:null});}row.cta=keys.length===1?'Додати':'Обрати колір';}}
             t.hasProductDocs=!!s.has_docs;t.productDocsNote=s.docs_note||'';
-            const area=s.sale_unit==='m2',missing=storeSizeMissing(s),confirmedVariants=Object.values(s.variants).filter(v=>!v.size_unconfirmed),currentColor=e.productColor||(h&&!h.size_unconfirmed?h.color:'')||confirmedVariants[0]?.color||Object.values(s.variants)[0]?.color||'',availableKeys=Object.keys(s.variants).filter(k=>s.variants[k].color===currentColor&&!s.variants[k].size_unconfirmed),sizeKeys=storeProductSizeKeys(s,currentColor,p),selected=p&&availableKeys.includes(p)?p:(sizeKeys.length===1?sizeKeys[0]:null),vv=selected?s.variants[selected]:null,qty=storeQty(e.qty||1),unitPrice=vv?.price||s.price;
+            const area=s.sale_unit==='m2',missing=storeSizeMissing(s),confirmedVariants=Object.values(s.variants).filter(v=>!v.size_unconfirmed),currentColor=storeLegacyColor(s,e,h),availableKeys=Object.keys(s.variants).filter(k=>s.variants[k].color===currentColor&&!s.variants[k].size_unconfirmed),sizeKeys=storeProductSizeKeys(s,currentColor,p),selected=p&&availableKeys.includes(p)?p:(sizeKeys.length===1?sizeKeys[0]:null),vv=selected?s.variants[selected]:null,qty=storeQty(e.qty||1),unitPrice=vv?.price||s.price;
             t.isArea=area;t.areaQty=qty;t.areaSummary=storeMoney(unitPrice)+' / м² × '+qty+' м² = '+storeMoney(unitPrice*qty);t.onAreaQty=ev=>{const q=storeQty(ev.target.value);if(q>0&&q<=10000)this.setState({qty:q});};
             t.item.priceFmt=storeMoney(unitPrice)+(area?' / м²':'');t.item.sku=vv?.sku||s.sku;
             const desc=s.desc||'';t.item.desc=desc.length>220?desc.split(/\n\n/)[0].slice(0,220).replace(/\s+\S*$/,'')+'…':desc;t.fullDescription=desc;t.hasFullDescription=desc.length>220;
-            t.productColors=[...new Set((confirmedVariants.length?confirmedVariants:Object.values(s.variants)).map(v=>v.color).filter(Boolean))].map(color=>({name:color,pick:()=>this.setState({productColor:color,size:null,qty:1,addErr:''}),style:{padding:'10px 12px',minHeight:'44px',border:'1px solid '+(color===currentColor?'var(--legacy-f2a33c)':'var(--legacy-3a423b)'),background:'transparent',color:'var(--legacy-edefea)',cursor:'pointer'}}));t.hasProductColors=t.productColors.length>1;
+            t.productColors=[...new Set((confirmedVariants.length?confirmedVariants:Object.values(s.variants)).map(v=>v.color).filter(Boolean))].map(color=>({name:color,selected:color===currentColor?'true':'false',pick:()=>{if(color===currentColor)return;storeGalleryReset();this.setState({productColor:color,size:null,qty:1,addErr:'',galIdx:0});},style:{padding:'10px 12px',minHeight:'44px',border:'1px solid '+(color===currentColor?'var(--legacy-f2a33c)':'var(--legacy-3a423b)'),background:'transparent',color:'var(--legacy-edefea)',cursor:'pointer'}}));t.hasProductColors=t.productColors.length>1;
             if(missing){t.sizeNote='Розміри не підтверджені постачальником. Уточніть у менеджера.';t.buyOn=false;t.buyOff=true;t.mobBuyLabel='Уточнити розмір';}
             const anyAvailable=Object.values(s.variants).some(v=>v.availability!=='out_of_stock'&&!v.size_unconfirmed&&v.price>0);if(s.storeReady&&!anyAvailable&&!missing){t.buyOn=false;t.buyOff=true;t.sizeNote='Немає в наявності';t.mobBuyLabel='Немає в наявності';t.item.related=i.filter(p=>p.id!==s.id&&!this.allOut(p)).slice(0,3).map(this.cardVm);}
             const choice=storeVariantChoice(s);if(!area&&!missing&&sizeKeys.length>1){t.sizeHead=choice.head;t.sizeNote=e.addErr||(!selected?choice.choose:t.sizeNote);t.mobSizeLabel=selected?choice.head+': '+this.sd(s,selected):choice.choose;t.mobBuyLabel=selected?'До кошика':choice.cta;}

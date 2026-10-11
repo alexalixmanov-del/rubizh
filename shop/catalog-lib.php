@@ -15,6 +15,25 @@ function shopVariantRows(PDO $db,array $ids): array {
     $q=$db->prepare('SELECT product_id,sku,size,color,price,kit_price,availability,lead_time,data FROM variants WHERE product_id IN ('.implode(',',array_fill(0,count($ids),'?')).') ORDER BY product_id,sort');
     $q->execute($ids);$out=[];foreach($q->fetchAll(PDO::FETCH_ASSOC) as $v)$out[$v['product_id']][]=$v;return $out;
 }
+// Legacy colour galleries. PIM sends variants[].photos, but falls back to the whole model gallery when a
+// variant has no own photos, so a colour owns photos only when its set is a strict, known subset of the
+// gallery. Anything else is unconfirmed: the colour gets [] (an honest placeholder), never another colour's
+// photos. Returns null for single-colour products, which keep the model gallery.
+function shopColorPhotos(array $variantRows,array $gallery): ?array {
+    $sets=[];
+    foreach($variantRows as $v){
+        $color=shopColor((string)$v['color']);if($color==='')continue;$sets[$color]??=[];
+        $extra=json_decode((string)$v['data'],true) ?: [];
+        foreach(is_array($extra['photos']??null)?$extra['photos']:[] as $url)if(is_string($url)&&preg_match('~^https?://~i',$url))$sets[$color][sha1($url)]=true;
+    }
+    if(count($sets)<2)return null;
+    $keys=array_column($gallery,'key');$out=[];
+    foreach($sets as $color=>$own){
+        $owned=$own&&!array_diff(array_keys($own),$keys)&&count($own)<count(array_unique($keys));
+        $out[$color]=$owned?array_values(array_filter($gallery,fn($p)=>isset($own[$p['key']??'']))):[];
+    }
+    return $out;
+}
 function shopProduct(PDO $db, array $row, array $photos=[],?array $variantRows=null): array {
     if(pimV3IsModel($row))return pimV3ProductDto($db,$row);
     $data=json_decode((string)$row['data'],true) ?: [];
@@ -41,7 +60,7 @@ function shopProduct(PDO $db, array $row, array $photos=[],?array $variantRows=n
     return ['canonical_category_id'=>$taxonomy['canonical_category_id']??null,'category_url'=>$taxonomy['category_url']??null,'id'=>$row['id'],'slug'=>$row['slug'],'name'=>$row['name'],'brand'=>shopBrand($row['brand']),'category'=>$taxonomy['category']??$row['category_path'],
         'sale_unit'=>shopSaleUnit($data+['name'=>$row['name']]),'description'=>shopDescription((string)($data['description']??$row['description'])),'attributes'=>shopVariantAttributes(shopDescriptionAttributes((string)($data['description']??$row['description']),array_replace(is_array($data['attributes']??null)?$data['attributes']:[],json_decode((string)$row['attributes'],true) ?: [])),$variants,shopSaleUnit($data+['name'=>$row['name']])),
         'price_min'=>($prices=array_column(array_filter($variants,fn($v)=>$v['availability']!=='out'),'price'))?min($prices):($row['price_min']===null?null:(float)$row['price_min']),'availability'=>count(array_filter($variants,fn($v)=>$v['availability']==='in'))?'in':(count(array_filter($variants,fn($v)=>$v['availability']==='order'))?'order':'out'),
-        'has_docs'=>(bool)$row['has_docs'],'docs_note'=>(bool)$row['has_docs']?'Протокол випробувань додається до замовлення; до покупки надаємо за запитом':'','photos'=>$photos[$row['id']] ?? [],'variants'=>$variants];
+        'has_docs'=>(bool)$row['has_docs'],'docs_note'=>(bool)$row['has_docs']?'Протокол випробувань додається до замовлення; до покупки надаємо за запитом':'','photos'=>$photos[$row['id']] ?? [],'color_photos'=>shopColorPhotos($variantRows,$photos[$row['id']] ?? []),'variants'=>$variants];
 }
 function shopProductsByIds(PDO $db,array $ids): array {
     $ids=array_slice(array_values(array_unique(array_filter($ids,'is_string'))),0,200);

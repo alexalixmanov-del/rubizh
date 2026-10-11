@@ -406,12 +406,12 @@ function media_url(string $rel): string { return rtrim((string)cfg('media_url'),
 function product_photos(PDO $pdo, array $ids): array {
   if (!$ids) return [];
   $in = implode(',', array_fill(0, count($ids), '?'));
-  $st = $pdo->prepare("SELECT product_id, pos, src_url, file, thumb, width, height, status FROM photos WHERE product_id IN ($in) ORDER BY product_id, pos");
+  $st = $pdo->prepare("SELECT product_id, pos, src_url, src_hash, file, thumb, width, height, status FROM photos WHERE product_id IN ($in) ORDER BY product_id, pos");
   $st->execute($ids); $out = [];
   foreach ($st->fetchAll() as $r) {
     $ok = $r['status'] === 'ok' && media_file_exists((string)$r['file']);
     // Пока фото не обработано, отдаём ссылку поставщика — сайт не остаётся без картинок
-    $out[$r['product_id']][] = ['url' => $ok ? media_url($r['file']) : $r['src_url'], 'thumb' => $ok ? media_url(media_file_exists((string)$r['thumb'])?$r['thumb']:$r['file']) : $r['src_url'], 'width' => (int)$r['width'], 'height' => (int)$r['height'], 'local' => $ok];
+    $out[$r['product_id']][] = ['url' => $ok ? media_url($r['file']) : $r['src_url'], 'thumb' => $ok ? media_url(media_file_exists((string)$r['thumb'])?$r['thumb']:$r['file']) : $r['src_url'], 'width' => (int)$r['width'], 'height' => (int)$r['height'], 'local' => $ok, 'key' => (string)($r['src_hash'] ?: sha1((string)$r['src_url']))];
   }
   return $out;
 }
