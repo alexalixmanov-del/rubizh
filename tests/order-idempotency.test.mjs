@@ -46,15 +46,23 @@ test('order idempotency: double click and lost-response retries (in place and af
   await page.reload();await fill();const again=await submit();assert.equal(again.ok,true,JSON.stringify(again));assert.equal(orders(),3,'retry after reload → the same order');
   await page.unroute('**/shop/order.php');
 
-  // 3b. Stale second tab: unchanged it resends the ordered cart's key (same order); after editing its cart it buys anew.
-  await add();const stale=await context.newPage();await stale.goto(site.base+'/#cart');await stale.waitForTimeout(500);
+  // 3b. Stale second tabs, both loaded with the cart BEFORE the first tab orders and never reloaded afterwards:
+  // unchanged → resends the ordered cart's key (the same order, D-18); edited in place → a new purchase (not a 409 replay).
+  const inPage=async p=>{const c=p.getByRole('button',{name:/Оформити/}).first();if(await c.count())await c.click();
+   await p.locator('input[name="name"]').fill('Тест Покупець');await p.locator('input[name="phone"]').fill('+380671234567');await p.locator('input[name="city"]').fill('Київ');await p.locator('input[name="address"]').fill('Відділення 1');
+   const r=p.waitForResponse(x=>x.url().endsWith('/shop/order.php'));await p.getByRole('button',{name:/Підтвердити замовлення/}).first().click();return (await (await r).json());};
+  await add();const unchanged=await context.newPage(),edited=await context.newPage();
+  for(const p of [unchanged,edited]){await p.goto(site.base+'/#cart');await p.locator('input[name="name"]').waitFor();}
   await fill();const ordered=await submit();assert.equal(ordered.ok,true,JSON.stringify(ordered));const before=orders();
-  await stale.goto(site.base+'/product/idem-cap');await stale.locator('[data-size-grid]').getByText('L',{exact:true}).click();await stale.getByRole('button',{name:/До кошика/}).first().click();
-  await stale.goto(site.base+'/#cart');const c=stale.getByRole('button',{name:/Оформити/}).first();if(await c.count())await c.click();
-  await stale.locator('input[name="name"]').fill('Тест Покупець');await stale.locator('input[name="phone"]').fill('+380671234567');await stale.locator('input[name="city"]').fill('Київ');await stale.locator('input[name="address"]').fill('Відділення 1');
-  const sr=stale.waitForResponse(x=>x.url().endsWith('/shop/order.php'));await stale.getByRole('button',{name:/Підтвердити замовлення/}).first().click();const edited=await (await sr).json();
-  assert.equal(edited.ok,true,'an edited stale cart is a new purchase, not a refused replay: '+JSON.stringify(edited));assert.equal(orders(),before+1);assert.notEqual(edited.order.number,ordered.order.number);
-  await stale.close();
+  const same=await inPage(unchanged);assert.equal(same.ok,true,JSON.stringify(same));assert.equal(same.order.number,ordered.order.number,'an unchanged stale tab gets the same order');assert.equal(orders(),before);
+  // Edit in place: in-app navigation (no reload) to the product, add size L, back to checkout; the tab's memory survives.
+  await edited.evaluate(()=>{window.__sameDocument=1;history.pushState({},'','/product/idem-cap');dispatchEvent(new PopStateEvent('popstate'));});
+  await edited.locator('[data-size-grid]').getByText('L',{exact:true}).click();await edited.getByRole('button',{name:/До кошика/}).first().click();
+  await edited.waitForFunction(()=>JSON.parse(localStorage.getItem('rubizh.cart')||'[]').length===2);await edited.goBack();await edited.locator('input[name="name"]').waitFor();
+  assert.equal(await edited.evaluate(()=>window.__sameDocument),1,'the stale tab was never reloaded');
+  const fresh=await inPage(edited);
+  assert.equal(fresh.ok,true,'an edited stale cart is a new purchase, not a refused replay: '+JSON.stringify(fresh));assert.equal(orders(),before+1);assert.notEqual(fresh.order.number,ordered.order.number);
+  await unchanged.close();await edited.close();
 
   // 4. Deliberate repeat purchase of the identical item after success: a new order.
   await add();await fill();const repeat=await submit();assert.equal(repeat.ok,true,JSON.stringify(repeat));

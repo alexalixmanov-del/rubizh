@@ -23,6 +23,7 @@ async function fixture(){
   assert.equal(o.status,200,JSON.stringify(o.data));const id=o.data.order.id;assert.equal((await site.post('/shop/payment-start.php',{csrf,order_id:id},h)).status,200);
   return {id,inv:site.sql('SELECT * FROM rubizh_mono_invoices WHERE order_id='+id)[0]};};
  site.paid=id=>site.sql('SELECT payment_status FROM rubizh_customer_orders WHERE id='+id)[0].payment_status;
+ site.reads=()=>+(site.sql("SELECT v FROM meta WHERE k='mono_mock_status_reads'")[0]?.v||0);// bank status reads seen by the mock
  return site;
 }
 
@@ -38,12 +39,14 @@ test('MonoPay webhook contract: valid signature pays once; duplicates change not
 test('MonoPay webhook contract: forged signature, wrong amount, wrong currency, foreign invoice and failure never mark paid',{skip,timeout:180000},async()=>{
  const site=await fixture();try{
   const {id,inv}=await site.newInvoice(2);
+  const reads=site.reads();
   assert.equal((await site.forged(inv)).status,403,'forged signature');
   assert.equal((await site.hook(inv,{amount:+inv.amount-1})).status,200,'wrong amount is acknowledged and parked');
   assert.equal((await site.hook(inv,{ccy:840})).status,200,'wrong currency is acknowledged and parked');
   assert.equal((await site.hook(inv,{invoiceId:'someone-else-invoice'})).status,503,'unknown invoice stays retryable');
   assert.equal((await site.hook(inv,{status:'failure'})).status,200);
   assert.equal(site.paid(id),'failed');assert.equal(+site.sql(`SELECT COUNT(*) n FROM rubizh_np_audit WHERE order_id=${id} AND action='mono_event_rejected'`)[0].n,2);assert.equal(+site.sql(`SELECT COUNT(*) n FROM rubizh_np_audit WHERE order_id=${id} AND action='mono_parked_reconcile'`)[0].n,1,'parked events are reconciled by one status read; a replay within a minute adds no bank call');
+  assert.equal(site.reads()-reads,1,'exactly one bank read for the parked events (the second one is skipped, not failed)');assert.match(site.sql(`SELECT note FROM rubizh_np_audit WHERE order_id=${id} AND action='mono_parked_reconcile'`)[0].note,/^bank status=created /,'and that read succeeded');
  }finally{site.stop();}
 });
 
@@ -75,5 +78,15 @@ test('MonoPay webhook contract: an unknown status is parked, then the site reads
   assert.deepEqual(audit.map(a=>a.action),['mono_event_rejected','mono_parked_reconcile'],'parked, then reconciled by a pull read');
   assert.match(audit[1].note,/^bank status=created .*local=created$/,'the bank answer (mock) and the local state are recorded');
   assert.equal(site.sql(`SELECT status FROM rubizh_mono_invoices WHERE order_id=${id}`)[0].status,'created','the pull read moves no money state');
+ }finally{site.stop();}
+});
+
+test('MonoPay webhook contract: a failed bank status read during reconciliation still answers 200 (parked) and is audited',{skip,timeout:180000},async()=>{
+ const site=await fixture();try{
+  const {id,inv}=await site.newInvoice(6);const reads=site.reads();
+  site.sql("INSERT INTO meta(k,v) VALUES('mono_mock_status_fail','1') ON DUPLICATE KEY UPDATE v='1'");
+  assert.equal((await site.hook(inv,{status:'chargeback_new'})).status,200,'the bank outage does not turn the parked answer into a retryable error');
+  assert.notEqual(site.paid(id),'paid');assert.equal(site.reads()-reads,1,'the read was attempted');
+  assert.match(site.sql(`SELECT note FROM rubizh_np_audit WHERE order_id=${id} AND action='mono_parked_reconcile'`)[0].note,/^status read failed: RuntimeException local=created$/);
  }finally{site.stop();}
 });

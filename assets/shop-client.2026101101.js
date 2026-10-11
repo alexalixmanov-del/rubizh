@@ -6355,7 +6355,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                 payment: storeCheckoutPay(e),
                 promo: e.promo || ""
             }, s = JSON.stringify(i);
-            const orderCart=this._cartId||'',orderItems=this.state.cart;this._orderFingerprint !== s && (this._orderFingerprint = s, this._orderKey = storeAttemptKey(orderCart, s));
+            const orderCart=this._cartId||'',orderItems=t;this._orderFingerprint !== s && (this._orderFingerprint = s, this._orderKey = storeAttemptKey(orderCart, s));
             const o = this.renderVals(), a = e.storeQuote?.total ?? o.storeTotal;
             clearTimeout(this._cartReminderTimer);this._cartReminderGeneration=(this._cartReminderGeneration||0)+1;this.setState({
                 orderSending: !0,

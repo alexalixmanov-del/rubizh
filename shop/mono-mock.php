@@ -8,7 +8,12 @@ function monoMockApi(string $path,?array $body): array {
         if(!is_array($body)||!is_int($body['amount']??null)||($body['ccy']??null)!==980)throw new RuntimeException('Mock bank: invalid invoice');
         $id='mock'.bin2hex(random_bytes(10));return ['invoiceId'=>$id,'pageUrl'=>'https://pay.mbnk.biz/'.$id];
     }
-    if(str_starts_with($path,'invoice/status'))return ['status'=>'created'];
+    if(str_starts_with($path,'invoice/status')){
+        // Test observability (staging mock only): every status read is counted; meta mono_mock_status_fail=1 simulates a bank outage.
+        $db=shopStoreDatabase();$db->exec("INSERT INTO meta(k,v) VALUES('mono_mock_status_reads','1') ON DUPLICATE KEY UPDATE v=v+1");
+        if($db->query("SELECT v FROM meta WHERE k='mono_mock_status_fail'")->fetchColumn()==='1')throw new RuntimeException('Mock bank: status unavailable');
+        return ['status'=>'created'];
+    }
     if($path==='invoice/remove')return [];
     if($path==='pubkey')throw new RuntimeException('Mock bank: staging key must be preloaded');
     throw new RuntimeException('Mock bank: unsupported call');
