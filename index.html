@@ -731,7 +731,7 @@
   </sc-if>
 
   <sc-if value="{{ isProduct }}" hint-placeholder-val="{{ false }}">
-    <section data-prod-section="1" style="max-width:1320px;margin:0 auto;padding:clamp(18px,2.4vw,30px) clamp(16px,4vw,40px) 0">
+    <section id="main-content" tabindex="-1" data-prod-section="1" style="max-width:1320px;margin:0 auto;padding:clamp(18px,2.4vw,30px) clamp(16px,4vw,40px) 0">
       <sc-if value="{{ showDevUrl }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:8px;max-width:100%;margin-bottom:12px;padding:7px 11px;border:1px dashed var(--legacy-2a322b);background:var(--legacy-0f120f);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--legacy-99a398);overflow:hidden"><span style="color:var(--legacy-8a9487);flex:0 0 auto">URL</span><span style="min-width:0;overflow-wrap:anywhere;color:var(--legacy-c6d3a8)">{{ item.url }}</span></div></sc-if>
       <div data-mob-buy="1" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:80;background:var(--legacy-141815);border-top:1px solid var(--legacy-2a322b);padding:10px 14px calc(10px + env(safe-area-inset-bottom));flex-direction:column;gap:8px">
         <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;min-width:0">
@@ -782,7 +782,7 @@
               </sc-for>
             </div>
             <div style="flex:1 1 auto;min-width:0;position:relative;border:1px solid var(--legacy-2a322b);background:var(--legacy-0f120f)">
-              <div data-gal-track="1" data-photo-count="{{ gal.slides.length }}" sc-camel-on-scroll="{{ gal.onScroll }}" style="display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;aspect-ratio:4/5">
+              <div data-gal-track="1" tabindex="0" role="region" aria-label="Фото товару" data-photo-count="{{ gal.slides.length }}" sc-camel-on-scroll="{{ gal.onScroll }}" style="display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;aspect-ratio:4/5">
                 <sc-for list="{{ gal.slides }}" as="sl" hint-placeholder-count="1">
                   <div sc-camel-on-mouse-move="{{ zoomMove }}" sc-camel-on-mouse-leave="{{ zoomOut }}" style="flex:0 0 100%;height:100%;scroll-snap-align:start;overflow:hidden;position:relative">
                     <div style="position:absolute;inset:0;transition:transform .12s ease-out"><sc-if value="{{ sl.hasSrc }}"><img sc-camel-src="{{ sl.src }}" alt="{{ sl.ph }}" loading="{{ sl.eager ? 'eager' : 'lazy' }}" decoding="async" style="width:100%;height:100%;object-fit:contain"></sc-if><sc-if value="{{ !sl.hasSrc }}"><image-slot id="{{ sl.slot }}" shape="rect" fit="cover" placeholder="{{ sl.ph }}"></image-slot></sc-if></div>
@@ -1424,7 +1424,7 @@
   </sc-if>
 
   <sc-if value="{{ isGuides }}" hint-placeholder-val="{{ false }}">
-    <section style="max-width:1320px;margin:0 auto;padding:clamp(18px,2.4vw,30px) clamp(16px,4vw,40px) 0">
+    <section id="main-content" tabindex="-1" style="max-width:1320px;margin:0 auto;padding:clamp(18px,2.4vw,30px) clamp(16px,4vw,40px) 0">
       <sc-if value="{{ showDevUrl }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:8px;max-width:100%;margin-bottom:12px;padding:7px 11px;border:1px dashed var(--legacy-2a322b);background:var(--legacy-0f120f);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--legacy-99a398);overflow:hidden"><span style="color:var(--legacy-8a9487);flex:0 0 auto">URL</span><span style="min-width:0;overflow-wrap:anywhere;color:var(--legacy-c6d3a8)">rubizh.shop/porady</span></div></sc-if>
       <div data-camo-chip="1" style="color:var(--legacy-8a9487);font-size:12.5px;letter-spacing:.06em;margin-bottom:10px"><span tabindex="0" role="button" sc-camel-on-click="{{ goHome }}" style="cursor:pointer">ГОЛОВНА</span> / ПОРАДИ</div>
       <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:16px">
@@ -1442,7 +1442,7 @@
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:12px">
         <sc-for list="{{ guideList }}" as="gc" hint-placeholder-count="6">
           <div style="border:1px solid var(--legacy-2a322b);background:var(--legacy-141815);display:flex;flex-direction:column;min-width:0" style-hover="border-color:var(--legacy-4c5a36)">
-              <div tabindex="0" role="button" sc-camel-on-click="{{ gc.open }}" style="height:170px;flex:0 0 auto;overflow:hidden;background:var(--legacy-0f120f);cursor:pointer"><image-slot id="{{ gc.slot }}" sc-camel-src="{{ gc.src }}" shape="rect" fit="cover" placeholder="{{ gc.ph }}"></image-slot></div>
+              <div sc-camel-on-click="{{ gc.open }}" style="height:170px;flex:0 0 auto;overflow:hidden;background:var(--legacy-0f120f);cursor:pointer"><image-slot id="{{ gc.slot }}" sc-camel-src="{{ gc.src }}" shape="rect" fit="cover" placeholder="{{ gc.ph }}"></image-slot></div>
               <div style="padding:16px;display:flex;flex-direction:column;gap:8px;flex:1">
                 <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="border:1px solid var(--legacy-4c5a36);color:var(--legacy-c6d3a8);font-family:'UAH','Oswald',sans-serif;font-size:11px;letter-spacing:.1em;padding:3px 7px;text-transform:uppercase">{{ gc.topic }}</span><span style="color:var(--legacy-8a9487);font-size:12px">{{ gc.min }}</span></div>
                 <a href="{{ gc.href }}" sc-camel-on-click="{{ gc.open }}" style="font-family:'UAH','Oswald',sans-serif;font-size:18px;text-transform:uppercase;line-height:1.2;color:var(--legacy-edefea);text-decoration:none;text-wrap:balance" style-hover="color:var(--link)">{{ gc.title }}</a>
@@ -1461,7 +1461,7 @@
   </sc-if>
 
   <sc-if value="{{ isGuide }}" hint-placeholder-val="{{ false }}">
-    <section style="max-width:1320px;margin:0 auto;padding:clamp(18px,2.4vw,30px) clamp(16px,4vw,40px) 0">
+    <section id="main-content" tabindex="-1" style="max-width:1320px;margin:0 auto;padding:clamp(18px,2.4vw,30px) clamp(16px,4vw,40px) 0">
       <sc-if value="{{ showDevUrl }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:8px;max-width:100%;margin-bottom:12px;padding:7px 11px;border:1px dashed var(--legacy-2a322b);background:var(--legacy-0f120f);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--legacy-99a398);overflow:hidden"><span style="color:var(--legacy-8a9487);flex:0 0 auto">URL</span><span style="min-width:0;overflow-wrap:anywhere;color:var(--legacy-c6d3a8)">{{ guide.url }}</span></div></sc-if>
       <div style="color:var(--legacy-8a9487);font-size:12.5px;letter-spacing:.06em;margin-bottom:12px"><span tabindex="0" role="button" sc-camel-on-click="{{ goHome }}" style="cursor:pointer">ГОЛОВНА</span> / <span tabindex="0" role="button" sc-camel-on-click="{{ goGuides }}" style="cursor:pointer">ПОРАДИ</span> / {{ guide.topic }}</div>
       <div style="height:clamp(180px,26vw,340px);overflow:hidden;border:1px solid var(--legacy-2a322b);background:var(--legacy-0f120f);margin-bottom:18px"><image-slot id="{{ guide.slot }}" sc-camel-src="{{ guide.src }}" shape="rect" fit="cover" placeholder="{{ guide.ph }}"></image-slot></div>
@@ -1523,7 +1523,7 @@
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:12px">
           <sc-for list="{{ guide.similar }}" as="gc" hint-placeholder-count="3">
             <div style="border:1px solid var(--legacy-2a322b);background:var(--legacy-141815);display:flex;flex-direction:column;min-width:0" style-hover="border-color:var(--legacy-4c5a36)">
-              <div tabindex="0" role="button" sc-camel-on-click="{{ gc.open }}" style="height:170px;flex:0 0 auto;overflow:hidden;background:var(--legacy-0f120f);cursor:pointer"><image-slot id="{{ gc.slot }}" sc-camel-src="{{ gc.src }}" shape="rect" fit="cover" placeholder="{{ gc.ph }}"></image-slot></div>
+              <div sc-camel-on-click="{{ gc.open }}" style="height:170px;flex:0 0 auto;overflow:hidden;background:var(--legacy-0f120f);cursor:pointer"><image-slot id="{{ gc.slot }}" sc-camel-src="{{ gc.src }}" shape="rect" fit="cover" placeholder="{{ gc.ph }}"></image-slot></div>
               <div style="padding:16px;display:flex;flex-direction:column;gap:8px;flex:1">
                 <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="border:1px solid var(--legacy-4c5a36);color:var(--legacy-c6d3a8);font-family:'UAH','Oswald',sans-serif;font-size:11px;letter-spacing:.1em;padding:3px 7px;text-transform:uppercase">{{ gc.topic }}</span><span style="color:var(--legacy-8a9487);font-size:12px">{{ gc.min }}</span></div>
                 <a href="{{ gc.href }}" sc-camel-on-click="{{ gc.open }}" style="font-family:'UAH','Oswald',sans-serif;font-size:18px;text-transform:uppercase;line-height:1.2;color:var(--legacy-edefea);text-decoration:none;text-wrap:balance" style-hover="color:var(--link)">{{ gc.title }}</a>
@@ -1811,7 +1811,7 @@
                     <img sc-camel-src="{{ sl.art }}" alt="" loading="lazy" decoding="async" width="120" height="140">
                     <div><p>{{ sl.description }}</p><button class="rz-slot-select" type="button" sc-camel-on-click="{{ sl.open }}">Обрати спорядження <span aria-hidden="true">+</span></button></div>
                   </div>
-                  <div class="rz-kit-recommendations" aria-label="Рекомендовані товари для слоту">
+                  <div class="rz-kit-recommendations" role="group" aria-label="Рекомендовані товари для слоту">
                     <sc-for list="{{ sl.recs }}" as="rec">
                       <div class="rz-kit-rec">
                         <sc-if value="{{ rec.hasThumb }}"><img sc-camel-src="{{ rec.thumb }}" alt="" loading="lazy" decoding="async" width="48" height="56"></sc-if>

@@ -107,3 +107,23 @@ test('mobile 390px touch: tapping a colour swaps photos and keeps the page free 
   assert.deepEqual(errors,[]);
  }finally{await browser.close();s.stop();}
 });
+
+// D-21 (legacy, live path): the catalog card previews the colour the product page opens with, not gallery[0].
+test('legacy catalog card shows the default colour photo when the first gallery photo belongs to an unavailable colour',{skip,timeout:240000},async()=>{
+ const s=await startSite({enableV3:false});const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||(existsSync('/usr/bin/chromium')?'/usr/bin/chromium':undefined),args:['--no-sandbox']});
+ try{
+  const coat={...structuredClone(jacket),id:'leg-coat',slug:'leg-coat',name:'Куртка обкладинка',canonical_category_id:'clothing_jackets'};
+  for(const v of coat.variants)if(v.color==='Олива')Object.assign(v,{availability:'out',stock:0});
+  php(`define('RUBIZH_AUTH_NO_SESSION',true);require '${s.site}/auth/bootstrap.php';require_once '${s.site}/api/lib.php';save_product(db(),json_decode(${JSON.stringify(JSON.stringify(coat))},true));`);
+  const {writeFileSync}=await import('node:fs');
+  writeFileSync(s.site+'/router.php',`<?php $p=parse_url($_SERVER['REQUEST_URI'],PHP_URL_PATH);if(str_starts_with($p,'/api/')){require __DIR__.'/api/index.php';return;}if($p==='/'||preg_match('~^/(?:product|catalog)(?:/.*)?$~',$p)){require __DIR__.'/storefront.php';return;}return false;`);
+  const page=await browser.newPage({viewport:{width:1280,height:900}});
+  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=','base64');
+  await page.route('https://img.test/**',r=>r.fulfill({contentType:'image/png',body:png}));
+  await page.goto(s.base+'/catalog');const card=page.locator('img[alt="Куртка обкладинка"]').first();await card.waitFor();
+  await page.waitForLoadState('networkidle');await page.waitForTimeout(300);
+  assert.equal(await card.getAttribute('src'),img('black-1'),'card = first photo of the default (buyable) colour');
+  await page.goto(s.base+'/product/leg-coat');await page.locator('[data-product-colors] button').first().waitFor();
+  assert.equal(await colour(page,'Чорний').getAttribute('aria-pressed'),'true','the product page opens on the same colour');
+ }finally{await browser.close();s.stop();}
+});

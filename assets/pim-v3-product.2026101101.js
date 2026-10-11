@@ -19,6 +19,9 @@ window.storeV3Map=function(t,a){
   a.variants[key]={sku:'',option_id:o.option_id,variant_id:'opt:'+o.option_id,color_id:o.color_id,option_scope:o.scope,color:'',price:0,price_pending:true,stock:null,stockKnown:false,availability:'preorder',availability_v3:'SIZE_CONFIRMATION_REQUIRED',payment_allowed:false,order_submission_allowed:true,requires_order_confirmation:true,published:true,size_type:'other',size_display:o.size,size_native:o.size,size_unconfirmed:false,kit_price:null,kit_discount_pct:0};}
  const priced=Object.values(a.variants).filter(v=>v.price>0&&v.order_submission_allowed);a.price=priced.length?Math.min(...priced.map(v=>v.price)):(t.price_min||0);
  a.sku=(t.variants||[])[0]?.sku||t.id;a.model_id=t.model_id||t.id;
+ // Catalog card preview = first photo of the colour the product page opens with (colorOf without URL/state), else the model gallery (D-21).
+ const opening=a.colors.find(c=>(c.skus||[]).some(k=>a.variants[k]?.payment_allowed))||a.colors.find(c=>(c.skus||[]).some(k=>a.variants[k]?.order_submission_allowed))||a.colors[0];
+ a.cardPhoto=opening?.photos?.[0]?.thumb||opening?.photos?.[0]?.url||'';
  // Characteristics from the PIM canonical attribute keys (structured, never parsed from text); empty values are not shown,
  // colour/camouflage only for a single-colour model (otherwise the COLOR selector says it).
  const label=V3_ATTR_LABEL,code=V3_ATTR_VALUE;a.specs=Object.entries(t.attributes||{}).filter(([k,v])=>label[k]&&v!=null&&String(v).trim()&&!/^(?:null|none|undefined)$/i.test(String(v))&&!(['color','camouflage'].includes(k)&&a.colors.length>1)).map(([k,v])=>[label[k],code[k]?.[v]||String(v)]);

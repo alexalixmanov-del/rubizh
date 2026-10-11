@@ -1,6 +1,6 @@
 # SESSION HANDOFF — RUBIZH SITE release hardening
 
-Пауза: 2026-10-11 (лимит токенов). Продолжать с этого документа.
+Обновлено: 2026-10-11, сессия 2 (P2/P3, браузерная матрица, a11y/SEO/Lighthouse). Продолжать с этого документа.
 
 ## Репозитории и ветки
 
@@ -28,6 +28,8 @@ PIM — только чтение; CRM не менять и не развора�
 7. `793cc70` D-06/D-07 недавно просмотренные; D-08 мобильные карусели категорий.
 8. `77d3a8f` D-26 мобильная кнопка «Оберіть розмір».
 9. Финальный коммит: документы `docs/release-hardening/*`, QA-инструменты `tests/.staging/qa-matrix.mjs`, `qa-cabinet.mjs`, `macos-php-shim.sh`.
+10. Сессия 2 (коммит после `fcc73e9`): D-14, D-18, D-20, D-21 (legacy + v3), D-27, D-28, D-29…D-33 — regression-first; D-24 NO-DEFECT; D-11 → Q-8; D-22 → Q-9 (удаление файлов заблокировано классификатором, нужно разрешение). Документы 05 и 07. QA-инструменты `qa-fixture.mjs` (общий стенд) и `qa-audit.mjs` (кнопки, axe, Lighthouse).
+
 
 Полный реестр: `03-DEFECT_REGISTER.md`. План: `04-ECC_IMPLEMENTATION_PLAN.md`. Интеграции: `06-INTEGRATION_AUDIT.md`.
 
@@ -35,7 +37,9 @@ PIM — только чтение; CRM не менять и не развора�
 
 ## Тесты
 
-Добавлены: `tests/release-hardening.test.mjs` (COD ×3, D-03, D-04, D-13, D-25, D-10), `tests/color-gallery.test.mjs` (PHP + desktop + mobile), `tests/ui-hardening.test.mjs` (recently viewed ×2, карусель 360/390/430, desktop). Изменены осознанно (новые требования владельца): `storefront.test.mjs` (COD никогда не показывается), `category-directory.test.mjs` (карусель вместо 4/стр).
+Сессия 2: `tests/seo-hardening.test.mjs`, `tests/a11y-hardening.test.mjs`, тесты D-18/D-20 в `release-hardening`, D-14 в `pim-v3-sync`, D-21 в `pim-v3-browser` и `color-gallery`.
+
+Добавлены (сессия 1): `tests/release-hardening.test.mjs` (COD ×3, D-03, D-04, D-13, D-25, D-10), `tests/color-gallery.test.mjs` (PHP + desktop + mobile), `tests/ui-hardening.test.mjs` (recently viewed ×2, карусель 360/390/430, desktop). Изменены осознанно (новые требования владельца): `storefront.test.mjs` (COD никогда не показывается), `category-directory.test.mjs` (карусель вместо 4/стр).
 
 Regression-first: каждый новый тест сначала красный на старом коде (для галереи/UI — проверено в worktree `59b4685`).
 
@@ -46,14 +50,15 @@ Regression-first: каждый новый тест сначала красный
 
 Браузерный QA:
 - Кабинет (`qa-cabinet`): Chromium/WebKit/Firefox × 360/390/768/1280 — 12/12 OK: свой список, чужой заказ 404 (IDOR нет), отменённая ТТН скрыта, без overflow.
-- Матрица витрины (`qa-matrix`, 3 движка × 12 ширин × 15 страниц + покупка) — **запущена, не дочитана** при паузе. Перезапустить (см. ниже).
-- CI GitHub для ветки — проверить после push.
+- Матрица витрины (`qa-matrix`): 540/540 загрузок без ошибок/overflow, покупка до заказа 9/9 в 3 движках — см. `05-BROWSER_QA_MATRIX.md`.
+- Аудит (`qa-audit`): axe 4 serious → исправлены; Lighthouse SEO 100, a11y 98–100 — см. `07-SECURITY_PERFORMANCE_REVIEW.md`.
+- CI GitHub: `fcc73e9` — success; после нового push проверить снова.
 
 ## Не начато / в работе
 
-- В работе: разбор матрицы QA → `05-BROWSER_QA_MATRIX.md`.
-- Не начато: D-11, D-14, D-18, D-20, D-21, D-22, D-24, D-27, D-28; interaction inventory; Lighthouse; `07-SECURITY_PERFORMANCE_REVIEW.md`; `08-RELEASE_READINESS.md`; финальный `/ecc:code-review`.
-- Заблокировано: D-09 (нет файлов баннеров для 19 категорий), Q-4…Q-7 (решения владельца).
+- Ждёт владельца: Q-4…Q-9 (03), файлы баннеров D-09/D-23, **дополнительное ТЗ** (главная, конструктор комплектов, каталог, кабинет 2.0, Instagram/TikTok) — сопоставить с 04, добавить только новое.
+- Не начато: D-34 (шапка/поиск — вместе с ТЗ главной), `08-RELEASE_READINESS.md`, финальный `/ecc:code-review`.
+- Не объявлять проект завершённым до обработки дополнительного ТЗ.
 
 ## Требует дополнительной проверки
 
@@ -94,6 +99,8 @@ export CHROMIUM_PATH="$HOME/Library/Caches/ms-playwright/chromium-1234/chrome-ma
 export PATH=$W/rt/usr/bin:/opt/homebrew/opt/findutils/libexec/gnubin:/opt/homebrew/opt/mariadb@11.4/bin:$PATH
 npm test
 node tests/.staging/qa-matrix.mjs $W/qa && node tests/.staging/qa-cabinet.mjs $W/qa
+# axe + Lighthouse: npm i axe-core@4.10.3 lighthouse@12.6.1 в отдельной папке $W/tools, затем
+node tests/.staging/qa-audit.mjs $W/qa/audit $W/tools
 ```
 
 ## Порядок следующих действий

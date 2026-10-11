@@ -161,17 +161,19 @@ function pimV3WriteModel(PDO $db,array $m,string $batch,string $revision): strin
         'canonical_category_id'=>$m['canonical_category_id'],'attributes'=>is_array($m['filter_attributes']??null)?$m['filter_attributes']:[],'availability'=>$m['availability'],
         'order_submission_allowed'=>$m['order_submission_allowed'],'payment_allowed'=>$m['payment_allowed'],'requires_order_confirmation'=>$m['requires_order_confirmation'],
         'pricing_policy_version'=>1,'related'=>array_values(array_filter((array)($m['recommended_with']??[]),'is_string')),'kit_component'=>$m['kit_component']??null,'kit_component_tags'=>$m['kit_component_tags']??[]];
+    // The contract allows ACTIVE/HIDDEN/ARCHIVED; only ACTIVE is published (D-14).
+    $state=in_array($m['publication_state']??null,['HIDDEN','ARCHIVED'],true)?$m['publication_state']:'ACTIVE';
     $slug=unique_slug($db,slugify((string)$m['slug'])?:slugify((string)$m['marketing_name_uk']),$id);
     $db->prepare("INSERT INTO products(id,slug,name,brand,category_id,category_path,description,attributes,links,has_docs,docs_note,price_min,price_max,availability,variants_count,visible,hash,data,created_at,updated_at,synced_at,
         pim_contract_version,pim_model_id,pim_publication_state,pim_publication_reason,pim_revision,pim_usable_photo_count,pim_media_revision,pim_classification_version,pim_category_catalog_version,pim_size_catalog_version,pim_order_policy_version,pim_inventory_policy_version,pim_pricing_policy_version)
-        VALUES(?,?,?,?,?,?,?,?,'{}',0,'',?,?,?,?,1,?,?,UTC_TIMESTAMP(),UTC_TIMESTAMP(),UTC_TIMESTAMP(),3,?,'ACTIVE',NULL,?,?,?,1,2,1,1,1,1)
+        VALUES(?,?,?,?,?,?,?,?,'{}',0,'',?,?,?,?,?,?,?,UTC_TIMESTAMP(),UTC_TIMESTAMP(),UTC_TIMESTAMP(),3,?,?,?,?,?,?,1,2,1,1,1,1)
         ON DUPLICATE KEY UPDATE slug=VALUES(slug),name=VALUES(name),brand=VALUES(brand),category_id=VALUES(category_id),category_path=VALUES(category_path),description=VALUES(description),attributes=VALUES(attributes),
-        price_min=VALUES(price_min),price_max=VALUES(price_max),availability=VALUES(availability),variants_count=VALUES(variants_count),visible=1,hash=VALUES(hash),data=VALUES(data),updated_at=VALUES(updated_at),synced_at=VALUES(synced_at),
-        pim_contract_version=3,pim_model_id=VALUES(pim_model_id),pim_publication_state='ACTIVE',pim_publication_reason=NULL,pim_revision=VALUES(pim_revision),pim_usable_photo_count=VALUES(pim_usable_photo_count),pim_media_revision=VALUES(pim_media_revision),
+        price_min=VALUES(price_min),price_max=VALUES(price_max),availability=VALUES(availability),variants_count=VALUES(variants_count),visible=VALUES(visible),hash=VALUES(hash),data=VALUES(data),updated_at=VALUES(updated_at),synced_at=VALUES(synced_at),
+        pim_contract_version=3,pim_model_id=VALUES(pim_model_id),pim_publication_state=VALUES(pim_publication_state),pim_publication_reason=VALUES(pim_publication_reason),pim_revision=VALUES(pim_revision),pim_usable_photo_count=VALUES(pim_usable_photo_count),pim_media_revision=VALUES(pim_media_revision),
         pim_classification_version=1,pim_category_catalog_version=2,pim_size_catalog_version=1,pim_order_policy_version=1,pim_inventory_policy_version=1,pim_pricing_policy_version=1")
         ->execute([$id,$slug,mb_substr($m['marketing_name_uk'],0,500),mb_substr($public['brand'],0,191),$path!==''?sha1($path):null,$path,$m['description'],json_encode((object)$public['attributes'],JSON_UNESCAPED_UNICODE),
-            $prices?shopMoneyValue(min($prices)):null,$prices?shopMoneyValue(max($prices)):null,$best,count($variants),$hash,json_encode($public,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),
-            $m['model_id'],$revision,count($m['photos']),sha1(json_encode([$m['photos'],array_column($m['colors'],'photos','id')],JSON_THROW_ON_ERROR))]);
+            $prices?shopMoneyValue(min($prices)):null,$prices?shopMoneyValue(max($prices)):null,$best,count($variants),$state==='ACTIVE'?1:0,$hash,json_encode($public,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),
+            $m['model_id'],$state,$state==='ACTIVE'?null:'PIM_PUBLICATION_STATE',$revision,count($m['photos']),sha1(json_encode([$m['photos'],array_column($m['colors'],'photos','id')],JSON_THROW_ON_ERROR))]);
     // Colors: composite (model,color) identity; inactive colors keep history.
     $db->prepare('UPDATE products SET pim_kit_slot=? WHERE id=?')->execute([pimV3KitSlot(is_string($m['kit_component']??null)?$m['kit_component']:null),$id]);
     $db->prepare('UPDATE rubizh_product_colors SET active=0 WHERE product_id=?')->execute([$id]);

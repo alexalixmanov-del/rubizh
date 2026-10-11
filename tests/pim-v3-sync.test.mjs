@@ -148,3 +148,17 @@ test('full catalog reset: exact plan + verified backup, catalog tables empty, ta
   for(const p of wire.products)assert.equal(slugs.find(r=>r.id===p.id).slug,p.slug,'no -2 URL after reset');
  }finally{site.stop();}
 });
+
+// D-14: the contract accepts HIDDEN/ARCHIVED models; sync must publish them hidden, not force them ACTIVE.
+test('a model sent as HIDDEN or ARCHIVED is stored hidden with its state, and ACTIVE again restores it',{skip,timeout:120000},async()=>{
+ const site=await startSite();
+ try{
+  const w=clone(wire);w.products.find(p=>p.id==='m-belt').publication_state='ARCHIVED';
+  const r=await publish(site,w);assert.equal(r.status,200,JSON.stringify(r.data));
+  const belt=()=>site.sql("SELECT visible,pim_publication_state FROM products WHERE id='m-belt'")[0];
+  assert.deepEqual({...belt(),visible:+belt().visible},{visible:0,pim_publication_state:'ARCHIVED'});
+  assert.equal(+site.sql("SELECT visible FROM products WHERE id='m-jacket'")[0].visible,1,'other models stay published');
+  w.products.find(p=>p.id==='m-belt').publication_state='ACTIVE';assert.equal((await publish(site,w)).status,200);
+  assert.deepEqual({...belt(),visible:+belt().visible},{visible:1,pim_publication_state:'ACTIVE'});
+ }finally{site.stop();}
+});

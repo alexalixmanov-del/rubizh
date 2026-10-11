@@ -9,6 +9,15 @@ if(in_array($uri,['/offer','/offer/','/privacy','/privacy/'],true)){header('Cach
 require_once __DIR__.'/shop/settings-lib.php';
 $boot=['kitSlots'=>shopKitSlotPatterns()];$head='';$fallback='';$status=200;
 function storefrontEsc(string $s): string{return htmlspecialchars($s,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');}
+// BreadcrumbList JSON-LD: home → catalog → each published ancestor of the category path → current page (no item URL).
+function storefrontBreadcrumb(array $categories,string $path,?string $leaf=null): string{
+    $urls=array_column($categories,'url_path','path');$parts=$path===''?[]:explode(' / ',$path);
+    $items=[['РУБІЖ','https://rubizh.shop/'],['Каталог','https://rubizh.shop/catalog']];
+    foreach($parts as $i=>$name){$branch=implode(' / ',array_slice($parts,0,$i+1));if(isset($urls[$branch]))$items[]=[$name,'https://rubizh.shop/catalog/'.$urls[$branch]];}
+    if($leaf!==null)$items[]=[$leaf,null];else $items[count($items)-1][1]=null;
+    $list=[];foreach($items as $i=>[$name,$url])$list[]=['@type'=>'ListItem','position'=>$i+1,'name'=>$name]+($url===null?[]:['item'=>$url]);
+    return '<script type="application/ld+json">'.json_encode(['@context'=>'https://schema.org','@type'=>'BreadcrumbList','itemListElement'=>$list],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT).'</script>';
+}
 try{
     rubizhPublicGate('storefront',180);rubizhHttpWork('public-read',16);$GLOBALS['rubizh_public_query_budget']=true;$themeMarkup=shopThemeMarkup();
     $db=db();
@@ -25,7 +34,7 @@ try{
             $structured=['@context'=>'https://schema.org','@type'=>'Product','name'=>$p['name'],'description'=>$description,'sku'=>($p['variants'][0]['sku']??$p['id']),'url'=>$canonical];if($p['price_min']!==null)$structured['offers']=$offer;if($p['brand']!=='')$structured['brand']=['@type'=>'Brand','name'=>$p['brand']];if($p['photos'])$structured['image']=array_column($p['photos'],'url');
             $head='<title>'.storefrontEsc($title).'</title><meta name="description" content="'.storefrontEsc($description).'"><link rel="canonical" href="'.storefrontEsc($canonical).'"><meta property="og:title" content="'.storefrontEsc($title).'"><meta property="og:description" content="'.storefrontEsc($description).'"><meta property="og:url" content="'.storefrontEsc($canonical).'"><meta property="og:type" content="product">';
             if($p['photos'])$head.='<meta property="og:image" content="'.storefrontEsc(str_starts_with($p['photos'][0]['url'],'/')?'https://rubizh.shop'.$p['photos'][0]['url']:$p['photos'][0]['url']).'">';
-            $head.='<script id="rubizh-product-schema" type="application/ld+json">'.json_encode($structured,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT).'</script>';
+            $head.='<script id="rubizh-product-schema" type="application/ld+json">'.json_encode($structured,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT).'</script>'.storefrontBreadcrumb($boot['categories'],(string)$p['category'],$p['name']);
             $fallback='<article><h1>'.storefrontEsc($p['name']).'</h1><p>'.storefrontEsc($p['description']).'</p><p>'.storefrontEsc((string)$p['price_min']).' ₴</p><a href="/catalog">До каталогу</a></article>';
         }
     }elseif($uri==='/porady'||str_starts_with($uri,'/porady/')){
@@ -47,6 +56,7 @@ $boot['catalog']=shopCatalog($db,$args);
         $title=$boot['categoryPath']?end($boot['categoryPath']).' — купити в РУБІЖ':'Каталог тактичного спорядження — РУБІЖ';$canonical='https://rubizh.shop/catalog'.($category!==''?'/'.$category:'');if($boot['catalog']['page']>1)$canonical.='?page='.$boot['catalog']['page'];
         $head='<title>'.storefrontEsc($title).'</title><link rel="canonical" href="'.storefrontEsc($canonical).'"><meta name="description" content="'.storefrontEsc($title.' — ціни, розміри та доставка по Україні.').'">';
         if(count($_GET)>0 && array_diff(array_keys($_GET),['page']))$head.='<meta name="robots" content="noindex,follow">';
+        if($status!==404)$head.=storefrontBreadcrumb($boot['categories'],implode(' / ',$boot['categoryPath']));
         $fallback='<h1>'.storefrontEsc($title).'</h1><ul>';foreach($boot['catalog']['items'] as $p)$fallback.='<li><a href="/product/'.storefrontEsc($p['slug']).'">'.storefrontEsc($p['name']).'</a> · '.storefrontEsc((string)$p['price_min']).' ₴</li>';$fallback.='</ul>';
         for($page=1;$page<=max(1,$boot['catalog']['pages']);$page++)$fallback.='<a href="'.storefrontEsc($uri.'?page='.$page).'">'.$page.'</a> ';
     }elseif(preg_match('~^/kit/([a-f0-9]{32})/?$~',$uri,$m)){$boot['kitCode']=$m[1];$head='<title>Комплект побратима — РУБІЖ</title><meta name="robots" content="noindex,follow">';}
@@ -56,7 +66,7 @@ $boot['catalog']=shopCatalog($db,$args);
 }catch(Throwable $e){error_log('rubizh storefront: '.get_class($e).' code '.(string)$e->getCode());$status=$e instanceof RubizhHttpException?$e->status:503;$boot['error']=$e instanceof RubizhHttpException?$e->getMessage():'Каталог тимчасово недоступний. Спробуйте ще раз.';$head='<meta name="robots" content="noindex,follow">';if($e instanceof RubizhHttpException&&$e->retryAfter)header('Retry-After: '.$e->retryAfter);}
 http_response_code($status);header('Content-Type: text/html; charset=utf-8');header('Cache-Control: '.($status>=400?'no-store':(!empty($_SESSION['customer_id'])?'private, no-store':'no-cache')));header('X-Content-Type-Options: nosniff');
 if($status===503)header('Retry-After: 60');
-if($status===404){echo '<!doctype html><html lang="uk"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Не знайдено — РУБІЖ</title><body style="background:#0B0D0B;color:#EDEFEA;font:18px Arial;padding:40px">'.$fallback.'</body></html>';exit;}
+if($status===404){echo '<!doctype html><html lang="uk"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Не знайдено — РУБІЖ</title><style>a{color:#F2A33C}</style><body style="background:#0B0D0B;color:#EDEFEA;font:18px Arial;padding:40px">'.$fallback.'</body></html>';exit;}
 $boot['settings']=shopPublicSettings();
 $html=rubizhSellerHtml(file_get_contents(__DIR__.'/index.html'));
 // Real metadata belongs in the head, before the client runtime begins.

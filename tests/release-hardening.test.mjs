@@ -2,7 +2,7 @@
 // Isolated MySQL fixture only; MonoPay is the local mock, no network, no production data.
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {readFileSync,writeFileSync} from 'node:fs';
 import path from 'node:path';
 import {generateKeyPairSync,createSign} from 'node:crypto';
 import {startSite,wire,publish,php,root} from './helpers/site-fixture.mjs';
@@ -165,4 +165,45 @@ test('storefront code offers no COD option, no COD default and no COD wording fo
  assert.doesNotMatch(js,/npCodEnabled|np_cod_enabled/,'no COD feature switch on the storefront');
  for(const file of ['shop/order.php','shop/customer.php','shop/np-fulfillment.php','shop/pim-v3-checkout.php','api/config.sample.php'])
   assert.doesNotMatch(readFileSync(path.join(root,file),'utf8'),/np_cod_|AfterpaymentOnGoodsCost|BackwardDeliveryData/,file+' has no COD integration');
+});
+
+// D-20: a signed callback that can never become valid (amount/currency/status) is acknowledged once and parked for
+// a manager, instead of 503 that makes the bank retry it forever. An invoice not yet recorded stays retryable.
+test('signed MonoPay callback with a permanent mismatch is acknowledged, audited and changes no money state',{skip,timeout:180000},async()=>{
+ const site=await fixture();try{
+  const buyer=await shopper(site),o=await checkout(site,buyer);assert.equal(o.status,200,JSON.stringify(o.data));const id=o.data.order.id,inv=await startInvoice(site,buyer,id);
+  const bad=await site.webhook(inv,'success',+inv.amount-100);assert.equal(bad.status,200,'no endless bank retries for a permanent mismatch');
+  assert.deepEqual(state(site,id),{payment:'pending',invoice:'created',reservation:'ACTIVE',confirmed:0},'a mismatched amount never marks paid');
+  assert.equal(+site.sql(`SELECT COUNT(*) n FROM rubizh_np_audit WHERE order_id=${id} AND action='mono_event_rejected'`)[0].n,1,'parked for the manager');
+  assert.equal((await site.webhook({...inv,invoice_id:'not-recorded-yet'})).status,503,'unknown invoice stays retryable');
+  assert.equal((await site.webhook(inv)).status,200);assert.equal(state(site,id).payment,'paid','the valid callback still pays');
+ }finally{site.stop();}
+});
+
+// D-18: the same cart submitted from a second tab must not create a second order.
+test('two tabs submitting the same checkout create one order and both show its receipt',{skip,timeout:180000},async()=>{
+ const {chromium}=await import('playwright');
+ const site=await startSite({enableV3:false,extraConfig:",'mono_mock'=>true,'environment'=>'staging','staging_allow_loopback'=>true"});let browser;
+ try{
+  const p={id:'tab-cap',slug:'tab-cap',canonical_category_id:'clothing_headwear',name:'Кепка Вкладки',brand:'QA',category:'Одяг та форма / Головні убори',category_path:['Одяг та форма','Головні убори'],description:'Тест.',photos:['https://img.test/cap.png'],
+   variants:['M','L'].map(size=>({sku:'TAB-'+size,color:'Олива',size,size_display:size,price:900,availability:'in',stock:5,photos:['https://img.test/cap.png']}))};
+  php(`define('RUBIZH_AUTH_NO_SESSION',true);require '${site.site}/auth/bootstrap.php';require_once '${site.site}/api/lib.php';save_product(db(),json_decode(${JSON.stringify(JSON.stringify(p))},true));`);
+  writeFileSync(site.site+'/router.php',`<?php $p=parse_url($_SERVER['REQUEST_URI'],PHP_URL_PATH);if(str_starts_with($p,'/api/')){require __DIR__.'/api/index.php';return;}if($p==='/'||preg_match('~^/(?:product|catalog)(?:/.*)?$~',$p)){require __DIR__.'/storefront.php';return;}return false;`);
+  browser=await chromium.launch({executablePath:(process.env.CHROMIUM_PATH||'/usr/bin/chromium'),args:['--no-sandbox']});
+  const context=await browser.newContext({viewport:{width:1280,height:900}});
+  await context.route('https://img.test/**',r=>r.fulfill({contentType:'image/png',body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==','base64')}));
+  const a=await context.newPage();await a.goto(site.base+'/product/tab-cap');
+  await a.locator('[data-size-grid]').getByText('M',{exact:true}).click();await a.getByRole('button',{name:/До кошика/}).first().click();
+  await a.waitForFunction(()=>JSON.parse(localStorage.getItem('rubizh.cart')||'[]').length===1);
+  const b=await context.newPage();
+  const fill=async page=>{await page.goto(site.base+'/#cart');const c=page.getByRole('button',{name:/Оформити/}).first();if(await c.count())await c.click();
+   await page.locator('input[name="name"]').fill('Тест Покупець');await page.locator('input[name="phone"]').fill('+380671234567');
+   await page.locator('input[name="city"]').fill('Київ');await page.locator('input[name="address"]').fill('Відділення 1');};
+  await fill(a);await fill(b);// tab B has the cart loaded before tab A submits
+  const submit=async page=>{const r=page.waitForResponse(x=>x.url().endsWith('/shop/order.php'));await page.getByRole('button',{name:/Підтвердити замовлення/}).first().click();return (await (await r).json());};
+  const first=await submit(a),second=await submit(b);
+  assert.equal(first.ok,true,JSON.stringify(first));assert.equal(second.ok,true,JSON.stringify(second));
+  assert.equal(+site.sql('SELECT COUNT(*) n FROM rubizh_customer_orders')[0].n,1,'one order for one checkout');
+  assert.equal(second.order.number,first.order.number,'the second tab shows the same order');
+ }finally{await browser?.close();site.stop();}
 });

@@ -50,3 +50,21 @@ test('storefront: one MODEL, color switch changes gallery and real sizes, size s
   await req.close();
  }finally{await browser.close();site.stop();}
 });
+
+// D-21: the catalog card shows the colour the product page opens with, not whichever photo PIM listed first for the model.
+test('catalog card preview is the default colour photo, matching the product page',{skip,timeout:240000},async()=>{
+ const site=await startSite({extraConfig:",'mono_mock'=>true,'environment'=>'staging','staging_allow_loopback'=>true"});
+ const browser=await chromium.launch({executablePath:(process.env.CHROMIUM_PATH||'/usr/bin/chromium'),args:['--no-sandbox']});
+ try{
+  const w=structuredClone(wire),j=w.products.find(p=>p.id==='m-jacket');j.photos=[...olive.photos,...black.photos];// model gallery starts with another colour
+  assert.equal((await publish(site,w)).status,200);
+  const {writeFileSync}=await import('node:fs');
+  writeFileSync(site.site+'/router.php',`<?php $p=parse_url($_SERVER['REQUEST_URI'],PHP_URL_PATH);if(str_starts_with($p,'/api/')){require __DIR__.'/api/index.php';return;}if($p==='/'||preg_match('~^/(?:product|catalog)(?:/.*)?$~',$p)){require __DIR__.'/storefront.php';return;}return false;`);
+  const page=await browser.newPage({viewport:{width:1280,height:900}});
+  await page.route('https://rubizh.shop/**',r=>r.fulfill({contentType:'image/png',body:png}));await page.route(/fonts\.(googleapis|gstatic)/,r=>r.abort());
+  await page.goto(site.base+'/catalog');const card=page.locator(`img[alt="${j.marketing_name_uk}"]`).first();await card.waitFor();
+  await page.waitForLoadState('networkidle');await page.waitForTimeout(300);// the first paint comes from the boot data, then the storefront API re-renders
+  assert.match(await card.getAttribute('src'),/jacket-black-1/,'card shows the default (black) colour');
+  await page.close();
+ }finally{await browser.close();site.stop();}
+});
