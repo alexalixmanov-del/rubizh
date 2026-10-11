@@ -26,12 +26,14 @@ test('order idempotency: double click and lost-response retries (in place and af
    await page.locator('input[name="name"]').fill('Тест Покупець');await page.locator('input[name="phone"]').fill('+380671234567');
    await page.locator('input[name="city"]').fill('Київ');await page.locator('input[name="address"]').fill('Відділення 1');};
   const place=()=>page.getByRole('button',{name:/Підтвердити замовлення/}).first();
-  const submit=async()=>{const r=page.waitForResponse(x=>x.url().endsWith('/shop/order.php'));await place().click();return (await (await r).json());};
+  // Q-7: a confirmed-stock card order hands off to MonoPay (stub) on its own; wait for it before the next navigation.
+  const handoff=()=>page.waitForURL(/^https:\/\/pay\.mbnk\.biz\//,{timeout:15000});
+  const submit=async()=>{const r=page.waitForResponse(x=>x.url().endsWith('/shop/order.php'));await place().click();const j=await (await r).json();if(j.ok)await handoff();return j;};
 
   // 1. Double click: one order; every request of the attempt carries the same key.
   await add();await fill();const sent=[];page.on('request',r=>{if(r.url().endsWith('/shop/order.php'))sent.push(r);});
   const done=page.waitForResponse(x=>x.url().endsWith('/shop/order.php'));await place().dblclick();const first=await (await done).json();
-  await page.waitForTimeout(800);assert.equal(first.ok,true,JSON.stringify(first));assert.equal(orders(),1,'double click → one order');
+  assert.equal(first.ok,true,JSON.stringify(first));await handoff();await page.waitForTimeout(300);assert.equal(orders(),1,'double click → one order');
   assert.equal(new Set(sent.map(r=>JSON.parse(r.postData()).request_id)).size,1,'one key per attempt');
 
   // 2. Lost response: the server makes the order, the browser sees a network error, the buyer retries in place.
@@ -67,8 +69,8 @@ test('order idempotency: double click and lost-response retries (in place and af
   // 4. Deliberate repeat purchase of the identical item after success: a new order.
   await add();await fill();const repeat=await submit();assert.equal(repeat.ok,true,JSON.stringify(repeat));
   assert.equal(orders(),6,'a deliberate repeat purchase is a new order');assert.notEqual(repeat.order.number,again.order.number);
-  // Q-7: confirmed stock paid by card goes straight to MonoPay (stub page; never leaves the machine), with one invoice.
-  await page.waitForURL(/^https:\/\/pay\.mbnk\.biz\//,{timeout:10000});
+  // Q-7: confirmed stock paid by card went straight to MonoPay (stub page; never leaves the machine), with one invoice.
+  assert.match(page.url(),/^https:\/\/pay\.mbnk\.biz\//);
   assert.equal(+site.sql(`SELECT COUNT(*) n FROM rubizh_mono_invoices i JOIN rubizh_customer_orders o ON o.id=i.order_id WHERE o.order_number='${repeat.order.number}'`)[0].n,1);
  }finally{await browser?.close();site.stop();}
 });

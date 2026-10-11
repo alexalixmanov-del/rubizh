@@ -9,7 +9,7 @@ const results={started:new Date().toISOString(),pages:[],flows:[]};
 try{
  const widths=process.env.QA_WIDTHS?process.env.QA_WIDTHS.split(',').map(Number):[320,360,375,390,414,430,768,820,1024,1280,1440,1920];
  const flowAt=process.env.QA_FLOW_ALL?new Set(widths):new Set([390,768,1280]);
- for(const [bname,engine] of [['chromium',chromium],['webkit',webkit],['firefox',firefox]]){
+ for(const [bname,engine] of [['chromium',chromium],['webkit',webkit],['firefox',firefox]].filter(([n])=>!process.env.QA_ENGINES||process.env.QA_ENGINES.split(',').includes(n))){
   const browser=await engine.launch(bname==='chromium'?{executablePath:process.env.CHROMIUM_PATH}:{});
   for(const w of widths){
    const mobile=w<768&&bname!=='firefox';

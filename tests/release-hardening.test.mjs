@@ -201,7 +201,8 @@ test('two tabs submitting the same checkout create one order and both show its r
    await page.locator('input[name="name"]').fill('Тест Покупець');await page.locator('input[name="phone"]').fill('+380671234567');
    await page.locator('input[name="city"]').fill('Київ');await page.locator('input[name="address"]').fill('Відділення 1');};
   await fill(a);await fill(b);// tab B has the cart loaded before tab A submits
-  const submit=async page=>{const r=page.waitForResponse(x=>x.url().endsWith('/shop/order.php'));await page.getByRole('button',{name:/Підтвердити замовлення/}).first().click();return (await (await r).json());};
+  // Q-7: a confirmed-stock card order hands off to MonoPay (stub) on its own; wait for it before the next navigation.
+  const submit=async page=>{const r=page.waitForResponse(x=>x.url().endsWith('/shop/order.php'));await page.getByRole('button',{name:/Підтвердити замовлення/}).first().click();const j=await (await r).json();if(j.ok)await page.waitForURL(/^https:\/\/pay\.mbnk\.biz\//,{timeout:15000});return j;};
   const first=await submit(a),second=await submit(b);
   assert.equal(first.ok,true,JSON.stringify(first));assert.equal(second.ok,true,JSON.stringify(second));
   assert.equal(+site.sql('SELECT COUNT(*) n FROM rubizh_customer_orders')[0].n,1,'one order for one checkout');
@@ -254,7 +255,8 @@ test('buying the same item again after a successful order creates a new order, w
   const fill=async page=>{await page.goto(site.base+'/#cart');const c=page.getByRole('button',{name:/Оформити/}).first();if(await c.count())await c.click();
    await page.locator('input[name="name"]').fill('Тест Покупець');await page.locator('input[name="phone"]').fill('+380671234567');
    await page.locator('input[name="city"]').fill('Київ');await page.locator('input[name="address"]').fill('Відділення 1');};
-  const submit=async page=>{const r=page.waitForResponse(x=>x.url().endsWith('/shop/order.php'));await page.getByRole('button',{name:/Підтвердити замовлення/}).first().click();return (await (await r).json());};
+  // Q-7: a confirmed-stock card order hands off to MonoPay (stub) on its own; wait for it before the next navigation.
+  const submit=async page=>{const r=page.waitForResponse(x=>x.url().endsWith('/shop/order.php'));await page.getByRole('button',{name:/Підтвердити замовлення/}).first().click();const j=await (await r).json();if(j.ok)await page.waitForURL(/^https:\/\/pay\.mbnk\.biz\//,{timeout:15000});return j;};
   await add(a);const b=await context.newPage();await fill(a);await fill(b);
   const first=await submit(a);assert.equal(first.ok,true,JSON.stringify(first));
   const stale=await submit(b);assert.equal(stale.order.number,first.order.number,'the stale tab still gets the same order');
