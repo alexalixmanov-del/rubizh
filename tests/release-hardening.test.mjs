@@ -113,7 +113,8 @@ test('payment retry after a failed invoice first invalidates it at the bank; if 
   const retry=removeFails=>JSON.parse(call(site,`define('RUBIZH_MONO_TESTS',true);$GLOBALS['calls']=[];$GLOBALS['mono_test_transport']=function($p,$b){$GLOBALS['calls'][]=[$p,$b];if($p==='invoice/remove'&&${removeFails?'true':'false'})throw new RuntimeException('bank refused');if($p==='invoice/create')return ['invoiceId'=>'retry'.bin2hex(random_bytes(4)),'pageUrl'=>'https://pay.mbnk.biz/retry'];return [];};try{monoCreate($db,${id},'${owner}');$ok=true;}catch(Throwable $e){$ok=false;}echo json_encode(['ok'=>$ok,'calls'=>$GLOBALS['calls']]);`).stdout);
   const refused=retry(true);
   assert.equal(refused.ok,false,'no new invoice while the old one may still be payable');
-  assert.deepEqual(refused.calls.map(c=>c[0]),['invoice/remove']);assert.equal(refused.calls[0][1].invoiceId,a.invoice_id);
+  // After a refused removal the bank status is read; only a final non-payable status would let a new invoice through.
+  assert.deepEqual(refused.calls.map(c=>c[0].split('?')[0]),['invoice/remove','invoice/status']);assert.equal(refused.calls[0][1].invoiceId,a.invoice_id);
   assert.equal(+site.sql('SELECT COUNT(*) n FROM rubizh_mono_invoices WHERE order_id='+id)[0].n,1);
   const done=retry(false);
   assert.equal(done.ok,true,JSON.stringify(done));assert.deepEqual(done.calls.map(c=>c[0]),['invoice/remove','invoice/create'],'invalidate first, then create');
@@ -205,5 +206,60 @@ test('two tabs submitting the same checkout create one order and both show its r
   assert.equal(first.ok,true,JSON.stringify(first));assert.equal(second.ok,true,JSON.stringify(second));
   assert.equal(+site.sql('SELECT COUNT(*) n FROM rubizh_customer_orders')[0].n,1,'one order for one checkout');
   assert.equal(second.order.number,first.order.number,'the second tab shows the same order');
+ }finally{await browser?.close();site.stop();}
+});
+
+// Review finding (open point on D-13): a refused invoice/remove must not block payment forever, nor allow paying twice.
+test('a refused invoice/remove is settled by the bank status: an expired invoice allows the retry; a still-failed one stays blocked and is flagged',{skip,timeout:180000},async()=>{
+ const site=await fixture({extra:`,'staff_roles'=>['${owner}'=>'OWNER']`});try{
+  const buyer=await shopper(site),o=await checkout(site,buyer);assert.equal(o.status,200,JSON.stringify(o.data));const id=o.data.order.id,a=await startInvoice(site,buyer,id);
+  assert.equal((await site.webhook(a,'failure')).status,200);
+  const retry=status=>JSON.parse(call(site,`define('RUBIZH_MONO_TESTS',true);$GLOBALS['calls']=[];$GLOBALS['mono_test_transport']=function($p,$b){$GLOBALS['calls'][]=$p;if($p==='invoice/remove')throw new RuntimeException('bank refused');if(str_starts_with($p,'invoice/status'))return ['invoiceId'=>'${a.invoice_id}','status'=>'${status}','amount'=>${+a.amount},'ccy'=>980,'reference'=>'${a.reference}','modifiedDate'=>'2026-10-11T10:00:00Z'];if($p==='invoice/create')return ['invoiceId'=>'retry'.bin2hex(random_bytes(4)),'pageUrl'=>'https://pay.mbnk.biz/retry'];return [];};try{monoCreate($db,${id},'${owner}');$ok=true;$err='';}catch(Throwable $e){$ok=false;$err=$e->getMessage();}echo json_encode(['ok'=>$ok,'calls'=>$GLOBALS['calls'],'error'=>$err]);`).stdout);
+  const audit=action=>+site.sql(`SELECT COUNT(*) n FROM rubizh_np_audit WHERE order_id=${id} AND action='${action}'`)[0].n;
+  const blocked=retry('failure');
+  assert.equal(blocked.ok,false,'a failed invoice the bank would not close may still be payable: no second invoice');
+  assert.equal(audit('mono_invoice_remove_refused'),1,'the manager sees why the customer cannot pay');
+  assert.doesNotMatch(blocked.error,/кілька хвилин/,'no false promise that waiting helps');
+  assert.equal(+site.sql('SELECT COUNT(*) n FROM rubizh_mono_invoices WHERE order_id='+id)[0].n,1);
+  const expired=retry('expired');
+  assert.equal(expired.ok,true,JSON.stringify(expired));assert.deepEqual(expired.calls.map(c=>c.split('?')[0]),['invoice/remove','invoice/status','invoice/create']);
+  assert.equal(audit('mono_invoice_final_not_removed'),1);
+ }finally{site.stop();}
+});
+
+// Review finding: invoices stuck in awaiting_webhook (frozen updated_at) must not starve newer invoices in the worker.
+test('the MonoPay worker still refreshes new invoices when many old ones wait for a webhook',{skip,timeout:180000},async()=>{
+ const site=await fixture();try{
+  const buyer=await shopper(site),o=await checkout(site,buyer);assert.equal(o.status,200,JSON.stringify(o.data));const id=o.data.order.id,fresh=await startInvoice(site,buyer,id);
+  for(let i=0;i<30;i++)site.sql(`INSERT INTO rubizh_mono_invoices(order_id,invoice_id,reference,amount,status,modified_at,created_at,updated_at) VALUES(${id},'stuck${i}','ref-stuck-${i}',100,'awaiting_webhook','',UTC_TIMESTAMP()-INTERVAL 2 DAY,UTC_TIMESTAMP()-INTERVAL 2 DAY)`);
+  const read=JSON.parse(call(site,`define('RUBIZH_MONO_TESTS',true);$GLOBALS['seen']=[];$GLOBALS['mono_test_transport']=function($p,$b){parse_str((string)parse_url($p,PHP_URL_QUERY),$q);$GLOBALS['seen'][]=$q['invoiceId']??'';throw new RuntimeException('offline');};monoWorkerRun($db);echo json_encode($GLOBALS['seen']);`).stdout);
+  assert.ok(read.includes(fresh.invoice_id),'the new invoice is polled: '+read.length+' reads');
+ }finally{site.stop();}
+});
+
+// Review finding P2: the cross-tab key must not swallow a deliberate identical purchase made after the first one succeeded.
+test('buying the same item again after a successful order creates a new order, while a stale second tab still gets the first one',{skip,timeout:240000},async()=>{
+ const {chromium}=await import('playwright');
+ const site=await startSite({enableV3:false,extraConfig:",'mono_mock'=>true,'environment'=>'staging','staging_allow_loopback'=>true"});let browser;
+ try{
+  const p={id:'tab-cap',slug:'tab-cap',canonical_category_id:'clothing_headwear',name:'Кепка Вкладки',brand:'QA',category:'Одяг та форма / Головні убори',category_path:['Одяг та форма','Головні убори'],description:'Тест.',photos:['https://img.test/cap.png'],
+   variants:['M','L'].map(size=>({sku:'TAB-'+size,color:'Олива',size,size_display:size,price:900,availability:'in',stock:5,photos:['https://img.test/cap.png']}))};
+  php(`define('RUBIZH_AUTH_NO_SESSION',true);require '${site.site}/auth/bootstrap.php';require_once '${site.site}/api/lib.php';save_product(db(),json_decode(${JSON.stringify(JSON.stringify(p))},true));`);
+  writeFileSync(site.site+'/router.php',`<?php $p=parse_url($_SERVER['REQUEST_URI'],PHP_URL_PATH);if(str_starts_with($p,'/api/')){require __DIR__.'/api/index.php';return;}if($p==='/'||preg_match('~^/(?:product|catalog)(?:/.*)?$~',$p)){require __DIR__.'/storefront.php';return;}return false;`);
+  browser=await chromium.launch({executablePath:(process.env.CHROMIUM_PATH||'/usr/bin/chromium'),args:['--no-sandbox']});
+  const context=await browser.newContext({viewport:{width:1280,height:900}});
+  await context.route('https://img.test/**',r=>r.fulfill({contentType:'image/png',body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==','base64')}));
+  const a=await context.newPage();
+  const add=async page=>{await page.goto(site.base+'/product/tab-cap');await page.locator('[data-size-grid]').getByText('M',{exact:true}).click();await page.getByRole('button',{name:/До кошика/}).first().click();await page.waitForFunction(()=>JSON.parse(localStorage.getItem('rubizh.cart')||'[]').length===1);};
+  const fill=async page=>{await page.goto(site.base+'/#cart');const c=page.getByRole('button',{name:/Оформити/}).first();if(await c.count())await c.click();
+   await page.locator('input[name="name"]').fill('Тест Покупець');await page.locator('input[name="phone"]').fill('+380671234567');
+   await page.locator('input[name="city"]').fill('Київ');await page.locator('input[name="address"]').fill('Відділення 1');};
+  const submit=async page=>{const r=page.waitForResponse(x=>x.url().endsWith('/shop/order.php'));await page.getByRole('button',{name:/Підтвердити замовлення/}).first().click();return (await (await r).json());};
+  await add(a);const b=await context.newPage();await fill(a);await fill(b);
+  const first=await submit(a);assert.equal(first.ok,true,JSON.stringify(first));
+  const stale=await submit(b);assert.equal(stale.order.number,first.order.number,'the stale tab still gets the same order');
+  await add(a);await fill(a);const second=await submit(a);
+  assert.equal(second.ok,true,JSON.stringify(second));assert.notEqual(second.order.number,first.order.number,'a new purchase is a new order');
+  assert.equal(+site.sql('SELECT COUNT(*) n FROM rubizh_customer_orders')[0].n,2);
  }finally{await browser?.close();site.stop();}
 });

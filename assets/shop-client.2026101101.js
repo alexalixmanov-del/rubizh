@@ -14,6 +14,12 @@ function storeDigest(str){let h1=0xdeadbeef,h2=0x41c6ce57;for(let i=0;i<str.leng
 function storeOrderKey(fingerprint){const h=storeDigest(fingerprint);
  try{const v=JSON.parse(localStorage.getItem(STORE_ORDER_KEY)||'null');if(v&&v.h===h&&/^[a-f0-9]{32}$/.test(v.k)&&Date.now()-v.t>=0&&Date.now()-v.t<STORE_ORDER_KEY_TTL)return v.k;}catch(e){}
  const k=Array.from(crypto.getRandomValues(new Uint8Array(16)),t=>t.toString(16).padStart(2,'0')).join('');try{localStorage.setItem(STORE_ORDER_KEY,JSON.stringify({h,k,t:Date.now()}));}catch(e){}return k;}
+// After a successful order the key stays for stale tabs of that checkout; new goods in the cart release it, so a
+// deliberate identical purchase becomes a new order instead of the previous receipt.
+function storeOrderKeyDone(){try{const v=JSON.parse(localStorage.getItem(STORE_ORDER_KEY)||'null');if(v){v.done=true;localStorage.setItem(STORE_ORDER_KEY,JSON.stringify(v));}}catch(e){}}
+function storeOrderKeyRelease(){try{if(JSON.parse(localStorage.getItem(STORE_ORDER_KEY)||'null')?.done)localStorage.removeItem(STORE_ORDER_KEY);}catch(e){}}
+// A tab may release only after it saw the cart empty after that order (the ordering tab, or one opened afterwards); a stale tab never does.
+function storeOrderKeyFreshTab(){try{return !!JSON.parse(localStorage.getItem(STORE_ORDER_KEY)||'null')?.done&&!JSON.parse(localStorage.getItem('rubizh.cart')||'[]').length;}catch(e){return false;}}
 // Kit builder guide (ADDENDUM K-1): shown on the first plain visit, once per guide version; storage errors only mean it may show again.
 const STORE_KIT_INTRO_KEY='rubizh.kitIntro',STORE_KIT_INTRO_VERSION='1';
 function storeKitIntroSeen(){try{return localStorage.getItem(STORE_KIT_INTRO_KEY)===STORE_KIT_INTRO_VERSION;}catch(e){return false;}}
@@ -29,7 +35,8 @@ function storeLegacyColor(s,e,h){const all=Object.values(s.variants),confirmed=a
  return (buyable.find(photo)||buyable[0]||confirmed[0]||all[0])?.color||'';}
 function storeGalleryPhotos(s,color){const m=s.colorPhotos;if(!m||s.v3)return s.photoData||[];return Array.isArray(m[color])?m[color]:[];}
 // Card preview = the photo the product page opens with (D-21): v3 default colour (storeV3Map cardPhoto), legacy default colour's own photo.
-function storeCardCover(p){if(p.v3)return p.cardPhoto||'';const own=p.colorPhotos?storeGalleryPhotos(p,storeLegacyColor(p,{},null))[0]:null;return own?(own.thumb||own.url||''):'';}
+// undefined = no colour ownership known (the model gallery may be used); '' = another colour owns the gallery photos, so none is borrowed.
+function storeCardCover(p){if(p.v3)return p.cardPhoto||undefined;if(!p.colorPhotos)return undefined;const own=storeGalleryPhotos(p,storeLegacyColor(p,{},null))[0];if(own)return own.thumb||own.url||undefined;return Object.values(p.colorPhotos).some(l=>Array.isArray(l)&&l.length)?'':undefined;}
 // A new colour starts its gallery at the first photo without animating through the old colour's slides.
 // «Нещодавно переглянуті»: product ids, newest first, one entry per model (a product card holds all its colours),
 // kept across browser restarts. Storage can be unavailable (private mode); the list then lives in memory only.
@@ -1570,6 +1577,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
             } catch (t) {}
         };
         componentDidMount() {
+            this._orderKeyFresh = storeOrderKeyFreshTab();
             this._previousState = this.state, this.mobileSync(), this._mobileViewportChange = () => {
                 this.mobileSync();
                 // 0 on phones = no paging: every section sits in the swipe carousel.
@@ -1713,6 +1721,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
             try {
                 localStorage.setItem("rubizh.cart", JSON.stringify(e));
             } catch (t) {}
+            if(this._orderKeyFresh&&e.length){this._orderKeyFresh=false;storeOrderKeyRelease();}
             if(this.state?.cartReminderActive)this.storeCartReminderSchedule(e);
             return e;
         };
@@ -3801,10 +3810,10 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                     style: s("var(--legacy-edefea)", "var(--legacy-0b0d0b)")
                 } : null;
             })(),
-            photo: storeCardCover(t) || t.photoData?.[0]?.thumb || t.photos[0] || "",
+            photo: (c => c === "" ? "" : c || t.photoData?.[0]?.thumb || t.photos[0] || "")(storeCardCover(t)),
             href: "/product/" + encodeURIComponent(t.slug || t.id),
-            hasPhoto: !!t.photos[0] && !this.state.brokenPhotos.includes(t.id),
-            noPhoto: !t.photos[0] || this.state.brokenPhotos.includes(t.id),
+            hasPhoto: !!t.photos[0] && storeCardCover(t) !== "" && !this.state.brokenPhotos.includes(t.id),
+            noPhoto: !t.photos[0] || storeCardCover(t) === "" || this.state.brokenPhotos.includes(t.id),
             photoErr: () => this.setState(e => e.brokenPhotos.includes(t.id) ? null : {
                 brokenPhotos: e.brokenPhotos.concat([ t.id ])
             }),
@@ -6064,7 +6073,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
         top5Vm=()=>Dt.map(c=>{const count=c.roots.reduce((n,r)=>n+Number(this._storeCategories?.find(x=>x.path===r)?.product_count||0),0);const params=new URLSearchParams({roots:JSON.stringify(c.roots)});const href=c.roots.length===1?'/catalog/'+(this._storeCategories?.find(x=>x.path===c.roots[0])?.url_path||w(c.roots[0])):'/catalog?'+params;return {title:c.title,sub:'',count:x(count,'товар','товари','товарів'),aria:c.title,href,hasImg:!!c.img,imgStyle:{position:'absolute',inset:0,backgroundImage:`url('${c.img}')`,backgroundSize:'cover',backgroundPosition:'center'},open:ev=>{if(ev?.metaKey||ev?.ctrlKey||ev?.shiftKey||ev?.button>0)return;ev?.preventDefault?.();this.goRoots(c);}};});
         storeLoadRecommendations=async()=>{if(this._recommendations)return;this._recommendations=true;try{const j=await this.storeRequest('/shop/catalog.php?action=storefront');this.storeCache(j.products||[]);this.setState({storePreparedKits:j.kits||[],storeKitsReady:true});}catch(e){this._recommendations=false;this.setState({storeKitsReady:true});}};
         buildKit=cfg=>{const season=cfg.season||'Демісезон',have=cfg.have||[],size=cfg.formSize==='S–M'?'M':cfg.formSize==='XL–XXL'?'XL':'L',num={M:'48',L:'50',XL:'54'}[size],used=new Set(),lines=[],miss={},names=[],budget=cfg.budget>=61000?Infinity:(Number(cfg.budget)||Infinity);let sum=0;const add=(slot,test,prefs=[])=>{const candidates=Z.filter(p=>storeKitEligible(p)&&storeKitPrimary(p)&&!used.has(p.id)&&storeSlot(p)===slot&&storeSeasonOK(p,season)&&(!test||test(p))).sort((a,b)=>(storePalette(b.camo)===storePalette(cfg.camo)?1:0)-(storePalette(a.camo)===storePalette(cfg.camo)?1:0)||a.price-b.price);for(const p of candidates){const keys=Object.keys(p.variants).filter(k=>this.avail(p,k)!=='out'&&!p.variants[k].size_unconfirmed),k=prefs.length?keys.find(k=>prefs.includes(p.variants[k].size_display)||prefs.includes(p.variants[k].size_native)):keys.find(k=>/Один розмір|універс/i.test(p.variants[k].size_display))||keys[0];if(!k||sum+p.variants[k].price>budget)continue;used.add(p.id);sum+=p.variants[k].price;lines.push(this.kitLine(slot,p.id,k));names.push(p.name);delete miss[slot];return p;}miss[slot]=true;return null;};if(!have.includes('Форма')){if(season==='Зима'){add('body',p=>storeRole(p)==='thermal',[size,num]);add('body',p=>['fleece','outer'].includes(storeRole(p)),[size,num]);}else add('body',p=>storeRole(p)==='ubacs'||/сороч|костюм/i.test(p.name),[size,num]);add('legs',p=>storeRole(p)==='pants',[size,num]);}if(!have.includes('Берці'))add('boots',null,[cfg.shoe||'43']);if(!have.includes('Аптечка'))add('med',p=>storeRole(p)==='ifak'||/турнікет|джгут/i.test(p.name));if(!have.includes('Плитоноска з плитами')&&['Штурм','Розвідка'].includes(cfg.spec))add('armor',p=>storeRole(p)==='protection'&&storeHasPlates(p));if(!have.includes('Шолом')&&['Штурм','Розвідка','Оператор БпЛА'].includes(cfg.spec))add('head',p=>/шолом|каск/i.test(p.name));else add('head',p=>season==='Зима'?/шапк|балаклав/i.test(p.name):/кепк|панам|бейсбол/i.test(p.name));add('small',p=>storeRole(p)==='gloves',[size,num]);if(!have.includes('Рюкзак')&&['Штурм','Розвідка','Медик','Оператор БпЛА'].includes(cfg.spec))add('gear',p=>storeRole(p)==='backpack');return {lines,miss,names,sum};};
-        storeImage=(row,p)=>{row.photoLoading='lazy';row.photoPriority='auto';if(!p)return;const urls=[...new Set([storeCardCover(p)].concat((p.photoData||[]).flatMap(x=>[x.thumb,x.url]),p.photos||[]).filter(Boolean))];row.thumb=urls[0]||'';row.photo=urls[0]||'';row.hasThumb=row.hasPhoto=!!urls.length;row.noPhoto=!urls.length;row.photoErr=ev=>{const img=ev.currentTarget,idx=Number(img.dataset.tryIndex||0)+1;img.dataset.tryIndex=idx;if(urls[idx])img.src=urls[idx];else img.style.visibility='hidden';};};
+        storeImage=(row,p)=>{row.photoLoading='lazy';row.photoPriority='auto';if(!p)return;const cover=storeCardCover(p),urls=cover===''?[]:[...new Set([cover].concat((p.photoData||[]).flatMap(x=>[x.thumb,x.url]),p.photos||[]).filter(Boolean))];row.thumb=urls[0]||'';row.photo=urls[0]||'';row.hasThumb=row.hasPhoto=!!urls.length;row.noPhoto=!urls.length;row.photoErr=ev=>{const img=ev.currentTarget,idx=Number(img.dataset.tryIndex||0)+1;img.dataset.tryIndex=idx;if(urls[idx])img.src=urls[idx];else img.style.visibility='hidden';};};
         storeBundleLines=b=>(b.items||[]).map((it,i)=>{const id=typeof it==='string'?it:it.product_id,p=Z.find(p=>p.id===id&&p.storeReady);if(!p||!storeKitEligible(p))return null;const palette=this.state.kitPalettes?.[b.id],wanted=palette||it.color||'',keys=Object.keys(p.variants).filter(k=>this.avail(p,k)!=='out'),colors=[...new Set(keys.map(k=>p.variants[k].color))],neutral=colors.length===1&&['Койот','Олива','Чорний'].includes(storePalette(colors[0]));const exact=keys.filter(k=>!wanted||neutral||p.variants[k].color===wanted||(storePalette(wanted)&&storePalette(p.variants[k].color)===storePalette(wanted))),k=exact.find(k=>['L','50','43','Один розмір'].includes(p.variants[k].size_display))||exact[0]||keys[0];return k?Object.assign(this.kitLine(storeSlot(p),id,k),{qty:it.qty||1,color_fallback:!!wanted&&!neutral&&!exact.length}):null;}).filter(Boolean);
         storeBundleVm=b=>{const lines=this.storeBundleLines(b),c=St(this.kitLines(lines)),ps=lines.map(l=>Z.find(p=>p.id===l.id)),sets=ps.map(p=>[...new Set(Object.values(p.variants).filter(v=>v.availability!=='out_of_stock').map(v=>storePalette(v.color)).filter(Boolean))]).filter(s=>s.length>1||!['Койот','Олива','Чорний'].includes(s[0])),palettes=sets.length?sets.reduce((a,s)=>a.filter(c=>s.includes(c))):[];const row={...b,tag:b.tag||'Готовий комплект',sub:b.note||'',count:lines.length,name:b.name,comp:lines.map(l=>{const p=Z.find(p=>p.id===l.id);return {name:p.name+' · '+p.variants[l.size].color,href:'/product/'+p.slug,priceFmt:storeMoney(p.variants[l.size].price),view:()=>this.open(p.id)};}),compLabel:'Переглянути склад ('+lines.length+')',compOpen:!!this.state.bundleComp?.[b.id],toggleComp:()=>this.setState(s=>({bundleComp:{...(s.bundleComp||{}),[b.id]:!s.bundleComp?.[b.id]}})),fullFmt:storeMoney(c.full),priceFmt:storeMoney(c.kit),saveFmt:'вигода '+storeMoney(c.save)+(vt(c)?' · '+vt(c):''),open:()=>{this.setState({kit:lines,kitDefinition:b.id,kitFromPick:false,kitMiss:{},kitSeason:b.id==='b1'?'Літо':b.id==='b3'?'Зима':'Демісезон'});this.go('kit');},go:()=>{this.setState({kit:lines,kitDefinition:b.id,kitFromPick:false,kitMiss:{},kitSeason:b.id==='b1'?'Літо':b.id==='b3'?'Зима':'Демісезон'});this.go('kit');},hasPalettes:palettes.length>=2,palettes:palettes.map(color=>({name:color,pick:ev=>{ev?.stopPropagation?.();const ps={...(this.state.kitPalettes||{}),[b.id]:color};try{localStorage.setItem('rubizh.kit.palettes',JSON.stringify(ps))}catch(e){}this.setState({kitPalettes:ps});},style:{border:'1px solid '+(this.state.kitPalettes?.[b.id]===color?'var(--legacy-f2a33c)':'var(--legacy-3a423b)'),background:'transparent',color:'var(--legacy-edefea)',padding:'7px 9px',cursor:'pointer'}})),colorFallback:lines.some(l=>l.color_fallback)};row.add=row.open;this.storeImage(row,ps[0]);return row;};
         storeChangeKitColor=(uid,color)=>this.setState(s=>{const kit=s.kit.map(l=>{if(l.uid!==uid)return l;const p=Z.find(p=>p.id===l.id),old=p?.variants[l.size],keys=Object.keys(p?.variants||{}).filter(k=>p.variants[k].color===color&&this.avail(p,k)!=='out'),k=keys.find(k=>p.variants[k].size_native===old?.size_native||p.variants[k].size_display===old?.size_display);return {...l,color,size:k||l.size,needsSize:!k,previousSize:old?.size_display};});return {kit};});
@@ -6373,7 +6382,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                     cartReminderActive:false,
                     orderEmailStatus: t.email_status || "pending",
                     checkoutDirty: !1
-                }), this.go("done");if(e.payment_status==='paid')this.storeTrackPaid(e);if(t.payment?.url&&/^https:\/\/(?:pay\.mbnk\.biz|pay\.monobank\.ua)\//.test(t.payment.url))window.location.assign(t.payment.url);
+                }), this._orderFingerprint = null, storeOrderKeyDone(), this._orderKeyFresh = !0, this.go("done");if(e.payment_status==='paid')this.storeTrackPaid(e);if(t.payment?.url&&/^https:\/\/(?:pay\.mbnk\.biz|pay\.monobank\.ua)\//.test(t.payment.url))window.location.assign(t.payment.url);
             } catch (t) {
                 this.setState({
                     orderSending: !1,

@@ -69,5 +69,20 @@
 
 Порядок: Phase 2 (A-1…A-4) → Phase 7 (S-1) → Phase 3 (K-1) → Phase 4 (K-2…K-10) → Phase 5 (C-*) → Phase 6 (P-*) → Q-6 → Q-7 → Q-5 → Q-4 → Q-8/Q-9 (документы) → B-1 → Phase 8 (регрессия, browser QA, документы) → финальный `/ecc:code-review` → `08-RELEASE_READINESS.md`.
 
+## VERIFIED CHECKPOINT после каждого этапа (требование владельца 2026-10-11)
+
+Этапы (сопоставление, на подтверждение владельца): ADDENDUM №2 Phase 2 → **этап 1** (главная), Phase 3 → **2** (онбординг конструктора), Phase 4 → **3** (удобство конструктора), Phase 5 → **4** (каталог), Phase 6 → **5** (кабинет), Phase 7 → **6** (соцсети).
+
+**Definition of Done этапа** — все пункты выполнены на одном и том же HEAD:
+1. Полный `npm test` (известные macOS-ограничения окружения перечислены и совпадают с исходным `59b4685`).
+2. Полная Browser QA Matrix (`qa-matrix`, `qa-cabinet`, `qa-addendum`) + снимки изменённых экранов.
+3. SITE ↔ PIM ↔ CRM в пределах изменений (pim-v3-*, crm-*, release-hardening).
+4. Security, SEO, accessibility, performance (`qa-audit`: axe, Lighthouse; seo/a11y тесты).
+5. CI GitHub для **точного SHA** (требует push — только с разрешения владельца).
+6. Независимый ECC code review (агент `ecc:code-reviewer`) и исправление находок.
+7. Нет открытых P0 и блокирующих P1.
+
+**Checkpoint:** обновить 03/05/08 → `STAGE_CHECKPOINT.md` (SHA SITE и PIM, дата, результаты, восстановление) → отдельный commit → annotated tag `rubizh-stage-N-verified` (только если пункты 1–7 зелёные) → чистое дерево. Push коммитов и тегов — только с явного разрешения. Если чего-то нет (например, CI без push) — статус **INCOMPLETE**, без тега `verified`, обычный commit и перечень недостающего. Изменение кода после checkpoint отменяет его подтверждение для нового HEAD.
+
 ## Не входит без отдельного разрешения
 Production deploy, production migrations, включение v3, PIM-патчи, реальные платежи/invoice, реальные ТТН, reset/импорт каталога, изменения CRM, merge в main.

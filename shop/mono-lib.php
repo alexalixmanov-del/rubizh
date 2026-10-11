@@ -90,8 +90,14 @@ function monoApplyEvent(PDO $db,array $event,string $hash,bool $signedWebhook=fa
 function monoInvalidateFailed(PDO $db,int $orderId): void {
  $q=$db->prepare('SELECT * FROM rubizh_mono_invoices WHERE order_id=? ORDER BY id DESC LIMIT 1');$q->execute([$orderId]);$last=$q->fetch(PDO::FETCH_ASSOC);
  if(!$last||$last['status']!=='failure'||!$last['invoice_id'])return;
- $done=$db->prepare("SELECT COUNT(*) FROM rubizh_np_audit WHERE order_id=? AND action='mono_invoice_removed' AND note=?");$done->execute([$orderId,$last['invoice_id']]);if((int)$done->fetchColumn()>0)return;
- try{monoApi('invoice/remove',['invoiceId'=>$last['invoice_id']]);}catch(Throwable $e){error_log('rubizh mono remove: '.get_class($e));throw new RuntimeException('Попередній рахунок ще не закрито в банку. Новий рахунок не створюємо — спробуйте за кілька хвилин.');}
+ $done=$db->prepare("SELECT COUNT(*) FROM rubizh_np_audit WHERE order_id=? AND action IN ('mono_invoice_removed','mono_invoice_final_not_removed') AND note=?");$done->execute([$orderId,$last['invoice_id']]);if((int)$done->fetchColumn()>0)return;
+ try{monoApi('invoice/remove',['invoiceId'=>$last['invoice_id']]);}catch(Throwable $e){error_log('rubizh mono remove: '.get_class($e));
+  // The bank did not close it: only its own final, non-payable status lets a new invoice through (no double payment).
+  $state='';try{$r=monoApi('invoice/status?invoiceId='.rawurlencode($last['invoice_id']));if(($r['invoiceId']??null)===$last['invoice_id'])$state=(string)($r['status']??'');}catch(Throwable $read){error_log('rubizh mono status: '.get_class($read));}
+  if($state==='expired'){npAudit($db,str_repeat('0',32),'mono_invoice_final_not_removed',$orderId,0,$last['invoice_id']);return;}
+  $seen=$db->prepare("SELECT COUNT(*) FROM rubizh_np_audit WHERE order_id=? AND action='mono_invoice_remove_refused' AND note=?");$seen->execute([$orderId,$last['invoice_id']]);
+  if((int)$seen->fetchColumn()===0)npAudit($db,str_repeat('0',32),'mono_invoice_remove_refused',$orderId,0,$last['invoice_id']);
+  throw new RuntimeException('Попередній рахунок банк ще не закрив. Новий рахунок не створюємо, щоб не було подвійної оплати: менеджер перевірить його й зв’яжеться з вами.');}
  npAudit($db,str_repeat('0',32),'mono_invoice_removed',$orderId,0,$last['invoice_id']);
 }
 // Grace period for the signed webhook before a lost callback is resolved from the bank status read.
@@ -105,7 +111,9 @@ function monoRefresh(PDO $db,array $invoice): void {if(!$invoice['invoice_id'])r
  monoApplyEvent($db,$e,hash('sha256',json_encode($e,JSON_THROW_ON_ERROR)),false,$confirmed);}
 // Cron/worker pass over invoices whose final state is still unknown to the shop. Returns the number of failed checks.
 function monoWorkerRun(PDO $db): int {
- $rows=$db->query("SELECT * FROM rubizh_mono_invoices WHERE invoice_id IS NOT NULL AND (status IN ('created','processing','hold','awaiting_webhook') OR refund_status IN ('processing','unknown')) ORDER BY updated_at LIMIT 25")->fetchAll(PDO::FETCH_ASSOC);$failed=0;
+ // Two queues: invoices waiting for a lost webhook keep their first-observation time and must not starve the rest.
+ $rows=array_merge($db->query("SELECT * FROM rubizh_mono_invoices WHERE invoice_id IS NOT NULL AND (status IN ('created','processing','hold') OR refund_status IN ('processing','unknown')) ORDER BY updated_at LIMIT 25")->fetchAll(PDO::FETCH_ASSOC),
+  $db->query("SELECT * FROM rubizh_mono_invoices WHERE invoice_id IS NOT NULL AND status='awaiting_webhook' AND refund_status NOT IN ('processing','unknown') ORDER BY RAND() LIMIT 10")->fetchAll(PDO::FETCH_ASSOC));$failed=0;
  foreach($rows as $i){try{monoRefresh($db,$i);}catch(Throwable $e){$failed++;}}return $failed;
 }
 function monoRefund(PDO $db,int $orderId,string $actor,string $reason=''): void {

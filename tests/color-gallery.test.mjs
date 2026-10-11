@@ -127,3 +127,22 @@ test('legacy catalog card shows the default colour photo when the first gallery 
   assert.equal(await colour(page,'Чорний').getAttribute('aria-pressed'),'true','the product page opens on the same colour');
  }finally{await browser.close();s.stop();}
 });
+
+// Review finding: when only a colour that is not on sale owns photos, the card must not borrow them for the model.
+test('legacy card never shows a photo owned by another colour when the opening colour has none',{skip,timeout:240000},async()=>{
+ const s=await startSite({enableV3:false});const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||(existsSync('/usr/bin/chromium')?'/usr/bin/chromium':undefined),args:['--no-sandbox']});
+ try{
+  const g=[img('olive-a'),img('olive-b'),img('sand-1')];// gallery[0] belongs to the unavailable colour
+  const coat={id:'leg-coat2',slug:'leg-coat2',name:'Куртка без фото кольору',brand:'Тест',canonical_category_id:'clothing_jackets',category:'Одяг та форма / Куртки',category_path:['Одяг та форма','Куртки'],description:'Тест',photos:g,variants:[
+   variant('S-M','Пісок','M',g),// ownership unknown (whole gallery) and on sale
+   variant('O-M','Олива','M',[img('olive-a'),img('olive-b')],{availability:'out',stock:0})]};
+  php(`define('RUBIZH_AUTH_NO_SESSION',true);require '${s.site}/auth/bootstrap.php';require_once '${s.site}/api/lib.php';save_product(db(),json_decode(${JSON.stringify(JSON.stringify(coat))},true));`);
+  const {writeFileSync}=await import('node:fs');
+  writeFileSync(s.site+'/router.php',`<?php $p=parse_url($_SERVER['REQUEST_URI'],PHP_URL_PATH);if(str_starts_with($p,'/api/')){require __DIR__.'/api/index.php';return;}if($p==='/'||preg_match('~^/(?:product|catalog)(?:/.*)?$~',$p)){require __DIR__.'/storefront.php';return;}return false;`);
+  const page=await browser.newPage({viewport:{width:1280,height:900}});
+  await page.route('https://img.test/**',r=>r.fulfill({contentType:'image/png',body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=','base64')}));
+  await page.goto(s.base+'/catalog');await page.waitForLoadState('networkidle');await page.waitForTimeout(500);
+  const srcs=await page.locator('img[alt="Куртка без фото кольору"]').evaluateAll(x=>x.map(i=>i.getAttribute('src')||''));
+  for(const src of srcs)assert.doesNotMatch(src,/olive/,'no photo of the unavailable colour on the card');
+ }finally{await browser.close();s.stop();}
+});
