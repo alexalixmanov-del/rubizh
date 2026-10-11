@@ -122,6 +122,26 @@ test('payment retry after a failed invoice first invalidates it at the bank; if 
  }finally{site.stop();}
 });
 
+// Owner rule (2026-10-11): in stock → online MonoPay; under order → manager confirmation → invoice → online MonoPay.
+// Production runs the legacy catalog path (PIM v3 off), so the rule is checked on a legacy product.
+test('legacy preorder: order waits for the manager, confirmation unlocks the MonoPay invoice; nothing is payable before',{skip,timeout:180000},async()=>{
+ const site=await startSite({enableV3:false,extraConfig:`,'mono_mock'=>true,'environment'=>'staging','staff_roles'=>['${owner}'=>'OWNER']`});try{
+  const product={id:'leg-pouch',slug:'leg-pouch',name:'Підсумок тестовий',brand:'Тест',category:'Підсумки',category_path:['Підсумки'],description:'Тест',photos:['https://example.com/a.jpg'],
+   variants:[{sku:'L-ORD',size:'Один розмір',size_display:'Один розмір',color:'Олива',price:500,availability:'order',lead_time:'7 днів',preorder_confirmed:true},{sku:'L-IN',size:'Один розмір',size_display:'Один розмір',color:'Чорний',price:450,availability:'in',stock:5}]};
+  call(site,`require_once '${site.site}/api/lib.php';save_product($db,json_decode(${JSON.stringify(JSON.stringify(product))},true));`);
+  const buyer=await shopper(site),lines=[{product_id:'leg-pouch',sku:'L-ORD',qty:1,price_mode:'retail'}];
+  const q=await site.post('/shop/checkout-quote.php',{csrf:buyer.csrf,lines,payment:'card'},buyer.headers);assert.equal(q.status,200,JSON.stringify(q.data));
+  const o=await site.post('/shop/order.php',{csrf:buyer.csrf,request_id:'f'.repeat(32),contact,payment:'card',lines,expected_total:q.data.quote.total,catalog_version:q.data.quote.catalog_version},buyer.headers);
+  assert.equal(o.status,200,JSON.stringify(o.data));const id=o.data.order.id;
+  assert.equal(site.sql('SELECT status FROM rubizh_customer_orders WHERE id='+id)[0].status,'new','a preorder waits for the manager');
+  const early=await site.post('/shop/payment-start.php',{csrf:buyer.csrf,order_id:id},buyer.headers);assert.notEqual(early.status,200,'no invoice before confirmation');
+  const confirmed=JSON.parse(call(site,`try{npConfirm($db,${id},'${owner}',true,false,'');echo json_encode(['ok'=>true]);}catch(Throwable $e){echo json_encode(['ok'=>false,'code'=>$e instanceof ShopOrderConflict?$e->reason:null,'message'=>$e->getMessage()]);}`).stdout);
+  assert.equal(confirmed.ok,true,'manager confirmation of a preorder must succeed: '+JSON.stringify(confirmed));
+  const inv=await site.post('/shop/payment-start.php',{csrf:buyer.csrf,order_id:id},buyer.headers);assert.equal(inv.status,200,'invoice after confirmation: '+JSON.stringify(inv.data));
+  assert.equal(+site.sql('SELECT amount FROM rubizh_mono_invoices WHERE order_id='+id)[0].amount,50000);
+ }finally{site.stop();}
+});
+
 test('storefront code offers no COD option, no COD default and no COD wording for new orders',()=>{
  const html=readFileSync(path.join(root,'index.html'),'utf8');
  const client=html.match(/src="\/assets\/(shop-client\.[^"?]+\.js)/)[1];

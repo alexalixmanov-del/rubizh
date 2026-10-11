@@ -55,7 +55,9 @@ function shopValidateOrder(PDO $db,array $input,string $phase='checkout',?array 
                 throw new ShopOrderConflict('AVAILABILITY_CHANGED',['line_no'=>$i,'old'=>$old['availability_v3']??$old['availability'],'current'=>$l['availability_v3']??$l['availability']],'Наявність змінилася. Повторно перевірте замовлення.');
         }
         if($phase!=='checkout'&&($l['sku']??'')==='')throw new ShopOrderConflict('SKU_UNAVAILABLE',['line_no'=>$i],'Оберіть реальний SKU для кожного запиту розміру.');
-        if($phase!=='checkout'&&empty($l['payment_allowed']))throw new ShopOrderConflict('PAYMENT_NOT_ALLOWED',['line_no'=>$i],'PIM ще не дозволяє оплату цього SKU. Потрібне актуальне підтвердження.');
+        // PIM v3 lines carry PIM's payment permission. Legacy lines have no such flag: for an under-order
+        // legacy SKU the manager's confirmation is the decision (owner rule: confirmation → invoice → MonoPay).
+        if($phase!=='checkout'&&empty($l['payment_allowed'])&&($l['contract_version']??null)===3)throw new ShopOrderConflict('PAYMENT_NOT_ALLOWED',['line_no'=>$i],'PIM ще не дозволяє оплату цього SKU. Потрібне актуальне підтвердження.');
     }
     if($order!==null){
         $changed=shopMoney($order['total'])!==shopMoney($quote['total'])+shopMoney($order['shipping_amount']??0);
