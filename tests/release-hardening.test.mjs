@@ -105,6 +105,23 @@ test('an accepted price change is refused while a card invoice is open, and allo
  }finally{site.stop();}
 });
 
+// D-13: a retry must never leave two payable invoices for one order.
+test('payment retry after a failed invoice first invalidates it at the bank; if that fails no second invoice is created',{skip,timeout:180000},async()=>{
+ const site=await fixture({extra:`,'staff_roles'=>['${owner}'=>'OWNER']`});try{
+  const buyer=await shopper(site),o=await checkout(site,buyer);assert.equal(o.status,200,JSON.stringify(o.data));const id=o.data.order.id,a=await startInvoice(site,buyer,id);
+  assert.equal((await site.webhook(a,'failure')).status,200);
+  const retry=removeFails=>JSON.parse(call(site,`define('RUBIZH_MONO_TESTS',true);$GLOBALS['calls']=[];$GLOBALS['mono_test_transport']=function($p,$b){$GLOBALS['calls'][]=[$p,$b];if($p==='invoice/remove'&&${removeFails?'true':'false'})throw new RuntimeException('bank refused');if($p==='invoice/create')return ['invoiceId'=>'retry'.bin2hex(random_bytes(4)),'pageUrl'=>'https://pay.mbnk.biz/retry'];return [];};try{monoCreate($db,${id},'${owner}');$ok=true;}catch(Throwable $e){$ok=false;}echo json_encode(['ok'=>$ok,'calls'=>$GLOBALS['calls']]);`).stdout);
+  const refused=retry(true);
+  assert.equal(refused.ok,false,'no new invoice while the old one may still be payable');
+  assert.deepEqual(refused.calls.map(c=>c[0]),['invoice/remove']);assert.equal(refused.calls[0][1].invoiceId,a.invoice_id);
+  assert.equal(+site.sql('SELECT COUNT(*) n FROM rubizh_mono_invoices WHERE order_id='+id)[0].n,1);
+  const done=retry(false);
+  assert.equal(done.ok,true,JSON.stringify(done));assert.deepEqual(done.calls.map(c=>c[0]),['invoice/remove','invoice/create'],'invalidate first, then create');
+  assert.equal(+site.sql('SELECT COUNT(*) n FROM rubizh_mono_invoices WHERE order_id='+id)[0].n,2);
+  const again=retry(false);assert.deepEqual(again.calls.map(c=>c[0]),[],'the open new invoice is reused; nothing else is created or removed');
+ }finally{site.stop();}
+});
+
 test('storefront code offers no COD option, no COD default and no COD wording for new orders',()=>{
  const html=readFileSync(path.join(root,'index.html'),'utf8');
  const client=html.match(/src="\/assets\/(shop-client\.[^"?]+\.js)/)[1];

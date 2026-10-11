@@ -9,6 +9,7 @@ function monoMockApi(string $path,?array $body): array {
         $id='mock'.bin2hex(random_bytes(10));return ['invoiceId'=>$id,'pageUrl'=>'https://pay.mbnk.biz/'.$id];
     }
     if(str_starts_with($path,'invoice/status'))return ['status'=>'created'];
+    if($path==='invoice/remove')return [];
     if($path==='pubkey')throw new RuntimeException('Mock bank: staging key must be preloaded');
     throw new RuntimeException('Mock bank: unsupported call');
 }

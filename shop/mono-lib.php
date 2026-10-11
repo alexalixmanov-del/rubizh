@@ -18,7 +18,7 @@ function monoPageUrl(string $url): bool {$p=parse_url($url);return ($p['scheme']
 function monoCreate(PDO $db,int $orderId,?string $actor=null): array {
  if($actor!==null)shopRequirePermission($actor,'payment.invoice.create');
  elseif(!shopMayReadOrder($db,$orderId))throw new ShopPermissionException('Замовлення недоступне.');
- return npLocked($db,$orderId,function()use($db,$orderId,$actor){$db->beginTransaction();try{$order=npOrder($db,$orderId);if(in_array($order['payment_status'],['paid','refunded'],true)||in_array($order['status'],['cancelled','returned'],true))throw new RuntimeException('Це замовлення вже оплачене або закрите.');
+ return npLocked($db,$orderId,function()use($db,$orderId,$actor){monoInvalidateFailed($db,$orderId);$db->beginTransaction();try{$order=npOrder($db,$orderId);if(in_array($order['payment_status'],['paid','refunded'],true)||in_array($order['status'],['cancelled','returned'],true))throw new RuntimeException('Це замовлення вже оплачене або закрите.');
  if(!shopPaymentReady($order))throw new RuntimeException('Дочекайтеся підтвердження наявності менеджером.');
  if(function_exists('pimV3RevalidateForPayment'))pimV3RevalidateForPayment($db,$order);
  if(($order['contact']['payment']??'')!=='card')throw new RuntimeException('Для замовлення обрано інший спосіб оплати.');
@@ -79,6 +79,16 @@ function monoApplyEvent(PDO $db,array $event,string $hash,bool $signedWebhook=fa
  if($event['status']==='expired'&&shopNoOpenCardInvoice($db,(int)$invoice['order_id'])){shopReservationTransition($db,(int)$invoice['order_id'],'EXPIRED','MONOPAY');$db->prepare("UPDATE rubizh_customer_orders SET status='cancelled',updated_at=UTC_TIMESTAMP() WHERE id=? AND payment_status NOT IN ('paid','refunded')")->execute([$invoice['order_id']]);if(!empty($GLOBALS['rubizh_pim_v3_columns']))$db->prepare("UPDATE rubizh_customer_orders SET pim_order_state='CANCELLED' WHERE id=? AND payment_status NOT IN ('paid','refunded') AND pim_contract_version=3")->execute([$invoice['order_id']]);}
  if($bankConfirmed)npAudit($db,str_repeat('0',32),'mono_status_confirmed',(int)$invoice['order_id'],0,'signed webhook not received; bank status read confirmed '.$event['status']);
  npAudit($db,str_repeat('0',32),'mono_'.$event['status'],(int)$invoice['order_id']);$db->commit();}catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}});
+}
+// Before a retry creates a new invoice, the previous failed one is invalidated at the bank (invoice/remove
+// works only while nothing was paid). If the bank refuses, no second payable invoice is created.
+// expired invoices are already invalid at the bank.
+function monoInvalidateFailed(PDO $db,int $orderId): void {
+ $q=$db->prepare('SELECT * FROM rubizh_mono_invoices WHERE order_id=? ORDER BY id DESC LIMIT 1');$q->execute([$orderId]);$last=$q->fetch(PDO::FETCH_ASSOC);
+ if(!$last||$last['status']!=='failure'||!$last['invoice_id'])return;
+ $done=$db->prepare("SELECT COUNT(*) FROM rubizh_np_audit WHERE order_id=? AND action='mono_invoice_removed' AND note=?");$done->execute([$orderId,$last['invoice_id']]);if((int)$done->fetchColumn()>0)return;
+ try{monoApi('invoice/remove',['invoiceId'=>$last['invoice_id']]);}catch(Throwable $e){error_log('rubizh mono remove: '.get_class($e));throw new RuntimeException('Попередній рахунок ще не закрито в банку. Новий рахунок не створюємо — спробуйте за кілька хвилин.');}
+ npAudit($db,str_repeat('0',32),'mono_invoice_removed',$orderId,0,$last['invoice_id']);
 }
 // Grace period for the signed webhook before a lost callback is resolved from the bank status read.
 const MONO_WEBHOOK_GRACE_SECONDS=900;
