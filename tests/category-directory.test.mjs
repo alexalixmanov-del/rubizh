@@ -45,7 +45,9 @@ test('Catalog category pages have two short rows, correct arrows, and no generic
  await page.getByRole('button',{name:'Попередні категорії'}).click();assert.equal(await page.locator('[data-catalog-section]').count(),10);
  await page.getByRole('combobox',{name:'Сортування товарів'}).selectOption('exp');await page.waitForFunction(()=>new URL(location.href).searchParams.get('sort')==='exp');
  await page.waitForFunction(()=>document.querySelector('[data-card-name]')?.textContent.includes('Плитоноска'));
- await page.setViewportSize({width:390,height:844});await page.waitForFunction(()=>document.querySelectorAll('[data-catalog-section]').length===4);
+ // Phones: one swipe carousel with every section instead of 4-per-page paging (owner decision 2026-10-11).
+ await page.setViewportSize({width:390,height:844});await page.waitForFunction(()=>document.querySelectorAll('[data-catalog-section]').length===18);
+ assert.equal(await page.locator('[data-catalog-sections]').evaluate(g=>getComputedStyle(g).display+'|'+getComputedStyle(g).overflowX),'flex|auto');
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
  await page.locator('[data-catalog-section]').filter({hasText:'Взуття'}).click();await page.locator('[data-card-name]').filter({hasText:'Берці'}).waitFor();
 }));

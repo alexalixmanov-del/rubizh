@@ -12,6 +12,13 @@ function storeLegacyColor(s,e,h){const all=Object.values(s.variants),confirmed=a
  return (buyable.find(photo)||buyable[0]||confirmed[0]||all[0])?.color||'';}
 function storeGalleryPhotos(s,color){const m=s.colorPhotos;if(!m||s.v3)return s.photoData||[];return Array.isArray(m[color])?m[color]:[];}
 // A new colour starts its gallery at the first photo without animating through the old colour's slides.
+// «Нещодавно переглянуті»: product ids, newest first, one entry per model (a product card holds all its colours),
+// kept across browser restarts. Storage can be unavailable (private mode); the list then lives in memory only.
+const STORE_SEEN_KEY='rubizh.seen',STORE_SEEN_MAX=12;
+function storeSeenClean(ids){return [...new Set((Array.isArray(ids)?ids:[]).filter(x=>typeof x==='string'&&/^[A-Za-z0-9_.:-]{1,191}$/.test(x)))].slice(0,STORE_SEEN_MAX);}
+function storeSeenLoad(){try{return storeSeenClean(JSON.parse(localStorage.getItem(STORE_SEEN_KEY)||'[]'));}catch{return [];}}
+function storeSeenSave(ids){const clean=storeSeenClean(ids);try{localStorage.setItem(STORE_SEEN_KEY,JSON.stringify(clean));}catch{}return clean;}
+function storeSeenList(products,seen,current){return seen.filter(id=>id!==current).map(id=>products.find(p=>p.id===id)).filter(p=>p&&p.storeReady).slice(0,8);}
 function storeGalleryReset(){try{const track=document.querySelector('[data-gal-track]');track&&track.scrollTo({left:0,behavior:'instant'});}catch{}}
 
 // Один список слотів конструктора: сервер передає його в RUBIZH_BOOT.kitSlots (shop/catalog-lib.php · shopKitSlotPatterns)
@@ -1309,7 +1316,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
             burger: !1,
             miniCart: null,
             fav: [],
-            seen: [],
+            seen: storeSeenLoad(),
             notify: !1,
             page: "delivery",
             acc: "overview",
@@ -1535,7 +1542,8 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
         componentDidMount() {
             this._previousState = this.state, this.mobileSync(), this._mobileViewportChange = () => {
                 this.mobileSync();
-                const size=window.innerWidth>=1200?10:window.innerWidth>=1000?8:window.innerWidth>=700?6:4;
+                // 0 on phones = no paging: every section sits in the swipe carousel.
+                const size=window.innerWidth>=1200?10:window.innerWidth>=1000?8:window.innerWidth>=700?6:0;
                 if(size!==this.state.catalogSectionsPerPage)this.setState({catalogSectionsPerPage:size,catalogSectionsPage:0});
             },
             window.addEventListener("resize", this._mobileViewportChange, {
@@ -1579,6 +1587,8 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
         }
         componentDidUpdate() {
             this.mobileSync();
+            // A product page counts as viewed however it was reached: card click, direct link, reload or back/forward.
+            if(this.state.screen==='product'&&this.state.current&&this._seenTracked!==this.state.current&&Z.some(p=>p.id===this.state.current&&p.storeReady)){this._seenTracked=this.state.current;if((this.state.seen||[])[0]!==this.state.current)this.setState(s=>({seen:storeSeenSave([s.current].concat((s.seen||[]).filter(id=>id!==s.current)))}));}
             if(this.state.screen==='done'&&this._receiptKey!==this.storeReceiptNumber()){this._receiptKey=this.storeReceiptNumber();this.storeLoadReceipt();}
             const t = this._previousState || {};
             if (this._previousState = this.state, this.state.storeQuote && (t.cart !== this.state.cart || t.delivery !== this.state.delivery)) return void this.setState({
@@ -1693,7 +1703,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
         };
         open=t => {const p=Z.find(p=>p.id===t);if(p)window.rubizhAnalytics?.track('view_item',{value:p.price,items:[{item_id:Object.values(p.variants)[0]?.sku,item_name:p.name,price:p.price,quantity:1}]});
             this.setState(e => ({
-                seen: [ t ].concat(e.seen.filter(e => e !== t)).slice(0, 6)
+                seen: storeSeenSave([ t ].concat(e.seen.filter(e => e !== t)))
             })), this.go("product", {
                 current: t,
                 size: null,
@@ -4208,8 +4218,8 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                 isFav: "fav" === t.screen,
                 favItems: Z.filter(e => e.storeReady && t.fav.includes(e.id)).map(this.cardVm),
                 favEmpty: 0 === t.fav.length,
-                seenItems: Z.filter(e => e.storeReady && t.seen.includes(e.id) && e.id !== t.current).map(this.cardVm),
-                hasSeen: t.seen.filter(e => e !== t.current).length > 0,
+                seenItems: storeSeenList(Z, t.seen, t.current).map(this.cardVm),
+                hasSeen: storeSeenList(Z, t.seen, t.current).length > 0,
                 isTrack: "track" === t.screen,
                 goTrack: () => this.go("track", {
                     burger: !1
@@ -6059,9 +6069,14 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                         const e = Z.find(e => e.id === t);
                         e && (e.storeReady = !1);
                     }
-                    i.length && this.setState({
-                        storeError: "Деякі збережені товари більше недоступні. Перевірте кошик і комплект."
-                    });
+                    // Removed or archived products leave the viewed history quietly; only cart/kit losses need the shopper.
+                    if (i.length) {
+                        const kept = [ ...this.state.cart || [], ...this.state.kit || [] ].some(l => i.includes(l.id));
+                        this.setState(s => ({
+                            seen: storeSeenSave((s.seen || []).filter(id => !i.includes(id))),
+                            ...kept ? { storeError: "Деякі збережені товари більше недоступні. Перевірте кошик і комплект." } : {}
+                        }));
+                    }
                 }
             } catch (t) {
                 this.setState({
@@ -6962,7 +6977,8 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                 tile.hasSrc=!!tile.src;
                 tile.number=String(index+1).padStart(2,'0');
             }
-            const sectionsSize=e.catalogSectionsPerPage||(window.innerWidth>=1200?10:window.innerWidth>=1000?8:window.innerWidth>=700?6:4);
+            // Phones swipe through every section in one carousel (category-carousel CSS); wider screens page.
+            const sectionsSize=e.catalogSectionsPerPage||(window.innerWidth>=1200?10:window.innerWidth>=1000?8:window.innerWidth>=700?6:Math.max(1,sectionsSource.length));
             const sectionsPages=Math.max(1,Math.ceil(sectionsSource.length/sectionsSize));
             const sectionsPage=Math.min(e.catalogSectionsPage||0,sectionsPages-1);
             t.subTiles=sectionsSource.slice(sectionsPage*sectionsSize,(sectionsPage+1)*sectionsSize);

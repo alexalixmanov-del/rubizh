@@ -41,6 +41,8 @@
 <link rel="stylesheet" href="/assets/kit-parameters.2026100606.css">
 <link rel="stylesheet" href="/assets/mobile-polish.2026100702.css?v=2026100703">
 <link rel="stylesheet" href="/assets/site-qa.2026101101.css">
+<link rel="stylesheet" href="/assets/recently-viewed.2026101101.css">
+<link rel="stylesheet" href="/assets/category-carousel.2026101101.css">
 <script src="/assets/site-qa.2026101101.js" defer></script>
 </head>
 <body>
@@ -2029,13 +2031,13 @@
   <sc-if value="{{ hasSeen }}" hint-placeholder-val="{{ false }}">
     <section style="max-width:1320px;margin:0 auto;padding:clamp(28px,4vw,48px) clamp(16px,4vw,40px) 0">
       <div style="font-family:'UAH','Oswald',sans-serif;font-size:13.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--legacy-99a398);border-bottom:1px solid var(--legacy-2a322b);padding-bottom:10px;margin-bottom:14px">Нещодавно переглянуті</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:10px">
+      <div class="rz-seen-grid" data-seen-grid="1">
         <sc-for list="{{ seenItems }}" as="p" hint-placeholder-count="4">
-          <div style="border:1px solid var(--legacy-2a322b);background:var(--legacy-141815);min-width:0" style-hover="border-color:var(--legacy-4c5a36)">
-            <div tabindex="0" role="button" sc-camel-on-click="{{ p.open }}" style="height:110px;overflow:hidden;background:var(--legacy-0f120f);cursor:pointer"><sc-if value="{{ p.hasPhoto }}"><img sc-camel-src="{{ p.photo }}" sc-camel-on-error="{{ p.photoErr }}" alt="{{ p.name }}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover"></sc-if><sc-if value="{{ !p.hasPhoto }}"><image-slot id="{{ p.slot }}" shape="rect" fit="cover" placeholder="{{ p.ph }}"></image-slot></sc-if></div>
-            <div style="padding:11px">
-              <div tabindex="0" role="button" sc-camel-on-click="{{ p.open }}" style="font-family:'UAH','Oswald',sans-serif;font-size:13.5px;text-transform:uppercase;line-height:1.2;cursor:pointer">{{ p.name }}</div>
-              <div style="font-family:'UAH','Oswald',sans-serif;font-size:15px;margin-top:6px">{{ p.priceFmt }}</div>
+          <div class="rz-seen-card" data-seen-card="1" style-hover="border-color:var(--legacy-4c5a36)">
+            <div class="rz-seen-photo" data-seen-photo="1" tabindex="0" role="button" aria-label="{{ p.name }}" sc-camel-on-click="{{ p.open }}"><sc-if value="{{ p.hasPhoto }}"><img sc-camel-src="{{ p.photo }}" sc-camel-on-error="{{ p.photoErr }}" alt="{{ p.name }}" loading="lazy" decoding="async"></sc-if><sc-if value="{{ !p.hasPhoto }}"><image-slot id="{{ p.slot }}" shape="rect" fit="contain" placeholder="{{ p.ph }}"></image-slot></sc-if></div>
+            <div class="rz-seen-body">
+              <div class="rz-seen-name" tabindex="0" role="button" sc-camel-on-click="{{ p.open }}">{{ p.name }}</div>
+              <div class="rz-seen-price">{{ p.priceFmt }}</div>
             </div>
           </div>
         </sc-for>
