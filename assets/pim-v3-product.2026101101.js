@@ -75,7 +75,7 @@ window.storeV3ProductVm=function(app,t,e,s){
  t.addLabel=!v?'Оберіть розмір':state==='pay'?'До кошика · '+money(price*qty):state==='request'?'Надіслати заявку':(v.availability_v3==='UNKNOWN'?'Уточнимо наявність':'Немає в наявності');
  t.mobBuyLabel=!v?'Оберіть розмір':state==='pay'?'До кошика':state==='request'?'Надіслати заявку':'Недоступно';t.mobSizeLabel=v?'Розмір: '+(v.size_display||'—'):'Оберіть розмір';
  const add=()=>v&&state!=='blocked'&&app.add(s.id,chosen,qty);
- t.addProduct=add;t.oneClick=()=>add()?app.go('cart'):app.setState({addErr:'Оберіть розмір'});t.mobBuy=()=>v?add():document.querySelector('[data-product-sizes]')?.scrollIntoView({block:'center',behavior:'smooth'});
+ t.addProduct=add;t.oneClick=()=>add()?app.go('cart'):app.setState({addErr:'Оберіть розмір'});t.mobBuy=()=>v?add():document.querySelector('[data-size-grid]')?.scrollIntoView({block:'center',behavior:'smooth'});
 };
 // Cart → server: exact MODEL/COLOR/SKU or a size request without SKU. Prices/flags are never sent as authority.
 window.storeV3PricingLine=function(l,p,v){

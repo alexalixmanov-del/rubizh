@@ -98,6 +98,12 @@ test('mobile 390px touch: tapping a colour swaps photos and keeps the page free 
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),true,'no horizontal page scroll');
   await colour(page,'Олива').tap();
   await page.waitForFunction(()=>[...document.querySelectorAll('[data-gal-track] img')].every(i=>i.getAttribute('src')?.includes('olive')));
+  // The sticky "choose size" action really brings the size grid into view (was a dead selector).
+  const inView=()=>page.evaluate(()=>{const r=document.querySelector('[data-size-grid]').getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight;});
+  await page.evaluate(()=>{const g=document.querySelector('[data-size-grid]');window.scrollTo(0,g.getBoundingClientRect().top+scrollY+innerHeight*1.5);});
+  await page.waitForTimeout(200);assert.equal(await inView(),false,'precondition: the size grid is off screen');
+  await page.locator('[data-mob-buy] [role="button"]').tap();
+  await page.waitForFunction(()=>{const r=document.querySelector('[data-size-grid]').getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight;},null,{timeout:3000});
   assert.deepEqual(errors,[]);
  }finally{await browser.close();s.stop();}
 });
