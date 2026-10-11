@@ -35,9 +35,16 @@ test('Q-5: high-risk actions need a fresh login; low-risk ones do not',{skip,tim
   const id=site.orderId,stale=site.as(OWNER,{age:3600});
   const r=await stale({action:'refund.execute',order_id:id,reason:'повернення коштів покупцю'});
   assert.equal(r.status,403);assert.match(r.data.error,/увійдіть ще раз|підтвердьте вхід/i);
-  const fresh=await site.as(OWNER)({action:'refund.execute',order_id:id,reason:'повернення коштів покупцю'});
+  const blind=await site.as(OWNER)({action:'refund.execute',order_id:id,reason:'повернення коштів покупцю'});
+  assert.equal(blind.status,409,'a refund must name the order version it was prepared on');assert.equal(blind.data.error_code,'STATE_REQUIRED');
+  const version=site.sql('SELECT updated_at FROM rubizh_customer_orders WHERE id='+id)[0].updated_at;
+  const fresh=await site.as(OWNER)({action:'refund.execute',order_id:id,reason:'повернення коштів покупцю',expected_updated_at:version});
   assert.notEqual(fresh.status,403,'a fresh owner passes the identity check (the unpaid order is then refused by state)');assert.match(fresh.data.error||'',/не оплачене/i);
-  assert.equal((await stale({action:'invoice.create',order_id:id})).status,200,'invoice creation is not high-risk');
+  const old=site.as(OWNER,{age:3600});// rewrites the owner session with an hour-old login
+  assert.equal((await old({action:'invoice.create',order_id:id})).status,200,'invoice creation is not high-risk');
+  // The settings page checks the owner role only; it moves no money, so an older login still opens it.
+  const settings=await site.get('/shop/settings.php',{Cookie:'rubizh_customer='+('s'+OWNER).slice(0,32)});
+  assert.equal(settings.status,200,'owner settings page without step-up: '+settings.text.slice(0,120));
  }finally{site.stop();}
 });
 

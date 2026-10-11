@@ -56,7 +56,7 @@ function sendPhoneCode(string $phone, string $code, string $id): void {
 // Q-6: a request that looks automated must first pass a small proof-of-work check (no third-party CAPTCHA, CSP-safe,
 // solved invisibly by auth/login.js). Without JavaScript the message offers email login as the accessible fallback.
 final class PhoneCheckRequired extends RuntimeException {}
-function phoneCheckBits(): int {return max(8,min(24,(int)(authConfig()['sms_check_bits'] ?? 16)));}
+function phoneCheckBits(): int {return max(8,min(20,(int)(authConfig()['sms_check_bits'] ?? 16)));}
 function phoneCheckIssue(string $phone): void {$_SESSION['sms_check']=['nonce'=>bin2hex(random_bytes(16)),'bits'=>phoneCheckBits(),'phone'=>hash('sha256',$phone),'expires'=>time()+300];}
 function phoneCheckValid(string $phone): bool {
     $c=$_SESSION['sms_check'] ?? null; $answer=$_POST['sms_check'] ?? '';
@@ -91,7 +91,7 @@ function phoneRequest(string $phone): void {
         if ($global>=$limit) { throw new RuntimeException('SMS-вхід тимчасово недоступний. Скористайтеся email.'); }
         // D-15: 30% of the daily budget stays for numbers that already belong to a customer.
         $known=identityFind('phone',$phone)!==null;
-        if (!$known && $global>=(int)floor($limit*0.7)) { throw new RuntimeException('SMS для нових номерів тимчасово обмежено. Увійдіть через email — це так само безпечно.'); }
+        if (!$known && $global>=(int)floor($limit*0.7)) { throw new RuntimeException('SMS-вхід тимчасово недоступний. Скористайтеся email.'); }// same text as the global limit: no account-existence oracle
         $q=$db->prepare('SELECT COUNT(*) FROM rubizh_phone_challenges WHERE phone=? AND sent_at>?'); $q->execute([$phone,$now-3600]); $phoneHour=(int)$q->fetchColumn();
         // The check is a deterrent (hard limits above do the protecting); above 60% it applies to every number alike.
         $suspicious=$ipBurst>=3 || $phoneHour>=2 || $global>=(int)floor($limit*0.6);

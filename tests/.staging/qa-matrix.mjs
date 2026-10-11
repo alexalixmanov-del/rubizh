@@ -7,7 +7,8 @@ const out=process.argv[2];mkdirSync(out+'/shots',{recursive:true});
 const {site,pages}=await startQaSite();
 const results={started:new Date().toISOString(),pages:[],flows:[]};
 try{
- const widths=[320,360,375,390,414,430,768,820,1024,1280,1440,1920];
+ const widths=process.env.QA_WIDTHS?process.env.QA_WIDTHS.split(',').map(Number):[320,360,375,390,414,430,768,820,1024,1280,1440,1920];
+ const flowAt=process.env.QA_FLOW_ALL?new Set(widths):new Set([390,768,1280]);
  for(const [bname,engine] of [['chromium',chromium],['webkit',webkit],['firefox',firefox]]){
   const browser=await engine.launch(bname==='chromium'?{executablePath:process.env.CHROMIUM_PATH}:{});
   for(const w of widths){
@@ -27,7 +28,7 @@ try{
     await page.close();
    }
    // Purchase flow at three representative widths: colour → size → cart → checkout; only card/invoice offered.
-   if([390,768,1280].includes(w)){
+   if(flowAt.has(w)){
     const page=await context.newPage(),errors=[],steps=[];page.on('pageerror',e=>errors.push(e.message.slice(0,160)));
     try{
      await page.goto(site.base+'/product/qa-jacket');await page.locator('[data-product-colors] button').first().waitFor({timeout:20000});

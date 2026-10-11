@@ -2,7 +2,7 @@
 // Storefront views on the demo preview (dev/preview.mjs); the account and order page on the isolated QA fixture with a
 // synthetic customer session. Records JS errors, horizontal overflow and screenshots; synthetic data only.
 // Usage: node tests/.staging/qa-addendum.mjs OUT_DIR
-import {chromium,webkit} from '/Users/l/Projects/rubizh/node_modules/playwright/index.mjs';
+import {chromium,webkit,firefox} from '/Users/l/Projects/rubizh/node_modules/playwright/index.mjs';
 import {startPreview} from '/Users/l/Projects/rubizh/dev/preview.mjs';
 import {startQaSite,png} from './qa-fixture.mjs';
 import {writeFileSync,mkdirSync} from 'node:fs';
@@ -37,10 +37,10 @@ try{
   ['catalog-search-empty',preview+'/catalog?q='+encodeURIComponent('zzzнемає'),async p=>{}],
   ['account',site.base+'/auth/?tab=orders&view=active',async p=>{},{cookie:SID}],
   ['order-detail',site.base+'/auth/?tab=orders&order='+orderId,async p=>{},{cookie:SID}]];
- for(const [bname,engine] of [['chromium',chromium],['webkit',webkit]]){
+ for(const [bname,engine] of [['chromium',chromium],['webkit',webkit],...(process.env.QA_FIREFOX?[['firefox',firefox]]:[])]){
   const browser=await engine.launch(bname==='chromium'?{executablePath:process.env.CHROMIUM_PATH}:{});
   for(const w of widths)for(const [name,url,act,opt={}] of views){
-   const mobile=w<768;const context=await browser.newContext({viewport:{width:w,height:mobile?844:900},...(mobile?{isMobile:true,hasTouch:true}:{})});
+   const mobile=w<768&&bname!=='firefox';const context=await browser.newContext({viewport:{width:w,height:mobile?844:900},...(mobile?{isMobile:true,hasTouch:true}:{})});
    await context.route('https://img.test/**',x=>x.fulfill({contentType:'image/png',body:png}));
    if(!opt.guide)await context.addInitScript(()=>{try{localStorage.setItem('rubizh.kitIntro','1');}catch{}});
    if(opt.social)await context.addInitScript(s=>{let b;Object.defineProperty(window,'RUBIZH_BOOT',{configurable:true,get:()=>b,set:v=>{b=v;if(v&&v.settings)v.settings.social=s;}});},opt.social);
