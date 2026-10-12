@@ -115,8 +115,10 @@ if ($path === '/health') {
   foreach ($files as $f) {
     $local = $dir . '/' . ltrim((string)$f, '/'); $okFile = $dir !== '' && is_file($local) && is_readable($local);
     $type = $okFile && function_exists('mime_content_type') ? (string)@mime_content_type($local) : '';
-    $code = null; $url = media_url((string)$f); if (str_starts_with($url, '/')) $url = 'https://' . ($_SERVER['HTTP_HOST'] ?? 'rubizh.shop') . $url;
-    if (function_exists('curl_init')) { $ch = curl_init($url); curl_setopt_array($ch, [CURLOPT_NOBODY => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => true, CURLOPT_TIMEOUT => 5, CURLOPT_CONNECTTIMEOUT => 3]); curl_exec($ch); $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE); $ctype = (string)curl_getinfo($ch, CURLINFO_CONTENT_TYPE); curl_close($ch); if ($type === '') $type = $ctype; }
+    // Public readiness is a local file check. It must not turn an untrusted Host
+    // or a media redirect into an outbound request; external delivery monitoring
+    // belongs to a separately configured monitor.
+    $code = null;
     $good = $okFile && ($code === null || $code === 200) && ($type === '' || str_starts_with($type, 'image/'));
     $checks[] = ['file' => $f, 'ok' => $good, 'http' => $code, 'type' => $type];
   }
