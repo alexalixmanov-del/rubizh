@@ -4,7 +4,7 @@
 # compare and smoke checks. It never enables PIM v3 sync, payments or cron: those are separate commands.
 # Usage: install-pim-v3.sh SITE_ROOT DB_BACKUP_FILE DB_BACKUP_SHA256
 set -euo pipefail
-# Read-only release gates.
+# Read-only gates are also sourceable by the local regression tests.
 rubizh_verify_release() (
  local archive=$1 php=$2 check
  check=$(mktemp -d)
@@ -42,6 +42,16 @@ rubizh_p0_ready() {
   return 2
  fi
 }
+rubizh_smoke() {
+ local base=$1 url code
+ for url in / /shop/catalog.php /sitemap.php; do
+  if ! code=$(curl -sS --connect-timeout 5 --max-time 20 -o /dev/null -w '%{http_code}' "$base$url"); then
+   echo "Smoke check failed: $url transport unavailable" >&2; return 2
+  fi
+  [[ "$code" = 200 ]] || { echo "Smoke check failed: $url HTTP $code" >&2; return 2; }
+  printf '%s %s\n' "$url" "$code"
+ done
+}
 if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then return 0; fi
 umask 077
 RUBIZH_ROOT=${1:?Usage: install-pim-v3.sh SITE_ROOT DB_BACKUP_FILE DB_BACKUP_SHA256}
@@ -51,6 +61,8 @@ RUBIZH_DB_SHA=${3:?Database backup SHA256 required}
 RUBIZH_PHP=${RUBIZH_PHP_BIN:-/usr/local/php82/bin/php}
 [[ -x "$RUBIZH_PHP" ]] || RUBIZH_PHP=$(command -v php)
 "$RUBIZH_PHP" -r 'if(version_compare(PHP_VERSION,"8.1","<"))exit(2);foreach(["pdo_mysql","curl","mbstring","openssl","gd","fileinfo"] as $name)if(!extension_loaded($name)){fwrite(STDERR,"Missing PHP extension: ".$name."\n");exit(2);}'
+# Never expose reservation code to a pre-P0 database. This only reads schema;
+# legacy installations must prepare the reviewed additive migration separately.
 rubizh_p0_ready "$RUBIZH_ROOT" "$RUBIZH_PHP"
 # The DB backup must exist outside the web root and match its checksum before anything changes.
 RUBIZH_DB_REAL=$(realpath "$RUBIZH_DB_BACKUP")
@@ -61,6 +73,8 @@ trap 'command rm -rf -- "$RUBIZH_TEMP"' EXIT
 RUBIZH_SHA=cc8ac3b7c0f0224b8af5559c9ad9be6fc126254d9f18ee8b2b637193f32b0c3c
 curl -fsSL "${RUBIZH_ARCHIVE_URL:-https://raw.githubusercontent.com/alexalixmanov-del/rubizh/6616e42dc9341eae04cc26fd7f1542d4ac4e0ee4/downloads/Rubizh-pim-v3-20261009.zip}" -o "$RUBIZH_TEMP/update.zip"
 printf '%s  %s\n' "$RUBIZH_SHA" "$RUBIZH_TEMP/update.zip" | sha256sum -c -
+# The currently shipped historical archive deliberately fails this gate. A new
+# reviewed artifact and checksum are required before this installer can deploy.
 rubizh_verify_release "$RUBIZH_TEMP/update.zip" "$RUBIZH_PHP"
 RUBIZH_REPORTS="$(dirname "$RUBIZH_ROOT")/rubizh-private-backups/pim-v3-$(date -u +%Y%m%d-%H%M%S)"
 mkdir -p "$RUBIZH_REPORTS"
@@ -82,7 +96,7 @@ RUBIZH_DB_NAME=$("$RUBIZH_PHP" -r 'echo json_decode(file_get_contents($argv[1]),
 "$RUBIZH_PHP" dev/catalog-inventory.php --compare="$RUBIZH_REPORTS/inventory-before.json" > "$RUBIZH_REPORTS/inventory-after.json"
 "$RUBIZH_PHP" -r '$d=json_decode(file_get_contents($argv[1]),true);foreach($d["compare"] as $k=>$v)echo $k," ",$v["before"]," → ",$v["after"],$v["identical"]?" OK":" CHANGED","\n";exit($d["all_identical"]?0:3);' "$RUBIZH_REPORTS/inventory-after.json"
 echo 'Smoke checks:'
-for RUBIZH_URL in / /shop/catalog.php /sitemap.php; do printf '%s ' "$RUBIZH_URL"; curl -s -o /dev/null -w '%{http_code}\n' "${RUBIZH_SMOKE_BASE:-https://rubizh.shop}$RUBIZH_URL"; done
+rubizh_smoke "${RUBIZH_SMOKE_BASE:-https://rubizh.shop}"
 echo "Reports: $RUBIZH_REPORTS"
 echo 'PIM v3 schema applied with LOST_* = 0. PIM v3 sync is still OFF: enable it only with the separate owner command.'
 grep -o 'Rollback command: .*' "$RUBIZH_REPORTS/deploy.log" || true

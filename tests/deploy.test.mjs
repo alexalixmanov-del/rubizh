@@ -46,6 +46,13 @@ test('Installer prerequisite is read-only and rejects an incomplete P0 schema be
   assert.ok(main.indexOf('rubizh_verify_release')<main.indexOf('RUBIZH_INVENTORY='));
  }finally{s.stop();}
 });
+test('Installer smoke rejects unavailable HTTP routes and accepts successful routes',async()=>{
+ let status=503;const server=createServer((req,res)=>{res.writeHead(status);res.end('synthetic local smoke');});
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ const base='http://127.0.0.1:'+server.address().port;
+ const run=()=>new Promise(resolve=>{const p=spawn('bash',['-c','set -euo pipefail; source "$1"; rubizh_smoke "$2"','release-smoke',installer,base],{stdio:['ignore','pipe','pipe']});let stdout='',stderr='';p.stdout.on('data',x=>stdout+=x);p.stderr.on('data',x=>stderr+=x);p.on('close',exit=>resolve({exit,stdout,stderr}));});
+ try{const bad=await run();assert.notEqual(bad.exit,0);assert.match(bad.stderr,/Smoke check failed.*503/);status=200;const good=await run();assert.equal(good.exit,0,good.stderr);assert.equal((good.stdout.match(/200/g)||[]).length,3);}finally{await new Promise(resolve=>server.close(resolve));}
+});
 test('Deployment preserves private configs, media and legacy provider keys; invalid checksum changes nothing',()=>{
  const dir=mkdtempSync(path.join(tmpdir(),'rubizh-deploy-'));const site=path.join(dir,'www'),bin=path.join(dir,'bin'),release=path.join(dir,'release/rubizh');
  for(const p of ['api','auth','media'])mkdirSync(path.join(site,p),{recursive:true});mkdirSync(bin);mkdirSync(path.join(release,'api'),{recursive:true});
