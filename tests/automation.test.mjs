@@ -81,11 +81,11 @@ test('Real MySQL queue: consent, validated catalogue, debounce, delivery, conver
   }finally{$db->exec('DROP DATABASE '.$schema);}echo 'passed';`);
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
-test('Scheduler runs each worker once, respects its interval, isolates failures and prevents concurrent overlap',async()=>{
+test('Scheduler runs each worker once, respects its interval, isolates failures and prevents concurrent overlap',{skip:process.platform!=='linux'&&spawnSync('flock',['--version']).status!==0?'Scheduler requires flock, unavailable on this non-Linux platform; exercised on Linux CI':false},async()=>{
  const dir=mkdtempSync(path.join(tmpdir(),'rubizh-automation-')),site=path.join(dir,'www');mkdirSync(path.join(site,'shop'),{recursive:true});copyFileSync(path.join(root,'shop/automation-worker.sh'),path.join(site,'shop/automation-worker.sh'));
  const fake=path.join(dir,'php');writeFileSync(fake,'#!/bin/sh\nprintf "%s\\n" "$1" >> "$FIXTURE_RUNS"\nsleep 0.2\ncase "$1" in *notification*) exit 7;; esac\n',{mode:0o755});const runs=path.join(dir,'runs'),options={env:{...process.env,RUBIZH_PHP_BIN:fake,FIXTURE_RUNS:runs},encoding:'utf8'};
  const execute=()=>new Promise(resolve=>{const p=spawn('bash',[path.join(site,'shop/automation-worker.sh')],options);p.on('close',resolve);});
- try{await Promise.all([execute(),execute()]);const lines=readFileSync(runs,'utf8').trim().split('\n');assert.equal(lines.length,5);assert.equal(new Set(lines).size,5);assert.match(readFileSync(path.join(dir,'rubizh-automation/notifications.state'),'utf8'),/^\d+ 7 0/);assert.match(readFileSync(path.join(dir,'rubizh-automation/cache.state'),'utf8'),/^\d+ 0 \d+/);assert.equal(await execute(),0);assert.equal(readFileSync(runs,'utf8').trim().split('\n').length,5);}finally{rmSync(dir,{recursive:true,force:true});}
+ try{assert.deepEqual((await Promise.all([execute(),execute()])).sort(),[0,1],'one scheduler owns the deliberately failing worker; the other does not overlap');const lines=readFileSync(runs,'utf8').trim().split('\n');assert.equal(lines.length,5);assert.equal(new Set(lines).size,5);assert.match(readFileSync(path.join(dir,'rubizh-automation/notifications.state'),'utf8'),/^\d+ 7 0/);assert.match(readFileSync(path.join(dir,'rubizh-automation/cache.state'),'utf8'),/^\d+ 0 \d+/);assert.equal(await execute(),0);assert.equal(readFileSync(runs,'utf8').trim().split('\n').length,5);}finally{rmSync(dir,{recursive:true,force:true});}
 });
 test('Read-only launch report distinguishes fresh, failed and missing workers without printing private credentials',()=>{
  const dir=mkdtempSync(path.join(tmpdir(),'rubizh-launch-report-')),site=path.join(dir,'www'),state=path.join(dir,'rubizh-automation');
