@@ -1101,9 +1101,11 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
     Rt.push(...Z.filter(t => t.storeReady).map(It));
     return class extends t {
         mobileOverlay=() => {
-            if (!window.matchMedia("(max-width:860px)").matches) return null;
-            const t = this.state;
-            return t.burger ? "menu" : t.sheet ? "filters" : t.sortSheet ? "sort" : t.qOpen ? "search" : t.kitModal ? "kit" : t.sizeModal ? "size" : t.qv ? "qv" : t.preAsk ? "preorder" : t.miniCart ? "mini" : t.donShot ? "donation" : null;
+            const t = this.state, mobile = window.matchMedia("(max-width:860px)").matches;
+            const open = [ ["menu", mobile && t.burger], ["filters", mobile && t.sheet], ["sort", mobile && t.sortSheet], ["search", mobile && t.qOpen], ["kit", t.kitModal], ["size", t.sizeModal], ["qv", t.qv], ["preorder", t.preAsk], ["mini", t.miniCart], ["donation", mobile && t.donShot] ].filter(([, value]) => value).map(([key]) => key);
+            this._mobileOverlayOrder = (this._mobileOverlayOrder || []).filter(key => open.includes(key));
+            for (const key of open) if (!this._mobileOverlayOrder.includes(key)) this._mobileOverlayOrder.push(key);
+            return this._mobileOverlayOrder.at(-1) || null;
         };
         mobileViewport=() => {
             const t = window.visualViewport, e = document.documentElement, i = (t, i) => {
@@ -1126,8 +1128,8 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
         };
         mobileSync=() => {
             this.mobileViewport();
-            const t = this.mobileOverlay(), e = this._mobileOverlayKey;
-            if (t && !this._mobileLock) {
+            const t = this.mobileOverlay(), e = this._mobileOverlayKey, mobile = window.matchMedia("(max-width:860px)").matches;
+            if (t && mobile && !this._mobileLock) {
                 const t = document.body, e = {};
                 for (const i of [ "position", "top", "left", "width", "overflow" ]) e[i] = t.style[i];
                 this._mobileLock = {
@@ -1142,13 +1144,40 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                     width: "100%",
                     overflow: "hidden"
                 }), document.documentElement.style.overflow = "hidden";
-            } else t || this.mobileUnlock();
-            this._mobileOverlayKey = t, this._mobileDialog = "search" === t ? document.querySelector('[data-swrap][data-open="1"]') : t ? document.querySelector('[data-mobile-dialog="' + t + '"]') : null,
-            e !== t && (t ? (this._mobileFocus = document.activeElement, "search" !== t && this._mobileDialog?.querySelector('button,[role="button"],input,select,a[href]')?.focus({
-                preventScroll: !0
-            })) : "search" !== e && this._mobileFocus?.isConnected && this._mobileFocus.focus({
-                preventScroll: !0
-            }));
+            } else if (!t || !mobile) this.mobileUnlock();
+            this.mobileRestoreInert();
+            const filters = document.querySelector('[data-mobile-dialog="filters"]');
+            if (filters) {
+                if (mobile && this.state.sheet) { filters.setAttribute("role", "dialog"); filters.setAttribute("aria-modal", "true"); }
+                else { filters.removeAttribute("role"); filters.removeAttribute("aria-modal"); }
+            }
+            this._mobileOverlayKey = t;
+            this._mobileDialog = "search" === t ? document.querySelector('[data-swrap][data-open="1"]') : t ? document.querySelector('[data-mobile-dialog="' + t + '"]') : null;
+            const frames = this._mobileFocusStack ||= [];
+            const closed = frames.filter(frame => !this._mobileOverlayOrder.includes(frame.key));
+            this._mobileFocusStack = frames.filter(frame => this._mobileOverlayOrder.includes(frame.key));
+            for (const frame of this._mobileFocusStack) if (!frame.opener?.isConnected && closed[0]?.opener) frame.opener = closed[0].opener;
+            if (t && !this._mobileFocusStack.some(frame => frame.key === t)) {
+                this._mobileFocusStack.push({key:t, opener:document.activeElement?.isConnected && document.activeElement !== document.body ? document.activeElement : closed[0]?.opener});
+            }
+            const dialog = this._mobileDialog;
+            if (dialog) {
+                if (!dialog.hasAttribute("tabindex")) dialog.setAttribute("tabindex", "-1");
+                // Inert siblings along the ancestor path, never the active dialog's ancestors.
+                this._mobileInert = new Map;
+                for (let node = dialog; node && node !== document.body; node = node.parentElement) {
+                    for (const sibling of node.parentElement?.children || []) {
+                        if (sibling === node || sibling.getAttribute('data-modal-backdrop') === t) continue;
+                        this._mobileInert.set(sibling, sibling.inert); sibling.inert = true;
+                    }
+                }
+            }
+            if (e !== t) {
+                // Search cancellation intentionally blurs its field; refocusing would reopen it.
+                const back = closed[0]?.key !== "search" ? closed[0]?.opener : null;
+                if (back?.isConnected && (!dialog || dialog.contains(back))) back.focus({preventScroll:true});
+                else if (dialog && t !== "search") (this.mobileFocusable(dialog)[0] || dialog).focus({preventScroll:true});
+            }
             const i = [ document.querySelector("header"), ...document.querySelectorAll("[data-mob-buy],[data-mob-bar],[data-kit-bar]") ].filter(Boolean);
             if (window.ResizeObserver) {
                 this._mobileResize ||= new ResizeObserver(() => this.mobileMeasure());
@@ -1158,6 +1187,11 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
             }
             this.mobileMeasure();
         };
+        mobileRestoreInert=() => {
+            for (const [node, inert] of this._mobileInert || []) node.inert = inert;
+            this._mobileInert = null;
+        };
+        mobileFocusable=dialog => [...dialog.querySelectorAll('button,input,select,textarea,a[href],[tabindex="0"],summary')].filter(node => !node.disabled && !node.closest('[inert]') && node.getBoundingClientRect().height > 0 && getComputedStyle(node).visibility !== "hidden");
         mobileMeasure=() => {
             const t = document.documentElement, e = document.querySelector("header"), i = e && "sticky" === getComputedStyle(e).position ? Math.ceil(e.getBoundingClientRect().height) : 0, s = [ ...document.querySelectorAll("[data-mob-buy],[data-mob-bar],[data-kit-bar]") ].filter(t => "none" !== getComputedStyle(t).display), o = s.length ? Math.ceil(Math.max(...s.map(t => t.getBoundingClientRect().height))) + 16 : 0;
             for (const [e, s] of [ [ "--rubizh-header-height", i + "px" ], [ "--rubizh-bottom-space", o + "px" ] ]) t.style.getPropertyValue(e) !== s && t.style.setProperty(e, s);
@@ -1175,19 +1209,14 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
         mobileKey=t => {
             const e = this._mobileOverlayKey, i = this._mobileDialog;
             if (e && i) {
-                if ("Escape" === t.key) return t.preventDefault(), "search" === e ? void this.renderVals().cancelSearch() : void this.setState({
-                    burger: !1,
-                    sheet: !1,
-                    sortSheet: !1,
-                    kitModal: null,
-                    sizeModal: null,
-                    qv: null,
-                    preAsk: !1,
-                    miniCart: null,
-                    donShot: null
-                });
+                if ("Escape" === t.key) {
+                    t.preventDefault();
+                    if ("search" === e) return void this.renderVals().cancelSearch();
+                    const field = {menu:"burger",filters:"sheet",sort:"sortSheet",kit:"kitModal",size:"sizeModal",qv:"qv",preorder:"preAsk",mini:"miniCart",donation:"donShot"}[e];
+                    return void this.setState({[field]:null});
+                }
                 if ("Tab" === t.key) {
-                    const e = [ ...i.querySelectorAll('button,input,select,textarea,a[href],[tabindex="0"],summary') ].filter(t => !t.disabled && t.getBoundingClientRect().height > 0), s = e[0], o = e.at(-1);
+                    const e = this.mobileFocusable(i), s = e[0], o = e.at(-1);
                     if (!s) return;
                     !t.shiftKey || document.activeElement !== s && i.contains(document.activeElement) ? t.shiftKey || document.activeElement !== o && i.contains(document.activeElement) || (t.preventDefault(),
                     s.focus()) : (t.preventDefault(), o.focus());
@@ -1682,7 +1711,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
         }
         componentWillUnmount() {
             clearInterval(this._receiptTimer);clearTimeout(this._cartReminderTimer);
-            this.mobileUnlock(), this._mobileResize?.disconnect(), window.removeEventListener("resize", this._mobileViewportChange),
+            this.mobileRestoreInert(), this.mobileUnlock(), this._mobileResize?.disconnect(), window.removeEventListener("resize", this._mobileViewportChange),
             window.visualViewport?.removeEventListener("resize", this._mobileViewportChange),
             window.visualViewport?.removeEventListener("scroll", this.mobileViewport), document.removeEventListener("keydown", this.mobileKey), document.removeEventListener("keydown", this.kitIntroKey),
             clearTimeout(this._kitSearchTimer);
@@ -4858,6 +4887,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                         return {
                             variantKey: t,
                             label: this.sd(bt, t),
+                            pressed: String(a),
                             qtyLabel: o ? it : s ? "немає" : e <= 3 ? e + " шт" : "",
                             pick: () => this.setState({
                                 size: t,

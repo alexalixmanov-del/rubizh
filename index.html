@@ -449,7 +449,7 @@
           <div class="rz-filter-title">Фільтри <span>Знайди своє</span></div>
           <div data-sheet-head="1" style="display:none;justify-content:space-between;align-items:center;padding-bottom:12px;border-bottom:1px solid var(--legacy-2a322b)">
             <div style="font-family:'UAH','Oswald',sans-serif;font-size:18px;text-transform:uppercase;letter-spacing:.06em">Фільтри</div>
-            <div tabindex="0" role="button" sc-camel-on-click="{{ closeSheet }}" style="color:var(--legacy-99a398);font-size:20px;cursor:pointer;padding:4px 8px">✕</div>
+            <div tabindex="0" role="button" aria-label="Закрити фільтри" sc-camel-on-click="{{ closeSheet }}" style="color:var(--legacy-99a398);font-size:20px;cursor:pointer;padding:4px 8px">✕</div>
           </div>
           <div>
             <div tabindex="0" role="button" sc-camel-on-click="{{ fold.cat.toggle }}" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;margin-bottom:10px"><div style="font-family:'UAH','Oswald',sans-serif;font-size:13.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--legacy-99a398)">Категорія</div><span style="color:var(--legacy-8a9487);font-size:15px;line-height:1">{{ fold.cat.mark }}</span></div>
@@ -840,7 +840,7 @@
 <sc-if value="{{ sizeButtons }}" hint-placeholder-val="{{ true }}">
           <div data-size-grid="1" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:8px;margin-bottom:10px;max-width:480px">
             <sc-for list="{{ item.sizes }}" as="s" hint-placeholder-count="5">
-              <div tabindex="0" role="button" sc-camel-on-click="{{ s.pick }}" style="{{ s.style }}"><span>{{ s.label }}</span><span style="{{ s.qtyStyle }}">{{ s.qtyLabel }}</span></div>
+              <div tabindex="0" role="button" aria-pressed="{{ s.pressed }}" sc-camel-on-click="{{ s.pick }}" style="{{ s.style }}"><span>{{ s.label }}</span><span style="{{ s.qtyStyle }}">{{ s.qtyLabel }}</span></div>
             </sc-for>
           </div>
           </sc-if>
@@ -1335,7 +1335,7 @@
   </sc-if>
 
   <sc-if value="{{ qvOpen }}" hint-placeholder-val="{{ false }}">
-    <div tabindex="0" role="button" sc-camel-on-click="{{ closeQv }}" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:96;background:rgba(6,8,6,.75)"></div>
+    <div data-modal-backdrop="qv" aria-hidden="true" sc-camel-on-click="{{ closeQv }}" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:96;background:rgba(6,8,6,.75)"></div>
     <div data-mobile-dialog="qv" data-mobile-qv="1" role="dialog" aria-modal="true" aria-label="Швидкий перегляд товару" style="position:fixed;z-index:97;left:50%;top:50%;transform:translate(-50%,-50%);width:min(820px,calc(100vw - 24px));max-height:calc(100vh - 32px);overflow:auto;border:1px solid var(--legacy-4c5a36);background:var(--legacy-141815);display:flex;flex-wrap:wrap">
       <div style="flex:1 1 300px;min-width:0;aspect-ratio:4/5;max-height:70vh;background:var(--legacy-0f120f);position:relative"><sc-if value="{{ qvP.hasThumb }}"><img sc-camel-src="{{ qvP.thumb }}" alt="Фото товару" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:contain"></sc-if><sc-if value="{{ !qvP.hasThumb }}"><image-slot id="{{ qvP.slot }}" shape="rect" fit="cover" placeholder="{{ qvP.ph }}"></image-slot></sc-if></div>
       <div style="flex:1 1 300px;min-width:0;padding:clamp(16px,2.4vw,24px);display:flex;flex-direction:column;gap:12px">
