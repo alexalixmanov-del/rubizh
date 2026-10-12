@@ -4,6 +4,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {generateKeyPairSync,createSign} from 'node:crypto';
+import {writeFileSync} from 'node:fs';
 import {startSite,php} from './helpers/site-fixture.mjs';
 const skip=!process.env.RUBIZH_TEST_MYSQL_SOCKET;
 const product=(id,variants)=>({id,slug:id,name:'Товар '+id,brand:'QA',canonical_category_id:'clothing_headwear',category:'Одяг та форма / Головні убори',category_path:['Одяг та форма','Головні убори'],description:'Тест.',photos:['https://img.test/'+id+'.png'],variants});
@@ -46,16 +47,18 @@ test('ARCH01: paid Q-7 orders can confirm fulfillment without changing money, ti
   site.sql(`UPDATE rubizh_order_timing SET payment_due='2030-01-07 10:00:00',remind_at='2030-01-06 10:00:00' WHERE order_id=${id}`);
   const snapshot=()=>Object.fromEntries(['rubizh_customer_orders','rubizh_order_details','rubizh_order_fulfillment_lines','rubizh_order_timing','rubizh_stock_reservations','rubizh_mono_invoices','rubizh_buyer_mail','rubizh_notifications'].map(table=>[table,site.sql('SELECT * FROM '+table+' WHERE '+(table==='rubizh_customer_orders'?'id':'order_id')+'='+id)]));
   const before=snapshot();assert.equal(before.rubizh_stock_reservations[0].status,'COMMITTED');
+  const sid='q7manager'.padEnd(32,'b'),csrf='c'.repeat(64);writeFileSync(site.dir+'/sess_'+sid,`csrf|s:64:"${csrf}";customer_id|s:32:"${manager}";login_time|i:${Math.floor(Date.now()/1000)};login_method|s:5:"email";`);
+  const confirmHttp=extra=>site.post('/shop/order-confirm.php',{csrf,order_id:id,availability_confirmed:true,expected_updated_at:site.sql('SELECT updated_at FROM rubizh_customer_orders WHERE id='+id)[0].updated_at,...extra},{Cookie:'rubizh_customer='+sid});
   // A later catalog change must not cause fulfillment confirmation to reprice the paid snapshot.
   site.save(product('q7-paid',[v('Q7-PAID','M',{price:1500,stock:0})]));
-  const confirm=call(`npConfirm($db,${id},'${manager}',true,false,'')`);assert.equal(confirm.ok,true,JSON.stringify(confirm));
+  const confirm=await confirmHttp({extra_delivery_agreed:false});assert.equal(confirm.status,200,JSON.stringify(confirm));
   assert.deepEqual(snapshot(),before);
   const noExtra=ready();assert.equal(noExtra.ok,false);assert.match(noExtra.message,/кожної окремої посилки/,'split parcels still require explicit agreement');
   const missingAvailability=call(`npConfirm($db,${id},'${manager}',false,true,'')`);assert.equal(missingAvailability.ok,false);
   const denied=call(`npConfirm($db,${id},'${reader}',true,true,'')`);assert.equal(denied.class,'ShopPermissionException');
   const proof=call(`npConfirm($db,${id},'${owner}',true,true,'bank statement',['reason'=>'Звірено виписку'])`);assert.equal(proof.ok,false,'a paid fulfillment confirmation cannot reconcile money');
   assert.equal(+site.sql('SELECT extra_delivery_agreed FROM rubizh_np_order_confirmations WHERE order_id='+id)[0].extra_delivery_agreed,0);
-  assert.equal(call(`npConfirm($db,${id},'${manager}',true,true,'')`).ok,true);assert.equal(ready().ok,true);assert.deepEqual(snapshot(),before);
+  assert.equal((await confirmHttp({extra_delivery_agreed:true})).status,200);assert.equal(ready().ok,true);assert.deepEqual(snapshot(),before);
   assert.equal(+site.sql(`SELECT availability_confirmed FROM rubizh_np_order_confirmations WHERE order_id=${id}`)[0].availability_confirmed,1);
   assert.equal(+site.sql(`SELECT COUNT(*) n FROM rubizh_np_audit WHERE order_id=${id} AND action='paid_fulfillment_confirmed'`)[0].n,2);
   for(const status of ['cancelled','returned','completed']){site.sql(`UPDATE rubizh_customer_orders SET status='${status}' WHERE id=${id}`);assert.equal(call(`npConfirm($db,${id},'${manager}',true,true,'')`).ok,false);}

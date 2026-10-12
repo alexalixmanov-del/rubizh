@@ -142,3 +142,38 @@ test('stage-2 FPAY-01: an exact SITE refund response records the completed full 
   assert.deepEqual(site.sql('SELECT payment_status,pim_payment_state FROM rubizh_customer_orders WHERE id='+id)[0],{payment_status:'refunded',pim_payment_state:'REFUNDED'});assert.equal(site.sql('SELECT refund_status FROM rubizh_mono_invoices WHERE order_id='+id)[0].refund_status,'success');
  }finally{site.stop();}
 });
+
+test('stage-2 ARCH-04: SITE confirmation forms and JSON require the viewed version before manual payment proof',{skip,timeout:180000},async()=>{
+ for(const route of ['json','form']){
+  const site=await fixture();try{
+   const id=site.orderId;site.as(OWNER);const contact=JSON.parse(site.sql('SELECT contact_json FROM rubizh_order_details WHERE order_id='+id)[0].contact_json);contact.payment='invoice';site.sql(`UPDATE rubizh_order_details SET contact_json='${JSON.stringify(contact).replaceAll("'","''")}' WHERE order_id=${id}`);
+   site.sql(`UPDATE rubizh_customer_orders SET status='new',pim_order_state='WAITING_CONFIRMATION' WHERE id=${id}`);
+   const cookie={Cookie:'rubizh_customer='+('s'+OWNER).slice(0,32)},reason='Оплату звірено з випискою покупця';
+   const send=async extra=>route==='json'?site.post('/shop/order-confirm.php',{csrf:'c'.repeat(64),order_id:id,availability_confirmed:true,payment_proof:'statement-ARCH04',approval:{reason},...extra},cookie):fetch(site.base+'/shop/np-manager.php',{method:'POST',redirect:'manual',headers:{...cookie,'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({csrf:'c'.repeat(64),order_id:id,action:'confirm',availability:'yes',payment_proof:'statement-ARCH04',financial_reason:reason,...extra})});
+   const viewed=site.sql('SELECT updated_at FROM rubizh_customer_orders WHERE id='+id)[0].updated_at;site.sql(`UPDATE rubizh_customer_orders SET updated_at=updated_at+INTERVAL 1 MINUTE WHERE id=${id}`);
+   for(const [extra,code] of [[{},'STATE_REQUIRED'],[{expected_updated_at:viewed},'STATE_CHANGED']]){
+    const r=await send(extra);if(route==='json'){assert.equal(r.status,409);assert.equal(r.data.error_code,code);}else{assert.notEqual(r.status,303);assert.match(await r.text(),/актуальну картку|змінилося після перегляду/);}
+    assert.equal(site.sql('SELECT payment_status FROM rubizh_customer_orders WHERE id='+id)[0].payment_status,'pending');assert.equal(site.sql('SELECT * FROM rubizh_np_order_confirmations WHERE order_id='+id).length,0,'refused confirmation saves no fulfillment or payment evidence');
+   }
+   const current=site.sql('SELECT updated_at FROM rubizh_customer_orders WHERE id='+id)[0].updated_at,r=await send({expected_updated_at:current});assert.equal(r.status,route==='json'?200:303,'current-version owner proof remains supported');assert.equal(site.sql('SELECT payment_status FROM rubizh_customer_orders WHERE id='+id)[0].payment_status,'paid');
+  }finally{site.stop();}
+ }
+});
+
+test('stage-2 ARCH-04: confirmation rereads the prepared version after waiting on an independent order lock',{skip,timeout:180000},async()=>{
+ const site=await fixture();try{
+  const {spawn}=await import('node:child_process'),{phpArgs,phpEnv,runtime}=await import('./helpers/site-fixture.mjs'),id=site.orderId;site.as(OWNER);
+  const cookie={Cookie:'rubizh_customer='+('s'+OWNER).slice(0,32)};
+  for(const route of ['json','form']){
+   const viewed=site.sql('SELECT updated_at FROM rubizh_customer_orders WHERE id='+id)[0].updated_at;
+   const locker=spawn(runtime+'/bin/php8.4',[...phpArgs,'-r',`$db=new PDO('mysql:unix_socket='.getenv('RUBIZH_TEST_MYSQL_SOCKET').';dbname=${site.schema}','root','');$db->query("SELECT GET_LOCK('rubizh_np_order_${id}',2)");echo "READY\\n";fflush(STDOUT);fgets(STDIN);$db->query("SELECT RELEASE_LOCK('rubizh_np_order_${id}')");`],{env:phpEnv,stdio:['pipe','pipe','pipe']});
+   try{
+    await new Promise((resolve,reject)=>{locker.stdout.once('data',resolve);locker.once('error',reject);});
+    const request=route==='json'?site.post('/shop/order-confirm.php',{csrf:'c'.repeat(64),order_id:id,availability_confirmed:true,expected_updated_at:viewed},cookie):fetch(site.base+'/shop/np-manager.php',{method:'POST',redirect:'manual',headers:{...cookie,'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({csrf:'c'.repeat(64),order_id:id,action:'confirm',availability:'yes',expected_updated_at:viewed})});
+    await new Promise(r=>setTimeout(r,150));site.sql(`UPDATE rubizh_customer_orders SET updated_at=updated_at+INTERVAL 1 MINUTE WHERE id=${id}`);locker.stdin.end('\n');
+    const r=await request;if(route==='json'){assert.equal(r.status,409);assert.equal(r.data.error_code,'STATE_CHANGED');}else{assert.notEqual(r.status,303);assert.match(await r.text(),/змінилосяหลัง|змінилося після перегляду/);}
+    assert.equal(site.sql('SELECT * FROM rubizh_np_order_confirmations WHERE order_id='+id).length,0,'version is compared before confirmation mutation');
+   }finally{locker.kill();}
+  }
+ }finally{site.stop();}
+});

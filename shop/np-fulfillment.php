@@ -80,14 +80,15 @@ function npDraft(PDO $db,int $order,string $actor,string $op,string $code,array 
       $db->prepare("INSERT INTO rubizh_order_shipments(order_id,supplier_code,operation_key,lines_json,package_json,declared_value,status,created_at,updated_at) VALUES(?,?,?,?,?,?,'draft',UTC_TIMESTAMP(),UTC_TIMESTAMP())")->execute([$order,$code,$op,json_encode($items,JSON_THROW_ON_ERROR),json_encode($pack,JSON_THROW_ON_ERROR),$value]);$id=(int)$db->lastInsertId();npAudit($db,$actor,'shipment_draft',$order,$id);return $id;
     });
 }
-function npConfirm(PDO $db,int $order,string $actor,bool $availability,bool $extra,string $proof,array $approval=[]): void {
+function npConfirm(PDO $db,int $order,string $actor,bool $availability,bool $extra,string $proof,array $approval=[],?string $expectedUpdatedAt=null): void {
     shopRequirePermission($actor,'order.confirm');
     if(!$availability)throw new RuntimeException('Підтвердьте наявність і комплектацію всіх позицій.');
     if(trim($proof)!==''){shopRequirePermission($actor,'payment.manual_reconcile');shopFinancialReason((string)($approval['reason']??''));}
-    npLocked($db,$order,function()use($db,$order,$actor,$extra,$proof,$approval){
+    $crmChecked=monoCrmVersionChecked($db,$order,$actor);
+    npLocked($db,$order,function()use($db,$order,$actor,$extra,$proof,$approval,$expectedUpdatedAt,$crmChecked){
         $db->beginTransaction();
         try{
-            $fresh=npOrder($db,$order);$method=$fresh['contact']['payment']??'';
+            $fresh=npOrder($db,$order);monoCheckOrderVersion($fresh,$expectedUpdatedAt,$crmChecked);$method=$fresh['contact']['payment']??'';
             if(in_array($fresh['status'],['cancelled','returned','completed'],true)||$fresh['payment_status']==='refunded')throw new RuntimeException('Замовлення оплачене або закрите.');
             if(!in_array($method,['invoice','card'],true))throw new ShopOrderConflict('PAYMENT_NOT_ALLOWED',[],'Спосіб оплати потребує окремої звірки.');
             // Q-7 can be paid before a manager confirms fulfillment. Keep the

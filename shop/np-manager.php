@@ -24,7 +24,7 @@ if(($_SERVER['REQUEST_METHOD']??'GET')==='POST'){
     if(($_POST['confirm_refund']??'')!=='yes')throw new RuntimeException('Підтвердьте повне повернення коштів.');monoRefund($db,$orderId,$actor,trim((string)($_POST['financial_reason']??'')),is_string($_POST['expected_updated_at']??null)?$_POST['expected_updated_at']:null);$notice='Запит повернення збережено. Статус перевіряйте в monobank.';
   }elseif($action==='confirm'){
     $GLOBALS['rubizh_request_resolution']=array_map(fn($v)=>is_string($v)?trim($v):'',is_array($_POST['resolve']??null)?$_POST['resolve']:[]);
-    npConfirm($db,$orderId,$actor,isset($_POST['availability']),isset($_POST['extra_delivery']),trim((string)($_POST['payment_proof']??'')),['reason'=>trim((string)($_POST['financial_reason']??'')),'quote_hash'=>(string)($_POST['quote_hash']??'')]);$notice='Наявність підтверджено. Неоплаченому покупцю надішлемо лист із переходом до оплати. ТТН ще не створено.';
+    npConfirm($db,$orderId,$actor,isset($_POST['availability']),isset($_POST['extra_delivery']),trim((string)($_POST['payment_proof']??'')),['reason'=>trim((string)($_POST['financial_reason']??'')),'quote_hash'=>(string)($_POST['quote_hash']??'')],is_string($_POST['expected_updated_at']??null)?$_POST['expected_updated_at']:null);$notice='Наявність підтверджено. Неоплаченому покупцю надішлемо лист із переходом до оплати. ТТН ще не створено.';
   }elseif($action==='draft'){
     $selected=[];foreach((is_array($_POST['line_qty']??null)?$_POST['line_qty']:[]) as $line=>$qty)if(trim((string)$qty)!==''&&(float)$qty>0)$selected[]=['line_no'=>(int)$line,'qty'=>str_replace(',','.',(string)$qty)];
     $places=json_decode((string)($_POST['places']??''),true,20,JSON_THROW_ON_ERROR);
