@@ -143,6 +143,18 @@ test('stage-2 SP1: cancellation lists have a bounded list shape and unique, vali
 });
 
 // Stage-2 SP3: an unsigned status read can observe success, but cannot roll signed terminal evidence back.
+test('stage-2 SP3: stale or contradictory unsigned success observations never reopen signed expired invoices',{skip,timeout:180000},async()=>{
+ const site=await fixture();try{
+  const {id,inv}=await site.newInvoice(83),at=new Date();assert.equal((await site.hook(inv,{status:'expired',at})).status,200);
+  const before=site.sql('SELECT status,modified_at,updated_at FROM rubizh_mono_invoices WHERE id='+inv.id);
+  for(const modifiedDate of ['2020-01-01T00:00:00Z',new Date(at.getTime()+1000).toISOString()])php(`define('RUBIZH_AUTH_NO_SESSION',true);require '${site.site}/auth/bootstrap.php';$db=shopStoreDatabase();$e=json_decode(${JSON.stringify(JSON.stringify({invoiceId:inv.invoice_id,status:'success',amount:+inv.amount,ccy:980,reference:inv.reference,modifiedDate}))},true);monoApplyEvent($db,$e,hash('sha256',json_encode($e)),false);`);
+  assert.deepEqual(site.sql('SELECT status,modified_at,updated_at FROM rubizh_mono_invoices WHERE id='+inv.id),before);
+  assert.equal(site.sql('SELECT status FROM rubizh_customer_orders WHERE id='+id)[0].status,'cancelled');assert.equal(site.paid(id),'failed');
+  assert.equal(site.sql(`SELECT COUNT(*) n FROM rubizh_np_audit WHERE order_id=${id} AND action='mono_observation_rejected'`)[0].n,2,'contradictory observations stay reviewable');
+  assert.equal((await site.hook(inv,{status:'success',at:new Date(at.getTime()+2000)})).status,200,'authentic later bank-paid evidence is still recorded');assert.equal(site.paid(id),'paid');assert.equal(site.sql('SELECT status FROM rubizh_customer_orders WHERE id='+id)[0].status,'cancelled','financial evidence retains the closed order');
+ }finally{site.stop();}
+});
+
 test('stage-2 PAY-01 worker: failure invoices remain in the polling queue until audited bank removal',{skip,timeout:180000},async()=>{
  const site=await fixture();try{
   const {id,inv}=await site.newInvoice(84);assert.equal((await site.hook(inv,{status:'failure'})).status,200);
@@ -150,5 +162,40 @@ test('stage-2 PAY-01 worker: failure invoices remain in the polling queue until 
   assert.deepEqual(poll(),[inv.invoice_id],'failure is a failed attempt, so the invoice must still be checked');
   site.sql(`INSERT INTO rubizh_np_audit(actor_id,action,order_id,shipment_id,note,created_at) VALUES('${'0'.repeat(32)}','mono_invoice_removed',${id},0,'${inv.invoice_id}',UTC_TIMESTAMP())`);
   assert.deepEqual(poll(),[],'audited bank removal lets the worker skip that failed invoice');
+ }finally{site.stop();}
+});
+
+test('stage-2 SP3: an independent diagnostic poll waits for signed expiry under the order lock',{skip,timeout:180000},async()=>{
+ const site=await fixture();try{
+  const {spawn}=await import('node:child_process'),{phpArgs,phpEnv,runtime}=await import('./helpers/site-fixture.mjs');
+  const {id,inv}=await site.newInvoice(85),at=new Date(),expiry={invoiceId:inv.invoice_id,status:'expired',amount:+inv.amount,ccy:980,modifiedDate:at.toISOString()},observation={...expiry,status:'success',modifiedDate:new Date(at.getTime()-1000).toISOString()};
+  const boot=`define('RUBIZH_AUTH_NO_SESSION',true);require '${site.site}/auth/bootstrap.php';$db=shopStoreDatabase();`;
+  const locker=spawn(runtime+'/bin/php8.4',[...phpArgs,'-r',boot+`$db->query("SELECT GET_LOCK('rubizh_np_order_${id}',2)");echo "READY\\n";fflush(STDOUT);fgets(STDIN);$e=json_decode('${JSON.stringify(expiry)}',true);monoApplyEvent($db,$e,hash('sha256',json_encode($e)),true);$db->query("SELECT RELEASE_LOCK('rubizh_np_order_${id}')");`],{env:phpEnv,stdio:['pipe','pipe','pipe']});
+  let poll;try{
+   await new Promise((resolve,reject)=>{locker.stdout.once('data',resolve);locker.once('error',reject);});
+   poll=spawn(runtime+'/bin/php8.4',[...phpArgs,'-r',boot+`$e=json_decode('${JSON.stringify(observation)}',true);echo "READY\\n";fflush(STDOUT);monoApplyEvent($db,$e,hash('sha256',json_encode($e)),false);`],{env:phpEnv,stdio:['ignore','pipe','pipe']});
+   const pollExit=new Promise((resolve,reject)=>{poll.once('exit',code=>resolve(code));poll.once('error',reject);}),lockExit=new Promise((resolve,reject)=>{locker.once('exit',code=>resolve(code));locker.once('error',reject);});
+   await new Promise((resolve,reject)=>{poll.stdout.once('data',resolve);poll.once('error',reject);});await new Promise(r=>setTimeout(r,150));
+   assert.equal(site.sql('SELECT status FROM rubizh_mono_invoices WHERE id='+inv.id)[0].status,'created','diagnostic observation cannot write while another process holds the order lock');
+   locker.stdin.end('\n');assert.equal(await lockExit,0);assert.equal(await pollExit,0);
+   assert.equal(site.sql('SELECT status FROM rubizh_mono_invoices WHERE id='+inv.id)[0].status,'expired');assert.equal(site.paid(id),'failed');
+   assert.equal(site.sql(`SELECT COUNT(*) n FROM rubizh_np_audit WHERE order_id=${id} AND action='mono_observation_rejected'`)[0].n,1);
+  }finally{poll?.kill();locker.kill();}
+ }finally{site.stop();}
+});
+
+test('stage-2 SP3/PAY-01: newer success observations recover a payable failed attempt after webhook grace',{skip,timeout:180000},async()=>{
+ const site=await fixture({stock:3});try{
+  const {id,inv}=await site.newInvoice(86),at=new Date();assert.equal((await site.hook(inv,{status:'failure',at})).status,200);
+  const read=modifiedDate=>php(`define('RUBIZH_AUTH_NO_SESSION',true);require '${site.site}/auth/bootstrap.php';define('RUBIZH_MONO_TESTS',true);$GLOBALS['mono_test_transport']=fn($p,$b)=>json_decode('${JSON.stringify({invoiceId:inv.invoice_id,status:'success',amount:+inv.amount,ccy:980,reference:inv.reference,modifiedDate})}',true);$db=shopStoreDatabase();$q=$db->prepare('SELECT * FROM rubizh_mono_invoices WHERE id=?');$q->execute([${inv.id}]);monoRefresh($db,$q->fetch(PDO::FETCH_ASSOC));`);
+  read(new Date(at.getTime()-1000).toISOString());assert.equal(site.sql('SELECT status FROM rubizh_mono_invoices WHERE id='+inv.id)[0].status,'failure','older success observations cannot replace the failure evidence');
+  assert.equal(site.sql(`SELECT COUNT(*) n FROM rubizh_np_audit WHERE order_id=${id} AND action='mono_observation_rejected'`)[0].n,1);
+  const newer=new Date(at.getTime()+1000).toISOString();read(newer);
+  assert.equal(site.sql('SELECT status FROM rubizh_mono_invoices WHERE id='+inv.id)[0].status,'awaiting_webhook','a failed attempt remains payable and a newer authenticated success read starts webhook grace');assert.equal(site.paid(id),'failed','observation alone does not mark paid');
+  assert.equal(site.sql('SELECT status FROM rubizh_stock_reservations WHERE order_id='+id)[0].status,'ACTIVE');
+  site.sql(`UPDATE rubizh_mono_invoices SET updated_at=UTC_TIMESTAMP()-INTERVAL 16 MINUTE WHERE id=${inv.id}`);read(newer);
+  assert.equal(site.sql('SELECT status FROM rubizh_mono_invoices WHERE id='+inv.id)[0].status,'success');assert.equal(site.paid(id),'paid','matching authenticated read confirms a lost webhook after 900 seconds');
+  assert.equal(site.sql('SELECT status FROM rubizh_customer_orders WHERE id='+id)[0].status,'confirmed');assert.equal(site.sql('SELECT status FROM rubizh_stock_reservations WHERE order_id='+id)[0].status,'COMMITTED');
+  assert.equal(site.sql(`SELECT COUNT(*) n FROM rubizh_np_audit WHERE order_id=${id} AND action='mono_status_confirmed'`)[0].n,1);
  }finally{site.stop();}
 });
