@@ -6019,6 +6019,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                 return o;
             } catch (t) {
                 if (o) throw new Error("Сервер довго не відповідає. Спробуйте ще раз.");
+                if (t.name !== "AbortError" && t instanceof TypeError) throw new Error("Не вдалося з’єднатися з сервером. Перевірте підключення до інтернету. Спробуйте ще раз.", {cause:t});
                 throw t;
             } finally {
                 clearTimeout(a), this._requestControllers.delete(s), i && this[i] === s && (this[i] = null);

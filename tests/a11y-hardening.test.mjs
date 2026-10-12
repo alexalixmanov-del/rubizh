@@ -58,6 +58,18 @@ test('D-33: «Перейти до вмісту» has a target on every storefron
 });
 
 // Stage 2: reproduce buyer-visible failures against synthetic loopback responses.
+test('Stage 2: native transport failures have a Ukrainian recovery message',async()=>{
+ const page=await open('/catalog');
+ try{
+  await page.locator('[data-card-name]').first().waitFor();
+  await page.route('**/shop/catalog.php?*',route=>route.abort('failed'));
+  await page.getByRole('combobox').selectOption('cheap');
+  const alert=page.getByRole('alert');await alert.waitFor();
+  assert.match(await alert.innerText(),/Не вдалося з’єднатися.*Спробуйте ще раз/);
+  assert.doesNotMatch(await alert.innerText(),/fetch|NetworkError|Load failed/);
+ }finally{await page.close();}
+});
+
 test('Stage 2: desktop quick view moves, traps and restores keyboard focus',async()=>{
  const page=await open('/catalog');
  try{
