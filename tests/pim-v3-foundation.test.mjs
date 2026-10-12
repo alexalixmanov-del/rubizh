@@ -95,6 +95,19 @@ test('Wire boundary model photos use the same safe source URL rules as color pho
  const r=JSON.parse(php(`require '${root}/shop/pim-v3-contract.php';$b=json_decode(stream_get_contents(STDIN));echo json_encode(pimV3ValidateModels($b->models,'$.models',true));`,JSON.stringify(b)));
  assert.deepEqual(r.errors,[],'ingestion accepts safe supplier HTTP sources consistently for model and color photos');
 });
+for(const currency of [undefined,null,'','uah','USD',980,false,[],{}])test(`Wire boundary rejects noncanonical currency ${JSON.stringify(currency)}`,()=>{
+ const chunk={...JSON.parse(readFileSync(path.join(root,'contracts/pim-v3/2/wire.exact.json'))),currency,batch_id:'PB-1111111111111111-2222222222222222',chunk_index:0,chunk_count:1};
+ const r=JSON.parse(php(`require '${root}/shop/pim-v3-sync.php';try{pimV3ParseChunk(stream_get_contents(STDIN));echo json_encode(['accepted'=>true]);}catch(PimV3Rejected $e){echo json_encode(['accepted'=>false,'reason'=>$e->reason]);}`,JSON.stringify(chunk)));
+ assert.deepEqual(r,{accepted:false,reason:'CURRENCY'});
+});
+test('Wire boundary accepts canonical UAH in first and later chunk headers',()=>{
+ for(const i of [0,1]){
+  const chunk={...JSON.parse(readFileSync(path.join(root,'contracts/pim-v3/2/wire.exact.json'))),currency:'UAH',batch_id:'PB-1111111111111111-2222222222222222',chunk_index:i,chunk_count:2,hide_ids:[]};
+  if(i===1){delete chunk.categories;delete chunk.category_catalog_hash;}
+  assert.equal(php(`require '${root}/shop/pim-v3-sync.php';pimV3ParseChunk(stream_get_contents(STDIN));echo 'accepted';`,JSON.stringify(chunk)),'accepted');
+ }
+});
+
 test('Schema interpreter rejects unknown keywords; JSON object/array distinction, conditional and contains checks are real',()=>{
  const r=JSON.parse(php(`require '${root}/shop/pim-v3-contract.php';$s=pimV3PinnedSchema();$v=json_decode(file_get_contents('${root}/tests/fixtures/pim-v3/1/quantity.json'))->models[0];$v->variants=[];echo json_encode(['contains'=>pimV3SchemaErrors($v,$s),'types'=>pimV3SchemaErrors(new stdClass(),['type'=>'array'])]);`));
  assert.ok(r.contains.some(x=>x.code==='CONTAINS'));assert.equal(r.types[0].code,'TYPE');

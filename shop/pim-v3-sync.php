@@ -35,6 +35,7 @@ function pimV3ParseChunk(string $raw): array {
     if(strlen($raw)>8*1024*1024)throw new PimV3Rejected('BYTE_LIMIT',[],413);
     try{$obj=json_decode($raw,false,64,JSON_THROW_ON_ERROR);$arr=json_decode($raw,true,64,JSON_THROW_ON_ERROR);}catch(JsonException){throw new PimV3Rejected('INVALID_JSON',[],400);}
     if(!$obj instanceof stdClass)throw new PimV3Rejected('BATCH_CONTRACT',[],400);
+    if(($arr['currency']??null)!=='UAH')throw new PimV3Rejected('CURRENCY',[],400);
     foreach(PIM_V3_CONTRACT as $k=>$v)if(($arr[$k]??null)!==$v)throw new PimV3Rejected('UNSUPPORTED_VERSION:'.$k,[],409);
     if(isset($arr['models'])||!is_array($arr['products']??null)||!array_is_list($arr['products']))throw new PimV3Rejected('ENVELOPE_PRODUCTS_REQUIRED',[],400);
     if(!is_string($arr['batch_id']??null)||!preg_match('/^PB-[a-f0-9]{16}-[a-f0-9]{16}$/D',$arr['batch_id']))throw new PimV3Rejected('BATCH_ID',[],400);
