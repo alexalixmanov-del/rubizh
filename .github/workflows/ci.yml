@@ -75,8 +75,11 @@ jobs:
         env:
           RUBIZH_TEST_MYSQL_SOCKET: /tmp/mysqld/mysqld.sock
         run: |
+          set -euo pipefail
           sudo chmod 777 /tmp/mysqld
           node --test --test-reporter=tap tests/*.test.mjs | tee "$RUNNER_TEMP/site-tests.tap"
+          grep -Eq '^# fail 0$' "$RUNNER_TEMP/site-tests.tap"
+          grep -Eq '^# tests [1-9][0-9]*$' "$RUNNER_TEMP/site-tests.tap"
           grep -Eq '^# skipped 0$' "$RUNNER_TEMP/site-tests.tap"
       - name: Verification evidence
         if: always()
