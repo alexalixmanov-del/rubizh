@@ -8,6 +8,10 @@ permissions:
   contents: read
 jobs:
   test:
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.2', '8.3']
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     defaults:
@@ -35,7 +39,7 @@ jobs:
           path: crm
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
+          php-version: ${{ matrix.php }}
           extensions: pdo_mysql, mbstring, gd, curl, openssl, fileinfo, intl, zip, sodium
           coverage: none
       - uses: actions/setup-node@v4
@@ -70,11 +74,14 @@ jobs:
       - name: Tests (MariaDB over the service socket)
         env:
           RUBIZH_TEST_MYSQL_SOCKET: /tmp/mysqld/mysqld.sock
-        run: sudo chmod 777 /tmp/mysqld && npm test
+        run: |
+          sudo chmod 777 /tmp/mysqld
+          node --test --test-reporter=tap tests/*.test.mjs | tee "$RUNNER_TEMP/site-tests.tap"
+          grep -Eq '^# skipped 0$' "$RUNNER_TEMP/site-tests.tap"
       - name: Verification evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: site-crm-verification-${{ github.sha }}
+          name: site-crm-verification-${{ github.sha }}-php${{ matrix.php }}
           path: /workspace/reports
           if-no-files-found: warn
