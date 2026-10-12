@@ -16,7 +16,7 @@ async function fixture({stock=null}={}){
  const other=generateKeyPairSync('ec',{namedCurve:'prime256v1'});
  // The bank key was refreshed a moment ago (as after any first webhook), so a forged signature is judged against it.
  site.sql(`INSERT INTO meta(k,v) VALUES('mono_public_key_checked',UNIX_TIMESTAMP()) ON DUPLICATE KEY UPDATE v=VALUES(v)`);
- site.hook=(inv,{status='success',amount=+inv.amount,ccy=980,invoiceId=inv.invoice_id,key=keys.privateKey,at=new Date()}={})=>{const raw=JSON.stringify({invoiceId,status,amount,ccy,reference:inv.reference,modifiedDate:at.toISOString()});
+ site.hook=(inv,{status='success',amount=+inv.amount,ccy=980,invoiceId=inv.invoice_id,key=keys.privateKey,at=new Date(),...extras}={})=>{const raw=JSON.stringify({invoiceId,status,amount,ccy,reference:inv.reference,modifiedDate:at.toISOString(),...extras});
   return site.post('/shop/mono-webhook.php',raw,{'X-Sign':createSign('SHA256').update(raw).sign(key).toString('base64')});};
  site.forged=inv=>site.hook(inv,{key:other.privateKey});
  const r=await fetch(site.base+'/shop/customer.php');const h={Cookie:r.headers.get('set-cookie').split(';')[0]},csrf=(await r.json()).csrf;
@@ -197,5 +197,31 @@ test('stage-2 SP3/PAY-01: newer success observations recover a payable failed at
   assert.equal(site.sql('SELECT status FROM rubizh_mono_invoices WHERE id='+inv.id)[0].status,'success');assert.equal(site.paid(id),'paid','matching authenticated read confirms a lost webhook after 900 seconds');
   assert.equal(site.sql('SELECT status FROM rubizh_customer_orders WHERE id='+id)[0].status,'confirmed');assert.equal(site.sql('SELECT status FROM rubizh_stock_reservations WHERE order_id='+id)[0].status,'COMMITTED');
   assert.equal(site.sql(`SELECT COUNT(*) n FROM rubizh_np_audit WHERE order_id=${id} AND action='mono_status_confirmed'`)[0].n,1);
+ }finally{site.stop();}
+});
+
+test('stage-2 FPAY-02: no-ledger partial or contradictory reversal facts are parked with a refund uncertainty hold',{skip,timeout:180000},async()=>{
+ const site=await fixture();try{
+  const {id,inv}=await site.newInvoice(87),at=new Date();assert.equal((await site.hook(inv,{at})).status,200);
+  const invalid=[[{extRef:'external-partial-refund',amount:100,ccy:980,status:'success'}],[{extRef:'external-processing-refund',amount:+inv.amount,ccy:980,status:'processing'}],[{extRef:'external-failed-refund',amount:+inv.amount,ccy:980,status:'failure'}]];
+  for(const [n,cancelList] of invalid.entries()){
+   const r=await site.hook(inv,{status:'reversed',at:new Date(at.getTime()+1000+n),cancelList});assert.equal(r.status,200);assert.equal(r.data.parked,true,'incomplete cancellation evidence must not become full refunded');
+   assert.equal(site.paid(id),'paid');assert.equal(site.sql('SELECT pim_payment_state FROM rubizh_customer_orders WHERE id='+id)[0].pim_payment_state,'PAID');
+   assert.deepEqual(site.sql('SELECT status,refund_status FROM rubizh_mono_invoices WHERE id='+inv.id)[0],{status:'success',refund_status:'unknown'},'invoice paid evidence and uncertainty remain durable');
+  }
+  // A known legacy operation requires its own exact reference even when another fact has the full amount.
+  site.sql(`UPDATE rubizh_mono_invoices SET refund_ref='legacy-pending-ref' WHERE id=${inv.id}`);
+  const foreign=await site.hook(inv,{status:'reversed',at:new Date(at.getTime()+2000),cancelList:[{extRef:'foreign-refund',amount:+inv.amount,ccy:980,status:'success'}]});assert.equal(foreign.data.parked,true);assert.equal(site.paid(id),'paid');assert.equal(site.sql('SELECT refund_status FROM rubizh_mono_invoices WHERE id='+inv.id)[0].refund_status,'unknown');
+  const retry=php(`define('RUBIZH_AUTH_NO_SESSION',true);require '${site.site}/auth/bootstrap.php';$GLOBALS['crm_staff_actor']=['id'=>str_repeat('1',32),'role'=>'OWNER'];define('RUBIZH_MONO_TESTS',true);$GLOBALS['calls']=0;$GLOBALS['mono_test_transport']=function($p,$b){$GLOBALS['calls']++;return ['status'=>'success'];};try{monoRefund(shopStoreDatabase(),${id},str_repeat('1',32),'Покупець погодив повне повернення');}catch(Throwable $e){}echo $GLOBALS['calls'];`);assert.equal(retry.stdout,'0','partial/uncertain facts prohibit an extra full provider refund');
+  assert.equal(site.sql(`SELECT COUNT(*) n FROM rubizh_np_audit WHERE order_id=${id} AND action='mono_event_rejected'`)[0].n,4);
+  const settled=await site.hook(inv,{status:'reversed',at:new Date(at.getTime()+3000),cancelList:[{extRef:'legacy-pending-ref',amount:+inv.amount,ccy:980,status:'success'}]});assert.equal(settled.status,200);assert.equal(settled.data.parked,undefined);assert.equal(site.paid(id),'refunded');assert.equal(site.sql('SELECT refund_status FROM rubizh_mono_invoices WHERE id='+inv.id)[0].refund_status,'success','exact signed full-refund facts can settle the hold');
+  const laterPartial=await site.hook(inv,{status:'reversed',at:new Date(at.getTime()+4000),cancelList:[{extRef:'external-partial-refund',amount:100,ccy:980,status:'success'}]});assert.equal(laterPartial.data.parked,true);assert.equal(site.paid(id),'refunded');assert.equal(site.sql('SELECT refund_status FROM rubizh_mono_invoices WHERE id='+inv.id)[0].refund_status,'success','successful refund evidence is monotonic');
+ }finally{site.stop();}
+});
+
+test('stage-2 FPAY-02: complete signed external cancellation facts settle a no-ledger full reversal',{skip,timeout:180000},async()=>{
+ const site=await fixture();try{
+  const {id,inv}=await site.newInvoice(88),at=new Date();assert.equal((await site.hook(inv,{at})).status,200);
+  const r=await site.hook(inv,{status:'reversed',at:new Date(at.getTime()+1000),cancelList:[{extRef:'external-refund-a',amount:100,ccy:980,status:'success'},{extRef:'external-refund-b',amount:+inv.amount-100,ccy:980,status:'success'}]});assert.equal(r.status,200);assert.equal(r.data.parked,undefined);assert.equal(site.paid(id),'refunded');assert.equal(site.sql('SELECT refund_status FROM rubizh_mono_invoices WHERE id='+inv.id)[0].refund_status,'success');
  }finally{site.stop();}
 });

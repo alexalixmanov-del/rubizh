@@ -107,6 +107,20 @@ function monoApplyEvent(PDO $db,array $event,string $hash,bool $signedWebhook=fa
  // The bank already reported success for this invoice; a stale non-final read cannot roll it back.
  if($current['status']==='awaiting_webhook'&&in_array($event['status'],['created','processing','hold'],true)){$db->commit();return;}
  if($current['modified_at']!==''&&strtotime($event['modifiedDate'])<strtotime($current['modified_at'])){$db->commit();return;}
+ // The no-ledger compatibility path represents only full refunds. Explicit cancellation facts
+ // must prove the whole amount, and a pending local operation must match its own reference.
+ // Partial/uncertain facts stay parked with a money-out hold instead of inventing a full refund.
+ if($event['status']==='reversed'&&array_key_exists('cancelList',$event)&&(!crmSchemaReady($db)||!crmRefundRows($db,(int)$invoice['order_id']))){
+  $total=0;$complete=true;foreach($event['cancelList'] as $c){
+   if($c['status']!=='success'||$current['refund_ref']!==''&&$c['extRef']!==$current['refund_ref']||$c['amount']>(int)$current['amount']-$total){$complete=false;break;}
+   $total+=$c['amount'];
+  }
+  if(!$complete||$total!==(int)$current['amount']){
+   $db->prepare("UPDATE rubizh_mono_invoices SET refund_status='unknown' WHERE id=? AND refund_status<>'success'")->execute([$current['id']]);
+   npAudit($db,str_repeat('0',32),'mono_event_rejected',(int)$invoice['order_id'],0,'incomplete or uncorrelated no-ledger reversal; full refund not established');
+   $db->commit();throw new MonoEventRejected('Факти повернення потребують звірки. Повне повернення не підтверджено.');
+  }
+ }
  $db->prepare('UPDATE rubizh_mono_invoices SET status=?,modified_at=?,updated_at=UTC_TIMESTAMP() WHERE id=?')->execute([$event['status'],$event['modifiedDate'],$invoice['id']]);
  if($event['status']==='success'){shopReservationTransition($db,(int)$invoice['order_id'],'COMMITTED','MONOPAY_WEBHOOK');$u=$db->prepare("UPDATE rubizh_customer_orders SET payment_status='paid',updated_at=UTC_TIMESTAMP() WHERE id=? AND payment_status NOT IN ('paid','refunded')");$u->execute([$invoice['order_id']]);if($u->rowCount())shopQueueEvent($db,(int)$invoice['order_id'],'paid');if(!empty($GLOBALS['rubizh_pim_v3_columns']))$db->prepare("UPDATE rubizh_customer_orders SET pim_payment_state='PAID',pim_fulfillment_state=IF(pim_fulfillment_state='NOT_READY' AND pim_order_state='CONFIRMED','READY_TO_SHIP',pim_fulfillment_state) WHERE id=? AND pim_contract_version=3")->execute([$invoice['order_id']]);}
  elseif(in_array($event['status'],['failure','expired'],true)){$db->prepare("UPDATE rubizh_customer_orders SET payment_status='failed',updated_at=UTC_TIMESTAMP() WHERE id=? AND payment_status='pending'")->execute([$invoice['order_id']]);if(!empty($GLOBALS['rubizh_pim_v3_columns']))$db->prepare("UPDATE rubizh_customer_orders SET pim_payment_state='UNPAID' WHERE id=? AND pim_contract_version=3 AND payment_status='failed'")->execute([$invoice['order_id']]);}
