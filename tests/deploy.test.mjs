@@ -53,7 +53,7 @@ test('Installer smoke rejects unavailable HTTP routes and accepts successful rou
  const run=()=>new Promise(resolve=>{const p=spawn('bash',['-c','set -euo pipefail; source "$1"; rubizh_smoke "$2"','release-smoke',installer,base],{stdio:['ignore','pipe','pipe']});let stdout='',stderr='';p.stdout.on('data',x=>stdout+=x);p.stderr.on('data',x=>stderr+=x);p.on('close',exit=>resolve({exit,stdout,stderr}));});
  try{const bad=await run();assert.notEqual(bad.exit,0);assert.match(bad.stderr,/Smoke check failed.*503/);status=200;const good=await run();assert.equal(good.exit,0,good.stderr);assert.equal((good.stdout.match(/200/g)||[]).length,3);}finally{await new Promise(resolve=>server.close(resolve));}
 });
-test('Deployment preserves private configs, media and legacy provider keys; invalid checksum changes nothing',()=>{
+test('Deployment preserves private configs, media and legacy provider keys; invalid checksum changes nothing',{skip:process.platform!=='linux'?'Deployment helper targets Linux/GNU realpath, find and sha256sum; exercise on Linux CI':false},()=>{
  const dir=mkdtempSync(path.join(tmpdir(),'rubizh-deploy-'));const site=path.join(dir,'www'),bin=path.join(dir,'bin'),release=path.join(dir,'release/rubizh');
  for(const p of ['api','auth','media'])mkdirSync(path.join(site,p),{recursive:true});mkdirSync(bin);mkdirSync(path.join(release,'api'),{recursive:true});
  const api="<?php return ['db_pass'=>'fixture-db','mono_token'=>''];";
@@ -68,7 +68,7 @@ test('Deployment preserves private configs, media and legacy provider keys; inva
   const result=run(sum);assert.equal(result.status,0,result.stderr);assert.equal(result.stdout.includes('fixture-legacy-mono'),false);assert.equal(readFileSync(path.join(site,'index.html'),'utf8'),'new-index');assert.match(readFileSync(path.join(site,'api/config.php'),'utf8'),/fixture-legacy-mono/);assert.equal(readFileSync(path.join(site,'auth/config.php'),'utf8'),'private-fixture-auth');assert.equal(readFileSync(path.join(site,'media/photo.txt'),'utf8'),'existing-media');
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
-test('Small patch without api files still backs up private config and installs successfully',()=>{
+test('Small patch without api files still backs up private config and installs successfully',{skip:process.platform!=='linux'?'Deployment helper targets Linux/GNU realpath, find and sha256sum; exercise on Linux CI':false},()=>{
  const dir=mkdtempSync(path.join(tmpdir(),'rubizh-small-patch-'));const site=path.join(dir,'www'),bin=path.join(dir,'bin'),release=path.join(dir,'release/rubizh');
  for(const p of ['api','shop'])mkdirSync(path.join(site,p),{recursive:true});mkdirSync(bin);mkdirSync(path.join(release,'shop'),{recursive:true});
  writeFileSync(path.join(site,'api/config.php'),"<?php return ['db_pass'=>'fixture-db','nova_poshta_api_key'=>'fixture-np'];");writeFileSync(path.join(site,'index.html'),'old-index');writeFileSync(path.join(site,'shop/np-lib.php'),'<?php // old library');
