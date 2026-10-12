@@ -139,3 +139,25 @@ node tests/.staging/qa-audit.mjs $W/qa/audit $W/tools
 4. P2/P3 из реестра.
 5. 07 и 08 документы, финальный `/ecc:code-review`, повтор тестов, GO/NO-GO.
 6. Deploy — только по отдельному подтверждению владельца.
+
+
+## Глобальный этап2 — cloud resume (2026-10-12)
+
+SITE `/workspace/rubizh`, branch `hardening/stage-2-audit-fixes`; baseline `rubizh-stage-1-verified` →51c83d808228a26328081b02211b4e3605353755. Main не использовать/не менять. PIM `/workspace/pim.rubizh` exact21198461f8ebb2eadef6dcd6fb77a50a8a038ea9, CRM dependency `/workspace/onboarding/dependencies/crm.rubizh` exactb0e2f9359a05ec835a83d64bb9bcdc2c97487a50; их source read-only.
+
+`source /workspace/onboarding/rubizh/environment.sh`; `bash /workspace/onboarding/rubizh/start.sh`. Helpers и signed Debian PHP8.4/MariaDB11.8 extraction вне checkout; Node24.19, Playwright1.62.1, Chromium/system плюс downloaded Firefox/WebKit. MariaDB fixture-only private Unix socket/noTCP, innodb_snapshot_isolation=OFF соответствует CI11.4. PHP extensions pdo_mysql/mbstring/curl/gd/fileinfo; root/no-password допустим только для этого fixture. Start проверяет SELECT1 и функциональный Node/PHP preview; running processes после snapshot restoration запускаются заново. Full tests: `node --test --test-reporter=tap --test-concurrency=2 tests/*.test.mjs`. Не запускать много DB/browser suites параллельно: под перегрузкой подтверждены hard20s fixture timeouts; serial retries не ослабляли assertions.
+
+Browser external runners `/workspace/onboarding/qa-tools`, artifact folders `/workspace/onboarding/rubizh/reports/checkpoint-*`; Firefox требует разрешённый tool sandbox escalation из-за user-namespace/proc startup, WebKit `executablePath=/workspace/onboarding/browsers/webkit-2336/pw_run.sh` с verified local libs bridge. Cookies ослабляются только generated HTTP QA fixture. Не выдавать localhost links и не запускать live MonoPay/NP/SMS/SMTP. Approved api.github.com/cdn.playwright.dev/playwright.download.prss.microsoft.com реально проверены; прежний network BLOCKED снят только для выполненных операций.
+
+Слепые исходные13 raw: stage-2/raw, единый регистр03, новые артефакты только stage-2/. Unresolved HIGH детали в ignored mode700 private/ и `/workspace/onboarding/stage2-private`; их не добавлять в index/PR/public reports. Full PIM HIGH patch private; public PIMC-P1 — notice. Другие proposals не применены. Поздние findings финального review корректированы/перепроверяются; точные статусы03/checkpoint имеют приоритет над историческими raw.
+
+Cloud install_script/start_skill обновлены, повторно исполнены и saved в draft; публикация/новая-session restoration не выполнены. Runtime network state unknown не означает отсутствие доступа: наблюдались успешные GitHub API, browser download и git push. Repository declarations после doc checkpoint должны сохранить exactHEAD + реальные mounts, не устаревший main. Не менять network fields при сохранении scripts/repositories.
+
+Следующий шаг только по итоговому STAGE_CHECKPOINT. Нельзя считать этот checkpoint разрешением на Stage3 build/packaging/deploy, PIM sync/AUTOPRICES или tag publication. GO-tag допускается лишь при выполненном Stage2 gate; сейчас unresolved owner/external пункты требуют NO-GO.
+
+Tmpfs hygiene: tests retain fixture copies after stop(), and this long audit exhausted17GB /tmp. 941 positively identified inactive synthetic SITE dirs were removed after stopping failed overlapping runners; all DB schemas/reports preserved. Do not count the ENOSPC/contended runs as green. Optional /workspace/onboarding/rubizh/cleanup-fixtures.py dry run/--apply only considers old (>1h), marker-verified, inactive copies. Run final DB/browser suites serially with capacity checks; no arbitrary /tmp or DB deletion.
+
+Финализация: code1fcca317f381c33ea29b40ccb12d99b2b65c439b; exact code CI38304082586SUCCESS PHP8.2/8.3. Full browser matrix/axe/Lighthouse repeated after app corrections; bound independent payment/changes/QA approval. Общий Stage2 NO-GO из-за incomplete whole SECURITY и exhaustive dynamic boundary coverage; Stage3 STOP. Doc-only checkpoint exactCI verified after push in final response/retained metadata. Full numeric reportstage-2/FINAL_REPORT, register03; сохранять private HIGH confidentiality.
+
+
+**Ограничение приватности:** GitHub repository visibility проверено как public. Унаследованный commit2a338da содержит исходные HIGH raw; обычный push сохранил эти версии в истории. Текущие документы редактированы, новые полные доказательства остаются local/private, но обещать приватность исторических raw нельзя. История не переписывалась: force-push запрещён владельцем. QA-20 MEDIUM / OWNER DECISION фиксирует процессный дефект; cleanup требует отдельного решения и не отменяет уже случившуюся публикацию. Технические подробности неразрешённых HIGH здесь не повторяются.

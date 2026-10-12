@@ -1,0 +1,22 @@
+# SITE payment correctness corrections — SP1, SP2, SP3
+
+Scope: local, reversible changes on `hardening/stage-2-audit-fixes`; commits c1c3498/ce8b8e8/415a08b; no deployment, live provider traffic or real data. The private independent review remains at `/workspace/onboarding/stage2-private/security-payments-review.md`.
+
+- SP1: `monoValidateEvent` checks the complete optional cancellation list before existing ledger mutation: list shape, maximum 100 facts, nonempty bounded references, unique references, integer positive amounts, supported statuses and currency. Contradictory duplicate facts are parked and audited; completed refund money and the unresolved operation hold remain unchanged. Existing ledger invoice/reference/amount correlation remains in place. No staff/CRM source edits.
+- SP2: SITE full-refund and manual-reconciliation helpers compare the existing `expected_updated_at` contract after acquiring `npLocked`. Forms carry the viewed timestamp; JSON calls pass it into the same helpers. Refused reconciliation makes no provider request. Trusted CLI calls retain compatibility; the existing authenticated CRM caller may omit this timestamp only when it already holds the same database connection's order lock, where CRM has checked its fingerprint. No schema or API contract expansion. The second-resolution timestamp remains unable to distinguish multiple changes within one second; this narrow correction does not claim to solve that residual limitation.
+- SP3: unsigned success/reversal observations use the existing order lock, reread the invoice `FOR UPDATE`, and apply timestamp/terminal guards before writing. Expired invoices and older observations are audited without reopening the invoice. A failed card attempt leaves its invoice payable: a newer matching authenticated success observation enters `awaiting_webhook` and retains the existing 900-second lost-webhook recovery path. Authentic later signed success still records financial evidence and retains an already-cancelled order.
+- PAY-01 worker support: failure invoices remain eligible for status polling until audited bank removal/final expiry. This preserves the coordinator's separate reservation and invoice-closure changes.
+
+## Verification
+
+Runtime: `source /workspace/onboarding/rubizh/environment.sh`; isolated MariaDB fixture with `innodb_snapshot_isolation=OFF`, PHP 8.4, synthetic sessions/keys, local mocks only.
+
+Pinned source baseline: SITE `51c83d808228a26328081b02211b4e3605353755`, unchanged archive `/workspace/onboarding/audit-source/site`. Copied into `/tmp/stage2-payments-pinned-red` with only the two regression test files overlaid. Targeted SP/PAY-worker run: **0 passed, 8 failed, 0 skipped**. Log: `/workspace/onboarding/stage2-private/payments-regressions-pinned-red.log`.
+
+Current focused run: `node --test tests/mono-webhook-contract.test.mjs tests/q5-manager-rbac.test.mjs tests/crm-security.test.mjs tests/q7-payment-readiness.test.mjs`: **26 passed, 0 failed, 0 skipped**. Log: `/workspace/onboarding/stage2-private/payments-regressions-green.log`. This includes real independent PHP processes proving diagnostic polls cannot write through a held order lock, stale refund/reconciliation JSON/form requests refused after a different process changes the order while they wait, signed late-payment bookkeeping, and failure-to-grace-to-paid lost-webhook recovery.
+
+Parent review identified that the initial SP3 guard treated `failure` as a terminal invoice. Added the recovery regression before narrowing this guard to `expired`: **0 passed, 1 failed, 0 skipped** against that intermediate implementation, with failure specifically at the newer observation remaining `failure` instead of `awaiting_webhook`. Log: `/workspace/onboarding/stage2-private/payments-failure-recovery-red.log`. The final focused run above passes this case and still rejects the older observation.
+
+PHP syntax checks for all three changed handlers/helpers and scoped `git diff --check` passed. SP4/provider cancellation-status contract handling remains outside these corrections; no new claim about the live provider contract is made.
+
+Final scoped independent payments review approved0c9789a; reviewed application blobs remain identical in final code1fcca317f381c33ea29b40ccb12d99b2b65c439b. Follow-up34/34 and independent correlated refund/reversal/version probes passed. Whole SECURITY remains incomplete; final full local suite/CI numbers are in STAGE_CHECKPOINT.

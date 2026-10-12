@@ -9,7 +9,7 @@
 | Этап | Содержание | Статус | Проверенный SHA | Тег (локальный) |
 |---|---|---|---|---|
 | 1 | Завершение SITE: hardening, Q-4…Q-7, Quality Gate | **VERIFIED** | `f50dc50` (код), тег на checkpoint-коммите | `rubizh-stage-1-verified` |
-| 2 | Независимый multi-agent аудит SITE + PIM | не начат | — | — |
+| 2 | Независимый multi-agent аудит SITE + PIM | **CHECKPOINT / INCOMPLETE / NO-GO** | `1fcca317f381c33ea29b40ccb12d99b2b65c439b` (code; doc-only checkpoint follows) | не создан |
 | 3 | Стабильный release candidate | не начат | — | — |
 | 4 | Завершение CRM | не начат | — | — |
 | 5 | Импорт пяти поставщиков | не начат | — | — |
@@ -118,3 +118,32 @@ cd ~/Projects/pim.rubizh && git checkout 21198461f8ebb2eadef6dcd6fb77a50a8a038ea
 | P0 / блокирующие P1 | нет |
 
 Статус на момент записи: INCOMPLETE (только CI). Позже: CI success на `8afd937` (run 38156005947) → Q-6 DONE.
+
+
+## Глобальный этап2 — checkpoint2026-10-12 UTC: NO-GO
+
+Code `1fcca317f381c33ea29b40ccb12d99b2b65c439b`, branch `hardening/stage-2-audit-fixes`; baseline tag51c83d808228a26328081b02211b4e3605353755. Main не использован/не изменён. PIM21198461f8ebb2eadef6dcd6fb77a50a8a038ea9; CRM dependencyb0e2f9359a05ec835a83d64bb9bcdc2c97487a50; оба tracked source clean/read-only; SITE staff/api-staff unchanged.
+
+| Quality Gate | Реальное доказательство |
+|---|---|
+| Linux baseline |351/351 PASS,0FAIL/SKIP; tag CI38173980266SUCCESS, f50 code38170904075SUCCESS |
+| Final full local |450/450 PASS;0FAIL/SKIP/CANCELLED;626167ms, exact code1fcca317 |
+| Exact code CI |[38304082586](https://github.com/lieverifying/rubizh/actions/runs/38304082586) SUCCESS, PHP8.2/8.3; positive count, fail0/skip0 enforced |
+| Three browsers /7widths |315/315 pages+21/21 purchases; ADDENDUM210/210, cabinet21/21; unexpectedJS/overflow/brokenimages0; expected synthetic404 consoles separately recorded |
+| PIM unchanged |682/682 PASS,0FAIL/SKIP; proposals not applied |
+| Q8 / D11 |Originalee ancestor PASS;31historical cases25red/6controls, finalfocused23/23; qty/N/mode follow-up approved; rules/examples in10 |
+| axe / Lighthouse |30/30 WCAG2.1 A/AA checks0violations,111inventory flags;32paired compressed Lighthouse runs0errors; mixed score/time deltas, performance threshold not claimed PASS |
+| Scoped review |Payments/changes/QA fixes independently approved, late financial/recovery/email findings closed; full whole SECURITY incomplete |
+| Restore |61tables/2triggers, restored rows equal; private configuration/media preservation; synthetic only |
+| Local integrity |151PHP syntax checks PASS; frozen SITE npm audit0; Stage2 gitleaks0(code span), final checkpoint span checked after commit |
+
+Единый03:126 finding rows,36 FIXED; confidence/status/duplicates explicit. Неисправленные HIGH публикуются только ID/severity; подробности остаются private. §7 owner proposals в04; PIM/CRM patches unapplied. Existing03/02/04/05/07/08/09/10/SESSION updated, new report/proposals onlystage-2/. [Полный10-раздельный итоговый отчёт](stage-2/FINAL_REPORT.md).
+
+**NO-GO:** required fresh whole SECURITY execution BLOCKED(tool)/INCOMPLETE; exhaustive dynamic endpoint/method/role traversal not certified. Зеленые selected suites или CI не заменяют эти два gate. Performance medians retain mixed deltas; productionp75/capacity UNMEASURED. Stage2 verified tag не создан, tag не опубликован, merge/deploy/Stage3 не выполнялись. Live provider E2E DEFERRED→Stage6, не PASS. Approved API/browser networking and normal branch push actually worked, corresponding BLOCKED(network) снят.
+
+Этот commit меняет только документы, app/test/workflow bytes совпадают с указанным codeSHA. Собственный checkpoint SHA нельзя включить в сам commit; после push exact SHA/CI result фиксируются в final response и `/workspace/onboarding/rubizh/reports/checkpoint-ci.json`. Until that evidence, exact checkpoint CI is not claimed successful by this file.
+
+Cloud install_script/start_skill tested and saved; final complete repository membership saved with actual mounts/exact HEADs after checkpoint. User review/save/publish in environment settings activates saved draft; new-task restoration not verified. Startup uses `/workspace/onboarding/rubizh/start.sh` +functional smoke, no live processes assumed restored. Optional marker/age/activity-checked cleanup helper preserves all fixture DB schemas/reports.
+
+
+**Ограничение приватности:** GitHub repository visibility проверено как public. Унаследованный commit2a338da содержит исходные HIGH raw; обычный push сохранил эти версии в истории. Текущие документы редактированы, новые полные доказательства остаются local/private, но обещать приватность исторических raw нельзя. История не переписывалась: force-push запрещён владельцем. QA-20 MEDIUM / OWNER DECISION фиксирует процессный дефект; cleanup требует отдельного решения и не отменяет уже случившуюся публикацию. Технические подробности неразрешённых HIGH здесь не повторяются.

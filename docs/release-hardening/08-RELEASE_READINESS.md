@@ -74,3 +74,50 @@
 - Live MonoPay / Nova Poshta / SMS-провайдер.
 - Реальный каталог и фото на стейджинге за Apache (Lighthouse на production-подобном сервере).
 - Пользовательское тестирование конструктора на реальных участниках (только сценарная экспертная проверка).
+
+## Глобальный этап 2 — 2026-10-12 UTC: **INCOMPLETE / production NO-GO** (checkpoint)
+
+Исторический GO этапа 1 выше относится к его закреплённому коду и переходу к аудиту. Он не подтверждает текущий release candidate. Исходный независимый аудит: SITE `51c83d808228a26328081b02211b4e3605353755`; итоговый код после поздних коррекций и повторной browser matrix: `1fcca317f381c33ea29b40ccb12d99b2b65c439b`.
+
+PIM остаётся `21198461f8ebb2eadef6dcd6fb77a50a8a038ea9`; отдельный CRM-репозиторий — read-only. Ни merge/deploy, ни production-миграции, ни provider activation, ни удаление assets не выполнялись и этим документом не разрешаются.
+
+| Gate | Проверенное доказательство | Текущий итог |
+|---|---|---|
+| Linux baseline SITE | **351/351 pass; 0 fail/skipped** (`baseline-compatible.tap`) | PASS для исходной базы |
+| Первый полный SITE regression | **435/435 pass; 0 fail/skipped** (`final-regression.tap`) | PASS до поздних изменений; новый итог `450/450 PASS;0FAIL/SKIP/CANCELLED;626167ms, exact code1fcca317` |
+| PIM, без изменений | **682/682 pass; 0 fail/skipped** (`pim-tests.log`) | PASS выбранного read-only workflow; предложения не применены |
+| Полная browser matrix | **315/315 загрузок +21/21 потоков**, ADDENDUM210/210, cabinet21/21;3движка×7ширин, final application tree | PASS локального synthetic scope; latest commits QA-only |
+| UI/a11y и SEO | Scoped UI/a11y **15/15**, SEO **7/7**, без skipped; дополнительные stock/SKU/canonical сценарии зелёные | PASS в указанном scope; не полная WCAG/provider-сертификация |
+| Release / ops rehearsal | Fail-closed artifact/schema/smoke gates; восстановлены **61 таблица и 2 триггера**, исходники/private config/media | Локально проверено; production artifact/backup/scheduler не подтверждены |
+| Финальное независимое review | Выполнены отдельные selected runs, найдены поздние пункты; security execution отмечено как незавершённое | **INCOMPLETE**; `Scoped payment/changes/QA review approved; whole SECURITY BLOCKED(tool)/INCOMPLETE` |
+| CI для точного итогового SHA | Exact code CI PHP8.2/8.3 SUCCESS | **[38304082586](https://github.com/lieverifying/rubizh/actions/runs/38304082586), SUCCESS; exact doc-only checkpoint CI checked after commit**; старый зелёный CI не заменяет новый |
+| Внешние HIGH и решения владельца | Окончательный статус фиксирует координатор в `03-DEFECT_REGISTER.md` | Остаются открытыми; общий GO не выдаётся |
+
+В matrix нет JS pageerror, horizontal overflow и битых синтетических изображений. Ожидаемые console-сообщения HTTP 404 для тестовой отсутствующей карточки сохранены отдельно; их не надо ни скрывать, ни считать JavaScript-сбоем. Проверка выполнялась на локальных fixture-данных с mock-провайдерами; это не реальная покупка.
+
+### Неразрешённые HIGH: публикационный список для завершения реестра
+
+Таблица — итоговый публикационный список, не заключение о подтверждённой эксплуатации. Часть исходных оценок ещё требует подтверждения; уверенность, source references, сценарии и исправления остаются в закрытых доказательствах. Окончательный реестр сверён; private confidence evidence сохранены.
+
+| ID | Severity |
+|---|---|
+| ARCH-02 | HIGH |
+| DB-01 | HIGH |
+| DB-02 | HIGH |
+| DB-03 | HIGH |
+| PAY-02 | HIGH |
+| LOG-02 | HIGH |
+| PIMC-P1 | HIGH |
+| SEC-05 | conditional HIGH |
+
+### Что остаётся после NO-GO checkpoint
+
+1. Провести fresh whole SECURITY review в доступной среде/человеком и exhaustive endpoint/method/role dynamic verification. Tool-blocked execution не считается PASS.
+2. Exact code CI success подтверждён; doc-only checkpoint exact-SHA CI выполняется после push и фиксируется в итоговом ответе/retained metadata.
+3. Оставить нерешённые внешние пункты и решения владельца открытыми. Предложения по архитектуре, performance, CGNAT, резервам, наблюдаемости, настройкам, CRM и Q-9 перечислены в `04-ECC_IMPLEMENTATION_PLAN.md`, этап 2 §7; наличие предложений не означает согласие на реализацию.
+4. Подготовить новый проверенный release artifact и целевые hosting prerequisites в отдельно разрешённом release-процессе. Нынешний исторический архив намеренно отсекается installer; успешной новой установки не было.
+
+Live HTTPS webhook, sandbox/live оплата, SMS/email, НП/ТТН и финальный E2E всей системы сохраняют статус **DEFERRED → глобальный этап 6**. Они не являются PASS или текущим выполненным deploy. Этапы 3–6 не объявляются закрытыми; production **NO-GO** сохраняется.
+
+
+**Ограничение приватности:** GitHub repository visibility проверено как public. Унаследованный commit2a338da содержит исходные HIGH raw; обычный push сохранил эти версии в истории. Текущие документы редактированы, новые полные доказательства остаются local/private, но обещать приватность исторических raw нельзя. История не переписывалась: force-push запрещён владельцем. QA-20 MEDIUM / OWNER DECISION фиксирует процессный дефект; cleanup требует отдельного решения и не отменяет уже случившуюся публикацию. Технические подробности неразрешённых HIGH здесь не повторяются.

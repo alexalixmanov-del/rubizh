@@ -76,3 +76,44 @@
 - **Кнопки:** реальных «мёртвых» нет; новые срабатывания («2XL», «Каталог ▾») проверены вручную — реагируют.
 - **Независимый ECC code review** (агент `ecc:code-reviewer`, диффы относительно `59b4685`, клиент — против прежних версий файлов): P0/P1 — нет; P2/P3 — RV-1…RV-4, все исправлены regression-first. Проверено без замечаний: COD, MonoPay (подписи, grace-период, повторы), INVOICE_OPEN, publication_state, XSS в новых шаблонах, соцссылки, отсутствие новых endpoint’ов.
 - **Новые поверхности безопасности ADDENDUM:** ссылки соцсетей валидируются при сохранении и при каждом чтении (https, точный хост, без учётных данных/порта/опасных схем), на клиенте — повторно; новых endpoint’ов нет; кабинет — только существующий домен заказов с проверкой владельца.
+
+## 7. Глобальный этап 2 — дополнение 2026-10-12 UTC (checkpoint)
+
+Предыдущие разделы — история этапа 1; их оценки и GO нельзя переносить на новый SHA. Независимый исходный аудит выполнялся на SITE `51c83d8`, финальный код `1fcca317f381c33ea29b40ccb12d99b2b65c439b`, matrix повторена на identical application tree, позднейшие commits QA-only. Runtime локальных проверок: Linux, PHP 8.4, синтетическая MariaDB, fixture-ключи/сессии и loopback mock-провайдеры. Production, реальные платежи, возвраты, ТТН, SMS/email и данные покупателей не использовались.
+
+### Security и независимое ревью
+
+Существующие и добавленные локальные проверки охватывают проверку подписи, порядок/повтор события, денежные версии под блокировкой, независимые конкурентные процессы, RBAC/step-up, идемпотентность и сохранение оплаченного snapshot. Отдельный финальный security-набор завершил **48/48 pass, 0 fail/skipped**, но это результат выбранных тестов, а не безусловное security-заключение.
+
+**Финальное независимое security-ревью — INCOMPLETE:** в его исполнении отмечены незавершённые пункты; детали и первичные доказательства частные. Дополнительные платежные и changes-ревью выявили поздние пункты на `56acdcb`; исправления повторно проверены payment/changes reviewers; полный SECURITY проход этим не заменён. Публикуются только ID/severity неразрешённых HIGH; ни количество зелёных тестов, ни статический просмотр не закрывают их автоматически. Итоговое заключение: `Scoped payment/changes/QA review approved; whole SECURITY BLOCKED(tool)/INCOMPLETE`.
+
+Installer теперь отказывает при неподходящем артефакте, неполных P0 prerequisites и неуспешном HTTP smoke. Синтетическое восстановление проверило **61 таблицу и 2 триггера**, равенство строк и запрет мутации audit; восстановление исходников сохранило private configuration и media. Это подтверждает локальную процедуру, а не backup, cron, downtime или recovery time настоящего хостинга. Исторический архив по-прежнему намеренно отвергается.
+
+### Accessibility и browser evidence
+
+Точечные исправления включают клавиатурные границы коммерческих диалогов, inert фон, возврат фокуса, семантику mobile filters, `aria-pressed` размеров и контраст фокуса light theme. До исправления добавленные regressions воспроизводились; итоговый scoped run `a11y-hardening` + `mobile-polish`: **15/15 pass, 0 fail/skipped**. В проверенной light-theme поверхности outline имеет контраст **5,9968:1**. Native fetch-сбой показывает украинский текст и освобождает состояние отправки; отмена, timeout и серверная валидация сохраняют отдельные пути.
+
+Повторная полная matrix на final application tree: Chromium/WebKit/Firefox × 360/390/430/768/1024/1280/1440, **315 загрузок и 21 поток покупки**, без JS pageerror, overflow и битых синтетических изображений. Предусмотренные HTTP 404 страницы товара вызвали console resource-сообщения в Chromium/WebKit; они отделены от JavaScript-ошибок. Поздние app corrections включены в повтор; real devices remain untested. Scoped тесты и matrix не являются полной сертификацией WCAG.
+
+### SEO
+
+Server/SPA теперь сохраняют полный Product с image, brand, description, seller, Offer URL и реальным SKU. SKU, цена и availability относятся к одному варианту: неизвестный остаток не превращается в InStock; zero, preorder с подтверждённым сроком, mixed inventory и совпадение SKU/цены проверены синтетически. Описание одно; SPA меняет robots/breadcrumbs, удаляет Product при уходе в каталог; out-of-range page canonical использует авторитетный ответ каталога. Автоматически сериализуемый default `sort=pop` нормализован на server/client.
+
+`seo-hardening`: **7/7 pass, 0 fail/skipped**. Дополнительные JS/no-JS проверки stock/identity/canonical прошли; provider rich-result eligibility, реальная индексация и search-console данные не проверялись.
+
+### Performance: уточнение исторических утверждений
+
+Этап 2 подтвердил зависимость видимого первого экрана от runtime compilation, тяжёлые cold catalog/facet-запросы и повторное владение CSS. В одном settled synthetic mobile-сценарии (200 legacy-товаров, 6× CPU, 150 ms latency, 200 kB/s) **FCP = LCP = 12 460 ms**, TTFB 1514,2 ms; другие начальные прогоны не дожидались contentful paint и не являются FCP/LCP-измерениями. Профилирование 2000 товаров завершилось таймаутом — это не измеренная задержка ответа.
+
+Здесь нет обычного hosting compression/CDN/cache, реальных CPU, распределения каталога или пользователей; magnitude на production не установлена. Историческая фраза §5 о том, что production LCP «будет заметно ниже», остаётся гипотезой, а не результатом этапа 2. Реальный p75 и целевая ёмкость **UNMEASURED**.
+
+Первый экран, компактный home dataset, facets/индексы и CSS-ownership остаются **OWNER DECISION**. Варианты A/B/C, риски и acceptance собраны в `04-ECC_IMPLEMENTATION_PLAN.md`, этап 2 §7; архитектурный редизайн и удаление файлов не выполнялись. После решения нужны одинаковые cold/warm before/after сценарии и визуальная/SEO/денежная parity.
+
+### Остаток для итогового gate
+
+Привязка результатов, включая честно незавершённый SECURITY gate: `1fcca317f381c33ea29b40ccb12d99b2b65c439b`, `450/450 PASS;0FAIL/SKIP/CANCELLED;626167ms, exact code1fcca317`, `Scoped payment/changes/QA review approved; whole SECURITY BLOCKED(tool)/INCOMPLETE`, `[38304082586](https://github.com/lieverifying/rubizh/actions/runs/38304082586), SUCCESS; exact doc-only checkpoint CI checked after commit`. Stage 2 review остаётся **INCOMPLETE**, production **NO-GO**. Live-провайдеры и финальный сквозной E2E — **DEFERRED → этап 6**, не PASS.
+
+Финальный paired compressed Lighthouse:32/32 runs,0runtime errors; mobile medians home53→54/catalog55→57/product58→59/kit56→55; LCP7370→7323/6929→7102/6150→6173/6575→6681ms. Desktop94→93/95→94/95→94/94→95. SEO100; payload+3,9–4,0KB. Все32 завершены; performance threshold не объявлен PASS. Одинаковые local gzip/cache, четыре synthetic products,3mobile runs interleaved per version/page; no live production CWV. Финальный axe30/30,0violations WCAG2.1 A/AA;111inventory flags, dead-click heuristic не повторена и не объявлена PASS. Полная детализация —stage-2/FINAL_REPORT.
+
+
+**Ограничение приватности:** GitHub repository visibility проверено как public. Унаследованный commit2a338da содержит исходные HIGH raw; обычный push сохранил эти версии в истории. Текущие документы редактированы, новые полные доказательства остаются local/private, но обещать приватность исторических raw нельзя. История не переписывалась: force-push запрещён владельцем. QA-20 MEDIUM / OWNER DECISION фиксирует процессный дефект; cleanup требует отдельного решения и не отменяет уже случившуюся публикацию. Технические подробности неразрешённых HIGH здесь не повторяются.

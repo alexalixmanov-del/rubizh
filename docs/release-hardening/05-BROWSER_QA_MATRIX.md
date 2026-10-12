@@ -91,3 +91,16 @@ Chromium + WebKit × 360, 390, 430, 768, 1024, 1280, 1440 px × 10 экрано�
 Найдено и исправлено при QA: вводящая в заблуждение «Оплата: Очікує оплати» до подтверждения менеджером (D-36). Ложная тревога инструмента (несуществующий формат ID клиента) исправлена в инструменте; инструмент теперь распознаёт экран ошибки при статусе 200.
 
 Повторный прогон на текущем коде: витрина 540/540 + покупка 9/9 (3 движка), кабинет 12/12 (3 движка × 4 ширины).
+
+
+## Глобальный этап2 — воспроизводимая полная матрица (2026-10-12)
+
+Первый завершённый post-fix прогон на56acdcb: Chromium/Firefox/WebKit ×360/390/430/768/1024/1280/1440; **315 route loads +21 purchase flows**, без horizontal overflow/broken images/runtime JS failures. Chromium/WebKit записали ожидаемые resource404 console сообщения на synthetic product-404; они отдельно классифицированы как проверенный HTTP404, не замаскированы как отсутствие console сообщений. ADDENDUM экраны210/210, кабинет21/21 (own/foreign list/detail/profile/delivery/favorites; foreign404/no leak). Это локальные синтетические данные; Secure cookie изменён только в generated HTTP fixture, production code сохранён. MonoPay navigation локально перехвачена stub; никаких provider/production transactions.
+
+После последних money/version/recovery исправлений матрица повторяется на application tree `0feae19e009bc29b73c1fb6d959cf2d2c3202821`, идентичном final code1fcca31 (поздние изменения только QA/CI): `MAIN MATRIX PASS:315/315 +21/21; ADDENDUM210/210, CABINET21/21 PASS`. Полный UI smoke относится к текущему legacy storefront с v3 activation OFF; PIMv3 contract/checkout/CRM suites дополняют его, но не заменяют live интеграционный gate этапа6.
+
+Permanent CI proposal: отдельный browser job с pinned Playwright1.62.1 и cached verified engines, изолированный fixture/DB на каждый engine; перечисленные7 widths обязательны. Проверять expected HTTP status, JS/runtime errors, overflow, rendered images, checkout totals, variant color/size, normal/N-unit kits, saved/shared/reminder recovery, accountA/B, loading/empty/error/retry, light/dark theme и modal keyboard boundaries. Runner должен assert summary, не считать exit0 JSON writer достаточным. Budget/summary/console classifications и screenshots сохранять с точным SHA. Реальные устройства/assistive tech и provider sandbox — отдельная проверка, не вывод из headless viewport.
+
+Первоначальный axe snapshot:30 route/width checks WCAG2.1 A/AA без violations; это не WCAG2.2 certificate. Inventory выявил138 flags (главным образом24px targets, breadcrumbs/cookie control); dead-click эвристика содержит no-op выбранных controls, timeouts и selector drift, поэтому её нельзя объявить PASS0. Пункты D-34/A11Y03–12 остаются в03 по своим подтверждениям. Финальные численные Lighthouse/axe результаты — checkpoint/evidence.
+
+Финальный axe повтор:30/30 route/width checks,0violations WCAG2.1 A/AA;111inventory flags, не все подтверждённые defects. Исторические138 flags относятся к первому inventory. Dead-click heuristic не перепроверялась и не объявлена PASS. Парный compressed Lighthouse32/32 runs: численные baseline/current medians и mixed deltas вstage-2/FINAL_REPORT; performance threshold не объявлен PASS.

@@ -247,3 +247,10 @@ HTTP-триггеры вне расписания: `/api/cron/photos?key=` (`api
 | `cron_key` | `api/index.php:97-98`; `shop/mail-worker.php:4` | HTTP-cron |
 | `meta.runtime_schema`, `crm_schema`, `order_p0_schema` | `runtime.php:86-93`; `staff/schema.php:22` | ленивые миграции; без `crm_schema` CRM API → 503 |
 
+
+
+## Stage2 correction overlay (2026-10-12)
+
+Историческая карта выше построена по pinned baseline51c83d8. На Stage2 branch публичный api health использует только local media verification; no-ledger refunds проверяют предоставленные correlation facts, неполные facts удерживаются как unknown; диагностические чтения и SITE refund/reconcile/confirm проверяют актуальную версию под order lock. AUTH manager email fallback использует proven email identity, Google contact_email не является такой идентичностью. NP transient directory outage сохраняет ручной адрес с unverified refs; TTN readiness по-прежнему требует manager validation. Paid fulfillment confirmation не меняет price/items/timing/reservation snapshots. Q8 recovery хранит полную selection и пересчитывается из текущих PIM prices/slots. SSR/SPA metadata имеют одного владельца. Installer требует reviewed artifact + существующие P0 prerequisites и HTTP200 smoke; старый zip не пересобран и fail-closed до будущей reviewed packaging задачи. SOURCE_OF_TRUTH, PIM/CRM source, prices/floors, activation flags и deployment не изменены. Точный SHA/CI — STAGE_CHECKPOINT; дефекты и решения — только существующий03.
+
+Карту guard boundary дополняют24 отрицательных CSRF/Origin HTTP probes на8 critical mutation endpoints (stage2-request-guards), existing accountA/B IDOR, staff role/step-up/revocation suites и сквозные contract/browser cases. Это не доказательство exhaustive dynamic traversal каждого endpoint/method/role из карты; финальный fresh SECURITY проход не завершён и не обозначается PASS.

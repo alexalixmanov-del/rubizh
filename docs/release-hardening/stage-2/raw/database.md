@@ -2,14 +2,17 @@
 
 MariaDB 11.4.13, STRICT_TRANS_TABLES, REPEATABLE-READ, utf8mb4_general_ci. Скрипты: `scratchpad/audit/tmp-db/` (`setup.sql`, `gap.sh`). Fixture-тесты PHP не запускались; DB-01 воспроизведён на уровне SQL.
 
-## DB-01 — HIGH, CONFIRMED (SQL), LIKELY (end-to-end) — gap-lock deadlock между оформлениями разных SKU
-`shop/reservations.php:34-38` (`shopReservedQty` … `FOR UPDATE` по вторичному индексу `(sku,expires_at)`), INSERT `:23`, индекс `shop/order-lifecycle.php:21`. При REPEATABLE READ для SKU без строк резерва берётся gap-lock на весь промежуток между соседними SKU; две оформляющие транзакции разных SKU в одном промежутке берут совместимые gap-lock и затем ждут друг друга на INSERT → `ERROR 1213 Deadlock` у одной (воспроизведено `gap.sh` для M100/M200). Покупатель получает 503 «Не вдалося зберегти замовлення» (повтор с тем же request_id работает). Вероятно при разреженной таблице резервов. Исправление: не блокировать промежутки — читать резервы без `FOR UPDATE` (SKU уже сериализован `FOR UPDATE` по variants), либо повтор при SQLSTATE 40001, либо READ COMMITTED для оформления.
+## DB-01 — HIGH — детали в закрытом хранилище
 
-## DB-02 — HIGH, LIKELY — каждое оформление, расчёт и проверка менеджера блокируют одну глобальную строку `meta`
-`shop/pricing-policy.php:55` (`shopPricingCatalogVersion($db,true)` = `SELECT … FROM meta WHERE k='pricing_catalog_version' FOR UPDATE`); вызовы `order-validation.php:~25`, `store-lib.php:~72`, `checkout-quote.php:7-9`, `api/index.php:42`, `pim-v3-sync.php:284`. Все оформления и публичные расчёты сериализуются; `checkout-quote.php` (только чтение) берёт блокировки meta/products/variants с таймаутом по умолчанию 50 с (`order.php` — 5 с); синхронизация PIM (до 16 МБ, одна транзакция) держит блокировку весь пакет — оформления падают через 5 с (503), расчёты через 50 с. Публичный расчёт (120/мин на IP) — дешёвый вектор конкуренции. Исправление: обычное чтение версии и оптимистичная проверка при фиксации; `FOR UPDATE` только в транзакции синхронизации; убрать блокировки из `checkout-quote.php`.
+Исходная находка требует независимого воспроизведения на закреплённом SHA.
 
-## DB-03 — HIGH, LIKELY — COMMITTED-резервы никогда не освобождаются
-`shop/reservations.php:6-8,36`; `shop/mono-lib.php:92,94,95`; проверка остатка `pim-v3-checkout.php`. Перевода COMMITTED → RELEASED нет нигде; оплаченные/отгруженные/возвращённые заказы держат COMMITTED навсегда (возврат `reversed` даже переводит в COMMITTED). `shopReservedQty` прибавляет все COMMITTED к проверке абсолютного остатка поставщика → после того как поставщик уменьшил свой остаток, единица учитывается дважды; со временем SKU уходит в «Недостатньо товару на складі» при наличии у поставщика. Исправление: освобождать (или не учитывать) COMMITTED для `returned`/`refunded` и после повторного наблюдения остатка (`committed_at < pim_observed_at`), либо считать фид остатков «за вычетом продаж».
+## DB-02 — HIGH — детали в закрытом хранилище
+
+Исходная находка требует независимого воспроизведения на закреплённом SHA.
+
+## DB-03 — HIGH — детали в закрытом хранилище
+
+Исходная находка требует независимого воспроизведения на закреплённом SHA.
 
 ## DB-04 — MEDIUM, LIKELY — ленивая DDL создаёт `rubizh_stock_reservations` без `status/committed_at/released_at`
 `shop/order-lifecycle.php:21` vs `shop/order-p0-schema.php:7-9` (только CLI) vs `shop/reservations.php:17,23,31`. На БД без `meta.runtime_schema` и без P0 первый веб-запрос создаёт старую таблицу → каждое оформление и переход оплаты падает «Unknown column» (503). `prepare-runtime.php:7` отказывает в P0 при наличии заказов; CRM-миграцию не вызывает ни один установщик. Исправление: колонки в ленивом CREATE или fail-closed в `/health.php` и оформлении без `meta.order_p0_schema='1'`; установщики всегда вызывают prepare-runtime и миграцию CRM.

@@ -1,0 +1,13 @@
+# UNAPPLIED PIM proposal; base SHA 21198461f8ebb2eadef6dcd6fb77a50a8a038ea9
+# Repair stale manifest attestation for the existing byte-identical fixture; do not rewrite or regenerate fixture payload.
+--- a/app/contracts/fixtures/pim-site-wire-v3.exact.manifest.json
++++ b/app/contracts/fixtures/pim-site-wire-v3.exact.manifest.json
+@@ -3,7 +3,7 @@
+   "exporter": "pimSiteWire() in app/lib/final-workflow.inc.js",
+   "catalog_input": "SYNTHETIC_REPRESENTATIVE (not owner data)",
+   "envelope": "products",
+-  "sha256": "66a1b714f52310b831592d58f26b3db5a1ea5afb5248caf0d1da2fde03f41512",
++  "sha256": "c21fe16c98ad9360555ec45d6be266669e3c77dc9c0151bc28780927448a1f1b",
+   "products": 4,
+   "skus": 8,
+   "decisions": [
