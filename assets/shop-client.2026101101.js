@@ -54,7 +54,7 @@ function storeGalleryReset(){try{const track=document.querySelector('[data-gal-t
 
 // Один список слотів конструктора: сервер передає його в RUBIZH_BOOT.kitSlots (shop/catalog-lib.php · shopKitSlotPatterns)
 const STORE_SLOT_NAMES=(Array.isArray(window.RUBIZH_BOOT?.kitSlots)&&window.RUBIZH_BOOT.kitSlots.length?window.RUBIZH_BOOT.kitSlots:[['gear','^(?:підсум|чохол|сумк|футляр|холдер|тримач)|рюкзак|баул|розвантаж|рпс|гідратор|бойовий пояс'],['med','аптеч|турнікет|джгут|гемостат|бандаж|ifak'],['small','шкарпет|рукавич|рукавиц|наколін|налокіт'],['head','шолом|каск|шапк|кепк|панам|бейсбол|балаклав|навушник|баф|окуляр'],['boots','берц|черевик|кросів|взутт|бахіл'],['armor','плитоноск|бронежилет|бронеплит|бронепакет|балістичн.*пакет'],['legs','штани|штанів|брюки|джогер|шорти'],['small','пояс|ремінь'],['body','курт|убакс|ubacs|сороч|футбол|поло|термобілиз|термобель|фліс|флис|кофта|худі|софтшел|пончо|костюм']]).map(([s,p])=>[s,new RegExp(p,'i')]);
-function storeSlot(p){for(const [slot,re] of STORE_SLOT_NAMES)if(re.test(p.name||''))return slot;const path=(p.path||String(p.category||'').split(' / ')).join(' / ');for(const [slot,re] of [['med',/медицин|медицина/i],['head',/голов|шолом/i],['armor',/бронезахист/i],['boots',/взуття/i],['legs',/штани/i],['small',/рукавич|аксесуари одягу/i],['gear',/рюкзак|підсум|рпс|спорядження/i],['body',/одяг|форма/i]])if(re.test(path))return slot;return 'small';}
+function storeSlot(p){if(p.v3)return p.kit_slot||'none';for(const [slot,re] of STORE_SLOT_NAMES)if(re.test(p.name||''))return slot;const path=(p.path||String(p.category||'').split(' / ')).join(' / ');for(const [slot,re] of [['med',/медицин|медицина/i],['head',/голов|шолом/i],['armor',/бронезахист/i],['boots',/взуття/i],['legs',/штани/i],['small',/рукавич|аксесуари одягу/i],['gear',/рюкзак|підсум|рпс|спорядження/i],['body',/одяг|форма/i]])if(re.test(path))return slot;return 'small';}
 function storeMoney(n){return new Intl.NumberFormat('uk-UA',{maximumFractionDigits:2}).format(Math.round(Number(n||0)*100)/100)+'\u00a0₴';}
 function storeQty(n){return Math.round(Number(String(n).replace(',','.'))*100)/100;}
 function storeAreaUnit(p){const a=p.attributes||p.attrs||Object.fromEntries(p.specs||[]);const u=p.sale_unit||a['Одиниця продажу']||a['Одиниця виміру']||p.unit||'';if(/^(?:м²|м2|m2|m²|sqm|кв\.?\s*м)$/i.test(String(u).trim()))return 'm2';return /(?:ціна|цена|вартість|оплата)\s*(?:вказана\s*)?(?:за|\/|per)\s*(?:1\s*)?(?:кв\.?\s*м|м²|м2|m²|m2)/i.test(p.name||'')?'m2':'piece';}
@@ -890,12 +890,12 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
         // from ≥2 main sections («Дрібниці» never qualify); the kit price applies to 1 unit of each model per kit (N for
         // «Для підрозділу»), extra units are retail. Ready kits keep their own composition (ready=true).
         const N=Math.max(1,Math.min(99,parseInt(e,10)||1)),main=['head','body','legs','boots','armor','gear','med'];
-        const info=t.map(r=>{const pid=r.pid??r.p?.id??r.l?.id,p=r.p||(pid?Z.find(x=>x.id===pid):null);return {pid,slot:r.slot??r.l?.slot??(p?storeSlot(p):'small')};});
+        const info=t.map(r=>{const pid=r.pid??r.p?.id??r.l?.id,p=r.p||(pid?Z.find(x=>x.id===pid):null);return {pid,slot:p?storeSlot(p):(r.slot??r.l?.slot??'small')};});
         const qualifies=!!ready||new Set(info.filter(i=>main.includes(i.slot)).map(i=>i.slot)).size>=2,left={};
         const rows=t.map(({v,q},i)=>{q=q||1;const ok=qualifies&&v.pricing_policy_version===1&&Number.isFinite(v.kit_price)&&v.kit_price>0;let kq=0;
             if(ok){if(ready)kq=q;else{const id=info[i].pid;left[id]=left[id]??N;kq=Math.min(q,left[id]);left[id]-=kq;}}
             const retail=Math.round(v.price*100),fullC=retail*q,kitC=(ok?Math.round(v.kit_price*100):retail)*kq+retail*(q-kq);
-            return {price:fullC/100,kit:kitC/100,unit:ok&&kq===q?v.kit_price:v.price,kitQty:kq,save:(fullC-kitC)/100,fixed:!kq,capped:kq>0&&kq<q};});
+            return {price:fullC/100,kit:kitC/100,unit:ok&&kq===q?v.kit_price:v.price,kitQty:kq,save:(fullC-kitC)/100,fixed:!kq,capped:kq>0&&kq<q,extraUnits:ok&&kq<q};});
         const fullCents=rows.reduce((n,l)=>n+Math.round(l.price*100),0),kitCents=rows.reduce((n,l)=>n+Math.round(l.kit*100),0),full=fullCents/100,kit=kitCents/100,pct=fullCents?Math.floor((fullCents-kitCents)*1000/fullCents)/10:0;
         return {t:pct,rows,full,kit,save:Math.round((full-kit)*100)/100,pct,capped:0,allowed:rows.some(r=>r.kitQty>0),qualifies,needsSections:t.length>0&&!qualifies};
     }, vt = t => t.allowed ? 'Ціни обраних SKU з PIM · вигода '+t.pct+'%' : 'Без підтвердженої спеціальної ціни · роздріб',
@@ -1014,6 +1014,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
     } ], jt = [ "orderNumber", "screen", "page", "current", "guide", "guideTopic", "acc", "cpath", "roots", "rootsTitle", "quick", "sq", "q", "qDeb", "sort", "catPg", "catMore", "camo", "sizes", "brands", "attrs", "priceFrom", "priceTo", "inStock", "withOrder", "size", "qty", "galIdx", "seoOpen", "sizeTab", "productColorId" ], Ut = [ "account", "allcats", "cart", "catalog", "compare", "done", "fav", "guide", "guides", "home", "kit", "login", "page", "picker", "product", "reports", "sizes", "track" ], Nt = t => {
         const e = String(t.category || "").split(" / ").filter(Boolean), i = e[0] || "", s = /брон|шолом/i.test(i) ? "armor" : /взут/i.test(i) ? "boots" : /мед/i.test(i) ? "med" : /одяг|форма/i.test(i) ? "form" : /рюк|розван|сумк/i.test(i) ? "load" : "small", o = (t.photos || []).filter(t => t && /^(https?:\/\/|\/)/.test(t.url || "")), a = {
             id: t.id,
+            kit_slot: t.kit_slot,
             slug: t.slug,
             has_docs:!!t.has_docs,docs_note:t.docs_note||'',
             name: t.name,
@@ -2369,7 +2370,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                 kitPriceNotes: A,
                 kitLimit: !!t.kitLimit,
                 kitLimitText: "Максимум 20 позицій у комплекті",
-                kitPriceHint: a.needsSections ? "Додайте річ ще з одного розділу, щоб отримати ціну комплекту" : ""
+                kitPriceHint: a.needsSections ? "Додайте річ ще з одного розділу, щоб отримати ціну комплекту" : a.rows.some(r => r.extraUnits) ? "Ціна комплекту діє на одну одиницю кожної речі (або на кількість комплектів для підрозділу); решта — за звичайною ціною." : ""
             }, M = i.some(t => "out" === this.avail(t.p, t.l.size)), T = Math.max(1, parseInt(t.kitN, 10) || 1), q = a.kit;
             let I = null;
             if (t.kitModal) {

@@ -60,7 +60,7 @@ function pimV3ProductDto(PDO $db,array $row): array {
     $prices=array_column($payable?:array_filter($variants,fn($v)=>$v['price']!==null),'price');
     return ['contract_version'=>3,'id'=>$id,'model_id'=>$row['pim_model_id']??$id,'slug'=>$row['slug'],'name'=>$row['name'],'brand'=>shopBrand((string)$row['brand']),
         'canonical_category_id'=>$taxonomy['canonical_category_id']??($data['canonical_category_id']??null),'category'=>$taxonomy['category']??$row['category_path'],'category_url'=>$taxonomy['category_url']??null,
-        'sale_unit'=>'pcs','description'=>shopDescription((string)($data['description']??$row['description'])),'attributes'=>is_array($data['attributes']??null)?$data['attributes']:[],
+        'kit_slot'=>$row['pim_kit_slot']??null,'sale_unit'=>'pcs','description'=>shopDescription((string)($data['description']??$row['description'])),'attributes'=>is_array($data['attributes']??null)?$data['attributes']:[],
         'price_min'=>$prices?min($prices):null,'availability'=>$row['availability'],
         'order_submission_allowed'=>(bool)array_filter($variants,fn($v)=>$v['order_submission_allowed'])||$options!==[],'payment_allowed'=>(bool)array_filter($variants,fn($v)=>$v['payment_allowed']),
         'has_docs'=>false,'docs_note'=>'','photos'=>$gallery,'colors'=>$colors,'size_options'=>$options,'variants'=>$variants];
