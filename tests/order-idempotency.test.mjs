@@ -22,7 +22,7 @@ test('order idempotency: double click and lost-response retries (in place and af
   const page=await context.newPage();
   const orders=()=>+site.sql('SELECT COUNT(*) n FROM rubizh_customer_orders')[0].n;
   const add=async()=>{await page.goto(site.base+'/product/idem-cap');await page.locator('[data-size-grid]').getByText('M',{exact:true}).click();await page.getByRole('button',{name:/До кошика/}).first().click();await page.waitForFunction(()=>JSON.parse(localStorage.getItem('rubizh.cart')||'[]').length===1);};
-  const fill=async()=>{await page.goto(site.base+'/#cart');const c=page.getByRole('button',{name:/Оформити/}).first();if(await c.count())await c.click();
+  const fill=async()=>{const ready=page.waitForResponse(r=>r.url().endsWith('/shop/customer.php')&&r.request().method()==='GET');await page.goto(site.base+'/#cart');assert.equal((await ready).status(),200);const c=page.getByRole('button',{name:/Оформити/}).first();if(await c.count())await c.click();
    await page.locator('input[name="name"]').fill('Тест Покупець');await page.locator('input[name="phone"]').fill('+380671234567');
    await page.locator('input[name="city"]').fill('Київ');await page.locator('input[name="address"]').fill('Відділення 1');};
   const place=()=>page.getByRole('button',{name:/Підтвердити замовлення/}).first();
@@ -39,12 +39,12 @@ test('order idempotency: double click and lost-response retries (in place and af
   // 2. Lost response: the server makes the order, the browser sees a network error, the buyer retries in place.
   await add();await fill();let lose=true;
   await page.route('**/shop/order.php',async r=>{if(lose){lose=false;await r.fetch();return r.abort('failed');}return r.continue();});
-  await place().click();await page.waitForTimeout(1500);assert.equal(orders(),2,'the lost attempt did create its order');
+  const failed=page.waitForEvent('requestfailed',{predicate:r=>r.url().endsWith('/shop/order.php')});await place().click();await failed;await page.getByRole('alert').waitFor();await place().waitFor();assert.equal(orders(),2,'the lost attempt did create its order');
   const retry=await submit();assert.equal(retry.ok,true,JSON.stringify(retry));assert.equal(orders(),2,'retry in place → the same order');
   assert.equal(retry.order.number,site.sql('SELECT order_number FROM rubizh_customer_orders ORDER BY id DESC LIMIT 1')[0].order_number);
 
   // 3. Lost response, then the buyer reloads the tab and submits again: still the same order.
-  await add();await fill();lose=true;await place().click();await page.waitForTimeout(1500);assert.equal(orders(),3);
+  await add();await fill();lose=true;const failedReload=page.waitForEvent('requestfailed',{predicate:r=>r.url().endsWith('/shop/order.php')});await place().click();await failedReload;await page.getByRole('alert').waitFor();await place().waitFor();assert.equal(orders(),3);
   await page.reload();await fill();const again=await submit();assert.equal(again.ok,true,JSON.stringify(again));assert.equal(orders(),3,'retry after reload → the same order');
   await page.unroute('**/shop/order.php');
 
