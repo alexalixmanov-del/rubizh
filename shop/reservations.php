@@ -33,6 +33,29 @@ function shopReserveLines(PDO $db,int $id,array $lines,string $expires): void {
 function shopReservedQty(PDO $db,string $sku,int $excludeOrder=0): float {
     // An expired clock cannot free a pending/unknown bank operation. Historical
     // paid rows also count before/while the additive migration is reconciled.
-    $q=$db->prepare("SELECT r.qty FROM rubizh_stock_reservations r JOIN rubizh_customer_orders o ON o.id=r.order_id WHERE r.sku=? AND r.order_id<>? AND (r.status='COMMITTED' OR (r.status='ACTIVE' AND (o.payment_status IN ('paid','refunded') OR (o.status NOT IN ('cancelled','returned') AND (r.expires_at>UTC_TIMESTAMP() OR EXISTS(SELECT 1 FROM rubizh_mono_invoices i WHERE i.order_id=o.id AND i.status IN ('creating','unknown','created','processing','hold','awaiting_webhook'))))))) FOR UPDATE");
+    $q=$db->prepare("SELECT r.qty
+      FROM rubizh_stock_reservations r
+      JOIN rubizh_customer_orders o ON o.id=r.order_id
+      WHERE r.sku=? AND r.order_id<>? AND (
+        r.status='COMMITTED' OR (
+          r.status='ACTIVE' AND (
+            o.payment_status IN ('paid','refunded') OR (
+              o.status NOT IN ('cancelled','returned') AND (
+                r.expires_at>UTC_TIMESTAMP() OR EXISTS(
+                  SELECT 1 FROM rubizh_mono_invoices i WHERE i.order_id=o.id AND (
+                    i.status IN ('creating','unknown','created','processing','hold','awaiting_webhook') OR (
+                      i.status='failure' AND i.invoice_id IS NOT NULL AND NOT EXISTS(
+                        SELECT 1 FROM rubizh_np_audit a WHERE a.order_id=i.order_id
+                          AND a.action IN ('mono_invoice_removed','mono_invoice_final_not_removed')
+                          AND a.note=i.invoice_id
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      ) FOR UPDATE");
     $q->execute([$sku,$excludeOrder]);return array_sum(array_map('floatval',$q->fetchAll(PDO::FETCH_COLUMN)));
 }

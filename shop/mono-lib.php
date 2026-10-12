@@ -126,7 +126,7 @@ function monoRefresh(PDO $db,array $invoice): void {if(!$invoice['invoice_id'])r
 // Cron/worker pass over invoices whose final state is still unknown to the shop. Returns the number of failed checks.
 function monoWorkerRun(PDO $db): int {
  // Two queues: invoices waiting for a lost webhook keep their first-observation time and must not starve the rest.
- $rows=array_merge($db->query("SELECT * FROM rubizh_mono_invoices WHERE invoice_id IS NOT NULL AND (status IN ('created','processing','hold') OR refund_status IN ('processing','unknown')) ORDER BY updated_at LIMIT 25")->fetchAll(PDO::FETCH_ASSOC),
+ $rows=array_merge($db->query("SELECT * FROM rubizh_mono_invoices i WHERE invoice_id IS NOT NULL AND (status IN ('created','processing','hold') OR refund_status IN ('processing','unknown') OR status='failure' AND NOT EXISTS (SELECT 1 FROM rubizh_np_audit a WHERE a.order_id=i.order_id AND a.action IN ('mono_invoice_removed','mono_invoice_final_not_removed') AND a.note=i.invoice_id)) ORDER BY updated_at LIMIT 25")->fetchAll(PDO::FETCH_ASSOC),
   $db->query("SELECT * FROM rubizh_mono_invoices WHERE invoice_id IS NOT NULL AND status='awaiting_webhook' AND refund_status NOT IN ('processing','unknown') ORDER BY RAND() LIMIT 10")->fetchAll(PDO::FETCH_ASSOC));$failed=0;
  foreach($rows as $i){try{monoRefresh($db,$i);}catch(Throwable $e){$failed++;}}return $failed;
 }

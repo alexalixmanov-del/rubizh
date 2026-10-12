@@ -148,7 +148,9 @@ function shopMayReadOrder(PDO $db,int $order): bool {
  $q=$db->prepare('SELECT scope_hash FROM rubizh_checkout_requests WHERE order_id=?');$q->execute([$order]);$hash=$q->fetchColumn();return is_string($hash)&&hash_equals($hash,hash('sha256',$scope));
 }
 function shopNoOpenCardInvoice(PDO $db,int $order): bool {
- $q=$db->prepare("SELECT COUNT(*) FROM rubizh_mono_invoices WHERE order_id=? AND status IN ('creating','unknown','created','processing','hold','awaiting_webhook')");$q->execute([$order]);return (int)$q->fetchColumn()===0;
+ // A rejected card attempt does not close a MonoPay invoice. Only a bank expiry
+ // or the audited invoice/remove result lets checkout release its reservation.
+ $q=$db->prepare("SELECT COUNT(*) FROM rubizh_mono_invoices i WHERE i.order_id=? AND (i.status IN ('creating','unknown','created','processing','hold','awaiting_webhook') OR (i.status='failure' AND i.invoice_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM rubizh_np_audit a WHERE a.order_id=i.order_id AND a.action IN ('mono_invoice_removed','mono_invoice_final_not_removed') AND a.note=i.invoice_id)))");$q->execute([$order]);return (int)$q->fetchColumn()===0;
 }
 function shopUseInvoice(PDO $db,int $id): void {
  npLocked($db,$id,function()use($db,$id){$o=npOrder($db,$id);if(!shopNoOpenCardInvoice($db,$id)||!in_array($o['payment_status'],['pending','failed'],true)||!in_array($o['status'],['new','confirmed','processing'],true))throw new RuntimeException('Спосіб оплати зараз змінити не можна.');

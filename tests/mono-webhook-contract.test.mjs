@@ -5,9 +5,12 @@ import assert from 'node:assert/strict';
 import {generateKeyPairSync,createSign} from 'node:crypto';
 import {startSite,wire,publish} from './helpers/site-fixture.mjs';
 const skip=!process.env.RUBIZH_TEST_MYSQL_SOCKET;
-async function fixture(){
+import {php} from './helpers/site-fixture.mjs';
+async function fixture({stock=null}={}){
  const site=await startSite({extraConfig:",'mono_mock'=>true,'environment'=>'staging'"});
- assert.equal((await publish(site,structuredClone(wire))).status,200);
+ const payload=structuredClone(wire);
+ if(stock!==null)for(const model of payload.products)for(const variant of model.variants)if(variant.sku==='RUB-F0001')Object.assign(variant,{stock,stock_quantity:stock,stock_status:'CONFIRMED',availability_source:'QUANTITY',inventory_mode:'QUANTITY'});
+ assert.equal((await publish(site,payload)).status,200);
  const keys=generateKeyPairSync('ec',{namedCurve:'prime256v1'});
  site.sql(`INSERT INTO meta(k,v) VALUES('mono_public_key','${Buffer.from(keys.publicKey.export({type:'spki',format:'pem'})).toString('base64')}')`);
  const other=generateKeyPairSync('ec',{namedCurve:'prime256v1'});
@@ -19,6 +22,7 @@ async function fixture(){
  const r=await fetch(site.base+'/shop/customer.php');const h={Cookie:r.headers.get('set-cookie').split(';')[0]},csrf=(await r.json()).csrf;
  const model=wire.products.find(p=>p.id==='m-jacket'),line={product_id:'m-jacket',color_id:model.colors.find(c=>c.variant_skus.includes('RUB-F0001')).id,sku:'RUB-F0001',qty:1};
  site.newInvoice=async(n)=>{const q=await site.post('/shop/checkout-quote.php',{csrf,lines:[line],payment:'card'},h);
+  assert.equal(q.status,200,JSON.stringify(q.data));
   const o=await site.post('/shop/order.php',{csrf,request_id:String(n).padStart(32,'9'),contact:{name:'Тест Покупець',recipient:'Тест Покупець',phone:'+380671234567',city:'Київ',address:'Відділення 1',delivery_type:'branch'},payment:'card',lines:[line],expected_total:q.data.quote.total,catalog_version:q.data.quote.catalog_version},h);
   assert.equal(o.status,200,JSON.stringify(o.data));const id=o.data.order.id;assert.equal((await site.post('/shop/payment-start.php',{csrf,order_id:id},h)).status,200);
   return {id,inv:site.sql('SELECT * FROM rubizh_mono_invoices WHERE order_id='+id)[0]};};
@@ -26,6 +30,22 @@ async function fixture(){
  site.reads=()=>+(site.sql("SELECT v FROM meta WHERE k='mono_mock_status_reads'")[0]?.v||0);// bank status reads seen by the mock
  return site;
 }
+
+test('stage-2 PAY-01: a failed card attempt keeps its payable invoice and reservation until the bank closes it',{skip,timeout:180000},async()=>{
+ const site=await fixture({stock:3});try{
+  const {id,inv}=await site.newInvoice(81);
+  assert.equal((await site.hook(inv,{status:'failure'})).status,200);
+  site.sql(`UPDATE rubizh_order_timing SET payment_due=UTC_TIMESTAMP()-INTERVAL 1 HOUR WHERE order_id=${id}`);
+  php(`define('RUBIZH_AUTH_NO_SESSION',true);require '${site.site}/auth/bootstrap.php';shopLifecycleTick(shopStoreDatabase());`);
+  assert.equal(site.sql(`SELECT status FROM rubizh_customer_orders WHERE id=${id}`)[0].status,'confirmed','a failed attempt has not closed the bank invoice');
+  assert.equal(site.sql(`SELECT status FROM rubizh_stock_reservations WHERE order_id=${id}`)[0].status,'ACTIVE','stock must remain held while the invoice can be paid');
+  assert.equal((await site.hook(inv,{status:'success',at:new Date(Date.now()+1000)})).status,200);
+  assert.equal(site.paid(id),'paid');
+  assert.equal(site.sql(`SELECT status FROM rubizh_customer_orders WHERE id=${id}`)[0].status,'confirmed');
+ }finally{site.stop();}
+});
+
+
 
 test('MonoPay webhook contract: valid signature pays once; duplicates change nothing',{skip,timeout:180000},async()=>{
  const site=await fixture();try{
@@ -88,5 +108,16 @@ test('MonoPay webhook contract: a failed bank status read during reconciliation 
   assert.equal((await site.hook(inv,{status:'chargeback_new'})).status,200,'the bank outage does not turn the parked answer into a retryable error');
   assert.notEqual(site.paid(id),'paid');assert.equal(site.reads()-reads,1,'the read was attempted');
   assert.match(site.sql(`SELECT note FROM rubizh_np_audit WHERE order_id=${id} AND action='mono_parked_reconcile'`)[0].note,/^status read failed: RuntimeException local=created$/);
+ }finally{site.stop();}
+});
+
+// Stage-2 SP1: validate the entire signed cancellation list before any refund-ledger transition.
+test('stage-2 PAY-01 worker: failure invoices remain in the polling queue until audited bank removal',{skip,timeout:180000},async()=>{
+ const site=await fixture();try{
+  const {id,inv}=await site.newInvoice(84);assert.equal((await site.hook(inv,{status:'failure'})).status,200);
+  const poll=()=>JSON.parse(php(`define('RUBIZH_AUTH_NO_SESSION',true);require '${site.site}/auth/bootstrap.php';$db=shopStoreDatabase();define('RUBIZH_MONO_TESTS',true);$GLOBALS['seen']=[];$GLOBALS['mono_test_transport']=function($p,$b){parse_str((string)parse_url($p,PHP_URL_QUERY),$q);$GLOBALS['seen'][]=$q['invoiceId']??'';throw new RuntimeException('Fixture offline');};monoWorkerRun($db);echo json_encode($GLOBALS['seen']);`).stdout);
+  assert.deepEqual(poll(),[inv.invoice_id],'failure is a failed attempt, so the invoice must still be checked');
+  site.sql(`INSERT INTO rubizh_np_audit(actor_id,action,order_id,shipment_id,note,created_at) VALUES('${'0'.repeat(32)}','mono_invoice_removed',${id},0,'${inv.invoice_id}',UTC_TIMESTAMP())`);
+  assert.deepEqual(poll(),[],'audited bank removal lets the worker skip that failed invoice');
  }finally{site.stop();}
 });
