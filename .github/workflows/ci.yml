@@ -77,7 +77,9 @@ jobs:
         run: |
           set -euo pipefail
           sudo chmod 777 /tmp/mysqld
-          node --test --test-reporter=tap --test-concurrency=2 tests/*.test.mjs | tee "$RUNNER_TEMP/site-tests.tap"
+          # runtime-http intentionally measures 8/32 concurrent clients. Keep other
+          # DB/browser test files idle so shared-runner pressure cannot pollute it.
+          node --test --test-reporter=tap --test-concurrency=1 tests/*.test.mjs | tee "$RUNNER_TEMP/site-tests.tap"
           grep -Eq '^# fail 0$' "$RUNNER_TEMP/site-tests.tap"
           grep -Eq '^# tests [1-9][0-9]*$' "$RUNNER_TEMP/site-tests.tap"
           grep -Eq '^# skipped 0$' "$RUNNER_TEMP/site-tests.tap"
