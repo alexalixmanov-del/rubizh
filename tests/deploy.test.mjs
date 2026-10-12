@@ -1,11 +1,31 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync,symlinkSync,existsSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync,symlinkSync,existsSync,copyFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
-import {spawnSync} from 'node:child_process';
+import {spawnSync,spawn} from 'node:child_process';
 import {createHash} from 'node:crypto';
+import {createServer} from 'node:http';
+import {startSite,runtime} from './helpers/site-fixture.mjs';
 const root=path.resolve(import.meta.dirname,'..');
+const installer=path.join(root,'dev/install-pim-v3.sh');
+const installerCheck=(name,args)=>spawnSync('bash',['-c','set -euo pipefail; source "$1"; shift; "$@"','release-check',installer,name,...args],{encoding:'utf8',env:process.env,timeout:10000});
+test('Release preflight rejects the shipped older archive and changed hardening bytes before deployment',()=>{
+ const php=process.env.PHP_PATH||runtime+'/bin/php8.4';
+ const old=installerCheck('rubizh_verify_release',[path.join(root,'downloads/Rubizh-pim-v3-20261009.zip'),php]);
+ assert.notEqual(old.status,0);assert.match(old.stderr,/Reviewed release artifact mismatch/);
+ const dir=mkdtempSync(path.join(tmpdir(),'rubizh-review-artifact-')),release=path.join(dir,'rubizh'),zip=path.join(dir,'release.zip');
+ const files=['shop/mono-lib.php','shop/mono-webhook.php','shop/financial-permissions.php','shop/order-validation.php'];const manifest={commit:'51c83d808228a26328081b02211b4e3605353755',files:{}};
+ mkdirSync(path.join(release,'shop'),{recursive:true});
+ try{
+  for(const f of files){copyFileSync(path.join(root,f),path.join(release,f));manifest.files[f]=createHash('sha256').update(readFileSync(path.join(release,f))).digest('hex');}
+  writeFileSync(path.join(release,'RELEASE-MANIFEST.json'),JSON.stringify(manifest));
+  assert.equal(spawnSync('zip',['-rq',zip,'rubizh'],{cwd:dir}).status,0);
+  const good=installerCheck('rubizh_verify_release',[zip,php]);assert.equal(good.status,0,good.stderr);
+  writeFileSync(path.join(release,files[0]),'<?php // unreviewed source');assert.equal(spawnSync('zip',['-rq',zip,'rubizh'],{cwd:dir}).status,0);
+  const changed=installerCheck('rubizh_verify_release',[zip,php]);assert.notEqual(changed.status,0);assert.match(changed.stderr,/Reviewed release artifact mismatch/);
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});
 test('Deployment preserves private configs, media and legacy provider keys; invalid checksum changes nothing',()=>{
  const dir=mkdtempSync(path.join(tmpdir(),'rubizh-deploy-'));const site=path.join(dir,'www'),bin=path.join(dir,'bin'),release=path.join(dir,'release/rubizh');
  for(const p of ['api','auth','media'])mkdirSync(path.join(site,p),{recursive:true});mkdirSync(bin);mkdirSync(path.join(release,'api'),{recursive:true});

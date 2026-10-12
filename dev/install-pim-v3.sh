@@ -4,6 +4,30 @@
 # compare and smoke checks. It never enables PIM v3 sync, payments or cron: those are separate commands.
 # Usage: install-pim-v3.sh SITE_ROOT DB_BACKUP_FILE DB_BACKUP_SHA256
 set -euo pipefail
+# Read-only release gates.
+rubizh_verify_release() (
+ local archive=$1 php=$2 check
+ check=$(mktemp -d)
+ trap 'command rm -rf -- "$check"' EXIT
+ if ! unzip -p "$archive" rubizh/RELEASE-MANIFEST.json > "$check/manifest.json"; then
+  echo 'Reviewed release artifact mismatch; no source installed.' >&2; return 2
+ fi
+ for file in shop/mono-lib.php shop/mono-webhook.php shop/financial-permissions.php shop/order-validation.php; do
+  mkdir -p "$check/$(dirname "$file")"
+  if ! unzip -p "$archive" "rubizh/$file" > "$check/$file"; then
+   echo 'Reviewed release artifact mismatch; no source installed.' >&2; return 2
+  fi
+ done
+ if ! "$php" -r '
+  $m=json_decode(file_get_contents($argv[1]."/manifest.json"),true);
+  if(!is_array($m)||($m["commit"]??null)!=="51c83d808228a26328081b02211b4e3605353755")exit(2);
+  $required=["shop/mono-lib.php"=>["monoInvalidateFailed(\$db,\$orderId);","MONO_WEBHOOK_GRACE_SECONDS"],"shop/mono-webhook.php"=>["catch(MonoEventRejected"],"shop/financial-permissions.php"=>["staff_stepup_seconds"],"shop/order-validation.php"=>["INVOICE_OPEN"]];
+  foreach($required as $f=>$markers){$text=file_get_contents($argv[1]."/".$f);$hash=$m["files"][$f]??"";if(!is_string($hash)||!hash_equals(hash("sha256",$text),$hash))exit(2);foreach($markers as $marker)if(!str_contains($text,$marker))exit(2);}
+ ' "$check"; then
+  echo 'Reviewed release artifact mismatch; no source installed.' >&2; return 2
+ fi
+)
+if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then return 0; fi
 umask 077
 RUBIZH_ROOT=${1:?Usage: install-pim-v3.sh SITE_ROOT DB_BACKUP_FILE DB_BACKUP_SHA256}
 RUBIZH_DB_BACKUP=${2:?Database backup file required}
@@ -21,6 +45,7 @@ trap 'command rm -rf -- "$RUBIZH_TEMP"' EXIT
 RUBIZH_SHA=cc8ac3b7c0f0224b8af5559c9ad9be6fc126254d9f18ee8b2b637193f32b0c3c
 curl -fsSL "${RUBIZH_ARCHIVE_URL:-https://raw.githubusercontent.com/alexalixmanov-del/rubizh/6616e42dc9341eae04cc26fd7f1542d4ac4e0ee4/downloads/Rubizh-pim-v3-20261009.zip}" -o "$RUBIZH_TEMP/update.zip"
 printf '%s  %s\n' "$RUBIZH_SHA" "$RUBIZH_TEMP/update.zip" | sha256sum -c -
+rubizh_verify_release "$RUBIZH_TEMP/update.zip" "$RUBIZH_PHP"
 RUBIZH_REPORTS="$(dirname "$RUBIZH_ROOT")/rubizh-private-backups/pim-v3-$(date -u +%Y%m%d-%H%M%S)"
 mkdir -p "$RUBIZH_REPORTS"
 # Identity inventory BEFORE any schema change (read-only; never runs migrations).
