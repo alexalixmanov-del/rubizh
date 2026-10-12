@@ -70,3 +70,50 @@ test('Q-5: a repeated action does not duplicate its effect, a changed order is r
   assert.notEqual((await mgr({action:'invoice.create',order_id:id},{token:'f'.repeat(64)})).status,200,'no CSRF, no action');
  }finally{site.stop();}
 });
+
+// Stage-2 SP2: every SITE money-out entry point checks its prepared version after taking the order lock.
+test('stage-2 SP2: legacy refund and reconciliation forms require a current order version',{skip,timeout:180000},async()=>{
+ const site=await fixture();try{
+  const id=site.orderId,owner=site.as(OWNER);assert.equal((await owner({action:'invoice.create',order_id:id})).status,200);
+  const inv=site.sql('SELECT * FROM rubizh_mono_invoices WHERE order_id='+id)[0];
+  const {readFileSync}=await import('node:fs');
+  const event={invoiceId:inv.invoice_id,status:'created',amount:+inv.amount,ccy:980,reference:inv.reference,modifiedDate:new Date().toISOString()};
+  writeFileSync(site.site+'/router.php',`<?php define('RUBIZH_MONO_TESTS',true);$GLOBALS['mono_test_transport']=function($p,$b){$db=shopStoreDatabase();$db->exec("INSERT INTO meta(k,v) VALUES('sp2_provider_calls','1') ON DUPLICATE KEY UPDATE v=v+1");if($p==='invoice/cancel')return ['status'=>'success'];return json_decode('${JSON.stringify(event)}',true);};`+readFileSync(site.site+'/router.php','utf8').replace(/^<\?php/,''));
+  const cookie={Cookie:'rubizh_customer='+('s'+OWNER).slice(0,32)};
+  const form=body=>fetch(site.base+'/shop/np-manager.php',{method:'POST',redirect:'manual',headers:{...cookie,'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({csrf:'c'.repeat(64),order_id:id,financial_reason:'Звірка фінансової операції покупця',...body})});
+  for(const action of ['mono_refund','mono_reconcile']){
+   if(action==='mono_refund'){site.sql(`UPDATE rubizh_customer_orders SET payment_status='paid' WHERE id=${id}`);site.sql(`UPDATE rubizh_mono_invoices SET status='success' WHERE id=${inv.id}`);}
+   else site.sql(`UPDATE rubizh_mono_invoices SET status='unknown',invoice_id=NULL WHERE id=${inv.id}`);
+   const version=site.sql('SELECT updated_at FROM rubizh_customer_orders WHERE id='+id)[0].updated_at;
+   site.sql(`UPDATE rubizh_customer_orders SET updated_at=updated_at+INTERVAL 1 MINUTE WHERE id=${id}`);
+   const params={action,confirm_refund:'yes',mono_invoice_id:inv.invoice_id};
+   for(const extra of [{},{expected_updated_at:version}]){
+    const r=await form({...params,...extra});assert.notEqual(r.status,303,'missing or stale version refuses '+action);assert.match(await r.text(),/актуальну картку|змінилося після перегляду/);
+    assert.equal(site.sql("SELECT v FROM meta WHERE k='sp2_provider_calls'").length,0,'refused action makes no provider request');
+   }
+   const page=await site.get('/shop/np-manager.php?order='+id,cookie),now=site.sql('SELECT updated_at FROM rubizh_customer_orders WHERE id='+id)[0].updated_at;
+   assert.match(page.text,new RegExp('name="expected_updated_at" value="'+now+'"'),'rendered money form carries the viewed version');
+   assert.equal((await form({...params,expected_updated_at:now})).status,303,'current version allows '+action);
+   site.sql("DELETE FROM meta WHERE k='sp2_provider_calls'");
+  }
+ }finally{site.stop();}
+});
+
+test('stage-2 SP2: money-action versions are rechecked after an independent process releases the order lock',{skip,timeout:180000},async()=>{
+ const site=await fixture();try{
+  const {spawn}=await import('node:child_process'),{phpArgs,phpEnv,runtime}=await import('./helpers/site-fixture.mjs');
+  const id=site.orderId,owner=site.as(OWNER);assert.equal((await owner({action:'invoice.create',order_id:id})).status,200);
+  site.sql(`UPDATE rubizh_customer_orders SET payment_status='paid' WHERE id=${id}`);site.sql(`UPDATE rubizh_mono_invoices SET status='success' WHERE order_id=${id}`);
+  for(const action of ['refund.execute','manual_reconcile'])for(const route of ['json','form']){
+   const version=site.sql('SELECT updated_at FROM rubizh_customer_orders WHERE id='+id)[0].updated_at;
+   const locker=spawn(runtime+'/bin/php8.4',[...phpArgs,'-r',`$db=new PDO('mysql:unix_socket='.getenv('RUBIZH_TEST_MYSQL_SOCKET').';dbname=${site.schema}','root','');$db->query("SELECT GET_LOCK('rubizh_np_order_${id}',2)");echo "READY\\n";fflush(STDOUT);fgets(STDIN);$db->query("SELECT RELEASE_LOCK('rubizh_np_order_${id}')");`],{env:phpEnv,stdio:['pipe','pipe','pipe']});
+   try{
+    await new Promise((resolve,reject)=>{locker.stdout.once('data',resolve);locker.once('error',reject);});
+    const request=route==='json'?owner({action,order_id:id,invoice_id:'mock-reconcile',reason:'Повернення коштів покупцю',expected_updated_at:version}):fetch(site.base+'/shop/np-manager.php',{method:'POST',redirect:'manual',headers:{Cookie:'rubizh_customer='+('s'+OWNER).slice(0,32),'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({csrf:'c'.repeat(64),order_id:id,action:action==='refund.execute'?'mono_refund':'mono_reconcile',mono_invoice_id:'mock-reconcile',confirm_refund:'yes',financial_reason:'Повернення коштів покупцю',expected_updated_at:version})});
+    await new Promise(r=>setTimeout(r,150));site.sql(`UPDATE rubizh_customer_orders SET updated_at=updated_at+INTERVAL 1 MINUTE WHERE id=${id}`);locker.stdin.end('\n');
+    const r=await request;if(route==='json'){assert.equal(r.status,409);assert.equal(r.data.error_code,'STATE_CHANGED');}else{assert.notEqual(r.status,303);assert.match(await r.text(),/змінилося після перегляду/);}
+    assert.equal(site.sql('SELECT refund_status FROM rubizh_mono_invoices WHERE order_id='+id)[0].refund_status,'','no refund intent before locked version check');
+   }finally{locker.kill();}
+  }
+ }finally{site.stop();}
+});

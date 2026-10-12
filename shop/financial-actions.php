@@ -15,7 +15,7 @@ try{
     $highRisk=['refund.execute'=>'payment.refund.execute','manual_reconcile'=>'payment.manual_reconcile'][is_string($action)?$action:'']??null;
     if($highRisk!==null){shopRequirePermission($actor,$highRisk);
         if(!is_string($input['expected_updated_at']??null))throw new ShopOrderConflict('STATE_REQUIRED',[],'Відкрийте актуальну картку замовлення та повторіть дію.');}
-    if(isset($input['expected_updated_at'])){$cur=$db->prepare('SELECT updated_at FROM rubizh_customer_orders WHERE id=?');$cur->execute([$id]);$now=$cur->fetchColumn();
+    if($highRisk===null&&isset($input['expected_updated_at'])){$cur=$db->prepare('SELECT updated_at FROM rubizh_customer_orders WHERE id=?');$cur->execute([$id]);$now=$cur->fetchColumn();
         if($now===false||(string)$now!==(string)$input['expected_updated_at'])throw new ShopOrderConflict('STATE_CHANGED',['updated_at'=>$now===false?null:(string)$now],'Замовлення змінилося після перегляду. Оновіть дані та повторіть дію.');}
     if($action==='invoice.create')$result=monoCreate($db,$id,$actor);
     elseif($action==='invoice.resend'){
@@ -23,8 +23,8 @@ try{
         // Same validation and permission gate; this returns the one existing link,
         // never sends unsolicited messages or bypasses current eligibility.
         $result=monoCreate($db,$id,$actor);
-    }elseif($action==='refund.execute'){monoRefund($db,$id,$actor,(string)($input['reason']??''));$result=['requested'=>true];}
-    elseif($action==='manual_reconcile'){monoReconcile($db,$id,(string)($input['invoice_id']??''),$actor,(string)($input['reason']??''));$result=['reconciled'=>true];}
+    }elseif($action==='refund.execute'){monoRefund($db,$id,$actor,(string)($input['reason']??''),$input['expected_updated_at']);$result=['requested'=>true];}
+    elseif($action==='manual_reconcile'){monoReconcile($db,$id,(string)($input['invoice_id']??''),$actor,(string)($input['reason']??''),$input['expected_updated_at']);$result=['reconciled'=>true];}
     else throw new InvalidArgumentException('Невідома фінансова операція.');
     shopJson(['ok'=>true,'result'=>$result]);
 }catch(Throwable $e){shopJson(['ok'=>false,'error_code'=>$e instanceof ShopOrderConflict?$e->reason:($e instanceof ShopPermissionException?'PERMISSION_DENIED':'FINANCIAL_OPERATION_FAILED'),'conflict'=>$e instanceof ShopOrderConflict?$e->details:null,'error'=>$e instanceof PDOException?'Фінансова операція не завершена.':$e->getMessage()],$e instanceof ShopPermissionException?403:($e instanceof ShopOrderConflict?409:400));}
