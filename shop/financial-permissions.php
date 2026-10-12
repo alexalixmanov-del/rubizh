@@ -22,7 +22,9 @@ function shopStaffRole(string $actor): string {
     $allowed=cfg('np_manager_emails');if(!is_array($allowed))return '';
     $allowed=array_map(fn($v)=>strtolower(trim((string)$v)),$allowed);
     foreach(customerIdentities($actor) as $i){
-        $email=$i['provider']==='email'?$i['subject']:($i['provider']==='google'?$i['contact_email']:'');
+        // Google contact_email may name a third-party mailbox Google does not control.
+        // Trusted Gmail/Workspace sign-in already attaches a proven email identity.
+        $email=$i['provider']==='email'?$i['subject']:'';
         if($email!==''&&in_array(strtolower($email),$allowed,true))return 'MANAGER';
     }
     return '';
