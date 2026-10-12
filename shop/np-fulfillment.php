@@ -88,8 +88,17 @@ function npConfirm(PDO $db,int $order,string $actor,bool $availability,bool $ext
         $db->beginTransaction();
         try{
             $fresh=npOrder($db,$order);$method=$fresh['contact']['payment']??'';
-            if(in_array($fresh['status'],['cancelled','returned','completed'],true)||in_array($fresh['payment_status'],['paid','refunded'],true))throw new RuntimeException('Замовлення оплачене або закрите.');
+            if(in_array($fresh['status'],['cancelled','returned','completed'],true)||$fresh['payment_status']==='refunded')throw new RuntimeException('Замовлення оплачене або закрите.');
             if(!in_array($method,['invoice','card'],true))throw new ShopOrderConflict('PAYMENT_NOT_ALLOWED',[],'Спосіб оплати потребує окремої звірки.');
+            // Q-7 can be paid before a manager confirms fulfillment. Keep the
+            // paid snapshot, deadline and committed reserve intact; this action
+            // records only availability and the separate-parcel agreement.
+            if($fresh['payment_status']==='paid'){
+                if(trim($proof)!=='')throw new RuntimeException('Оплачене замовлення потребує лише підтвердження комплектації, без повторної звірки оплати.');
+                $db->prepare('INSERT INTO rubizh_np_order_confirmations(order_id,availability_confirmed,extra_delivery_agreed,confirmed_at,confirmed_by,payment_proof,updated_at) VALUES(?,1,?,UTC_TIMESTAMP(),?,\'\',UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE availability_confirmed=1,extra_delivery_agreed=VALUES(extra_delivery_agreed),confirmed_at=VALUES(confirmed_at),confirmed_by=VALUES(confirmed_by),updated_at=VALUES(updated_at)')->execute([$order,$extra?1:0,$actor]);
+                npAudit($db,$actor,'paid_fulfillment_confirmed',$order,0,$extra?'Separate parcel delivery agreed':'Separate parcel delivery not agreed');
+                $db->commit();return;
+            }
             $v=pimV3ConfirmRequests($db,$order,is_array($GLOBALS['rubizh_request_resolution']??null)?$GLOBALS['rubizh_request_resolution']:[],$actor,$approval);
             $db->prepare('INSERT INTO rubizh_np_order_confirmations(order_id,availability_confirmed,extra_delivery_agreed,confirmed_at,confirmed_by,payment_proof,updated_at) VALUES(?,1,?,UTC_TIMESTAMP(),?,?,UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE availability_confirmed=1,extra_delivery_agreed=VALUES(extra_delivery_agreed),confirmed_at=VALUES(confirmed_at),confirmed_by=VALUES(confirmed_by),payment_proof=IF(LENGTH(VALUES(payment_proof))=0,payment_proof,VALUES(payment_proof)),updated_at=VALUES(updated_at)')->execute([$order,$extra?1:0,$actor,mb_substr($proof,0,240)]);
             $db->prepare("UPDATE rubizh_customer_orders SET status='confirmed',updated_at=UTC_TIMESTAMP() WHERE id=?")->execute([$order]);

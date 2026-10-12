@@ -3,12 +3,13 @@
 // Isolated MySQL fixture, MonoPay mock, synthetic products; no real payment.
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
+import {generateKeyPairSync,createSign} from 'node:crypto';
 import {startSite,php} from './helpers/site-fixture.mjs';
 const skip=!process.env.RUBIZH_TEST_MYSQL_SOCKET;
 const product=(id,variants)=>({id,slug:id,name:'Товар '+id,brand:'QA',canonical_category_id:'clothing_headwear',category:'Одяг та форма / Головні убори',category_path:['Одяг та форма','Головні убори'],description:'Тест.',photos:['https://img.test/'+id+'.png'],variants});
 const v=(sku,size,extra={})=>({sku,color:'Олива',size,size_display:size,price:1000,availability:'in',stock:3,photos:['https://img.test/x.png'],...extra});
-async function legacySite(){
- const site=await startSite({enableV3:false,extraConfig:",'mono_mock'=>true,'environment'=>'staging'"});
+async function legacySite({extraConfig=''}={}){
+ const site=await startSite({enableV3:false,extraConfig:",'mono_mock'=>true,'environment'=>'staging'"+extraConfig});
  site.save=p=>php(`define('RUBIZH_AUTH_NO_SESSION',true);require '${site.site}/auth/bootstrap.php';require_once '${site.site}/api/lib.php';save_product(db(),json_decode(${JSON.stringify(JSON.stringify(p))},true));`);
  site.buyer=async()=>{const r=await fetch(site.base+'/shop/customer.php');return {h:{Cookie:r.headers.get('set-cookie').split(';')[0]},csrf:(await r.json()).csrf};};
  let n=0;
@@ -20,6 +21,47 @@ async function legacySite(){
  return site;
 }
 const line=(id,sku,size,qty=1)=>({product_id:id,sku,size,color:'Олива',qty});
+
+test('ARCH01: paid Q-7 orders can confirm fulfillment without changing money, timing, reserves or payment mail',{skip,timeout:180000},async()=>{
+ const owner='a'.repeat(32),manager='b'.repeat(32),reader='d'.repeat(32);
+ const site=await legacySite({extraConfig:`, 'np_ttn_enabled'=>true,'np_supplier_by_sku'=>['Q7-PAID'=>'m_vin'],'staff_roles'=>['${owner}'=>'OWNER','${manager}'=>'MANAGER','${reader}'=>'READ_ONLY']`});
+ const call=code=>JSON.parse(php(`define('RUBIZH_AUTH_NO_SESSION',true);define('RUBIZH_NP_TESTS',true);$GLOBALS['np_test_transport']=fn()=>throw new LogicException('No provider operation permitted');require '${site.site}/auth/bootstrap.php';$db=shopStoreDatabase();try{${code};echo json_encode(['ok'=>true]);}catch(Throwable $e){echo json_encode(['ok'=>false,'class'=>get_class($e),'message'=>$e->getMessage()]);}`).stdout);
+ try{
+  site.save(product('q7-paid',[v('Q7-PAID','M')]));const b=await site.buyer();
+  const o=await site.order(b,[line('q7-paid','Q7-PAID','M',2)]);assert.equal(o.status,200,JSON.stringify(o.data));const id=o.data.order.id;
+  assert.equal(site.row(id).status,'confirmed');assert.equal((await site.pay(b,id)).status,200);
+  const inv=site.sql('SELECT * FROM rubizh_mono_invoices WHERE order_id='+id)[0];
+  const {publicKey,privateKey}=generateKeyPairSync('ec',{namedCurve:'prime256v1'});
+  site.sql(`INSERT INTO meta(k,v) VALUES('mono_public_key','${Buffer.from(publicKey.export({type:'spki',format:'pem'})).toString('base64')}') ON DUPLICATE KEY UPDATE v=VALUES(v)`);
+  const raw=JSON.stringify({invoiceId:inv.invoice_id,status:'success',amount:+inv.amount,ccy:980,reference:inv.reference,modifiedDate:new Date().toISOString()});
+  assert.equal((await site.post('/shop/mono-webhook.php',raw,{'X-Sign':createSign('SHA256').update(raw).sign(privateKey).toString('base64')})).status,200);
+  assert.equal(site.row(id).payment_status,'paid');
+  assert.equal(site.sql('SELECT * FROM rubizh_np_order_confirmations WHERE order_id='+id).length,0,'Q-7 payment does not imply fulfillment confirmation');
+  const detail=site.sql('SELECT contact_json FROM rubizh_order_details WHERE order_id='+id)[0];const contact=JSON.parse(detail.contact_json);contact.np_delivery={city_ref:'00000000-0000-0000-0000-000000000010',warehouse_ref:'00000000-0000-0000-0000-000000000020'};
+  site.sql(`UPDATE rubizh_order_details SET contact_json='${JSON.stringify(contact).replaceAll("'","''")}' WHERE order_id=${id}`);
+  const packageJson=JSON.stringify({weight:1,seats:1,places:[{weight:1,length:10,width:10,height:10}]});
+  for(let n=1;n<=2;n++)assert.equal(call(`npDraft($db,${id},'${owner}','${String(n).padStart(32,'0')}','m_vin',[['line_no'=>0,'qty'=>1]],json_decode('${packageJson}',true))`).ok,true);
+  const ready=()=>call(`$o=npOrder($db,${id});$q=$db->query('SELECT * FROM rubizh_np_order_confirmations WHERE order_id=${id}');$confirmation=$q->fetch(PDO::FETCH_ASSOC)?:[];$shipments=npShipments($db,${id});npAssertReady($o,$confirmation,npLines($db,${id}),$shipments,$shipments[0])`);
+  const beforeReady=ready();assert.equal(beforeReady.ok,false);assert.match(beforeReady.message,/підтвердьте наявність/);
+  site.sql(`UPDATE rubizh_order_timing SET payment_due='2030-01-07 10:00:00',remind_at='2030-01-06 10:00:00' WHERE order_id=${id}`);
+  const snapshot=()=>Object.fromEntries(['rubizh_customer_orders','rubizh_order_details','rubizh_order_fulfillment_lines','rubizh_order_timing','rubizh_stock_reservations','rubizh_mono_invoices','rubizh_buyer_mail','rubizh_notifications'].map(table=>[table,site.sql('SELECT * FROM '+table+' WHERE '+(table==='rubizh_customer_orders'?'id':'order_id')+'='+id)]));
+  const before=snapshot();assert.equal(before.rubizh_stock_reservations[0].status,'COMMITTED');
+  // A later catalog change must not cause fulfillment confirmation to reprice the paid snapshot.
+  site.save(product('q7-paid',[v('Q7-PAID','M',{price:1500,stock:0})]));
+  const confirm=call(`npConfirm($db,${id},'${manager}',true,false,'')`);assert.equal(confirm.ok,true,JSON.stringify(confirm));
+  assert.deepEqual(snapshot(),before);
+  const noExtra=ready();assert.equal(noExtra.ok,false);assert.match(noExtra.message,/кожної окремої посилки/,'split parcels still require explicit agreement');
+  const missingAvailability=call(`npConfirm($db,${id},'${manager}',false,true,'')`);assert.equal(missingAvailability.ok,false);
+  const denied=call(`npConfirm($db,${id},'${reader}',true,true,'')`);assert.equal(denied.class,'ShopPermissionException');
+  const proof=call(`npConfirm($db,${id},'${owner}',true,true,'bank statement',['reason'=>'Звірено виписку'])`);assert.equal(proof.ok,false,'a paid fulfillment confirmation cannot reconcile money');
+  assert.equal(+site.sql('SELECT extra_delivery_agreed FROM rubizh_np_order_confirmations WHERE order_id='+id)[0].extra_delivery_agreed,0);
+  assert.equal(call(`npConfirm($db,${id},'${manager}',true,true,'')`).ok,true);assert.equal(ready().ok,true);assert.deepEqual(snapshot(),before);
+  assert.equal(+site.sql(`SELECT availability_confirmed FROM rubizh_np_order_confirmations WHERE order_id=${id}`)[0].availability_confirmed,1);
+  assert.equal(+site.sql(`SELECT COUNT(*) n FROM rubizh_np_audit WHERE order_id=${id} AND action='paid_fulfillment_confirmed'`)[0].n,2);
+  for(const status of ['cancelled','returned','completed']){site.sql(`UPDATE rubizh_customer_orders SET status='${status}' WHERE id=${id}`);assert.equal(call(`npConfirm($db,${id},'${manager}',true,true,'')`).ok,false);}
+  site.sql(`UPDATE rubizh_customer_orders SET status='confirmed',payment_status='refunded' WHERE id=${id}`);assert.equal(call(`npConfirm($db,${id},'${manager}',true,true,'')`).ok,false);
+ }finally{site.stop();}
+});
 
 test('Q-7: confirmed legacy stock pays by card right away; the invoice amount is the server total and the stock is reserved',{skip,timeout:180000},async()=>{
  const site=await legacySite();try{
