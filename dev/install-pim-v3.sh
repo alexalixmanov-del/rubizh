@@ -27,6 +27,21 @@ rubizh_verify_release() (
   echo 'Reviewed release artifact mismatch; no source installed.' >&2; return 2
  fi
 )
+rubizh_p0_ready() {
+ if ! "$2" -r '
+  try{
+   $r=$argv[1];if(!is_file($r."/api/database.php"))exit(2);
+   require $r."/api/database.php";$db=rubizhDatabaseConnect(require $r."/api/config.php");
+   if($db->query("SELECT v FROM meta WHERE k=\x27order_p0_schema\x27")->fetchColumn()!=="1")exit(2);
+   if((int)$db->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=\x27rubizh_stock_reservations\x27 AND COLUMN_NAME IN (\x27status\x27,\x27committed_at\x27,\x27released_at\x27)")->fetchColumn()!==3)exit(2);
+   if((int)$db->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=\x27rubizh_order_audit\x27")->fetchColumn()!==1)exit(2);
+   if((int)$db->query("SELECT COUNT(*) FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA=DATABASE() AND EVENT_OBJECT_TABLE=\x27rubizh_order_audit\x27 AND TRIGGER_NAME IN (\x27rubizh_order_audit_no_update\x27,\x27rubizh_order_audit_no_delete\x27)")->fetchColumn()!==2)exit(2);
+  }catch(Throwable $e){exit(2);}
+ ' "$1"; then
+  echo 'P0 prerequisite unavailable; no source installed. Prepare and verify the guarded additive migration separately before updating.' >&2
+  return 2
+ fi
+}
 if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then return 0; fi
 umask 077
 RUBIZH_ROOT=${1:?Usage: install-pim-v3.sh SITE_ROOT DB_BACKUP_FILE DB_BACKUP_SHA256}
@@ -36,6 +51,7 @@ RUBIZH_DB_SHA=${3:?Database backup SHA256 required}
 RUBIZH_PHP=${RUBIZH_PHP_BIN:-/usr/local/php82/bin/php}
 [[ -x "$RUBIZH_PHP" ]] || RUBIZH_PHP=$(command -v php)
 "$RUBIZH_PHP" -r 'if(version_compare(PHP_VERSION,"8.1","<"))exit(2);foreach(["pdo_mysql","curl","mbstring","openssl","gd","fileinfo"] as $name)if(!extension_loaded($name)){fwrite(STDERR,"Missing PHP extension: ".$name."\n");exit(2);}'
+rubizh_p0_ready "$RUBIZH_ROOT" "$RUBIZH_PHP"
 # The DB backup must exist outside the web root and match its checksum before anything changes.
 RUBIZH_DB_REAL=$(realpath "$RUBIZH_DB_BACKUP")
 [[ -f "$RUBIZH_DB_REAL" && "$RUBIZH_DB_REAL" != "$RUBIZH_ROOT"/* ]] || { echo 'DB backup must be a file outside the web root' >&2; exit 2; }

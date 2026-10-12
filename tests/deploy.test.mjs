@@ -26,6 +26,26 @@ test('Release preflight rejects the shipped older archive and changed hardening 
   const changed=installerCheck('rubizh_verify_release',[zip,php]);assert.notEqual(changed.status,0);assert.match(changed.stderr,/Reviewed release artifact mismatch/);
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
+test('Installer prerequisite is read-only and rejects an incomplete P0 schema before source handoff',{skip:!process.env.RUBIZH_TEST_MYSQL_SOCKET},async()=>{
+ const s=await startSite({enableV3:false});
+ try{
+  const quote=v=>"'"+v.replaceAll("'","'\\''")+"'";const fixturePhp=path.join(s.dir,'php-preflight');
+  writeFileSync(fixturePhp,'#!/bin/sh\nexec '+quote(process.env.PHP_PATH||runtime+'/bin/php8.4')+' -d '+quote('pdo_mysql.default_socket='+process.env.RUBIZH_TEST_MYSQL_SOCKET)+' "$@"\n',{mode:0o755});
+  const ready=installerCheck('rubizh_p0_ready',[s.site,fixturePhp]);assert.equal(ready.status,0,ready.stderr);
+  const before=s.sql('SELECT * FROM meta ORDER BY k');s.sql('ALTER TABLE rubizh_stock_reservations DROP COLUMN status');
+  const missing=installerCheck('rubizh_p0_ready',[s.site,fixturePhp]);assert.notEqual(missing.status,0);assert.match(missing.stderr,/P0 prerequisite/);
+  const oldSource=readFileSync(path.join(s.site,'shop/reservations.php'));
+  const blocked=spawnSync('bash',[installer,s.site,path.join(s.dir,'not-a-production-backup'),'0'.repeat(64)],{env:{...process.env,RUBIZH_PHP_BIN:fixturePhp},encoding:'utf8',timeout:10000});
+  assert.notEqual(blocked.status,0);assert.match(blocked.stderr,/P0 prerequisite/);
+  assert.deepEqual(readFileSync(path.join(s.site,'shop/reservations.php')),oldSource);
+  assert.equal(existsSync(path.join(s.dir,'rubizh-private-backups')),false);
+  assert.deepEqual(s.sql('SELECT * FROM meta ORDER BY k'),before);
+  assert.equal(s.sql("SELECT COUNT(*) n FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='rubizh_stock_reservations' AND COLUMN_NAME='status'")[0].n,0);
+  const source=readFileSync(installer,'utf8');const main=source.slice(source.indexOf('RUBIZH_ROOT=${1:'));
+  assert.ok(main.indexOf('rubizh_p0_ready')<main.indexOf('curl -fsSL'));
+  assert.ok(main.indexOf('rubizh_verify_release')<main.indexOf('RUBIZH_INVENTORY='));
+ }finally{s.stop();}
+});
 test('Deployment preserves private configs, media and legacy provider keys; invalid checksum changes nothing',()=>{
  const dir=mkdtempSync(path.join(tmpdir(),'rubizh-deploy-'));const site=path.join(dir,'www'),bin=path.join(dir,'bin'),release=path.join(dir,'release/rubizh');
  for(const p of ['api','auth','media'])mkdirSync(path.join(site,p),{recursive:true});mkdirSync(bin);mkdirSync(path.join(release,'api'),{recursive:true});
