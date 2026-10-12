@@ -892,7 +892,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
         const N=Math.max(1,Math.min(99,parseInt(e,10)||1)),main=['head','body','legs','boots','armor','gear','med'];
         const info=t.map(r=>{const pid=r.pid??r.p?.id??r.l?.id,p=r.p||(pid?Z.find(x=>x.id===pid):null);return {pid,slot:p?storeSlot(p):(r.slot??r.l?.slot??'small')};});
         const qualifies=!!ready||new Set(info.filter(i=>main.includes(i.slot)).map(i=>i.slot)).size>=2,left={};
-        const rows=t.map(({v,q},i)=>{q=q||1;const ok=qualifies&&v.pricing_policy_version===1&&Number.isFinite(v.kit_price)&&v.kit_price>0;let kq=0;
+        const rows=t.map(({v,q,retailOnly},i)=>{q=q||1;const ok=qualifies&&!retailOnly&&v.pricing_policy_version===1&&Number.isFinite(v.kit_price)&&v.kit_price>0;let kq=0;
             if(ok){if(ready)kq=q;else{const id=info[i].pid;left[id]=left[id]??N;kq=Math.min(q,left[id]);left[id]-=kq;}}
             const retail=Math.round(v.price*100),fullC=retail*q,kitC=(ok?Math.round(v.kit_price*100):retail)*kq+retail*(q-kq);
             return {price:fullC/100,kit:kitC/100,unit:ok&&kq===q?v.kit_price:v.price,kitQty:kq,save:(fullC-kitC)/100,fixed:!kq,capped:kq>0&&kq<q,extraUnits:ok&&kq<q};});
@@ -1750,7 +1750,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                         v: Object.assign({}, s.variants[i.size], {
                             price: null != i.price ? i.price : s.variants[i.size].price
                         }),
-                        q: i.qty, pid: i.id, slot: i.kitSlot
+                        q: i.qty, pid: i.id, slot: i.kitSlot, retailOnly:!!i.kitRetail
                     };
                 }), i.length ? e[i[0]].kitUnits : 1, i.length && e[i[0]].kitReady);
                 i.forEach((t, i) => {
@@ -2941,7 +2941,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                     return {
                         v: Object.assign({}, e.variants[s[t].size], {
                             price: s[t].price
-                        }), q: s[t].qty, pid: s[t].id, slot: s[t].kitSlot
+                        }), q: s[t].qty, pid: s[t].id, slot: s[t].kitSlot, retailOnly:!!s[t].kitRetail
                     };
                 }), s[t[0]].kitUnits, s[t[0]].kitReady).rows;
                 t.forEach((t, i) => {
@@ -5873,7 +5873,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
             });
             return e.forEach(s), i.filter(t => t.n > 0).sort((t, e) => e.n - t.n);
         };
-        storePricingLines=cart=>cart.map(l=>{const p=Z.find(p=>p.id===l.id),v=p?.variants[l.size],v3=storeV3PricingLine(l,p,v);if(v3)return v3;const kit=!!(l.kit&&v?.pricing_policy_version===1&&v.kit_price!==null);return {product_id:l.id,sku:l.sku||v?.sku,qty:l.qty,color:v?.color,price_mode:l.wh?'wholesale':kit?'kit':'retail',kit_group:l.kit?l.kitId||'kit':'',...(l.kit?{kit_units:l.kitUnits||1}:{})};});
+        storePricingLines=cart=>cart.map(l=>{const p=Z.find(p=>p.id===l.id),v=p?.variants[l.size],v3=storeV3PricingLine(l,p,v);if(v3)return v3;const kit=!!(l.kit&&!l.kitRetail&&v?.pricing_policy_version===1&&v.kit_price!==null);return {product_id:l.id,sku:l.sku||v?.sku,qty:l.qty,color:v?.color,price_mode:l.wh?'wholesale':kit?'kit':'retail',kit_group:l.kit?l.kitId||'kit':'',...(l.kit?{kit_units:l.kitUnits||1}:{})};});
         applyPromo=async()=>{
             const seq=this._promoSeq=(this._promoSeq||0)+1,code=this.state.promoInput.trim().toUpperCase();
             if(!code){this.setState({promo:null,promoPct:0,promoBad:false,storeQuote:null,checkoutError:''});return;}
@@ -6375,7 +6375,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
             checkoutError: "",
             storeQuote: null
         },()=>{if(t==="checkoutEmail"&&this.state.cartReminderActive)this.storeCartReminderSchedule();});
-        storeReminderLines=cart=>cart.map(l=>{const p=Z.find(p=>p.id===l.id),v3=storeV3PricingLine(l,p,p?.variants[l.size]);if(v3)return v3;return {product_id:l.id,sku:l.sku||p?.variants[l.size]?.sku,qty:l.qty,kit_group:l.kit?l.kitId||'kit':'',...(l.kit?{kit_units:l.kitUnits||1}:{})};});
+        storeReminderLines=cart=>cart.map(l=>{const p=Z.find(p=>p.id===l.id),v3=storeV3PricingLine(l,p,p?.variants[l.size]);if(v3)return v3;return {product_id:l.id,sku:l.sku||p?.variants[l.size]?.sku,qty:l.qty,price_mode:l.kit&&!l.kitRetail?'kit':'retail',kit_group:l.kit?l.kitId||'kit':'',...(l.kit?{kit_units:l.kitUnits||1}:{})};});
         storeCartReminderQueue=(action,cart=this.state.cart)=>{
             const generation=this._cartReminderGeneration=(this._cartReminderGeneration||0)+1;const payload=action==='save'?{action,consent:true,email:(this.state.checkoutEmail||'').trim(),lines:this.storeReminderLines(cart)}:{action};
             this._cartReminderTail=(this._cartReminderTail||Promise.resolve()).catch(()=>{}).then(async()=>{
@@ -6394,9 +6394,13 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
             this.setState({cartReminderActive:true,cartReminderNotice:'Зберігаємо нагадування…'});this.storeCartReminderQueue('save');
         };
         storeRestoreCart=async()=>{try{const result=await this.storeRequest('/shop/cart-reminder.php',{action:'restore'});this.storeCache(result.products);const restored=[];
-            for(const line of result.items||[]){const p=Z.find(p=>p.id===line.product_id),key=Object.keys(p?.variants||{}).find(k=>p.variants[k].sku===line.sku&&!p.variants[k].size_unconfirmed&&this.avail(p,k)!=='out');if(!key)continue;const v=p.variants[key];restored.push({id:p.id,name:p.name,size:key,sku:v.sku,qty:line.qty,price:v.price,sale_unit:p.sale_unit,color:v.color,kit:!!line.kit_group,kitId:line.kit_group||undefined});}
-            const merged=this.state.cart.slice();for(const line of restored){const index=merged.findIndex(l=>l.sku===line.sku&&(l.kitId||'')===(line.kitId||''));if(index<0)merged.push(line);else merged[index]={...line,qty:Math.max(Number(line.qty),Number(merged[index].qty))};}
-            this.setState({cart:this.saveCart(merged),cartReminderNotice:result.omitted?'Кошик відновлено. Недоступні товари пропущено.':'Кошик відновлено. Перевірте товари перед оформленням.',storeQuote:null});this.go('cart');
+            for(const line of result.items||[]){const p=Z.find(p=>p.id===line.product_id),key=Object.keys(p?.variants||{}).find(k=>p.variants[k].sku===line.sku&&!p.variants[k].size_unconfirmed&&this.avail(p,k)!=='out');if(!key)continue;const v=p.variants[key],item={id:p.id,name:p.name,size:key,sku:v.sku,qty:Number(line.qty),price:v.price,sale_unit:p.sale_unit,color:v.color,colorId:v.color_id,optionId:v.option_id,kit:!!line.kit_group,kitRetail:!!line.kit_group&&line.price_mode==='retail',kitId:line.kit_group||undefined,kitUnits:line.kit_units||1,kitSlot:storeSlot(p)};
+                // Older reminder snapshots may contain kit/retail fragments. Sum them before merging a local copy.
+                const same=restored.find(l=>l.sku===item.sku&&(l.kitId||'')===(item.kitId||'')&&!!l.kitRetail===!!item.kitRetail);if(same)same.qty=storeQty(same.qty+item.qty);else restored.push(item);}
+            const merged=this.state.cart.slice();for(const line of restored){const index=merged.findIndex(l=>l.sku===line.sku&&(l.kitId||'')===(line.kitId||'')&&!!l.kitRetail===!!line.kitRetail);if(index<0)merged.push(line);else merged[index]={...line,qty:Math.max(Number(line.qty),Number(merged[index].qty))};}
+            const cart=this.saveCart(merged),notice=result.omitted?'Кошик відновлено. Недоступні товари пропущено.':'Кошик відновлено. Перевірте товари перед оформленням.',kitIds=new Set(restored.filter(l=>l.kit).map(l=>l.kitId));
+            const kitNotice=!kitIds.size?'':cart.some(l=>kitIds.has(l.kitId)&&l.kitQty>0)?' Ціни комплекту перераховано за актуальними правилами: спеціальна ціна діє на одну одиницю кожної речі на комплект; решта — за звичайною ціною.':' Ціни комплекту перераховано за актуальними правилами: для поточного складу застосовано звичайні ціни.';
+            this.setState({cart,cartReminderNotice:notice+kitNotice,storeQuote:null});this.go('cart');
         }catch(error){this.setState({cartReminderNotice:error.message});}};
         submitOrder=async t => {
             const c=this.state,checks=[['name',(c.checkoutName||'').trim().split(/\s+/).length>=2,'Вкажіть ім’я та прізвище отримувача'],['phone',/^380\d{9}$/.test((c.checkoutPhone||'').replace(/\D/g,'').replace(/^0/,'380')),'Вкажіть номер телефону'],['email',!(c.checkoutEmail||'').trim()||/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((c.checkoutEmail||'').trim()),'Перевірте email або залиште поле порожнім'],['city',(c.cityQ||'').trim().length>=2,'Вкажіть місто'],['address',(c.pointQ||'').trim().length>=2,'Вкажіть відділення або адресу']];

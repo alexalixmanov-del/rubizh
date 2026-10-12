@@ -83,6 +83,6 @@ window.storeV3ProductVm=function(app,t,e,s){
 // Cart → server: exact MODEL/COLOR/SKU or a size request without SKU. Prices/flags are never sent as authority.
 window.storeV3PricingLine=function(l,p,v){
  if(!p||!p.v3||!v)return null;
- return v.option_id?{product_id:l.id,color_id:v.color_id||l.colorId||undefined,option_id:v.option_id,size:v.size_display,qty:l.qty,price_mode:'retail'}:{product_id:l.id,color_id:v.color_id,sku:v.sku,qty:l.qty,price_mode:l.wh?'wholesale':l.kit&&v.pricing_policy_version===1&&v.kit_price!=null?'kit':'retail',...(l.kit?{kit_group:l.kitId||'kit',kit_units:l.kitUnits||1}:{})};
+ return v.option_id?{product_id:l.id,color_id:v.color_id||l.colorId||undefined,option_id:v.option_id,size:v.size_display,qty:l.qty,price_mode:'retail'}:{product_id:l.id,color_id:v.color_id,sku:v.sku,qty:l.qty,price_mode:l.wh?'wholesale':l.kit&&!l.kitRetail&&v.pricing_policy_version===1&&v.kit_price!=null?'kit':'retail',...(l.kit?{kit_group:l.kitId||'kit',kit_units:l.kitUnits||1}:{})};
 };
 })();

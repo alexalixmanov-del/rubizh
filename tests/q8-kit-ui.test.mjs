@@ -35,6 +35,40 @@ async function builder(width,kit){
 const summary=async page=>({goods:money(await page.locator('[data-kit-goods]').innerText()),total:money(await page.locator('[data-kit-total]').innerText()),
  discount:await page.locator('[data-kit-discount]').count()?money(await page.locator('[data-kit-discount]').innerText()):0,hint:await page.locator('[data-kit-price-hint]').count()?await page.locator('[data-kit-price-hint]').innerText():''});
 
+function reminder(units,tag,legacy=false,retail=false){
+ const lines=[{product_id:'q8-jacket',sku:'q8-jacket-L',qty:3*units,price_mode:'kit',kit_group:'q8-reminder',kit_units:units},{product_id:'q8-boots',sku:'q8-boots-43',qty:units,price_mode:retail?'retail':'kit',kit_group:'q8-reminder',kit_units:units}];
+ return JSON.parse(php(`define('RUBIZH_AUTH_NO_SESSION',true);require '${site.site}/auth/bootstrap.php';require_once '${site.site}/shop/store-lib.php';$db=shopStoreDatabase();$scope=hash('sha256','q8-reminder-${tag}-${units}');$lines=json_decode('${JSON.stringify(lines)}',true);shopCartReminderSave($db,$scope,null,['consent'=>true,'email'=>'${tag}${units}@example.test','lines'=>$lines]);${legacy?`$old=[];foreach(shopResolvedLines($db,$lines) as $l)$old[]=['product_id'=>$l['product_id'],'sku'=>$l['sku'],'qty'=>$l['qty'],'kit_group'=>$l['kit_group']];$db->prepare('UPDATE rubizh_cart_reminders SET items_json=? WHERE scope_hash=?')->execute([json_encode($old),$scope]);`:''}$q=$db->prepare('SELECT * FROM rubizh_cart_reminders WHERE scope_hash=?');$q->execute([$scope]);$r=$q->fetch(PDO::FETCH_ASSOC);echo json_encode(['saved'=>json_decode($r['items_json'],true),'current'=>shopCartReminderCurrentItems($db,$r),'code'=>$r['recovery_code']]);`).stdout);
+}
+
+test('Q-8 reminder selections keep full quantities, pricing intent and number of kits without storing prices',{skip,timeout:60000},()=>{
+ for(const units of [3,1]){
+  const r=reminder(units,'selection');
+  assert.deepEqual(r.saved.map(l=>[l.sku,l.qty,l.price_mode,l.kit_units]),[['q8-jacket-L',3*units,'kit',units],['q8-boots-43',units,'kit',units]]);
+  assert.deepEqual(r.current.map(l=>[l.sku,l.qty,l.price_mode,l.kit_units]),[['q8-jacket-L',3*units,'kit',units],['q8-boots-43',units,'kit',units]]);
+  assert.ok(r.saved.every(l=>!Object.hasOwn(l,'price')&&!Object.hasOwn(l,'kit_price')));
+ }
+});
+
+test('Q-8 reminder browser recovery preserves quantities and N kits, explains current rules and matches the server quote',{skip,timeout:180000},async()=>{
+ for(const [units,tag,legacy,retail] of [[3,'browser',false,false],[1,'browser',false,false],[1,'legacy',true,false],[1,'retail',false,true],[3,'retail',false,true]]){
+  const r=reminder(units,tag,legacy,retail),context=await browser.newContext({viewport:{width:390,height:844}});
+  await context.route('**/*',route=>new URL(route.request().url()).origin===site.base?route.continue():route.abort());
+  const page=await context.newPage();
+  try{
+   await page.goto(site.base+'/shop/cart-return.php?code='+r.code);await page.getByRole('heading',{name:'Оформлення замовлення'}).waitFor();
+   await page.getByText(/Кошик відновлено/).waitFor();
+   const cart=await page.evaluate(()=>JSON.parse(localStorage.getItem('rubizh.cart')||'[]'));
+   assert.deepEqual(cart.map(l=>[l.sku,l.qty,l.kitQty,l.kitUnits]),[['q8-jacket-L',3*units,units,units],['q8-boots-43',units,retail?0:units,units]]);
+   assert.match(await page.locator('body').innerText(),/Ціни комплекту перераховано.*решта — за звичайною ціною/);
+   assert.equal(money(await page.getByText('До сплати',{exact:true}).locator('..').innerText()),(retail?3800:3600)*units);
+   const q=await page.evaluate(async lines=>{const c=await (await fetch('/shop/customer.php')).json();return await (await fetch('/shop/checkout-quote.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({csrf:c.csrf,lines})})).json();},cart.map(l=>({product_id:l.id,sku:l.sku,qty:l.qty,price_mode:l.kitRetail?'retail':'kit',kit_group:l.kitId,kit_units:l.kitUnits})));
+   assert.equal(q.ok,true,JSON.stringify(q));assert.equal(q.quote.total,(retail?3800:3600)*units);
+   await page.reload();await page.getByRole('heading',{name:'Оформлення замовлення'}).waitFor();
+   assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('rubizh.cart')||'[]').map(l=>[l.qty,l.kitUnits])),[[3*units,units],[units,units]]);
+  }finally{await context.close();}
+ }
+});
+
 for(const width of [360,390,430,768,1024,1280,1440]){
  test(`Q-8 builder @${width}: two models of one section show the hint and no discount; two sections + «Дрібниці» get the kit price on all; extra units stay retail in builder/cart`,{skip,timeout:120000},async()=>{
   let b=await builder(width,SAME);
