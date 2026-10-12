@@ -259,7 +259,7 @@ test('Light theme keeps header text, icons and the logo readable across storefro
   for(const width of [320,390,1440]){
     await page.setViewportSize({width,height:1000});
     for(const path of ['/','/catalog','/kit','/categories','/product/demo-uniform','/porady','/auth/']){
-      await page.goto(base+path);
+      const response=await page.goto(base+path);assert.equal(response.status(),200,`${width}${path}: route must load`);await page.waitForLoadState('networkidle');
       await page.locator(path==='/auth/'?'.auth-shell':'[data-header-brand]').waitFor();
       assert.equal(await page.locator('html').getAttribute('data-theme'),'light');
       const problems=await page.evaluate(()=>{
