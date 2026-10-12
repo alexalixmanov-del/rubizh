@@ -115,18 +115,43 @@ function npWarehouse(PDO $db,string $city,string $ref): array {
 function npValidateDelivery(PDO $db,array $contact,string $type): array {
     $d=is_array($contact['np_delivery']??null)?$contact['np_delivery']:[];
     if(!npConfigured() && !defined('RUBIZH_NP_TESTS'))return ['city'=>(string)($contact['city']??''),'address'=>(string)($contact['address']??''),'type'=>$type,'manual'=>true];
-    $city=npCity($db,(string)($d['city_ref']??''));$result=['city_ref'=>$city['Ref'],'city'=>$city['Description'],'type'=>$type,'verified_at'=>gmdate('c')];
-    if($type==='courier'){
-      $streetRef=(string)($d['street_ref']??'');if(!npRef($streetRef))throw new RuntimeException('Оберіть вулицю з довідника НП.');
-      $street=null;foreach(npCached($db,'Address','getStreet',['CityRef'=>$city['Ref'],'Ref'=>$streetRef,'Limit'=>'100']) as $s)if(($s['Ref']??'')===$streetRef)$street=$s;
-      if(!$street)throw new RuntimeException('Вулиця не належить вибраному місту.');
-      $building=trim((string)($d['building']??''));$flat=trim((string)($d['flat']??''));
-      if(!preg_match('/^[0-9\p{L}\s\/-]{1,20}$/u',$building) || ($flat!==''&&!preg_match('/^[0-9\p{L}\s\/-]{1,20}$/u',$flat)))throw new RuntimeException('Вкажіть будинок і перевірте квартиру.');
-      return $result+['street_ref'=>$streetRef,'street'=>$street['Description'],'building'=>$building,'flat'=>$flat,'address'=>$street['Description'].', '.$building.($flat!==''?', кв. '.$flat:'')];
+    if(!in_array($type,['branch','postomat','courier'],true))throw new RuntimeException('Перевірте тип доставки.');
+    $cityRef=(string)($d['city_ref']??'');$pointKey=$type==='courier'?'street_ref':'warehouse_ref';$pointRef=(string)($d[$pointKey]??'');
+    // Reject malformed references before a directory outage can hide invalid input.
+    if(($cityRef!==''&&!npRef($cityRef))||($pointRef!==''&&!npRef($pointRef)))throw new RuntimeException('Оберіть місто й місце отримання з довідника НП.');
+    $building=trim((string)($d['building']??''));$flat=trim((string)($d['flat']??''));
+    if($type==='courier'&&(($building!==''&&!preg_match('/^[0-9\p{L}\s\/-]{1,20}$/u',$building))||($flat!==''&&!preg_match('/^[0-9\p{L}\s\/-]{1,20}$/u',$flat))))throw new RuntimeException('Вкажіть будинок і перевірте квартиру.');
+    try{
+      if($cityRef===''||$pointRef===''){
+        // Free text is allowed only when this server observes a transient read failure.
+        // A browser fallback flag cannot make a healthy directory accept missing refs.
+        $typedCity=trim((string)($contact['city']??''));
+        if($cityRef!==''){
+          npCity($db,$cityRef);
+          npCached($db,'Address',$type==='courier'?'getStreet':'getWarehouses',['CityRef'=>$cityRef,'FindByString'=>mb_substr(trim((string)($contact['address']??'')),0,240),'Limit'=>'20','Page'=>'1']);
+        }
+        elseif($typedCity!=='')npCached($db,'Address','getCities',['FindByString'=>mb_substr($typedCity,0,120),'Limit'=>'20','Page'=>'1']);
+        throw new RuntimeException('Оберіть місто й місце отримання з довідника НП.');
+      }
+      $city=npCity($db,$cityRef);$result=['city_ref'=>$city['Ref'],'city'=>$city['Description'],'type'=>$type,'verified_at'=>gmdate('c')];
+      if($type==='courier'){
+        $streetRef=(string)($d['street_ref']??'');if(!npRef($streetRef))throw new RuntimeException('Оберіть вулицю з довідника НП.');
+        $street=null;foreach(npCached($db,'Address','getStreet',['CityRef'=>$city['Ref'],'Ref'=>$streetRef,'Limit'=>'100']) as $s)if(($s['Ref']??'')===$streetRef)$street=$s;
+        if(!$street)throw new RuntimeException('Вулиця не належить вибраному місту.');
+        if(!preg_match('/^[0-9\p{L}\s\/-]{1,20}$/u',$building) || ($flat!==''&&!preg_match('/^[0-9\p{L}\s\/-]{1,20}$/u',$flat)))throw new RuntimeException('Вкажіть будинок і перевірте квартиру.');
+        return $result+['street_ref'=>$streetRef,'street'=>$street['Description'],'building'=>$building,'flat'=>$flat,'address'=>$street['Description'].', '.$building.($flat!==''?', кв. '.$flat:'')];
+      }
+      $w=npWarehouse($db,$city['Ref'],(string)($d['warehouse_ref']??''));$postomat=str_contains(npNormalize($w['Description']),'поштомат');
+      if(($type==='postomat')!==$postomat)throw new RuntimeException('Виберіть відділення для обраного способу доставки.');
+      return $result+['warehouse_ref'=>$w['Ref'],'address'=>$w['Description']];
+    }catch(NpUnknownResult|NpRateLimited $e){
+      $typedCity=trim((string)($contact['city']??''));$typedAddress=trim((string)($contact['address']??''));
+      // Shipment creation and manager verification supply refs only: they must
+      // stop on any read failure, before a recipient or document is created.
+      if($typedCity===''||$typedAddress==='')throw $e;
+      $candidates=array_intersect_key($d,array_flip(['city_ref','warehouse_ref','street_ref','building','flat']));
+      return ['city'=>mb_substr($typedCity,0,120),'address'=>mb_substr($typedAddress,0,240),'type'=>$type,'manual'=>true,'unverified_refs'=>$candidates];
     }
-    $w=npWarehouse($db,$city['Ref'],(string)($d['warehouse_ref']??''));$postomat=str_contains(npNormalize($w['Description']),'поштомат');
-    if(($type==='postomat')!==$postomat)throw new RuntimeException('Виберіть відділення для обраного способу доставки.');
-    return $result+['warehouse_ref'=>$w['Ref'],'address'=>$w['Description']];
 }
 function npOriginWarehouseCandidates(array $origin): array {
     $result=[];

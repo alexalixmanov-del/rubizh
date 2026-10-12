@@ -6301,12 +6301,12 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                 try{const type=delivery==='box'?'postomat':'branch';const r=await this.storeRequest('/shop/np-directory.php?kind='+kind+'&q='+encodeURIComponent(q)+'&city_ref='+encodeURIComponent(city)+'&type='+type);
                     if(!current())return;
                     if(!sameDirectory()){this.setState({npLoading:false});return;}
-                    this.setState({npLoading:false,npEnabled:r.enabled!==false,...(kind==='cities'?{npCities:r.items||[]}:{npPoints:r.items||[]})});
-                }catch(err){if(current())this.setState({npLoading:false,...(sameDirectory()?{npError:'Не вдалося завантажити довідник НП. Спробуйте ще раз.'}:{})});}
+                    this.setState({npLoading:false,npManual:false,npEnabled:r.enabled!==false,...(kind==='cities'?{npCities:r.items||[]}:{npPoints:r.items||[]})});
+                }catch(err){if(current())this.setState({npLoading:false,...(sameDirectory()?(err.status===503?{npManual:true,city:this.state.cityQ||'',point:this.state.pointQ||'',npCities:[],npPoints:[],cityOpen:false,pointOpen:false,npError:'Довідник НП тимчасово недоступний. Введіть місто та адресу — менеджер перевірить їх перед відправленням.'}:{npManual:false,npError:'Не вдалося завантажити довідник НП. Спробуйте ще раз.'}):{})});}
             },280);
         };
-        npCityInput=ev=>{const value=ev.target.value;this.setState({cityQ:value,city:this.state.npEnabled?'':value,cityOpen:true,point:'',pointQ:'',npCityRef:'',npWarehouseRef:'',npStreetRef:'',npCities:[],npPoints:[],npBuilding:'',npFlat:'',checkoutDirty:true,storeQuote:null});if(this.state.npEnabled&&value.trim().length>=2)this.npSearch('cities',value);else{clearTimeout(this._npTimer);this._npSeq=(this._npSeq||0)+1;this.setState({npLoading:false});}};
-        npPointInput=ev=>{const value=ev.target.value;this.setState({pointQ:value,point:this.state.npEnabled?'':value,pointOpen:true,npWarehouseRef:'',npStreetRef:'',npPoints:[],checkoutDirty:true,storeQuote:null});if(this.state.npEnabled)this.npSearch(this.state.delivery==='courier'?'streets':'warehouses',value);};
+        npCityInput=ev=>{const value=ev.target.value;this.setState({cityQ:value,city:this.state.npEnabled&&!this.state.npManual?'':value,cityOpen:true,point:'',pointQ:'',npCityRef:'',npWarehouseRef:'',npStreetRef:'',npCities:[],npPoints:[],npBuilding:'',npFlat:'',checkoutDirty:true,storeQuote:null});if(this.state.npEnabled&&!this.state.npManual&&value.trim().length>=2)this.npSearch('cities',value);else{clearTimeout(this._npTimer);this._npSeq=(this._npSeq||0)+1;this.setState({npLoading:false});}};
+        npPointInput=ev=>{const value=ev.target.value;this.setState({pointQ:value,point:this.state.npEnabled&&!this.state.npManual?'':value,pointOpen:true,npWarehouseRef:'',npStreetRef:'',npPoints:[],checkoutDirty:true,storeQuote:null});if(this.state.npEnabled&&!this.state.npManual)this.npSearch(this.state.delivery==='courier'?'streets':'warehouses',value);};
         npClear=()=>{clearTimeout(this._npTimer);this._npSeq=(this._npSeq||0)+1;this.setState({city:'',cityQ:'',point:'',pointQ:'',npCityRef:'',npWarehouseRef:'',npStreetRef:'',npCities:[],npPoints:[],npBuilding:'',npFlat:'',npError:'',npLoading:false,cityOpen:false,pointOpen:false,checkoutDirty:true,storeQuote:null});};
 
         storeCheckoutField=(t, e) => this.setState({
@@ -6342,7 +6342,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
             const c=this.state,checks=[['name',(c.checkoutName||'').trim().split(/\s+/).length>=2,'Вкажіть ім’я та прізвище отримувача'],['phone',/^380\d{9}$/.test((c.checkoutPhone||'').replace(/\D/g,'').replace(/^0/,'380')),'Вкажіть номер телефону'],['email',!(c.checkoutEmail||'').trim()||/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((c.checkoutEmail||'').trim()),'Перевірте email або залиште поле порожнім'],['city',(c.cityQ||'').trim().length>=2,'Вкажіть місто'],['address',(c.pointQ||'').trim().length>=2,'Вкажіть відділення або адресу']];
             let first=null;for(const [name,ok,note] of checks){const el=document.querySelector('input[name="'+name+'"]');el?.setAttribute('aria-invalid',ok?'false':'true');if(!ok&&!first)first={el,note};}if(first){this.setState({checkoutError:first.note});first.el?.scrollIntoView({block:'center',behavior:'smooth'});first.el?.focus({preventScroll:true});return;}
 
-            if(c.npEnabled && (!c.npCityRef || (c.delivery==='courier'?(!c.npStreetRef||!c.npBuilding):!c.npWarehouseRef))){this.setState({checkoutError:'Оберіть місто й місце отримання у довіднику НП; для кур’єра вкажіть будинок.'});document.querySelector('input[name="'+(!c.npCityRef?'city':c.delivery==='courier'&&!c.npBuilding?'building':'address')+'"]')?.focus();return;}
+            if(c.npEnabled && !c.npManual && (!c.npCityRef || (c.delivery==='courier'?(!c.npStreetRef||!c.npBuilding):!c.npWarehouseRef))){this.setState({checkoutError:'Оберіть місто й місце отримання у довіднику НП; для кур’єра вкажіть будинок.'});document.querySelector('input[name="'+(!c.npCityRef?'city':c.delivery==='courier'&&!c.npBuilding?'building':'address')+'"]')?.focus();return;}
             if (this.state.orderSending) return;
             const e = this.state, i = {
                 lines: this.storePricingLines(t),
@@ -6352,7 +6352,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                     email: e.checkoutEmail,
                     recipient: e.checkoutRecipient || "",
                     city: e.cityQ,
-                    address: e.pointQ,
+                    address: e.pointQ+(e.delivery==='courier'&&e.npBuilding?', '+e.npBuilding+(e.npFlat?', кв. '+e.npFlat:''):''),
                     np_delivery:{city_ref:e.npCityRef||'',warehouse_ref:e.npWarehouseRef||'',street_ref:e.npStreetRef||'',building:e.npBuilding||'',flat:e.npFlat||''},
                     delivery_type: {
                         np: "branch",
@@ -7104,15 +7104,15 @@ this.setState(s=>{const cart=s.cart.map(l=>({...l}));for(const a of added){const
             t.onCityFocus=()=>{this.setState({cityOpen:true});if(e.npEnabled&&(e.cityQ||'').length>=2)this.npSearch('cities',e.cityQ);};
             t.cityOpen=!!e.npEnabled&&e.cityOpen&&(e.npCities||[]).length>0;
             t.cityMatches=(e.npCities||[]).map(c=>({name:c.name,hl:'',rest:c.name,note:c.note,pick:()=>{this.setState({city:c.name,cityQ:c.name,npCityRef:c.ref,cityOpen:false,point:'',pointQ:'',npWarehouseRef:'',npStreetRef:'',npPoints:[],npBuilding:'',npFlat:'',npError:'',pointOpen:true,checkoutDirty:true,storeQuote:null},()=>{if(this.state.delivery!=='courier')this.npSearch('warehouses','');});}}));
-            t.pointDisabled=e.npEnabled?!e.npCityRef:!e.cityQ;
+            t.pointDisabled=e.npEnabled&&!e.npManual?!e.npCityRef:!e.cityQ;
             t.pointPlaceholder=e.delivery==='courier'?'Вулиця':e.delivery==='box'?'Поштомат: номер або адреса':'Відділення: номер або адреса';
             t.onPointFocus=()=>{this.setState({pointOpen:true});if(e.npEnabled&&e.npCityRef)this.npSearch(e.delivery==='courier'?'streets':'warehouses',e.pointQ||'');};
             t.pointOpen=!!e.npEnabled&&e.pointOpen&&(e.npPoints||[]).length>0;
             t.pointMatches=(e.npPoints||[]).map(p=>({name:p.name,note:p.note,pick:()=>this.setState({point:p.name,pointQ:p.name,pointOpen:false,npWarehouseRef:e.delivery==='courier'?'':p.ref,npStreetRef:e.delivery==='courier'?p.ref:'',checkoutDirty:true,storeQuote:null})}));
             t.npCourier=e.delivery==='courier';t.npBuilding=e.npBuilding||'';t.npFlat=e.npFlat||'';
             t.onNpBuilding=ev=>this.setState({npBuilding:ev.target.value,checkoutDirty:true,storeQuote:null});t.onNpFlat=ev=>this.setState({npFlat:ev.target.value,checkoutDirty:true,storeQuote:null});
-            t.npNote=e.npLoading?'Завантажуємо довідник НП…':e.npError||(e.npEnabled?'Оберіть місто та точне місце отримання зі списку.':'Довідник НП ще підключаємо. Введіть адресу — менеджер її перевірить.');
-            t.deliverySummary=e.npEnabled&&e.npCityRef&&(e.npWarehouseRef||(e.npStreetRef&&e.npBuilding))?e.city+' · '+e.point+(e.delivery==='courier'?', '+e.npBuilding+(e.npFlat?', кв. '+e.npFlat:''):''):'';
+            t.npNote=e.npLoading?'Завантажуємо довідник НП…':e.npError||(e.npManual?'Довідник НП тимчасово недоступний. Введіть місто та адресу — менеджер перевірить їх перед відправленням.':e.npEnabled?'Оберіть місто та точне місце отримання зі списку.':'Довідник НП ще підключаємо. Введіть адресу — менеджер її перевірить.');
+            t.deliverySummary=e.npEnabled&&!e.npManual&&e.npCityRef&&(e.npWarehouseRef||(e.npStreetRef&&e.npBuilding))?e.city+' · '+e.point+(e.delivery==='courier'?', '+e.npBuilding+(e.npFlat?', кв. '+e.npFlat:''):''):'';
             t.shippingFmt='Окремо за тарифом НП';
             t.deliveryOptions=[{k:'np',name:'Нова пошта — відділення',note:'Оберіть діюче відділення'},{k:'box',name:'Нова пошта — поштомат',note:'Оберіть конкретний поштомат'},{k:'courier',name:'Кур’єр Нової пошти',note:'Вулиця, будинок і квартира'}].map(d=>({name:d.name,note:d.note,price:'За тарифом НП',style:this.radio(e.delivery===d.k),dotStyle:this.dot(e.delivery===d.k),pick:()=>this.setState({delivery:d.k,point:'',pointQ:'',npWarehouseRef:'',npStreetRef:'',npPoints:[],npBuilding:'',npFlat:'',checkoutError:'',npError:'',storeQuote:null,checkoutDirty:true,pointOpen:false})}));
             t.payOptions=[...(e.monoEnabled?[{k:'card',name:'Оплата карткою',note:'Картки будь-якого банку · Apple Pay / Google Pay'}]:[]),{k:'invoice',name:'Оплата на рахунок ФОП',note:'Реквізити та підтвердження від менеджера'}].map(p=>({name:p.name,note:p.note,style:this.radio(storeCheckoutPay(e)===p.k),dotStyle:this.dot(storeCheckoutPay(e)===p.k),pick:()=>{window.rubizhAnalytics?.track('add_payment_info',{items:this.state.cart.map(l=>({item_id:l.sku,item_name:l.name,price:l.price,quantity:l.qty}))});this.setState({pay:p.k,checkoutDirty:true});}}));

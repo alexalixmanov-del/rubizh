@@ -129,6 +129,11 @@ function npAssertReady(array $order,array $confirmation,array $lines,array $ship
     $active=array_filter($shipments,fn($s)=>$s['status']!=='cancelled');$codes=array_unique(array_column($lines,'supplier_code'));
     if((count($active)>1||count($codes)>1) && (int)($confirmation['extra_delivery_agreed']??0)!==1)throw new RuntimeException('Погодьте з покупцем доставку кожної окремої посилки.');
     if(!is_array($order['contact']['np_delivery']??null))throw new RuntimeException('Для цього старого замовлення адресу ще не перевірено в довіднику НП.');
+    $delivery=$order['contact']['np_delivery'];$deliveryType=$order['contact']['delivery_type']??($delivery['type']??'');
+    if(!empty($delivery['manual'])||isset($delivery['unverified_refs'])||!npRef($delivery['city_ref']??'')
+      ||!in_array($deliveryType,['branch','postomat','courier'],true)
+      ||!npRef($delivery[$deliveryType==='courier'?'street_ref':'warehouse_ref']??'')
+      ||($deliveryType==='courier'&&trim((string)($delivery['building']??''))===''))throw new RuntimeException('Перевірте адресу одержувача в довіднику НП перед випуском ТТН.');
     if(count(preg_split('/\s+/u',trim((string)(($order['contact']['recipient']??'')?:($order['contact']['name']??'')))))<2)throw new RuntimeException('Вкажіть ім’я та прізвище одержувача.');
     npPackage(json_decode((string)$shipment['package_json'],true)?:[]);
     if((float)$shipment['declared_value']<=0)throw new RuntimeException('Немає підтвердженої оголошеної вартості.');
