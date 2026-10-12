@@ -112,6 +112,13 @@ function pimV3ValidateModels(array $list,string $root,bool $allowHttp=false): ar
         if(($m['pricing_policy_version']??null)!==1)$add($p,'PRICING_VERSION');
         if(!is_string($m['marketing_name_uk']??null)||trim($m['marketing_name_uk'])===''||strlen($m['marketing_name_uk'])>2000)$add($p,'MARKETING_NAME');
         if(!in_array($m['publication_state']??null,['ACTIVE','HIDDEN','ARCHIVED'],true))$add($p,'PUBLICATION_STATE');
+        // Snapshot-1 foundation models may omit the gallery; the runtime wire requires it.
+        // When present, model sources have exactly the same URL/type rules as color sources.
+        if(array_key_exists('photos',$m)){
+            if(!is_array($m['photos'])||!array_is_list($m['photos']))$add($p.'.photos','MODEL_PHOTOS');
+            elseif($m['photos']===[])$add($p.'.photos','NO_PHOTOS');
+            else foreach($m['photos'] as $url)if(!$photoOk($url))$add($p.'.photos','UNSAFE_PHOTO_URL');
+        }
         $colors=[];$colorKeys=[];
         foreach($m['colors'] as $j=>$color){
             $cp=$p.'.colors['.$j.']';

@@ -79,6 +79,22 @@ const negatives={
 };
 for(const [label,mutate] of Object.entries(negatives))test(`Foundation rejects ${label}`,()=>{const b=fixture('quantity');mutate(b);const r=validate(b);assert.equal(r.valid,false,JSON.stringify(r));assert.ok(r.errors.length>0);assert.ok(r.errors.every(x=>Object.keys(x).sort().join(',')==='code,path'));});
 
+for(const [label,photos] of Object.entries({
+ 'null gallery':null,'object gallery':{url:'https://cdn.example.com/a.webp'},'empty gallery':[],
+ 'null item':[null],'object item':[{url:'https://cdn.example.com/a.webp'}],'array item':[['https://cdn.example.com/a.webp']],
+ 'boolean item':[true],'numeric item':[1],'empty URL':[''],
+ 'credential URL':['https://user:password@cdn.example.com/a.webp'],'internal URL':['https://127.0.0.1/a.webp'],
+ 'unsafe scheme':['file:///etc/passwd']
+}))test(`Wire boundary rejects model photos: ${label}`,()=>{
+ const b=fixture('quantity');b.models[0].photos=photos;const r=validate(b);
+ assert.equal(r.valid,false,JSON.stringify(r));assert.ok(r.errors.some(e=>e.path.includes('.photos')));
+});
+test('Wire boundary model photos use the same safe source URL rules as color photos',()=>{
+ const b=fixture('quantity');b.models[0].photos=['https://cdn.example.com/model.webp'];assert.equal(validate(b).valid,true);
+ b.models[0].photos=['http://cdn.example.com/model.webp'];assert.equal(validate(b).valid,false);
+ const r=JSON.parse(php(`require '${root}/shop/pim-v3-contract.php';$b=json_decode(stream_get_contents(STDIN));echo json_encode(pimV3ValidateModels($b->models,'$.models',true));`,JSON.stringify(b)));
+ assert.deepEqual(r.errors,[],'ingestion accepts safe supplier HTTP sources consistently for model and color photos');
+});
 test('Schema interpreter rejects unknown keywords; JSON object/array distinction, conditional and contains checks are real',()=>{
  const r=JSON.parse(php(`require '${root}/shop/pim-v3-contract.php';$s=pimV3PinnedSchema();$v=json_decode(file_get_contents('${root}/tests/fixtures/pim-v3/1/quantity.json'))->models[0];$v->variants=[];echo json_encode(['contains'=>pimV3SchemaErrors($v,$s),'types'=>pimV3SchemaErrors(new stdClass(),['type'=>'array'])]);`));
  assert.ok(r.contains.some(x=>x.code==='CONTAINS'));assert.equal(r.types[0].code,'TYPE');
