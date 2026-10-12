@@ -5886,25 +5886,56 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                 this.setState({promo:code,promoPct:0,promoBad:false,storeQuote:result.quote,checkoutError:''});
             }catch(error){if(current())this.setState({promo:null,promoPct:0,promoBad:true,storeQuote:null,checkoutError:error.message});}
         };
+        storeSeoProduct=(p,url,description) => {
+            const variants=Object.values(p.variants||{}).sort((a,b)=>String(a.sku)<String(b.sku)?-1:String(a.sku)>String(b.sku)?1:0);
+            const v=variants.find(v=>v.availability!=='out_of_stock'&&Number(v.price)===Number(p.price))||variants.find(v=>Number(v.price)===Number(p.price));
+            const schema={"@context":"https://schema.org","@type":"Product",name:p.name,description,sku:v?.sku||p.sku||p.id,url};
+            if(v&&v.price>0){
+                const offer={"@type":"Offer",url,priceCurrency:"UAH",price:String(v.price),seller:{"@type":"Organization",name:(this.state.storeSettings||window.RUBIZH_BOOT?.settings)?.seller?.name||"ФОП Мєшалкін Андрій Леонідович"}};
+                if(v.availability==='out_of_stock'||v.availability==='in_stock'&&v.stock!=null&&v.stock<=0)offer.availability='https://schema.org/OutOfStock';
+                else if(v.availability==='preorder')offer.availability='https://schema.org/PreOrder';
+                else if(v.availability==='in_stock'&&v.stock!=null&&v.stock>0)offer.availability='https://schema.org/InStock';
+                schema.offers=offer;
+            }
+            if(p.brand)schema.brand={"@type":"Brand",name:p.brand};
+            if(p.photos?.length)schema.image=p.photos;
+            return schema;
+        };
+        storeSeoBreadcrumb=(path,leaf) => {
+            const categories=this._storeCategories||window.RUBIZH_BOOT?.categories||[],urls=new Map(categories.map(c=>[c.path,c.url_path]));
+            const items=[['РУБІЖ','https://rubizh.shop/'],['Каталог','https://rubizh.shop/catalog']];
+            (path||[]).forEach((name,i)=>{const url=urls.get(path.slice(0,i+1).join(' / '));if(url)items.push([name,'https://rubizh.shop/catalog/'+url]);});
+            if(leaf!=null)items.push([leaf,null]);else items[items.length-1][1]=null;
+            return {"@context":"https://schema.org","@type":"BreadcrumbList",itemListElement:items.map(([name,item],i)=>({"@type":"ListItem",position:i+1,name,...(item==null?{}:{item})}))};
+        };
         storeMeta=() => {
             const t = this.state, e = Z.find(e => e.id === t.current && e.storeReady);
             if ("product" === t.screen && !e) return;
-            const i = JSON.stringify([ t.screen, t.cpath, t.current, t.catPg, e?.name, e?.desc, e?.price, e?.photos ]);
+            // Compact catalog DTOs can refresh this model without its public description.
+            // Retain the full product description obtained from SSR or the product endpoint.
+            this._seoDescriptions ||= new Map();
+            if(e?.desc)this._seoDescriptions.set(e.id,e.desc);
+            const description=e?.desc||this._seoDescriptions.get(e?.id)||(e&&window.RUBIZH_BOOT?.product?.id===e.id?window.RUBIZH_BOOT.product.description:'');
+            const route=this.historyUrl(t),query=new URLSearchParams(route.split('?')[1]||'');
+            const page=t.screen==='catalog'&&!t.storeLoading&&this._storeQuery===this.storeQuery(t)?t.storeCatalog?.page||t.catPg:t.catPg;
+            const noindex=t.screen==='catalog'&&[...query.keys()].some(k=>k!=='page'&&(k!=='sort'||query.get(k)!=='pop'))||t.screen==='kit'&&/^\/kit\/[a-f0-9]{32}/.test(route)||!['home','catalog','product','allcats','guides','guide','kit','page'].includes(t.screen);
+            const i = JSON.stringify([ route, t.screen, t.cpath, t.current, page, noindex, t.guide, t.storeSettings?.seller?.name, e?.name, description, e?.price, e?.photos, e?.brand, e?.variants ]);
             if (this._metaKey === i) return;
             this._metaKey = i;
             const s = "https://rubizh.shop" + this.historyUrl(t).split("?")[0].split("#")[0], o = "product" === t.screen ? e.name + " — РУБІЖ" : "catalog" === t.screen ? t.cpath.at(-1) ? t.cpath.at(-1) + " — купити в РУБІЖ" : "Каталог тактичного спорядження — РУБІЖ" : "allcats" === t.screen ? "Усі категорії — РУБІЖ" : "guides" === t.screen ? "Поради — РУБІЖ" : "guide" === t.screen ? ((A.find(g => g.key === t.guide) || {}).title || "Поради") + " — Поради РУБІЖ" : "kit" === t.screen ? "Зібрати комплект — РУБІЖ" : "РУБІЖ — тактичний одяг та спорядження";
             document.title = o;
             const a = (t, e, i) => {
-                let s = document.head.querySelector(t);
+                const nodes=document.head.querySelectorAll(t);let s = nodes[0];
+                for(const extra of Array.from(nodes).slice(1))extra.remove();
                 s || (s = document.createElement(e), document.head.appendChild(s));
                 for (const [t, e] of Object.entries(i)) s.setAttribute(t, e);
             };
             a('link[rel="canonical"]', "link", {
                 rel: "canonical",
-                href: s + ("catalog" === t.screen && t.catPg > 1 ? "?page=" + t.catPg : "")
+                href: s + ("catalog" === t.screen && page > 1 ? "?page=" + page : "")
             }), a('meta[name="description"]', "meta", {
                 name: "description",
-                content: ("product" === t.screen ? e.desc || "Розміри, ціна та доставка по Україні." : o + " — ціни, розміри та доставка по Україні.").slice(0, 160)
+                content: Array.from("product" === t.screen ? description || "Замовити "+e.name+" у РУБІЖ. Розміри, ціна та доставка по Україні." : o + " — ціни, розміри та доставка по Україні.").slice(0,160).join('')
             }), a('meta[property="og:title"]', "meta", {
                 property: "og:title",
                 content: o
@@ -5921,24 +5952,22 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
             const r = "product" === t.screen ? e.photos?.[0] : null, n = document.head.querySelector('meta[property="og:image"]');
             r ? a('meta[property="og:image"]', "meta", {
                 property: "og:image",
-                content: new URL(r, window.location.origin).href
+                content: new URL(r, 'https://rubizh.shop').href
             }) : n?.remove();
+            if(noindex)a('meta[name="robots"]','meta',{name:'robots',content:'noindex,follow'});
+            else document.head.querySelectorAll('meta[name="robots"]').forEach(el=>el.remove());
             const c = document.getElementById("rubizh-product-schema");
-            if ("product" !== t.screen) c?.remove(); else if (e.price > 0) {
-                const t = c || document.createElement("script");
-                t.id = "rubizh-product-schema", t.type = "application/ld+json", t.textContent = JSON.stringify({
-                    "@context": "https://schema.org",
-                    "@type": "Product",
-                    name: e.name,
-                    sku: e.id,
-                    url: s,
-                    offers: {
-                        "@type": "Offer",
-                        price: e.price,
-                        priceCurrency: "UAH",
-                        availability: "https://schema.org/" + (this.allOut(e) ? "OutOfStock" : this.allPre(e) ? "PreOrder" : "InStock")
-                    }
-                }), c || document.head.appendChild(t);
+            if ("product" !== t.screen) c?.remove(); else {
+                const node=c||document.createElement('script');node.id='rubizh-product-schema';node.type='application/ld+json';
+                const json=JSON.stringify(this.storeSeoProduct(e,s,document.head.querySelector('meta[name="description"]').content));
+                if(node.textContent!==json)node.textContent=json;
+                if(!c)document.head.appendChild(node);
+            }
+            // Replace only route breadcrumbs; other structured data belongs to its own publisher.
+            document.head.querySelectorAll('script[type="application/ld+json"]').forEach(node=>{try{if(JSON.parse(node.textContent)['@type']==='BreadcrumbList')node.remove();}catch(error){}});
+            if(t.screen==='product'||t.screen==='catalog'){
+                const node=document.createElement('script');node.id='rubizh-breadcrumb-schema';node.type='application/ld+json';
+                node.textContent=JSON.stringify(this.storeSeoBreadcrumb(t.screen==='product'?e.path:t.cpath,t.screen==='product'?e.name:null));document.head.appendChild(node);
             }
         };
         storeKitQuery=(page=1) => {
