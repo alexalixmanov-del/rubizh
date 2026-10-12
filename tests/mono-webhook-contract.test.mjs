@@ -112,6 +112,37 @@ test('MonoPay webhook contract: a failed bank status read during reconciliation 
 });
 
 // Stage-2 SP1: validate the entire signed cancellation list before any refund-ledger transition.
+test('stage-2 SP1: contradictory duplicate cancellation facts are parked and keep the successful and uncertain refund amounts held',{skip,timeout:180000},async()=>{
+ const {startCrm,line}=await import('./helpers/crm-fixture.mjs'),{readFileSync,writeFileSync}=await import('node:fs');
+ const site=await startCrm();try{
+  const owner=await site.login('OWNER'),o=await site.checkout([line()]);let order=(await owner.get('/orders/'+o.id)).data.data;
+  assert.equal((await owner.send('/orders/'+o.id+'/invoice',{version:order.version})).status,200);
+  const inv=site.sql('SELECT * FROM rubizh_mono_invoices WHERE order_id='+o.id)[0];assert.equal((await site.webhook(inv)).status,200);
+  const refund=async(amount,key)=>owner.send('/payments/'+inv.id+'/refund',{version:(await owner.get('/orders/'+o.id)).data.data.version,amount,request_id:key.repeat(32),reason:'Покупець погодив тестове часткове повернення'});
+  assert.equal((await refund(1,'3')).status,201);
+  const provider=readFileSync(site.dir+'/provider-fixture.php','utf8');writeFileSync(site.dir+'/provider-fixture.php',provider.replace("if($path==='invoice/cancel')return ['status'=>'success','amount'=>$body['amount'],'extRef'=>$body['extRef']];","if($path==='invoice/cancel')return ['status'=>'processing','amount'=>$body['amount'],'extRef'=>$body['extRef']];"));
+  const pending=await refund(2,'4');assert.equal(pending.status,201);const op=pending.data.data;
+  const before=site.sql('SELECT id,amount,status FROM rubizh_refund_operations ORDER BY id');
+  const r=await site.webhook(inv,'reversed',{cancelList:[{extRef:op.ext_ref,amount:200,ccy:980,status:'success'},{extRef:op.ext_ref,amount:200,ccy:980,status:'failure'}]});
+  assert.equal(r.status,200);assert.equal(r.data.parked,true,'contradictory facts must be parked before the first cancellation is applied');
+  assert.deepEqual(site.sql('SELECT id,amount,status FROM rubizh_refund_operations ORDER BY id'),before,'preserve successful amount and processing hold');
+  assert.equal(site.sql('SELECT status FROM rubizh_mono_invoices WHERE id='+inv.id)[0].status,'success');
+  const next=await refund(Number(inv.amount)/100-1,'5');assert.equal(next.data.error.code,'REFUND_RECONCILIATION_REQUIRED','uncertain amount blocks an excessive follow-up request');
+  assert.equal(site.sql('SELECT COUNT(*) n FROM rubizh_refund_operations')[0].n,2,'no new provider refund operation');
+  assert.equal(site.sql(`SELECT COUNT(*) n FROM rubizh_np_audit WHERE order_id=${o.id} AND action='mono_event_rejected'`)[0].n,1);
+ }finally{site.stop();}
+});
+
+test('stage-2 SP1: cancellation lists have a bounded list shape and unique, valid references before applying money states',{skip,timeout:180000},async()=>{
+ const site=await fixture();try{
+  const {id,inv}=await site.newInvoice(82);
+  const cancellations=[null,{unexpected:[]},Array.from({length:101},(_,i)=>({extRef:'r'+i,amount:1,ccy:980,status:'success'})),[{extRef:'',amount:1,status:'success'}],[{extRef:'r',amount:0,status:'success'}],[{extRef:'r',amount:1,status:'success'},{extRef:'r',amount:1,status:'success'}]];
+  for(const cancelList of cancellations){const out=php(`define('RUBIZH_AUTH_NO_SESSION',true);require '${site.site}/auth/bootstrap.php';$db=shopStoreDatabase();$q=$db->prepare('SELECT * FROM rubizh_mono_invoices WHERE id=?');$q->execute([${inv.id}]);$i=$q->fetch(PDO::FETCH_ASSOC);$e=json_decode(${JSON.stringify(JSON.stringify({invoiceId:inv.invoice_id,status:'success',amount:+inv.amount,ccy:980,modifiedDate:new Date().toISOString(),cancelList}))},true);try{monoValidateEvent($e,$i);echo 'ACCEPTED';}catch(MonoEventRejected $e){echo 'REJECTED';}`);assert.equal(out.stdout,'REJECTED');}
+  assert.equal(site.paid(id),'pending');
+ }finally{site.stop();}
+});
+
+// Stage-2 SP3: an unsigned status read can observe success, but cannot roll signed terminal evidence back.
 test('stage-2 PAY-01 worker: failure invoices remain in the polling queue until audited bank removal',{skip,timeout:180000},async()=>{
  const site=await fixture();try{
   const {id,inv}=await site.newInvoice(84);assert.equal((await site.hook(inv,{status:'failure'})).status,200);

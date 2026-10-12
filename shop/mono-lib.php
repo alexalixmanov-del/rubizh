@@ -71,6 +71,15 @@ function monoValidateEvent(array $event,array $invoice): void {
  if(!is_string($event['invoiceId']??null)||$event['invoiceId']!==$invoice['invoice_id']||!is_int($event['amount']??null)||$event['amount']!==(int)$invoice['amount']||($event['ccy']??null)!==980)throw new MonoEventRejected('Рахунок, валюта або сума не збігаються.');
  if(!in_array($event['status']??'', ['created','processing','hold','success','failure','reversed','expired'],true))throw new MonoEventRejected('Невідомий статус оплати.');
  if(!is_string($event['modifiedDate']??null)||strtotime($event['modifiedDate'])===false)throw new MonoEventRejected('Немає часу зміни статусу.');
+ // Validate the complete list before the refund ledger sees any entry. Duplicate facts can otherwise
+ // compare against one old row snapshot and turn a just-successful refund back into a failure.
+ if(array_key_exists('cancelList',$event)){
+  $list=$event['cancelList'];if(!is_array($list)||!array_is_list($list)||count($list)>100)throw new MonoEventRejected('Некоректний список повернень.');
+  $seen=[];foreach($list as $c){$ref=is_array($c)?($c['extRef']??null):null;
+   if(!is_string($ref)||$ref===''||strlen($ref)>100||preg_match('/[\x00-\x1f\x7f]/',$ref)||isset($seen[$ref])||!is_int($c['amount']??null)||$c['amount']<=0||($c['ccy']??980)!==980||!in_array($c['status']??'',['success','processing','failure'],true))throw new MonoEventRejected('Некоректні або повторні факти повернення.');
+   $seen[$ref]=true;
+  }
+ }
 }
 function monoApplyEvent(PDO $db,array $event,string $hash,bool $signedWebhook=false,bool $bankConfirmed=false): void {
  $q=$db->prepare('SELECT * FROM rubizh_mono_invoices WHERE invoice_id=?');$q->execute([(string)($event['invoiceId']??'')]);$invoice=$q->fetch(PDO::FETCH_ASSOC);if(!$invoice)throw new RuntimeException('Рахунок ще не записаний. Повторіть callback.');
