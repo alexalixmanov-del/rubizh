@@ -117,3 +117,28 @@ test('stage-2 SP2: money-action versions are rechecked after an independent proc
   }
  }finally{site.stop();}
 });
+
+test('stage-2 FPAY-01: mismatched SITE refund responses retain uncertainty and block another bank request',{skip,timeout:180000},async()=>{
+ const {php}=await import('./helpers/site-fixture.mjs');
+ for(const response of ["['status'=>'success','amount'=>$b['amount']-1,'extRef'=>$b['extRef']]","['status'=>'success','amount'=>$b['amount'],'extRef'=>'foreign-refund']","['status'=>'success','amount'=>(string)$b['amount'],'extRef'=>$b['extRef']]","['status'=>'success','amount'=>$b['amount'],'extRef'=>null]"]){
+  const site=await fixture();try{
+   const id=site.orderId,owner=site.as(OWNER);assert.equal((await owner({action:'invoice.create',order_id:id})).status,200);
+   site.sql(`UPDATE rubizh_customer_orders SET payment_status='paid',pim_payment_state='PAID' WHERE id=${id}`);site.sql(`UPDATE rubizh_mono_invoices SET status='success' WHERE order_id=${id}`);
+   const out=php(`define('RUBIZH_AUTH_NO_SESSION',true);require '${site.site}/auth/bootstrap.php';define('RUBIZH_MONO_TESTS',true);$GLOBALS['mono_test_transport']=fn($p,$b)=>${response};try{monoRefund(shopStoreDatabase(),${id},'${OWNER}','Покупець погодив повне повернення');echo 'ACCEPTED';}catch(Throwable $e){echo 'UNCERTAIN';}`);
+   assert.equal(out.stdout,'UNCERTAIN','supplied amount/reference must correlate with the exact requested operation: '+response);
+   assert.deepEqual(site.sql('SELECT payment_status,pim_payment_state FROM rubizh_customer_orders WHERE id='+id)[0],{payment_status:'paid',pim_payment_state:'PAID'});
+   const inv=site.sql('SELECT refund_status,refund_ref FROM rubizh_mono_invoices WHERE order_id='+id)[0];assert.equal(inv.refund_status,'unknown');assert.ok(inv.refund_ref.startsWith('refund-'),'durable reference remains held for reconciliation');
+   assert.equal(site.sql(`SELECT COUNT(*) n FROM rubizh_order_audit WHERE order_id=${id} AND action='payment.refund.execute'`)[0].n,0,'uncorrelated success is not audited as a completed refund');
+   const retry=php(`define('RUBIZH_AUTH_NO_SESSION',true);require '${site.site}/auth/bootstrap.php';define('RUBIZH_MONO_TESTS',true);$GLOBALS['calls']=0;$GLOBALS['mono_test_transport']=function($p,$b){$GLOBALS['calls']++;return ['status'=>'success'];};try{monoRefund(shopStoreDatabase(),${id},'${OWNER}','Покупець погодив повне повернення');}catch(Throwable $e){}echo $GLOBALS['calls'];`);assert.equal(retry.stdout,'0','uncertainty blocks retry before another provider call');
+  }finally{site.stop();}
+ }
+});
+
+test('stage-2 FPAY-01: an exact SITE refund response records the completed full refund',{skip,timeout:180000},async()=>{
+ const {php}=await import('./helpers/site-fixture.mjs'),site=await fixture();try{
+  const id=site.orderId,owner=site.as(OWNER);assert.equal((await owner({action:'invoice.create',order_id:id})).status,200);
+  site.sql(`UPDATE rubizh_customer_orders SET payment_status='paid',pim_payment_state='PAID' WHERE id=${id}`);site.sql(`UPDATE rubizh_mono_invoices SET status='success' WHERE order_id=${id}`);
+  php(`define('RUBIZH_AUTH_NO_SESSION',true);require '${site.site}/auth/bootstrap.php';define('RUBIZH_MONO_TESTS',true);$GLOBALS['mono_test_transport']=fn($p,$b)=>['status'=>'success','amount'=>$b['amount'],'extRef'=>$b['extRef']];monoRefund(shopStoreDatabase(),${id},'${OWNER}','Покупець погодив повне повернення');`);
+  assert.deepEqual(site.sql('SELECT payment_status,pim_payment_state FROM rubizh_customer_orders WHERE id='+id)[0],{payment_status:'refunded',pim_payment_state:'REFUNDED'});assert.equal(site.sql('SELECT refund_status FROM rubizh_mono_invoices WHERE order_id='+id)[0].refund_status,'success');
+ }finally{site.stop();}
+});
