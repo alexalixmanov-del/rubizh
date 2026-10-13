@@ -14,6 +14,7 @@ function shopStartPaymentTiming(PDO $db,array $o): void {
  $db->prepare('UPDATE rubizh_stock_reservations SET expires_at=? WHERE order_id=?')->execute([$due,$o['id']]);
  if(trim((string)($o['email']??''))!=='')shopQueueBuyerMail($db,(int)$o['id'],'confirmed');
 }
+function shopPaymentRetryText(): string {return 'Оплату не підтверджено. Можна спробувати ще раз до строку оплати замовлення; строк резерву не змінюється.';}
 function shopReceiptStage(array $o): string {return in_array($o['status']??'',['cancelled','returned'],true)||($o['payment_status']??'')==='refunded'?'cancelled':(($o['payment_status']??'')==='paid'?'paid':'pending');}
 function shopLifecycleMigrate(PDO $db): void {if(function_exists('rubizhSchemaPrepared')&&rubizhSchemaPrepared($db))return;
  static $ready=false;if($ready)return;
@@ -51,7 +52,7 @@ function shopLifecycleTick(PDO $db,int $limit=30): void {
  $rows=$db->query("SELECT o.* FROM rubizh_customer_orders o LEFT JOIN rubizh_order_timing t ON t.order_id=o.id WHERE t.order_id IS NULL AND o.status IN ('new','confirmed','processing') ORDER BY o.id DESC LIMIT ".max(1,min(100,$limit)))->fetchAll(PDO::FETCH_ASSOC);foreach($rows as $o)shopEnsureTiming($db,$o);
  $rows=$db->query("SELECT o.id,t.payment_due,t.remind_at FROM rubizh_customer_orders o JOIN rubizh_order_timing t ON t.order_id=o.id WHERE o.status IN ('new','confirmed','processing') AND o.payment_status IN ('pending','failed') AND (t.remind_at<=UTC_TIMESTAMP() OR t.payment_due<=UTC_TIMESTAMP()) ORDER BY t.payment_due LIMIT ".max(1,min(100,$limit)))->fetchAll(PDO::FETCH_ASSOC);
  foreach($rows as $r){$id=(int)$r['id'];try{if($r['payment_due']<=gmdate('Y-m-d H:i:s')){
- $q=$db->prepare("SELECT * FROM rubizh_mono_invoices WHERE order_id=? AND status IN ('created','processing','hold')");$q->execute([$id]);foreach($q->fetchAll(PDO::FETCH_ASSOC) as $i)monoRefresh($db,$i);
+ $q=$db->prepare("SELECT * FROM rubizh_mono_invoices WHERE order_id=? AND status IN ('creating','unknown','created','processing','hold')");$q->execute([$id]);foreach($q->fetchAll(PDO::FETCH_ASSOC) as $i)monoRefresh($db,$i);
  // Never cancel while a bank operation or a shipment remains unresolved.
  if(shopNoOpenCardInvoice($db,$id)){shopCancelOrder($db,$id,true);shopQueueBuyerMail($db,$id,'cancelled');}
  }else shopQueueBuyerMail($db,$id,'reminder');}catch(Throwable $e){error_log('rubizh payment deadline: order '.$id.' needs reconciliation');}}

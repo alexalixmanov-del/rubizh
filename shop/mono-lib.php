@@ -23,6 +23,7 @@ function monoCreate(PDO $db,int $orderId,?string $actor=null): array {
  elseif(!shopMayReadOrder($db,$orderId))throw new ShopPermissionException('Замовлення недоступне.');
  return npLocked($db,$orderId,function()use($db,$orderId,$actor){monoInvalidateFailed($db,$orderId);$db->beginTransaction();try{$order=npOrder($db,$orderId);if(in_array($order['payment_status'],['paid','refunded'],true)||in_array($order['status'],['cancelled','returned'],true))throw new RuntimeException('Це замовлення вже оплачене або закрите.');
  if(!shopPaymentReady($order))throw new RuntimeException('Дочекайтеся підтвердження наявності менеджером.');
+ $due=$db->prepare('SELECT payment_due FROM rubizh_order_timing WHERE order_id=?');$due->execute([$orderId]);$paymentDue=$due->fetchColumn();if(is_string($paymentDue)&&$paymentDue<=gmdate('Y-m-d H:i:s'))throw new RuntimeException('Строк оплати замовлення минув. Зверніться до менеджера.');
  if(function_exists('pimV3RevalidateForPayment'))pimV3RevalidateForPayment($db,$order);
  if(($order['contact']['payment']??'')!=='card')throw new RuntimeException('Для замовлення обрано інший спосіб оплати.');
  $q=$db->prepare('SELECT * FROM rubizh_mono_invoices WHERE order_id=? ORDER BY id DESC LIMIT 1');$q->execute([$orderId]);$last=$q->fetch(PDO::FETCH_ASSOC);
@@ -127,7 +128,6 @@ function monoApplyEvent(PDO $db,array $event,string $hash,bool $signedWebhook=fa
  elseif($event['status']==='reversed'&&crmRefundWebhook($db,$event,$invoice)){shopReservationTransition($db,(int)$invoice['order_id'],'COMMITTED','MONOPAY_WEBHOOK');}
  elseif($event['status']==='reversed'){shopReservationTransition($db,(int)$invoice['order_id'],'COMMITTED','MONOPAY_WEBHOOK');$db->prepare("UPDATE rubizh_customer_orders SET payment_status='refunded',updated_at=UTC_TIMESTAMP() WHERE id=? AND payment_status<>'refunded'")->execute([$invoice['order_id']]);if(!empty($GLOBALS['rubizh_pim_v3_columns']))$db->prepare("UPDATE rubizh_customer_orders SET pim_payment_state='REFUNDED' WHERE id=? AND pim_contract_version=3")->execute([$invoice['order_id']]);$db->prepare("UPDATE rubizh_mono_invoices SET refund_status='success' WHERE id=?")->execute([$invoice['id']]);}
  if($event['status']==='success'&&crmSchemaReady($db))crmRefundState($db,(int)$invoice['order_id']);
- if($event['status']==='expired'&&shopNoOpenCardInvoice($db,(int)$invoice['order_id'])){shopReservationTransition($db,(int)$invoice['order_id'],'EXPIRED','MONOPAY');$db->prepare("UPDATE rubizh_customer_orders SET status='cancelled',updated_at=UTC_TIMESTAMP() WHERE id=? AND payment_status NOT IN ('paid','refunded')")->execute([$invoice['order_id']]);if(!empty($GLOBALS['rubizh_pim_v3_columns']))$db->prepare("UPDATE rubizh_customer_orders SET pim_order_state='CANCELLED' WHERE id=? AND payment_status NOT IN ('paid','refunded') AND pim_contract_version=3")->execute([$invoice['order_id']]);}
  if($bankConfirmed)npAudit($db,str_repeat('0',32),'mono_status_confirmed',(int)$invoice['order_id'],0,'signed webhook not received; bank status read confirmed '.$event['status']);
  npAudit($db,str_repeat('0',32),'mono_'.$event['status'],(int)$invoice['order_id']);$db->commit();}catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}});
 }
@@ -149,7 +149,34 @@ function monoInvalidateFailed(PDO $db,int $orderId): void {
 }
 // Grace period for the signed webhook before a lost callback is resolved from the bank status read.
 const MONO_WEBHOOK_GRACE_SECONDS=900;
-function monoRefresh(PDO $db,array $invoice): void {if(!$invoice['invoice_id'])return;$e=monoApi('invoice/status?invoiceId='.rawurlencode($invoice['invoice_id']));
+// The merchant API used here exposes status by invoiceId, not a supported reference search.
+// Do not invent a provider endpoint or treat local abandonment as proof of bank payment.
+function monoFailMissingInvoice(PDO $db,array $invoice,string $action,string $actor='',string $reason=''): void {
+ npLocked($db,(int)$invoice['order_id'],function()use($db,$invoice,$action,$actor,$reason){$db->beginTransaction();try{
+  $q=$db->prepare('SELECT * FROM rubizh_mono_invoices WHERE id=? FOR UPDATE');$q->execute([$invoice['id']]);$i=$q->fetch(PDO::FETCH_ASSOC);
+  if(!$i||$i['invoice_id']||!in_array($i['status'],['creating','unknown'],true)){$db->commit();return;}
+  if($actor===''&&strtotime((string)$i['created_at'].' UTC')>time()-MONO_WEBHOOK_GRACE_SECONDS){$db->commit();return;}
+  $db->prepare("UPDATE rubizh_mono_invoices SET status='failure',updated_at=UTC_TIMESTAMP() WHERE id=?")->execute([$i['id']]);
+  $db->prepare("UPDATE rubizh_customer_orders SET payment_status='failed',updated_at=UTC_TIMESTAMP() WHERE id=? AND payment_status='pending'")->execute([$i['order_id']]);
+  if(!empty($GLOBALS['rubizh_pim_v3_columns']))$db->prepare("UPDATE rubizh_customer_orders SET pim_payment_state='UNPAID' WHERE id=? AND pim_contract_version=3 AND payment_status='failed'")->execute([$i['order_id']]);
+  npAudit($db,$actor?:str_repeat('0',32),$action,(int)$i['order_id'],0,'reference='.$i['reference'].'; no invoice id; reference lookup unsupported; attempt failed, bank payment not confirmed');
+  shopOrderAudit($db,(int)$i['order_id'],$actor?:str_repeat('0',32),'payment.manual_reconcile',['status'=>$i['status'],'reference'=>$i['reference']],['status'=>'failure','invoice_id'=>null],$reason?:'Пошук рахунку за reference API не підтримується; невизначену спробу завершено',$actor===''?'SYSTEM':'USER');
+  $db->commit();
+ }catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}});
+}
+function monoReconcileNotCreated(PDO $db,int $orderId,string $actor,string $reason,?string $expectedUpdatedAt=null): void {
+ shopRequirePermission($actor,'payment.manual_reconcile');$reason=shopFinancialReason($reason);$crmChecked=monoCrmVersionChecked($db,$orderId,$actor);
+ npLocked($db,$orderId,function()use($db,$orderId,$actor,$reason,$expectedUpdatedAt,$crmChecked){
+  monoCheckOrderVersion(npOrder($db,$orderId),$expectedUpdatedAt,$crmChecked);
+  $q=$db->prepare("SELECT * FROM rubizh_mono_invoices WHERE order_id=? AND status IN ('creating','unknown') ORDER BY id DESC LIMIT 1");$q->execute([$orderId]);$i=$q->fetch(PDO::FETCH_ASSOC);
+  if(!$i||$i['invoice_id'])throw new RuntimeException('Рахунок з ID потрібно звірити через банк.');
+  monoFailMissingInvoice($db,$i,'mono_invoice_not_created',$actor,$reason);
+ });
+}
+function monoRefresh(PDO $db,array $invoice): void {if(!$invoice['invoice_id']){
+ if(in_array($invoice['status'],['creating','unknown'],true)&&strtotime((string)$invoice['created_at'].' UTC')<=time()-MONO_WEBHOOK_GRACE_SECONDS)monoFailMissingInvoice($db,$invoice,'mono_reference_lookup_unsupported');
+ return;}
+$e=monoApi('invoice/status?invoiceId='.rawurlencode($invoice['invoice_id']));
  // A paid order must not stay PENDING forever when the signed webhook is lost. The token-authenticated,
  // TLS-verified server read of this exact invoice confirms only a final success for the same reference;
  // amount, currency and invoice id are checked by monoValidateEvent, replay by the event hash.
@@ -159,7 +186,7 @@ function monoRefresh(PDO $db,array $invoice): void {if(!$invoice['invoice_id'])r
 // Cron/worker pass over invoices whose final state is still unknown to the shop. Returns the number of failed checks.
 function monoWorkerRun(PDO $db): int {
  // Two queues: invoices waiting for a lost webhook keep their first-observation time and must not starve the rest.
- $rows=array_merge($db->query("SELECT * FROM rubizh_mono_invoices i WHERE invoice_id IS NOT NULL AND (status IN ('created','processing','hold') OR refund_status IN ('processing','unknown') OR status='failure' AND NOT EXISTS (SELECT 1 FROM rubizh_np_audit a WHERE a.order_id=i.order_id AND a.action IN ('mono_invoice_removed','mono_invoice_final_not_removed') AND a.note=i.invoice_id)) ORDER BY updated_at LIMIT 25")->fetchAll(PDO::FETCH_ASSOC),
+ $rows=array_merge($db->query("SELECT * FROM rubizh_mono_invoices WHERE invoice_id IS NULL AND status IN ('creating','unknown') AND created_at<=UTC_TIMESTAMP()-INTERVAL 15 MINUTE ORDER BY created_at LIMIT 25")->fetchAll(PDO::FETCH_ASSOC),$db->query("SELECT * FROM rubizh_mono_invoices i WHERE invoice_id IS NOT NULL AND (status IN ('creating','unknown','created','processing','hold') OR refund_status IN ('processing','unknown') OR status='failure' AND NOT EXISTS (SELECT 1 FROM rubizh_np_audit a WHERE a.order_id=i.order_id AND a.action IN ('mono_invoice_removed','mono_invoice_final_not_removed') AND a.note=i.invoice_id)) ORDER BY updated_at LIMIT 25")->fetchAll(PDO::FETCH_ASSOC),
   $db->query("SELECT * FROM rubizh_mono_invoices WHERE invoice_id IS NOT NULL AND status='awaiting_webhook' AND refund_status NOT IN ('processing','unknown') ORDER BY RAND() LIMIT 10")->fetchAll(PDO::FETCH_ASSOC));$failed=0;
  foreach($rows as $i){try{monoRefresh($db,$i);}catch(Throwable $e){$failed++;}}return $failed;
 }

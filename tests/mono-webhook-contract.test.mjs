@@ -84,7 +84,7 @@ test('MonoPay webhook contract: expiry or a stale non-final event on a closed in
  const site=await fixture();try{
   const {id,inv}=await site.newInvoice(4);
   assert.equal((await site.hook(inv,{status:'expired'})).status,200);
-  assert.notEqual(site.paid(id),'paid');assert.equal(site.sql('SELECT status FROM rubizh_customer_orders WHERE id='+id)[0].status,'cancelled','an expired invoice releases the order');
+  assert.notEqual(site.paid(id),'paid');assert.equal(site.sql('SELECT status FROM rubizh_customer_orders WHERE id='+id)[0].status,'confirmed','invoice expiry keeps the order payable until its deadline');
   assert.equal((await site.hook(inv,{status:'processing',at:new Date(Date.now()-60000)})).status,200);assert.notEqual(site.paid(id),'paid');
  }finally{site.stop();}
 });
