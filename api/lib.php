@@ -229,7 +229,46 @@ function catalog_order_articles(PDO $pdo,array $lines): array {
  return $out;
 }
 
-function save_product(PDO $pdo, array $p): array {
+final class PimLegacySyncRejected extends RuntimeException {
+  public function __construct(public readonly string $reason) { parent::__construct($reason,409); }
+}
+function pimRequireLegacySync(): void {
+  if(cfg('pim_legacy_sync')!==true)throw new PimLegacySyncRejected('LEGACY_SYNC_DISABLED');
+}
+function pimAssertLegacyModels(PDO $pdo,array $ids): void {
+  pimRequireLegacySync();
+  pimV3DetectColumns($pdo);
+  if(empty($GLOBALS['rubizh_pim_v3_columns']))return;
+  foreach(array_chunk(array_values(array_unique(array_filter(array_map(fn($id)=>trim((string)$id),$ids)))),500) as $chunk){
+    $q=$pdo->prepare('SELECT id FROM products WHERE pim_contract_version=3 AND id IN ('.implode(',',array_fill(0,count($chunk),'?')).') LIMIT 1'.($pdo->inTransaction()?' FOR UPDATE':''));
+    $q->execute($chunk);if($q->fetchColumn()!==false)throw new PimLegacySyncRejected('CONTRACT_V3_REQUIRED');
+  }
+}
+/** Legacy writers serialize with contract-3 publication before inspecting model ownership. */
+function pimLegacyWrite(PDO $pdo,callable $write): mixed {
+  pimRequireLegacySync();$owns=!$pdo->inTransaction();
+  if($owns)$pdo->beginTransaction();
+  try {shopPricingCatalogVersion($pdo,true);$result=$write();if($owns){if(is_array($result)&&($result['status']??null)==='error')$pdo->rollBack();else $pdo->commit();}return $result;}
+  catch(Throwable $e){if($owns&&$pdo->inTransaction())$pdo->rollBack();throw $e;}
+}
+function hide_unavailable(PDO $pdo,bool $hide): void {
+  pimLegacyWrite($pdo,function()use($pdo,$hide){
+    pimV3DetectColumns($pdo);
+    if(!empty($GLOBALS['rubizh_pim_v3_columns'])&&$pdo->query('SELECT id FROM products WHERE pim_contract_version=3 LIMIT 1 FOR UPDATE')->fetchColumn()!==false)throw new PimLegacySyncRejected('CONTRACT_V3_REQUIRED');
+    $pdo->prepare("INSERT INTO meta(k,v) VALUES('hide_unavailable',?) ON DUPLICATE KEY UPDATE v=VALUES(v)")->execute([$hide?'1':'0']);
+  });
+}
+function save_product(PDO $pdo,array $p): array {
+  $p['id']=trim((string)($p['id']??''));
+  pimAssertLegacyModels($pdo,[$p['id']]);
+  if(($categoryError=shopTaxonomySyncValidate($pdo,$p))!==null)return ['id'=>$p['id'],'status'=>'error','error'=>$categoryError];
+  return pimLegacyWrite($pdo,function()use($pdo,$p){pimAssertLegacyModels($pdo,[(string)($p['id']??'')]);return pimSaveLegacyProduct($pdo,$p);});
+}
+
+function pimSaveLegacyProduct(PDO $pdo, array $p): array {
+  if(!$pdo->inTransaction())return save_product($pdo,$p);
+  shopPricingCatalogVersion($pdo,true);
+  pimAssertLegacyModels($pdo,[(string)($p['id']??'')]);
   $id = trim((string)($p['id'] ?? ''));
   if ($id === '' || strlen($id) > 64) return ['id' => $id, 'status' => 'error', 'error' => 'нет id'];
   if(($categoryError=shopTaxonomySyncValidate($pdo,$p))!==null)return ['id'=>$id,'status'=>'error','error'=>$categoryError];
@@ -337,7 +376,13 @@ function save_product(PDO $pdo, array $p): array {
   return ['id' => $id, 'status' => $o ? 'updated' : 'created', 'slug' => $slug] + (($p['pricing_policy_version']??null)===1?['pricing_policy_version'=>1]:[]);
 }
 
-function hide_products(PDO $pdo, array $ids): int {
+function hide_products(PDO $pdo,array $ids): int {
+  return pimLegacyWrite($pdo,function()use($pdo,$ids){pimAssertLegacyModels($pdo,$ids);return pimHideLegacyProducts($pdo,$ids);});
+}
+function pimHideLegacyProducts(PDO $pdo, array $ids): int {
+  if(!$pdo->inTransaction())return hide_products($pdo,$ids);
+  shopPricingCatalogVersion($pdo,true);
+  pimAssertLegacyModels($pdo,$ids);
   $ids = array_values(array_filter(array_map('strval', $ids), 'strlen'));
   if (!$ids) return 0;
   $n = 0;

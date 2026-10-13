@@ -1,5 +1,8 @@
 Options -Indexes
 RewriteEngine On
+RewriteRule (^|/)\. - [F,L]
+RewriteCond %{HTTPS} !=on
+RewriteRule ^ https://rubizh.shop%{REQUEST_URI} [R=301,L]
 RewriteRule ^google\.xml$ google.php [L]
 RewriteRule ^meta\.csv$ meta.php [L]
 <Files "feed.php">

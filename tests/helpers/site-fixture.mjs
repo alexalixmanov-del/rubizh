@@ -17,10 +17,10 @@ export const wire=JSON.parse(readFileSync(path.join(root,'contracts/pim-v3/2/wir
 const port=()=>new Promise(r=>{const s=createServer().listen(0,'127.0.0.1',()=>{const p=s.address().port;s.close(()=>r(p));});});
 export function php(code,{allowFail=false}={}){const r=spawnSync(runtime+'/bin/php8.4',[...phpArgs,'-r',code],{env:phpEnv,encoding:'utf8',timeout:60000});if(!allowFail)assert.equal(r.status,0,r.stdout+'\n'+r.stderr);return r;}
 function copyTree(from,to){mkdirSync(to,{recursive:true});for(const f of readdirSync(from)){const src=path.join(from,f),dst=path.join(to,f);if(statSync(src).isDirectory()){if(['downloads','preview','node_modules','.git','tests','docs'].includes(f))continue;copyTree(src,dst);}else if(!['config.php','np-private.php','mono-private.php','site-settings.json','site-settings.lock'].includes(f))copyFileSync(src,dst);}}
-export async function startSite({enableV3=true,extraConfig=''}={}){
+export async function startSite({enableV3=true,legacySync=true,extraConfig=''}={}){
  const dir=mkdtempSync(path.join(tmpdir(),'rubizh-v3-')),site=path.join(dir,'www'),schema='fixture_pim_v3_'+[...crypto.getRandomValues(new Uint8Array(6))].map(b=>b.toString(16).padStart(2,'0')).join('');
  copyTree(root,site);
- writeFileSync(path.join(site,'api/config.php'),`<?php return ['db_host'=>'localhost','db_name'=>'${schema}','db_user'=>'root','db_pass'=>'','pim_key'=>'${PIM_KEY}','cache_dir'=>'${dir}/cache','media_dir'=>'${dir}/media','media_url'=>'/media','pim_v3_sync'=>${enableV3?'true':'false'}${extraConfig}];`);
+ writeFileSync(path.join(site,'api/config.php'),`<?php return ['db_host'=>'localhost','db_name'=>'${schema}','db_user'=>'root','db_pass'=>'','pim_key'=>'${PIM_KEY}','cache_dir'=>'${dir}/cache','media_dir'=>'${dir}/media','media_url'=>'/media','pim_legacy_sync'=>${legacySync?'true':'false'},'pim_v3_sync'=>${enableV3?'true':'false'}${extraConfig}];`);
  writeFileSync(path.join(site,'auth/config.php'),"<?php return ['sms_enabled'=>false,'google_enabled'=>false,'noreply_password'=>'','auth_secret'=>'pim-v3-fixture-secret-at-least-forty-characters'];");
  const admin=`$db=new PDO('mysql:unix_socket='.getenv('RUBIZH_TEST_MYSQL_SOCKET'),'root','',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);`;
  php(`${admin}$db->exec('CREATE DATABASE ${schema} CHARACTER SET utf8mb4');require '${site}/dev/prepare-runtime.php';`);

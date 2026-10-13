@@ -8,6 +8,8 @@ return [
   'db_pass' => 'ПАРОЛЬ_ОТ_БАЗЫ',
 
   // Секретный ключ PIM: длинная случайная строка. Тот же ключ вставляется в PIM → «Выгрузка» → «Сайт».
+  // Legacy writes require explicit boolean permission; contract 3 models remain protected.
+  'pim_legacy_sync' => false,
   'pim_key' => 'ЗАМЕНИТЕ_НА_ДЛИННЫЙ_СЛУЧАЙНЫЙ_КЛЮЧ',
 
   // Откуда разрешено отправлять товары (адрес PIM)

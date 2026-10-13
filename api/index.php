@@ -7,7 +7,7 @@ declare(strict_types=1);
 if(preg_match('~^/api/staff(?:/|$)~',parse_url($_SERVER['REQUEST_URI']??'/',PHP_URL_PATH)?:'/')){require __DIR__.'/staff/index.php';exit;}
 require __DIR__ . '/lib.php';
 ini_set('display_errors', '0');
-set_exception_handler(function (Throwable $e) { error_log('rubizh api: '.get_class($e).' code '.(string)$e->getCode());header('Cache-Control: no-store');if($e instanceof RubizhHttpException){if($e->retryAfter)header('Retry-After: '.$e->retryAfter);fail($e->status,$e->getMessage());}fail(500,'Ошибка сервера. Попробуйте позже.'); });
+set_exception_handler(function (Throwable $e) { error_log('rubizh api: '.get_class($e).' code '.(string)$e->getCode());header('Cache-Control: no-store');if($e instanceof PimLegacySyncRejected)out(['ok'=>false,'error'=>$e->reason,'error_code'=>$e->reason],409);if($e instanceof RubizhHttpException){if($e->retryAfter)header('Retry-After: '.$e->retryAfter);fail($e->status,$e->getMessage());}fail(500,'Ошибка сервера. Попробуйте позже.'); });
 rubizhHeaders();
 
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
@@ -34,6 +34,7 @@ if ($isPim) {
       try{out(pimV3HandleSync($pdo,$raw));}
       catch(PimV3Rejected $e){out(['ok'=>false,'error'=>'PIM contract 3: '.$e->reason,'error_code'=>$e->reason,'results'=>$e->results],$e->getCode()?:422);}
     }
+    pimRequireLegacySync();
     if(pimV3Enabled($pdo))fail(409,'CONTRACT_V3_REQUIRED: legacy PIM sync is disabled after contract 3 activation.');
     $b = is_array($peek) ? $peek : body();
     if((int)$pdo->query("SELECT GET_LOCK('rubizh-category-migration',10)")->fetchColumn()!==1)fail(503,'Каталог оновлюється; повторіть синхронізацію пізніше.');
@@ -43,7 +44,7 @@ if ($isPim) {
     shopPricingCatalogVersion($pdo,true);
     if(isset($b['settings']['pricing_policy_version'])&&($b['settings']['pricing_policy_version']!==1||($b['settings']['discount_margin_floor_pct']??null)!==15))throw new ShopPricingException('DISCOUNT_NOT_ALLOWED','Непідтримувані правила цін PIM.');
     if(($b['settings']['pricing_policy_version']??null)===1)foreach($b['products']??[] as $product)if(($product['pricing_policy_version']??null)!==1)throw new ShopPricingException('DISCOUNT_NOT_ALLOWED','Товар без pricing_policy_version.');
-    if(isset($b['settings']['hide_unavailable']))$pdo->prepare("INSERT INTO meta(k,v) VALUES('hide_unavailable',?) ON DUPLICATE KEY UPDATE v=VALUES(v)")->execute([$b['settings']['hide_unavailable']===false?'0':'1']);
+    if(isset($b['settings']['hide_unavailable']))hide_unavailable($pdo,$b['settings']['hide_unavailable']!==false);
     $mode = ($b['mode'] ?? 'delta') === 'full' ? 'full' : 'delta';
     if (isset($b['categories']) && is_array($b['categories'])) sync_categories($pdo, $b['categories']);
     $results = []; $cnt = ['created' => 0, 'updated' => 0, 'unchanged' => 0, 'error' => 0];
@@ -65,6 +66,7 @@ if ($isPim) {
     $pdo->commit();
     } catch(Throwable $e) {
       if($pdo->inTransaction())$pdo->rollBack();
+      if($e instanceof PimLegacySyncRejected)out(['ok'=>false,'error'=>$e->reason,'error_code'=>$e->reason],409);
       error_log('rubizh pricing sync rejected: '.($e instanceof ShopPricingException?$e->reason:get_class($e)));
       out(['ok'=>false,'counts'=>['created'=>0,'updated'=>0,'unchanged'=>0,'error'=>count(is_array($b['products']??null)?$b['products']:[])], 'results'=>array_map(fn($p)=>['id'=>(is_array($p)?($p['id']??''):''),'status'=>'error','error_code'=>$e instanceof ShopPricingException?$e->reason:'SYNC_FAILED','error'=>'Пакет відхилено; товари і ціни не змінено.'],is_array($b['products']??null)?$b['products']:[])],400);
     }
