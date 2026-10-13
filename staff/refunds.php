@@ -5,6 +5,7 @@ function crmRefundState(PDO $db,int $order): void {
  $total=(int)(crmOne($db,"SELECT COALESCE(SUM(amount),0) amount FROM rubizh_refund_operations WHERE order_id=? AND status='success'",[$order])['amount']);if(!$total)return;
  $paid=(int)crmOne($db,"SELECT COALESCE(SUM(amount),0) amount FROM rubizh_mono_invoices WHERE order_id=? AND status IN ('success','reversed')",[$order])['amount'];if($total>$paid||!$paid)throw new CrmError('REFUND_FACT_CONFLICT',409);
  $state=$total===$paid?'REFUNDED':'PARTIALLY_REFUNDED';$db->prepare("UPDATE rubizh_customer_orders SET payment_status=?,pim_payment_state=IF(pim_contract_version=3,?,pim_payment_state),updated_at=UTC_TIMESTAMP() WHERE id=?")->execute([$state==='REFUNDED'?'refunded':'paid',$state,$order]);
+ if($state==='REFUNDED')shopReservationTransition($db,$order,'RELEASED','SYSTEM');
 }
 function crmRefund(PDO $db,int $order,array $actor,int $amount,string $key,string $reason,?string $version=null): array {
  crmPermit($actor,'payment.refund.execute');shopRequirePermission($actor['id'],'payment.refund.request');shopRequirePermission($actor['id'],'payment.refund.execute');$key=crmRequestId($key);$reason=shopFinancialReason($reason);if($amount<=0)throw new CrmError('INVALID_REFUND_AMOUNT');

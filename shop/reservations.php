@@ -2,17 +2,19 @@
 declare(strict_types=1);
 
 // rubizh_stock_reservations remains the sole quantity reservation source.
-// COMMITTED survives payment, expiry, fulfillment and financial refunds. Only a
-// separate, evidenced inventory reconciliation may consume/return that stock.
+// COMMITTED bridges sales until the SKU supplier stock observation catches up.
+// Terminal returned/cancelled/refunded orders release their remaining commitments.
 function shopReservationTransition(PDO $db,int $order,string $target,string $source): void {
     if(!$db->inTransaction())throw new LogicException('Reservation transition requires transaction');
     if(!in_array($target,['COMMITTED','RELEASED','EXPIRED'],true))throw new InvalidArgumentException('reservation state');
-    $q=$db->prepare('SELECT payment_status FROM rubizh_customer_orders WHERE id=? FOR UPDATE');$q->execute([$order]);$payment=$q->fetchColumn();
-    if($payment===false)throw new RuntimeException('Order missing');
-    if($target!=='COMMITTED'&&in_array($payment,['paid','refunded'],true))return;
+    $q=$db->prepare('SELECT status,payment_status FROM rubizh_customer_orders WHERE id=? FOR UPDATE');$q->execute([$order]);$o=$q->fetch(PDO::FETCH_ASSOC);
+    if(!$o)throw new RuntimeException('Order missing');
+    $terminal=in_array($o['status'],['cancelled','returned'],true)||$o['payment_status']==='refunded';
+    if($terminal)$target='RELEASED';
+    if(!$terminal&&$target!=='COMMITTED'&&$o['payment_status']==='paid')return;
     $q=$db->prepare('SELECT sku,qty,status FROM rubizh_stock_reservations WHERE order_id=? ORDER BY sku FOR UPDATE');$q->execute([$order]);
     foreach($q->fetchAll(PDO::FETCH_ASSOC) as $r){
-        if($r['status']===$target||($target!=='COMMITTED'&&$r['status']!=='ACTIVE'))continue;
+        if($r['status']===$target||($target!=='COMMITTED'&&$r['status']!=='ACTIVE'&&!($terminal&&$r['status']==='COMMITTED')))continue;
         $time=$target==='COMMITTED'?'committed_at':'released_at';
         $db->prepare("UPDATE rubizh_stock_reservations SET status=?,$time=UTC_TIMESTAMP() WHERE order_id=? AND sku=? AND status=?")->execute([$target,$order,$r['sku'],$r['status']]);
         shopOrderAudit($db,$order,str_repeat('0',32),'reservation.'.$target,$r,['sku'=>$r['sku'],'qty'=>$r['qty'],'status'=>$target],$source,$source);
@@ -31,13 +33,16 @@ function shopReserveLines(PDO $db,int $id,array $lines,string $expires): void {
     }
 }
 function shopReservedQty(PDO $db,string $sku,int $excludeOrder=0): float {
-    // An expired clock cannot free a pending/unknown bank operation. Historical
-    // paid rows also count before/while the additive migration is reconciled.
+    // Nonlocking read: caller serializes a purchase on the variant row.
+    // Keep unknown commitment timestamps conservatively until evidenced reconciliation.
+    $observed='';
+    if(!empty($GLOBALS['rubizh_pim_v3_columns']))$observed=" AND (r.committed_at IS NULL OR v.pim_stock_observed_at IS NULL OR TIMESTAMPDIFF(SECOND,'1970-01-01 00:00:00',r.committed_at)*1000>v.pim_stock_observed_at)";
     $q=$db->prepare("SELECT r.qty
       FROM rubizh_stock_reservations r
       JOIN rubizh_customer_orders o ON o.id=r.order_id
-      WHERE r.sku=? AND r.order_id<>? AND (
-        r.status='COMMITTED' OR (
+      LEFT JOIN variants v ON v.sku=r.sku
+      WHERE r.sku=? AND r.order_id<>? AND o.status NOT IN ('cancelled','returned') AND o.payment_status<>'refunded' AND (
+        (r.status='COMMITTED'$observed) OR (
           r.status='ACTIVE' AND (
             o.payment_status IN ('paid','refunded') OR (
               o.status NOT IN ('cancelled','returned') AND (
