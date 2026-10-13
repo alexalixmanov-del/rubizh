@@ -39,7 +39,7 @@ async function checkout(site,buyer,lines=[selection()],key=(++serial).toString(1
 async function invoice(site,buyer,id){const r=await site.post('/shop/payment-start.php',{csrf:buyer.csrf,order_id:id},buyer.headers);assert.equal(r.status,200,JSON.stringify(r.data));return site.sql('SELECT * FROM rubizh_mono_invoices WHERE order_id='+id)[0];}
 const reservation=(site,id)=>site.sql('SELECT sku,qty,status FROM rubizh_stock_reservations WHERE order_id='+id);
 
-test('PAID commits existing stock once; duplicate/semantic replay, repeat PAID processing, fulfillment and refund never free it',{skip},async()=>{
+test('PAID commits once across replay and fulfillment; full refund releases terminal stock once',{skip},async()=>{
  const site=await fixture();try{
   const buyer=await shopper(site),o=await checkout(site,buyer);assert.equal(o.status,200,JSON.stringify(o.data));const id=o.data.order.id;
   assert.equal(reservation(site,id)[0].status,'ACTIVE');const inv=await invoice(site,buyer,id);
@@ -53,21 +53,28 @@ test('PAID commits existing stock once; duplicate/semantic replay, repeat PAID p
   assert.equal((await checkout(site,await shopper(site))).data.error_code,'SKU_UNAVAILABLE','paid commitment blocks the next sale');
   assert.equal((await site.webhook(inv,'reversed')).status,200);
   assert.equal(site.sql('SELECT payment_status,pim_payment_state FROM rubizh_customer_orders WHERE id='+id)[0].pim_payment_state,'REFUNDED');
-  assert.equal(reservation(site,id)[0].status,'COMMITTED');
-  assert.equal((await checkout(site,await shopper(site))).data.error_code,'SKU_UNAVAILABLE','refund is not an inventory return');
+  assert.deepEqual(reservation(site,id),[{sku:'RUB-F0001',qty:'1.00',status:'RELEASED'}]);
+  assert.equal((await site.webhook(inv,'reversed')).status,200,'refund replay keeps the confirmed money fact');
+  assert.equal(site.sql(`SELECT COUNT(*) n FROM rubizh_order_audit WHERE order_id=${id} AND action='reservation.RELEASED'`)[0].n,1,'terminal refund releases once');
+  const next=await checkout(site,await shopper(site));assert.equal(next.status,200,'full refunded terminal order releases stock for another order');
+  assert.deepEqual(reservation(site,next.data.order.id),[{sku:'RUB-F0001',qty:'1.00',status:'ACTIVE'}]);
  }finally{site.stop();}
 });
 
-test('unpaid cancellation and expired invoice release exactly once; late signed payment retains commitment',{skip},async()=>{
+test('unpaid cancellation releases once; invoice expiry preserves deadline and late signed payment remains accounted for',{skip},async()=>{
  const site=await fixture();try{
   const b=await shopper(site),o=await checkout(site,b),id=o.data.order.id;
   call(site,`shopCancelOrder($db,${id});shopCancelOrder($db,${id});`);
   assert.equal(reservation(site,id)[0].status,'RELEASED');
   assert.equal(site.sql(`SELECT COUNT(*) n FROM rubizh_order_audit WHERE order_id=${id} AND action='reservation.RELEASED'`)[0].n,1);
   const b2=await shopper(site),next=await checkout(site,b2),id2=next.data.order.id;const inv=await invoice(site,b2,id2);
-  assert.equal((await site.webhook(inv,'expired')).status,200);assert.equal(reservation(site,id2)[0].status,'EXPIRED');
-  assert.equal(site.sql('SELECT status FROM rubizh_customer_orders WHERE id='+id2)[0].status,'cancelled');
-  assert.equal((await site.webhook(inv,'success')).status,200,'late money remains accounted for');assert.equal(reservation(site,id2)[0].status,'COMMITTED');
+  const due=site.sql('SELECT payment_due FROM rubizh_order_timing WHERE order_id='+id2)[0].payment_due;
+  assert.equal((await site.webhook(inv,'expired')).status,200);assert.deepEqual(reservation(site,id2),[{sku:'RUB-F0001',qty:'1.00',status:'ACTIVE'}]);
+  assert.equal(site.sql('SELECT status FROM rubizh_customer_orders WHERE id='+id2)[0].status,'confirmed','invoice expiry leaves the order payable until its deadline');
+  assert.equal(site.sql('SELECT payment_due FROM rubizh_order_timing WHERE order_id='+id2)[0].payment_due,due);
+  call(site,`shopCancelOrder($db,${id2});`);assert.equal(reservation(site,id2)[0].status,'RELEASED');
+  assert.equal((await site.webhook(inv,'success')).status,200,'late signed money remains accounted for after explicit cancellation');assert.equal(reservation(site,id2)[0].status,'RELEASED','late money does not recommit a cancelled order');
+  assert.equal(site.sql('SELECT payment_status FROM rubizh_customer_orders WHERE id='+id2)[0].payment_status,'paid');
   assert.ok(JSON.parse(call(site,`echo json_encode(shopCanonicalOrderDto($db,npOrder($db,${id2})));`).stdout).review_flags.includes('STATE_CONFLICT'));
  }finally{site.stop();}
 });
@@ -77,7 +84,8 @@ test('expired unpaid deadline releases without invoice; unresolved bank operatio
   const b=await shopper(site),o=await checkout(site,b),id=o.data.order.id;
   site.sql(`UPDATE rubizh_order_timing SET payment_due='2000-01-01',remind_at='2000-01-01' WHERE order_id=${id}`);
   site.sql(`UPDATE rubizh_stock_reservations SET expires_at='2000-01-01' WHERE order_id=${id}`);
-  call(site,'shopLifecycleTick($db);');assert.equal(reservation(site,id)[0].status,'EXPIRED');
+  call(site,'shopLifecycleTick($db);');assert.equal(reservation(site,id)[0].status,'RELEASED','terminal cancelled deadline releases stock');
+  assert.equal(site.sql('SELECT status FROM rubizh_customer_orders WHERE id='+id)[0].status,'cancelled');
   const b2=await shopper(site),next=await checkout(site,b2),id2=next.data.order.id;await invoice(site,b2,id2);
   site.sql(`UPDATE rubizh_mono_invoices SET status='unknown' WHERE order_id=${id2}`);
   site.sql(`UPDATE rubizh_stock_reservations SET expires_at='2000-01-01' WHERE order_id=${id2}`);
@@ -166,7 +174,7 @@ test('parallel last-unit checkouts serialize on the real SKU; replay never adds 
  }finally{site.stop();}
 });
 
-test('OWNER bank reconciliation requires reason, commits once and writes immutable old/new; refund success keeps stock',{skip},async()=>{
+test('OWNER reconciliation requires reason and immutable old/new; successful full refund releases terminal stock',{skip},async()=>{
  const site=await fixture({quantity:3});try{
   const b=await shopper(site),o=await checkout(site,b),id=o.data.order.id;
   call(site,`shopUseInvoice($db,${id});`);
@@ -177,7 +185,7 @@ test('OWNER bank reconciliation requires reason, commits once and writes immutab
   const audit=site.sql(`SELECT before_json,after_json FROM rubizh_order_audit WHERE order_id=${id} AND action='payment.manual_reconcile'`);assert.equal(audit.length,1);assert.equal(JSON.parse(audit[0].before_json).payment_status,'pending');assert.equal(JSON.parse(audit[0].after_json).payment_status,'paid');
   const b2=await shopper(site),o2=await checkout(site,b2),id2=o2.data.order.id,inv=await invoice(site,b2,id2);await site.webhook(inv);
   call(site,`define('RUBIZH_MONO_TESTS',true);$GLOBALS['mono_test_transport']=fn($path,$body)=>['status'=>'success'];monoRefund($db,${id2},'${owner}','Покупець погодив повернення коштів');`);
-  assert.equal(site.sql(`SELECT payment_status,pim_payment_state FROM rubizh_customer_orders WHERE id=${id2}`)[0].pim_payment_state,'REFUNDED');assert.equal(reservation(site,id2)[0].status,'COMMITTED');
+  assert.equal(site.sql(`SELECT payment_status,pim_payment_state FROM rubizh_customer_orders WHERE id=${id2}`)[0].pim_payment_state,'REFUNDED');assert.deepEqual(reservation(site,id2),[{sku:'RUB-F0001',qty:'1.00',status:'RELEASED'}]);
   assert.equal(site.sql(`SELECT refund_status FROM rubizh_mono_invoices WHERE order_id=${id2}`)[0].refund_status,'success');
   assert.equal(outcome(site,`monoRefund($db,${id2},'${owner}','Покупець погодив повернення коштів')`).ok,false);
  }finally{site.stop();}
@@ -225,15 +233,16 @@ test('confirmation sees reservations committed after its earlier order snapshot 
  }finally{site.stop();}
 });
 
-test('refund callback arriving before success retains stock; expired unpaid order cannot create an invoice before the worker tick',{skip},async()=>{
+test('full refund callback before success releases terminal stock; expired unpaid deadline blocks invoice before worker tick',{skip},async()=>{
  const site=await fixture();try{
   const b=await shopper(site),o=await checkout(site,b),id=o.data.order.id;
   site.sql(`UPDATE rubizh_order_timing SET payment_due='2000-01-01' WHERE order_id=${id}`);
-  const blocked=await site.post('/shop/payment-start.php',{csrf:b.csrf,order_id:id},b.headers);assert.equal(blocked.data.error_code,'PAYMENT_NOT_ALLOWED');assert.equal(blocked.data.conflict.blocker,'ORDER_EXPIRED');assert.equal(site.sql('SELECT COUNT(*) n FROM rubizh_mono_invoices')[0].n,0);
+  const blocked=await site.post('/shop/payment-start.php',{csrf:b.csrf,order_id:id},b.headers);assert.equal(blocked.status,409);assert.equal(blocked.data.error_code,'PAYMENT_NOT_ALLOWED');assert.equal(blocked.data.conflict.blocker,'ORDER_EXPIRED');assert.equal(site.sql('SELECT COUNT(*) n FROM rubizh_mono_invoices')[0].n,0);
   site.sql(`UPDATE rubizh_order_timing SET payment_due='2099-01-01' WHERE order_id=${id}`);
   const inv=await invoice(site,b,id);assert.equal((await site.webhook(inv,'reversed')).status,200);
-  assert.equal(site.sql(`SELECT payment_status FROM rubizh_customer_orders WHERE id=${id}`)[0].payment_status,'refunded');assert.equal(reservation(site,id)[0].status,'COMMITTED');
-  await site.webhook(inv,'success');assert.equal(site.sql(`SELECT payment_status FROM rubizh_customer_orders WHERE id=${id}`)[0].payment_status,'refunded');assert.equal((await checkout(site,await shopper(site))).data.error_code,'SKU_UNAVAILABLE');
+  assert.equal(site.sql(`SELECT payment_status FROM rubizh_customer_orders WHERE id=${id}`)[0].payment_status,'refunded');assert.deepEqual(reservation(site,id),[{sku:'RUB-F0001',qty:'1.00',status:'RELEASED'}]);
+  await site.webhook(inv,'success');assert.equal(site.sql(`SELECT payment_status FROM rubizh_customer_orders WHERE id=${id}`)[0].payment_status,'refunded');assert.equal(reservation(site,id)[0].status,'RELEASED','later success cannot undo the bank reversal');
+  const next=await checkout(site,await shopper(site));assert.equal(next.status,200,'terminal full refund permits normal reserve rules');assert.deepEqual(reservation(site,next.data.order.id),[{sku:'RUB-F0001',qty:'1.00',status:'ACTIVE'}]);
  }finally{site.stop();}
 });
 

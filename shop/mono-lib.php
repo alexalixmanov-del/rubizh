@@ -23,7 +23,7 @@ function monoCreate(PDO $db,int $orderId,?string $actor=null): array {
  elseif(!shopMayReadOrder($db,$orderId))throw new ShopPermissionException('Замовлення недоступне.');
  return npLocked($db,$orderId,function()use($db,$orderId,$actor){monoInvalidateFailed($db,$orderId);$db->beginTransaction();try{$order=npOrder($db,$orderId);if(in_array($order['payment_status'],['paid','refunded'],true)||in_array($order['status'],['cancelled','returned'],true))throw new RuntimeException('Це замовлення вже оплачене або закрите.');
  if(!shopPaymentReady($order))throw new RuntimeException('Дочекайтеся підтвердження наявності менеджером.');
- $due=$db->prepare('SELECT payment_due FROM rubizh_order_timing WHERE order_id=?');$due->execute([$orderId]);$paymentDue=$due->fetchColumn();if(is_string($paymentDue)&&$paymentDue<=gmdate('Y-m-d H:i:s'))throw new RuntimeException('Строк оплати замовлення минув. Зверніться до менеджера.');
+ $due=$db->prepare('SELECT payment_due FROM rubizh_order_timing WHERE order_id=?');$due->execute([$orderId]);$paymentDue=$due->fetchColumn();if(is_string($paymentDue)&&$paymentDue<=gmdate('Y-m-d H:i:s'))throw new ShopOrderConflict('PAYMENT_NOT_ALLOWED',['blocker'=>'ORDER_EXPIRED'],'Строк оплати замовлення минув. Зверніться до менеджера.');
  if(function_exists('pimV3RevalidateForPayment'))pimV3RevalidateForPayment($db,$order);
  if(($order['contact']['payment']??'')!=='card')throw new RuntimeException('Для замовлення обрано інший спосіб оплати.');
  $q=$db->prepare('SELECT * FROM rubizh_mono_invoices WHERE order_id=? ORDER BY id DESC LIMIT 1');$q->execute([$orderId]);$last=$q->fetch(PDO::FETCH_ASSOC);
