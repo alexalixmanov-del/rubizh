@@ -145,13 +145,14 @@ test('stage-2 SP1: cancellation lists have a bounded list shape and unique, vali
 // Stage-2 SP3: an unsigned status read can observe success, but cannot roll signed terminal evidence back.
 test('stage-2 SP3: stale or contradictory unsigned success observations never reopen signed expired invoices',{skip,timeout:180000},async()=>{
  const site=await fixture();try{
-  const {id,inv}=await site.newInvoice(83),at=new Date();assert.equal((await site.hook(inv,{status:'expired',at})).status,200);
+  const {id,inv}=await site.newInvoice(83),at=new Date(),due=site.sql('SELECT payment_due FROM rubizh_order_timing WHERE order_id='+id)[0].payment_due;assert.equal((await site.hook(inv,{status:'expired',at})).status,200);
   const before=site.sql('SELECT status,modified_at,updated_at FROM rubizh_mono_invoices WHERE id='+inv.id);
   for(const modifiedDate of ['2020-01-01T00:00:00Z',new Date(at.getTime()+1000).toISOString()])php(`define('RUBIZH_AUTH_NO_SESSION',true);require '${site.site}/auth/bootstrap.php';$db=shopStoreDatabase();$e=json_decode(${JSON.stringify(JSON.stringify({invoiceId:inv.invoice_id,status:'success',amount:+inv.amount,ccy:980,reference:inv.reference,modifiedDate}))},true);monoApplyEvent($db,$e,hash('sha256',json_encode($e)),false);`);
   assert.deepEqual(site.sql('SELECT status,modified_at,updated_at FROM rubizh_mono_invoices WHERE id='+inv.id),before);
-  assert.equal(site.sql('SELECT status FROM rubizh_customer_orders WHERE id='+id)[0].status,'cancelled');assert.equal(site.paid(id),'failed');
+  assert.equal(site.sql('SELECT status FROM rubizh_customer_orders WHERE id='+id)[0].status,'confirmed','invoice expiry keeps the order confirmed until payment_due');assert.equal(site.paid(id),'failed');
   assert.equal(site.sql(`SELECT COUNT(*) n FROM rubizh_np_audit WHERE order_id=${id} AND action='mono_observation_rejected'`)[0].n,2,'contradictory observations stay reviewable');
-  assert.equal((await site.hook(inv,{status:'success',at:new Date(at.getTime()+2000)})).status,200,'authentic later bank-paid evidence is still recorded');assert.equal(site.paid(id),'paid');assert.equal(site.sql('SELECT status FROM rubizh_customer_orders WHERE id='+id)[0].status,'cancelled','financial evidence retains the closed order');
+  assert.equal((await site.hook(inv,{status:'success',at:new Date(at.getTime()+2000)})).status,200,'authentic later bank-paid evidence is still recorded');assert.equal(site.paid(id),'paid');assert.equal(site.sql('SELECT status FROM rubizh_customer_orders WHERE id='+id)[0].status,'confirmed','later signed payment preserves the confirmed order');
+  assert.equal(site.sql('SELECT payment_due FROM rubizh_order_timing WHERE order_id='+id)[0].payment_due,due,'bank observations and signed payment keep the original payment deadline');
  }finally{site.stop();}
 });
 
