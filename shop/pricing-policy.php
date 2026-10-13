@@ -130,3 +130,9 @@ function shopPricingKitComposition(array $lines,array $definitions=[]): array {
     $out=[];foreach($lines as $i=>$l){$out[]=$l;if(isset($remainders[$i]))$out[]=$remainders[$i];}
     return $out;
 }
+
+// Nonlocking current read: checkout variant/product locks protect relevant prices;
+// the revision detects a concurrently committed catalog publication.
+function shopAssertCatalogVersion(PDO $db,string $expected): void {
+    if(!hash_equals($expected,shopPricingCatalogVersion($db)))throw new ShopOrderConflict('PRICE_CHANGED',[],'Версія каталогу змінилася. Перевірте новий розрахунок та підтвердьте.');
+}

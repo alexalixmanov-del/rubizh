@@ -19,7 +19,7 @@ require_once __DIR__.'/order-state.php';
 require_once __DIR__.'/crm-bridge.php';
 
 function shopStoreDatabase(): PDO {
-    $db=database();migrate($db);pimV3DetectColumns($db);if(rubizhSchemaPrepared($db))return $db;
+    $db=database();if(!$db->inTransaction())$db->exec('SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED');migrate($db);pimV3DetectColumns($db);if(rubizhSchemaPrepared($db))return $db;
     customerDatabase();$db=identityDatabase();shopNotificationMigrate($db);monoMigrate($db);shopLifecycleMigrate($db);shopUiMigrate($db);shopCartReminderMigrate($db);static $ready=false;
     if(!$ready){migrate($db);npMigrate($db);supplierMigrate($db);
         if((int)$db->query("SELECT v FROM meta WHERE k='rubizh_shop_schema'")->fetchColumn()>=1){$ready=true;return $db;}
@@ -69,7 +69,7 @@ function shopFavoriteIds(PDO $db,string $id): array {
     $q=$db->prepare('SELECT product_id FROM rubizh_favorites WHERE customer_id=? ORDER BY created_at DESC');$q->execute([$id]);return $q->fetchAll(PDO::FETCH_COLUMN);
 }
 function shopResolveCatalogLines(PDO $db,array $input,bool $lock=false,int $excludeOrder=0,?string $buyer=null): array {
-    if($lock)shopPricingCatalogVersion($db,true);
+    shopPricingCatalogVersion($db);
     if(!$input || count($input)>100)throw new RuntimeException('У кошику має бути від 1 до 100 позицій.');
     // Lock variants in the same order for all carts, even if customers add items
     // in opposite order. Output stays in the original order for kit discounts.

@@ -5,7 +5,7 @@ try {
     if(($_SERVER['REQUEST_METHOD']??'')!=='POST')shopJson(['ok'=>false,'error'=>'Тільки POST.'],405);
     $input=shopBody();shopCsrf($input);$db=shopStoreDatabase();shopLimit($db,'price-quotes',120,60);
     $db->beginTransaction();
-    try{$v=shopValidateOrder($db,is_array($input['lines']??null)?$input['lines']:[],'checkout',null,[],customerField($input,'promo',40));$raw=$v['raw'];$quote=$v['quote'];$decision=pimV3OrderDecision($raw,customerField($input,'payment',24));
+    try{$v=shopValidateOrder($db,is_array($input['lines']??null)?$input['lines']:[],'checkout',null,[],customerField($input,'promo',40),false);$raw=$v['raw'];$quote=$v['quote'];$decision=pimV3OrderDecision($raw,customerField($input,'payment',24));
         // One order: payable now only if every line is payable; otherwise a single confirmation request.
         $quote['order_mode']=$decision['contract_version']===3?($decision['payment_now']?'PAY':'REQUEST'):'LEGACY';$quote['price_pending']=(bool)array_filter($raw,fn($l)=>!empty($l['price_pending']));$db->rollBack();}
     catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}

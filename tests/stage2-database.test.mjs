@@ -29,3 +29,15 @@ test('R2 checkout retries one deadlock victim without duplicate order or request
  s.sql('DROP TRIGGER fixture_checkout_deadlock');s.sql("CREATE TRIGGER fixture_checkout_deadlock BEFORE INSERT ON rubizh_customer_orders FOR EACH ROW SIGNAL SQLSTATE '40001' SET MYSQL_ERRNO=1213,MESSAGE_TEXT='synthetic persistent deadlock'");const failed=await s.post('/shop/order.php',{csrf:b.csrf,request_id:'f'.repeat(32),contact:{name:'Fixture Buyer',recipient:'Fixture Buyer',phone:'+380671234567',city:'Kyiv',address:'Branch 1',delivery_type:'branch'},payment:'invoice',lines,expected_total:q.data.quote.total,catalog_version:q.data.quote.catalog_version},b.h);assert.equal(failed.status,503);assert.equal(+s.sql('SELECT COUNT(*) n FROM rubizh_customer_orders')[0].n,1);
  }finally{await cleanup(s);}
 });
+
+test('R3 quote reads do not wait for catalog or variant locks; checkout ignores unrelated catalog mutex',{skip,timeout:30000},async()=>{
+ const s=await startSite({enableV3:false});try{const lines=await catalog(s),b=await buyer(s);
+ await hold(s,"SELECT sku FROM variants WHERE sku='DB-SKU' FOR UPDATE",async()=>{const pending=s.post('/shop/checkout-quote.php',{csrf:b.csrf,lines},b.h);const fast=await Promise.race([pending,delay(500).then(()=>null)]);assert.ok(fast,'quote waited for variant lock');assert.equal(fast.status,200,JSON.stringify(fast.data));});
+ await hold(s,"SELECT v FROM meta WHERE k='pricing_catalog_version' FOR UPDATE",async()=>{const pending=s.post('/shop/checkout-quote.php',{csrf:b.csrf,lines},b.h);const fast=await Promise.race([pending,delay(500).then(()=>null)]);assert.ok(fast,'quote waited for global catalog lock');assert.equal(fast.status,200);
+ const o=s.post('/shop/order.php',{csrf:b.csrf,request_id:'d'.repeat(32),contact:{name:'Fixture Buyer',recipient:'Fixture Buyer',phone:'+380671234567',city:'Kyiv',address:'Branch 1',delivery_type:'branch'},payment:'invoice',lines,expected_total:fast.data.quote.total,catalog_version:fast.data.quote.catalog_version},b.h);const result=await Promise.race([o,delay(500).then(()=>null)]);assert.ok(result,'checkout waited for global catalog lock');assert.equal(result.status,200,JSON.stringify(result.data));});
+ }finally{await cleanup(s);}
+});
+test('R3 final optimistic check sees a catalog version changed after quote',{skip,timeout:30000},async()=>{
+ const s=await startSite({enableV3:false});try{await catalog(s);const marker=s.dir+'/version-read',release=s.dir+'/version-check';const worker=child(s,`$db=shopStoreDatabase();$db->beginTransaction();$version=shopPricingCatalogVersion($db);file_put_contents('${marker}','ready');$end=microtime(true)+4;while(!is_file('${release}')&&microtime(true)<$end)usleep(10000);try{shopAssertCatalogVersion($db,$version);echo 'accepted';}catch(ShopOrderConflict $e){echo $e->reason;}$db->rollBack();`);for(let i=0;i<200&&!existsSync(marker);i++)await delay(10);assert.ok(existsSync(marker));s.sql("UPDATE meta SET v='r3-changed' WHERE k='pricing_catalog_version'");writeFileSync(release,'go');const result=await worker.done;assert.equal(result.status,0,result.out);assert.equal(result.out,'PRICE_CHANGED');
+ }finally{await cleanup(s);}
+});

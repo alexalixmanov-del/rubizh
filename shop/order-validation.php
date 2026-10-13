@@ -14,12 +14,12 @@ function shopOrderBuyer(PDO $db,int $order): ?string {
  * Callers own the transaction; catalog revision and sorted variant locks come first.
  * Persisted snapshots are compared, never silently repriced here.
  */
-function shopValidateOrder(PDO $db,array $input,string $phase='checkout',?array $order=null,array $resolution=[],string $promo=''): array {
+function shopValidateOrder(PDO $db,array $input,string $phase='checkout',?array $order=null,array $resolution=[],string $promo='',bool $lock=true): array {
     if(!$db->inTransaction())throw new LogicException('Order validation requires transaction');
     if(!in_array($phase,['checkout','confirmation','invoice','selection'],true))throw new InvalidArgumentException('validation phase');
     $id=(int)($order['id']??0);
     if($phase==='invoice'&&$id){$q=$db->prepare('SELECT payment_due FROM rubizh_order_timing WHERE order_id=?');$q->execute([$id]);$due=$q->fetchColumn();if(is_string($due)&&$due<=gmdate('Y-m-d H:i:s')&&shopNoOpenCardInvoice($db,$id))throw new ShopOrderConflict('PAYMENT_NOT_ALLOWED',['blocker'=>'ORDER_EXPIRED']);}
-    shopPricingCatalogVersion($db,true);
+    $catalogVersion=shopPricingCatalogVersion($db);
     $buyer=$order===null?(function_exists('customerId')?customerId():null):shopOrderBuyer($db,$id);
     $selections=$input;
     foreach($resolution as $no=>$sku){
@@ -38,7 +38,7 @@ function shopValidateOrder(PDO $db,array $input,string $phase='checkout',?array 
         $after=($input[$i]['contract_version']??null)===3?$current['pim_effective_availability']:$current['availability'];
         if($before!==null&&$before!==$after)throw new ShopOrderConflict('AVAILABILITY_CHANGED',['line_no'=>$i,'old'=>$before,'current'=>$after],'Наявність змінилася. Повторно перевірте замовлення.');
     }
-    try{$raw=shopResolveCatalogLines($db,$selections,true,$id,$buyer);}
+    try{$raw=shopResolveCatalogLines($db,$selections,$lock,$id,$buyer);}
     catch(ShopPricingException $e){
         $code=match($e->reason){'INVALID_VARIANT'=>'SKU_UNAVAILABLE','UNAVAILABLE'=>'SKU_UNAVAILABLE',default=>$e->reason};
         throw new ShopOrderConflict($code,[],$e->getMessage());
@@ -48,6 +48,7 @@ function shopValidateOrder(PDO $db,array $input,string $phase='checkout',?array 
     $promo=$order!==null?($order['contact']['promo_code']??''):$promo;
     // Checkout callers apply their server-approved promo through this same service.
     $quote=shopCheckoutQuote($raw,(string)$promo);
+    $quote['catalog_version']=$catalogVersion;
     foreach($raw as $i=>$l){
         if($order!==null){
             $old=$input[$i];
