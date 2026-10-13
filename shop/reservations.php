@@ -56,6 +56,11 @@ function shopReservedQty(PDO $db,string $sku,int $excludeOrder=0): float {
             )
           )
         )
-      ) FOR UPDATE");
+      )");
     $q->execute([$sku,$excludeOrder]);return array_sum(array_map('floatval',$q->fetchAll(PDO::FETCH_COLUMN)));
+}
+
+// Retry only a rolled-back transaction victim, never arbitrary database failures.
+function shopRetryableTransactionError(Throwable $e): bool {
+    return $e instanceof PDOException && ((string)$e->getCode()==='40001' || (int)($e->errorInfo[1]??0)===1213);
 }

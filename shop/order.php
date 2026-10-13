@@ -32,6 +32,7 @@ try{
     if($existing){if(!hash_equals($existing['scope_hash'],$scope) || !hash_equals($existing['payload_hash'],$hash))shopJson(['ok'=>false,'error'=>'Запит уже використаний. Оновіть оформлення.'],409);$payment=null;shopJson(['ok'=>true,'payment'=>$payment,'order'=>shopOrderReceipt($db,(int)$existing['order_id']),'email_status'=>shopOrderMailStatus($db,(int)$existing['order_id']),'repeated'=>true]);}
     shopLimit($db,'orders',20);
     $delivery=npValidateDelivery($db,$contact,$type);$city=$delivery['city'];$address=$delivery['address'];
+    for($transactionAttempt=0;;$transactionAttempt++){
     $db->beginTransaction();
     try{
         $validated=shopValidateOrder($db,is_array($input['lines'] ?? null)?$input['lines']:[],'checkout',null,[],customerField($input,'promo',40));$raw=$validated['raw'];$quote=$validated['quote'];
@@ -50,7 +51,9 @@ try{
         $db->prepare('INSERT INTO rubizh_order_details(order_id,contact_json,subtotal,discount_amount,shipping_amount) VALUES(?,?,?,?,?)')->execute([$id,json_encode(['name'=>$name,'phone_raw'=>customerField($contact,'phone',30),'phone_normalized'=>'+'.$phone,'phone'=>'+'.$phone,'email'=>$email,'recipient'=>$recipient,'city'=>$city,'address'=>$address,'delivery_type'=>$type,'comment'=>$comment,'payment'=>$pay,'promo_code'=>customerField($input,'promo',40),'catalog_version'=>$quote['catalog_version'],'request_state'=>count(array_filter($raw,fn($l)=>$l['request_state']==='order_on_request'))?'order_on_request':'stock_check','np_delivery'=>$delivery,'shipping_estimate'=>false,'shipping_paid_to_carrier'=>true,'brigade'=>$brigade,'supplier_articles'=>catalog_order_articles($db,$calc['lines']),'donation_channel'=>$donationChannel,'donation_phone'=>'+'.$donationPhone,'donation_percent'=>3,'donation_amount'=>shopDonationAmount($total),'offer_version'=>'2026-10-07','accepted_at'=>gmdate('c')],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),$calc['subtotal'],$discount,$shipping]);
         if(crmSchemaReady($db))$db->prepare('INSERT INTO rubizh_order_contact_evidence(order_id,raw_phone,normalized_phone,evidence,updated_at) VALUES(?,?,?,\'ORDER_CONTACT\',UTC_TIMESTAMP())')->execute([$id,customerField($contact,'phone',30),'+'.$phone]);
         if($email!=='')$db->prepare('INSERT INTO rubizh_order_mail(order_id,recipient,next_at,updated_at) VALUES(?,?,UTC_TIMESTAMP(),UTC_TIMESTAMP())')->execute([$id,$email]);shopQueueEvent($db,$id,'new_order');$timing=shopEnsureTiming($db,['id'=>$id,'created_at'=>gmdate('Y-m-d H:i:s')]);shopReserveLines($db,$id,$raw,$timing['payment_due']);if($decision['payment_now'])shopStartPaymentTiming($db,['id'=>$id,'email'=>$email]);shopCartRemindersConverted($db,$scope,$email,$owner);$db->commit();
-    }catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}
+    }catch(Throwable $e){if($db->inTransaction())$db->rollBack();if($transactionAttempt===0&&shopRetryableTransactionError($e))continue;throw $e;}
+    break;
+    }
     $payment=null; // Legacy and request orders: manager confirms first. A fully payable v3 order is CONFIRMED and may start payment now.
     $response=['ok'=>true,'order'=>shopOrderReceipt($db,$id),'email_status'=>$email!==''?'pending':'none','payment'=>$payment??null];
     // On PHP-FPM the shopper receives the saved order before an SMTP connection.
