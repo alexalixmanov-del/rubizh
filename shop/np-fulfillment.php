@@ -186,19 +186,60 @@ function npCreate(PDO $db,int $order,int $id,string $actor): array {
       }
     });
 }
+// Additive operator-only migration; never called by a request.
+function npRecoveryMigrate(PDO $db): void {
+    if(PHP_SAPI!=='cli')throw new RuntimeException('CLI migration only');
+    foreach(['reconciliation_zero_at'=>'DATETIME NULL','reconciliation_matches'=>'INT NULL','reconciliation_evidence'=>'MEDIUMTEXT NULL'] as $c=>$type)npAddColumn($db,'rubizh_order_shipments',$c,$type);
+}
+function npDocumentReconciliation(array $shipment): array {
+    if(!preg_match('/^[a-f0-9]{32}$/D',(string)($shipment['operation_key']??'')))throw new RuntimeException('Немає ключа операції для звірки НП.');
+    $from=(new DateTimeImmutable($shipment['attempted_at']?:$shipment['created_at'],new DateTimeZone('UTC')))->modify('-1 day')->format('d.m.Y');$to=gmdate('d.m.Y');$matches=[];$complete=false;$pages=0;
+    for($page=1;$page<=20;$page++){
+        $rows=npApiCall('InternetDocument','getDocumentList',['DateTimeFrom'=>$from,'DateTimeTo'=>$to,'Page'=>(string)$page,'Limit'=>'100']);$pages=$page;
+        foreach($rows as $r){$marker=(string)($r['InfoRegClientBarcodes']??'').' '.(string)($r['AdditionalInformation']??'');if(str_contains($marker,'RB-'.$shipment['operation_key']))$matches[]=$r;}
+        if(count($rows)<100){$complete=true;break;}
+    }
+    return ['matches'=>$matches,'complete'=>$complete,'evidence'=>['complete'=>$complete,'pages'=>$pages,'matches'=>count($matches),'marker'=>'RB-'.$shipment['operation_key'],'from'=>$from,'to'=>$to,'checked_at'=>gmdate('Y-m-d H:i:s')]];
+}
+function npResolveUnknown(PDO $db,int $order,int $id,string $actor,string $choice,string $number,string $reason): void {
+    if(shopStaffRole($actor)!=='OWNER')throw new ShopPermissionException('Потрібні права власника.');
+    // Reuse the existing OWNER step-up contract, including this actor's own login timestamp.
+    shopRequirePermission($actor,'payment.manual_reconcile');$reason=shopFinancialReason($reason);
+    npLocked($db,$order,function()use($db,$order,$id,$actor,$choice,$number,$reason){
+        $q=$db->prepare('SELECT * FROM rubizh_order_shipments WHERE id=? AND order_id=?');$q->execute([$id,$order]);$s=$q->fetch(PDO::FETCH_ASSOC);
+        if(!$s||!in_array($s['status'],['unknown','creating'],true)||!empty($s['tracking_number']))throw new RuntimeException('Посилка вже не має невідомого результату.');
+        $result=[];
+        if($choice==='not_created'){
+            $at=strtotime((string)($s['reconciliation_zero_at']??'').' UTC');
+            if($at===false||$at>=time()-7200||(int)($s['reconciliation_matches']??-1)!==0||empty($s['reconciliation_evidence']))throw new RuntimeException('Потрібна повна звірка з нульовим результатом понад 2 години тому.');
+            $freshScan=npDocumentReconciliation($s);
+            if(!$freshScan['complete']||count($freshScan['matches'])!==0)throw new RuntimeException('Свіжа звірка не підтвердила відсутність ТТН. Скасування заблоковано.');
+            $state='cancelled';
+        }elseif($choice==='link'){
+            if(!preg_match('/^[0-9]{14}$/D',$number))throw new InvalidArgumentException('ТТН має містити 14 цифр.');
+            $rows=npApiCall('InternetDocument','getDocumentList',['IntDocNumber'=>$number,'Page'=>'1','Limit'=>'100']);
+            $matches=array_values(array_filter($rows,fn($r)=>(string)($r['IntDocNumber']??'')===$number&&npRef($r['Ref']??'')));
+            if(count($matches)!==1)throw new RuntimeException('НП не підтвердила однозначну існуючу ТТН.');
+            $result=$matches[0];$state='created';
+        }else throw new InvalidArgumentException('Оберіть результат звірки.');
+        $db->beginTransaction();try{
+            $q=$db->prepare('SELECT * FROM rubizh_order_shipments WHERE id=? AND order_id=? FOR UPDATE');$q->execute([$id,$order]);$latest=$q->fetch(PDO::FETCH_ASSOC);
+            foreach(['status','tracking_number','np_document_ref','operation_key','attempted_at','reconciliation_zero_at','reconciliation_matches','reconciliation_evidence','updated_at'] as $field)if(!$latest||($latest[$field]??null)!==($s[$field]??null))throw new RuntimeException('Стан або докази посилки змінилися під час звірки. Повторіть перевірку.');
+            if($choice==='not_created')$db->prepare('UPDATE rubizh_order_shipments SET reconciliation_evidence=? WHERE id=?')->execute([json_encode($freshScan['evidence'],JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),$id]);
+            $db->prepare("UPDATE rubizh_order_shipments SET status=?,tracking_number=?,np_document_ref=?,result_json=?,error='',checked_at=UTC_TIMESTAMP(),updated_at=UTC_TIMESTAMP() WHERE id=?")->execute([$state,$state==='created'?$number:null,$result['Ref']??'',json_encode($result,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),$id]);
+            shopOrderAudit($db,$order,$actor,'shipment.resolve_unknown',['shipment_id'=>$id,'status'=>$s['status']],['status'=>$state,'tracking_number'=>$number,'choice'=>$choice,'evidence'=>$choice==='not_created'?$freshScan['evidence']:($s['reconciliation_evidence']??null)],$reason);
+            npAudit($db,$actor,'shipment_unknown_resolved',$order,$id,$reason);npAggregateOrder($db,$order);$db->commit();
+        }catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}
+    });
+}
 function npReconcile(PDO $db,int $order,int $id,string $actor): bool {
     shopShipmentActor($actor);
     return npLocked($db,$order,function()use($db,$order,$id,$actor){
       $q=$db->prepare('SELECT * FROM rubizh_order_shipments WHERE id=? AND order_id=?');$q->execute([$id,$order]);$s=$q->fetch(PDO::FETCH_ASSOC);if(!$s)throw new RuntimeException('Посилку не знайдено.');if(!empty($s['tracking_number']))return true;
       if(!in_array($s['status'],['unknown','creating'],true))throw new RuntimeException('Цій посилці звірка не потрібна.');
-      $props=json_decode((string)$s['payload_json'],true)?:[];$matches=[];
-      for($page=1;$page<=20;$page++){
-        $rows=npApiCall('InternetDocument','getDocumentList',['DateTimeFrom'=>(new DateTimeImmutable($s['attempted_at']?:$s['created_at'],new DateTimeZone('UTC')))->modify('-1 day')->format('d.m.Y'),'DateTimeTo'=>gmdate('d.m.Y'),'Page'=>(string)$page,'Limit'=>'100']);
-        foreach($rows as $r){$marker=(string)($r['InfoRegClientBarcodes']??'').' '.(string)($r['AdditionalInformation']??'');
-          if(str_contains($marker,'RB-'.$s['operation_key'])&&npRef($r['Ref']??'')&&preg_match('/^[0-9]{14}$/D',(string)($r['IntDocNumber']??'')))$matches[]=$r;
-        }if(count($rows)<100)break;
-      }
-      if(count($matches)!==1){$db->prepare("UPDATE rubizh_order_shipments SET status='unknown',error='Немає однозначного збігу у НП. Повтор заблоковано.',checked_at=UTC_TIMESTAMP(),updated_at=UTC_TIMESTAMP() WHERE id=?")->execute([$id]);npAudit($db,$actor,'shipment_reconcile_manual',$order,$id);return false;}
+      $scan=npDocumentReconciliation($s);$matches=$scan['matches'];$complete=$scan['complete'];
+      $db->prepare('UPDATE rubizh_order_shipments SET reconciliation_zero_at=IF(?,UTC_TIMESTAMP(),NULL),reconciliation_matches=?,reconciliation_evidence=? WHERE id=?')->execute([$complete&&count($matches)===0?1:0,$complete?count($matches):null,json_encode($scan['evidence'],JSON_THROW_ON_ERROR),$id]);
+      if(!$complete||count($matches)!==1||!npRef($matches[0]['Ref']??'')||!preg_match('/^[0-9]{14}$/D',(string)($matches[0]['IntDocNumber']??''))){$db->prepare("UPDATE rubizh_order_shipments SET status='unknown',error='Немає однозначного збігу у НП. Повтор заблоковано.',checked_at=UTC_TIMESTAMP(),updated_at=UTC_TIMESTAMP() WHERE id=?")->execute([$id]);npAudit($db,$actor,'shipment_reconcile_manual',$order,$id);return false;}
       $r=$matches[0];$db->prepare("UPDATE rubizh_order_shipments SET status='created',np_document_ref=?,tracking_number=?,result_json=?,error='',checked_at=UTC_TIMESTAMP(),updated_at=UTC_TIMESTAMP() WHERE id=?")->execute([$r['Ref'],$r['IntDocNumber'],json_encode($r,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),$id]);npAggregateOrder($db,$order);npAudit($db,$actor,'shipment_reconciled',$order,$id,$r['IntDocNumber']);return true;
     });
 }
@@ -207,20 +248,32 @@ function npCancelDraft(PDO $db,int $order,int $id,string $actor): void {
     npLocked($db,$order,function()use($db,$order,$id,$actor){$q=$db->prepare("UPDATE rubizh_order_shipments SET status='cancelled',updated_at=UTC_TIMESTAMP() WHERE order_id=? AND id=? AND status IN ('draft','error') AND tracking_number IS NULL");$q->execute([$order,$id]);if(!$q->rowCount())throw new RuntimeException('Можна скасувати лише чернетку або явно відхилений запит. Невідомий результат потребує звірки.');npAudit($db,$actor,'shipment_draft_cancelled',$order,$id);});
 }
 function npTrackingState(string $code): string {
-    return match($code){'1'=>'created','2'=>'cancelled','3'=>'manual','4','5','6','7','8','41'=>'sent','9','10','11'=>'delivered','102','103','108'=>'returned',default=>'manual'};
+    return match($code){'1'=>'created','2'=>'cancelled','3'=>'manual','4','5','6','7','8','41','101','104','111','112','12'=>'sent','9','10','11','106'=>'delivered','102','103','108'=>'returned',default=>'manual'};
+}
+function npTrackingTransition(string $before,string $observed): string {
+    // Only the linear progress path has an order. Terminal branches remain sticky.
+    if(in_array($before,['cancelled','returned','delivered'],true))return $before;
+    if($before==='sent'&&$observed==='cancelled')return 'manual';
+    if($before==='manual'&&in_array($observed,['created','cancelled','manual'],true))return 'manual';
+    $progress=['created'=>0,'sent'=>1,'delivered'=>2];
+    if(isset($progress[$before])&&isset($progress[$observed])&&$progress[$observed]<$progress[$before])return $before;
+    if($observed==='manual'&&in_array($before,['created','sent'],true))return $before;
+    return $observed;
 }
 function npDeliveryMailEvent(string $code): string {return match($code){'4','5','6','41'=>'shipped','7','8'=>'arrived','9','10','11'=>'received',default=>''};}
 function npRefresh(PDO $db,int $order,string $actor): void {
     shopShipmentActor($actor);
     npLocked($db,$order,function()use($db,$order,$actor){$o=npOrder($db,$order);$ships=npShipments($db,$order);$to=[];
       foreach($ships as $s)if(!empty($s['tracking_number'])&&(!in_array($s['status'],['delivered','cancelled','returned'],true))&&($s['checked_at']===null||strtotime($s['checked_at'].' UTC')<time()-900))$to[]=['DocumentNumber'=>$s['tracking_number'],'Phone'=>preg_replace('/\D/','',$o['contact']['phone']??'')];
-      if($to){$rows=npApiCall('TrackingDocument','getStatusDocuments',['Documents'=>$to]);$allowed=array_column($to,'DocumentNumber');foreach($rows as $r){$number=(string)($r['Number']??'');if(!in_array($number,$allowed,true))continue;$db->prepare('UPDATE rubizh_order_shipments SET status=?,checked_at=UTC_TIMESTAMP(),updated_at=UTC_TIMESTAMP() WHERE order_id=? AND tracking_number=?')->execute([npTrackingState((string)($r['StatusCode']??'')),$order,$number]);$code=(string)($r['StatusCode']??'');$mailEvent=npDeliveryMailEvent($code);if($mailEvent!=='')shopQueueBuyerMail($db,$order,$mailEvent,$number);if(function_exists('shopTimelineEvent')){$time=gmdate('Y-m-d H:i:s');$detail=['tracking'=>$number,'address'=>(string)($r['WarehouseRecipient']??$o['delivery_label']),'storage_until'=>(string)($r['DateFreeStorage']??''),'observed'=>true];if(in_array($code,['4','5','6','7','8','9','10','11','41'],true)){shopTimelineEvent($db,$order,'sent',$number,$time,$detail);}if(in_array($code,['7','8'],true)){shopTimelineEvent($db,$order,'arrived',$number,$time,$detail);}if(in_array($code,['9','10','11'],true)){shopTimelineEvent($db,$order,'received',$number,$time,$detail);}if(in_array($code,['102','103','108'],true))shopTimelineEvent($db,$order,'returned',$number,$time,$detail);}}}
-      npAggregateOrder($db,$order);npAudit($db,$actor,'tracking_refresh',$order);
+      $db->beginTransaction();try{
+      if($to){$rows=npApiCall('TrackingDocument','getStatusDocuments',['Documents'=>$to]);$allowed=array_column($to,'DocumentNumber');foreach($rows as $r){$number=(string)($r['Number']??'');if(!in_array($number,$allowed,true))continue;$db->prepare('UPDATE rubizh_order_shipments SET status=?,checked_at=UTC_TIMESTAMP(),updated_at=UTC_TIMESTAMP() WHERE order_id=? AND tracking_number=?')->execute([npTrackingTransition((string)array_column($ships,'status','tracking_number')[$number],npTrackingState((string)($r['StatusCode']??''))),$order,$number]);$code=(string)($r['StatusCode']??'');if($code==='2'){npAudit($db,$actor,'shipment_np_deleted',$order,(int)array_column($ships,'id','tracking_number')[$number],$number);supplierQueueNpCancellation($db,$order,(int)array_column($ships,'id','tracking_number')[$number]);}$mailEvent=npDeliveryMailEvent($code);if($mailEvent!=='')shopQueueBuyerMail($db,$order,$mailEvent,$number);if(function_exists('shopTimelineEvent')){$time=gmdate('Y-m-d H:i:s');$detail=['tracking'=>$number,'address'=>(string)($r['WarehouseRecipient']??$o['delivery_label']),'storage_until'=>(string)($r['DateFreeStorage']??''),'observed'=>true];if(in_array($code,['4','5','6','7','8','9','10','11','41'],true)){shopTimelineEvent($db,$order,'sent',$number,$time,$detail);}if(in_array($code,['7','8'],true)){shopTimelineEvent($db,$order,'arrived',$number,$time,$detail);}if(in_array($code,['9','10','11'],true)){shopTimelineEvent($db,$order,'received',$number,$time,$detail);}if(in_array($code,['102','103','108'],true))shopTimelineEvent($db,$order,'returned',$number,$time,$detail);}}}
+      npAggregateOrder($db,$order);npAudit($db,$actor,'tracking_refresh',$order);$db->commit();
+      }catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}
     });
 }
 function npAggregateOrder(PDO $db,int $order): void {
     $o=npOrder($db,$order);if(in_array($o['status'],['cancelled','returned','completed'],true))return;
-    $ships=array_values(array_filter(npShipments($db,$order),fn($s)=>$s['status']!=='cancelled'));if(!$ships)return;
+    $allShips=npShipments($db,$order);if(!$allShips)return;$ships=array_values(array_filter($allShips,fn($s)=>$s['status']!=='cancelled'));if(!$ships){$db->prepare("UPDATE rubizh_customer_orders SET status='confirmed',pim_fulfillment_state=IF(pim_contract_version=3,'READY_TO_SHIP',pim_fulfillment_state),updated_at=UTC_TIMESTAMP() WHERE id=?")->execute([$order]);npAudit($db,str_repeat('0',32),'shipment_none_live',$order);return;}
     $remaining=npRemaining(npLines($db,$order),$ships);$covered=true;foreach($remaining as $r)if($r['qty']>0.00001)$covered=false;
     $states=array_column($ships,'status');$returned=count(array_filter($states,fn($s)=>$s==='returned'));$moving=count(array_filter($states,fn($s)=>in_array($s,['sent','delivered'],true)));$status=null;
     if($returned===count($ships))$status='returned';elseif($returned>0)$status='partially_returned';
@@ -230,7 +283,7 @@ function npAggregateOrder(PDO $db,int $order): void {
     // PIM v3 orders keep fulfillment separate from order/payment state.
     if(!empty($GLOBALS['rubizh_pim_v3_columns'])&&(int)($o['pim_contract_version']??0)===3){
         $delivered=count(array_filter($states,fn($s)=>$s==='delivered'));$ttn=count(array_filter($ships,fn($s)=>trim((string)($s['tracking_number']??''))!==''));
-        $f=$covered&&$delivered===count($ships)?'DELIVERED':($moving>0?'IN_TRANSIT':($ttn>0?'TTN_CREATED':null));
+        $f=$returned>0?'NOT_READY':($covered&&$delivered===count($ships)?'DELIVERED':($moving>0?'IN_TRANSIT':($ttn>0?'TTN_CREATED':null)));
         if($f!==null)$db->prepare('UPDATE rubizh_customer_orders SET pim_fulfillment_state=?,pim_order_state=IF(?=\'DELIVERED\' AND payment_status=\'paid\' AND pim_order_state=\'CONFIRMED\',\'COMPLETED\',pim_order_state) WHERE id=?')->execute([$f,$f,$order]);
     }
 }
