@@ -22,8 +22,12 @@ function crmCsrf(array $b): void {if(!is_string($b['csrf']??null)||!hash_equals(
  if(isset($_SERVER['HTTP_ORIGIN'])){$actual=parse_url((string)$_SERVER['HTTP_ORIGIN']);$host=$_SERVER['HTTP_HOST']??'';$expected=($actual['host']??'').(isset($actual['port'])?':'.$actual['port']:'');if($expected!==$host||($actual['scheme']??'')!==((($_SERVER['HTTPS']??'')==='on')?'https':'http'))throw new CrmError('CSRF_INVALID',403);}}
 function crmLogin(PDO $db,array $b): array {
  crmCsrf($b);$email=mb_strtolower(trim((string)($b['email']??'')));$password=$b['password']??'';if(!is_string($password)||strlen($password)>72||strlen($email)>254)throw new CrmError('LOGIN_FAILED',401);
- $ip=(string)($_SERVER['REMOTE_ADDR']??'unknown');$allowed=rubizhRateAllow('staff-login-ip',$ip,20,900)&&rubizhRateAllow('staff-login-account',hash('sha256',$email),8,900);if(!$allowed)throw new CrmError('RATE_LIMITED',429);
+ $ip=rubizhNetworkIdentity();$loginKey=hash('sha256',$ip.'|'.$email);
+ $proofScope='staff-login:'.$loginKey;
+ if(!rubizhRateCheck('staff-login-failed',$loginKey,8,900)&&!rubizhProofValid($proofScope,$b['rate_proof']??null)){
+  $proof=rubizhProofIssue($proofScope);header('Retry-After: 1');throw new CrmError('CHECK_REQUIRED',428,['challenge'=>['nonce'=>$proof['nonce'],'bits'=>$proof['bits'],'purpose'=>'staff-login'],'continue_url'=>'/auth/staff-login.php']);
+ }
  $q=$db->prepare('SELECT * FROM rubizh_staff_users WHERE email=?');$q->execute([$email]);$a=$q->fetch(PDO::FETCH_ASSOC);$verified=password_verify($password,$a['password_hash']??'$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi');
- if(!$a||!$verified||!(int)$a['enabled']){crmAudit($db,null,'security',hash('sha256',$email),'login.failed',[],['ip_hash'=>hash('sha256',$ip)],'',null,'SYSTEM');throw new CrmError('LOGIN_FAILED',401);}
+ if(!$a||!$verified||!(int)$a['enabled']){rubizhRateAllow('staff-login-failed',$loginKey,PHP_INT_MAX,900);crmAudit($db,null,'security',hash('sha256',$email),'login.failed',[],['ip_hash'=>hash('sha256',$ip)],'',null,'SYSTEM');throw new CrmError('LOGIN_FAILED',401);}
  session_regenerate_id(true);$_SESSION=['staff_id'=>$a['id'],'staff_version'=>(int)$a['session_version'],'staff_login_at'=>time(),'staff_seen_at'=>time(),'staff_csrf'=>bin2hex(random_bytes(32))];$actor=crmActor($db);crmAudit($db,$actor,'security',$a['id'],'login.success',[],['session_created'=>true]);return $actor;
 }

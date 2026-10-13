@@ -22,7 +22,9 @@ try{
     $pay=customerField($input,'payment',24);if(!in_array($pay,['card','invoice'],true))throw new RuntimeException('Оберіть спосіб оплати: карткою онлайн або на рахунок ФОП.');
     if($pay==='card'&&!monoConfigured())throw new RuntimeException('Оплату карткою ще не підключено.');
     $hash=hash('sha256',json_encode([$input['lines'] ?? [],$contact,$pay,$input['promo'] ?? ''],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR));
-    $owner=customerId();session_write_close();
+    $owner=customerId();$verifiedPhone=$owner!==null?customerVerifiedPhone($owner):null;
+    $rateKeys=shopCheckoutRateKeys($verifiedPhone,$scope,rubizhDeviceIdentity());$rateProof=rubizhProofValid('checkout:'.$scope,$input['rate_proof']??null);
+    session_write_close();
     $db->exec('SET SESSION innodb_lock_wait_timeout=5');
     $requestLock='rubizh-checkout-'.$key;
     $claim=$db->prepare('SELECT GET_LOCK(?,2)');$claim->execute([$requestLock]);
@@ -30,7 +32,7 @@ try{
     register_shutdown_function(function()use($db,$requestLock){try{$q=$db->prepare('SELECT RELEASE_LOCK(?)');$q->execute([$requestLock]);}catch(Throwable $e){}});
     $q=$db->prepare('SELECT r.*,o.order_number,o.total,o.items_json,o.delivery_label,o.payment_status FROM rubizh_checkout_requests r JOIN rubizh_customer_orders o ON o.id=r.order_id WHERE r.request_id=?');$q->execute([$key]);$existing=$q->fetch(PDO::FETCH_ASSOC);
     if($existing){if(!hash_equals($existing['scope_hash'],$scope) || !hash_equals($existing['payload_hash'],$hash))shopJson(['ok'=>false,'error'=>'Запит уже використаний. Оновіть оформлення.'],409);$payment=null;shopJson(['ok'=>true,'payment'=>$payment,'order'=>shopOrderReceipt($db,(int)$existing['order_id']),'email_status'=>shopOrderMailStatus($db,(int)$existing['order_id']),'repeated'=>true]);}
-    shopLimit($db,'orders',20);
+    try{shopCheckoutLimit($db,$rateKeys,false,$rateProof);}catch(RubizhHttpException $e){if($e->status!==428)throw $e;session_start();$proof=rubizhProofIssue('checkout:'.$scope);session_write_close();header('Retry-After: 1');shopJson(['ok'=>false,'error_code'=>'CHECK_REQUIRED','error'=>$e->getMessage(),'challenge'=>['nonce'=>$proof['nonce'],'bits'=>$proof['bits'],'purpose'=>'checkout']],428);}
     $delivery=npValidateDelivery($db,$contact,$type);$city=$delivery['city'];$address=$delivery['address'];
     for($transactionAttempt=0;;$transactionAttempt++){
     $db->beginTransaction();
@@ -40,6 +42,7 @@ try{
         $expected=$input['expected_total']??null;
         try{$expectedCents=shopMoney($expected);}catch(ShopPricingException $e){$expectedCents=null;}
         if($expectedCents!==shopMoney($total)||isset($input['catalog_version'])&&$input['catalog_version']!==$quote['catalog_version']){$db->rollBack();$kitNote=shopKitExplanation($quote['lines']);shopJson(['ok'=>false,'error_code'=>'PRICE_CHANGED','error'=>($kitNote!==''?$kitNote.' ':'').'Ціна або версія каталогу змінилася. Перевірте новий розрахунок та підтвердьте.','quote'=>$quote],409);}
+        shopCheckoutLimit($db,$rateKeys,true,$rateProof);
         $decision=pimV3OrderDecision($raw,$pay);
         $number='RB-'.gmdate('ymd').'-'.strtoupper(bin2hex(random_bytes(4)));$label=['branch'=>'Нова пошта · відділення','postomat'=>'Нова пошта · поштомат','courier'=>'Нова пошта · кур’єр'][$type].' · '.$city.' · '.$address;
         $db->prepare("INSERT INTO rubizh_customer_orders(external_id,email,order_number,status,payment_status,total,currency,items_json,delivery_label,created_at,updated_at) VALUES(?,?,?,?,?,?,'UAH',?,?,UTC_TIMESTAMP(),UTC_TIMESTAMP())")->execute(['web:'.$key,$email,$number,$decision['legacy_status'],$pay==='cod'?'cod':'pending',$total,json_encode($calc['lines'],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),$label]);

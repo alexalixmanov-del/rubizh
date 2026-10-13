@@ -39,33 +39,33 @@ test('Q-6: parallel requests for one number send exactly one SMS; the cooldown a
  }finally{site.stop();}
 });
 
-test('Q-6: one address cannot spray numbers — a short burst needs the check, a longer burst is refused',{skip,timeout:120000},async()=>{
+test('Q-6: one address cannot spray numbers — a soft network burst needs a check, without locking out the NAT',{skip,timeout:120000},async()=>{
  const site=await smsSite();
  try{
   const ip='198.51.100.9',out=[];
-  for(let i=0;i<3;i++)out.push(await site.req('+38067222000'+i,{ip}));
-  assert.deepEqual(out.map(r=>r.ok),[true,true,true],JSON.stringify(out.map(r=>r.error)));
-  const fourth=await site.req('+380672220003',{ip});
+  for(let i=0;i<5;i++)out.push(await site.req('+38067222000'+i,{ip}));
+  assert.deepEqual(out.map(r=>r.ok),[true,true,true,true,true],JSON.stringify(out.map(r=>r.error)));
+  const fourth=await site.req('+380672220005',{ip});
   assert.equal(fourth.check,true,'suspicious burst asks for the check: '+fourth.error);assert.match(fourth.error,/email/i,'email login is offered as the fallback');
   const challenge=fourth.session.sms_check;assert.ok(challenge&&challenge.nonce,'challenge kept in the session');
-  const passed=await site.req('+380672220003',{ip,session:fourth.session,pow:solve(challenge.nonce,challenge.bits)});
+  const passed=await site.req('+380672220005',{ip,session:fourth.session,pow:solve(challenge.nonce,challenge.bits)});
   assert.equal(passed.ok,true,'a solved check lets a real person through: '+passed.error);
   // Sessions live on the server: after use the challenge is gone, so the same answer cannot be replayed.
   assert.equal(passed.session.sms_check,undefined,'the challenge is consumed');
-  const replay=await site.req('+380672220004',{ip,session:passed.session,pow:solve(challenge.nonce,challenge.bits)});
+  const replay=await site.req('+380672220006',{ip,session:passed.session,pow:solve(challenge.nonce,challenge.bits)});
   assert.equal(replay.ok,false,'a solved check is single-use');
   site.sql(`INSERT INTO rubizh_phone_challenges(id,phone,code_hash,flow_hash,ip_hash,sent_at,expires_at,state) VALUES('${'f'.repeat(32)}','+380672220099','${'0'.repeat(64)}','${'0'.repeat(64)}','${site.ipHash(ip)}',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()+300,'sent')`);
-  const hard=await site.req('+380672220005',{ip,session:passed.session,pow:'0'});
-  assert.equal(hard.ok,false);assert.notEqual(hard.check,true,'over the hard limit no check helps');
+  const hard=await site.req('+380672220008',{ip,session:passed.session,pow:'0'});
+  assert.equal(hard.ok,false);assert.equal(hard.check,true,'a shared network gets a challenge, not a low hard ceiling');
  }finally{site.stop();}
 });
 
-test('Q-6/D-15: strangers cannot exhaust the daily budget — 30% stays reserved for numbers of existing customers',{skip,timeout:120000},async()=>{
+test('R8: known and unknown numbers receive the same budget challenge',{skip,timeout:120000},async()=>{
  const site=await smsSite();
  try{
   for(let i=0;i<7;i++)site.sql(`INSERT INTO rubizh_phone_challenges(id,phone,code_hash,flow_hash,ip_hash,sent_at,expires_at,state) VALUES('${String(i).padStart(32,'a')}','+38067333000${i}','${'0'.repeat(64)}','${'0'.repeat(64)}','${sha('x'+i)}',UNIX_TIMESTAMP()-7200,UNIX_TIMESTAMP(),'sent')`);
   const stranger=await site.req('+380673339999',{ip:'192.0.2.50'});
-  assert.equal(stranger.ok,false);assert.match(stranger.error,/email/i,'a stranger is pointed to email login');
+  assert.equal(stranger.check,true);assert.match(stranger.error,/email/i);const unknown=await site.req('+380673339999',{ip:'192.0.2.50',session:stranger.session,pow:solve(stranger.session.sms_check.nonce,stranger.session.sms_check.bits)});assert.equal(unknown.ok,true,'solved check admits unknown and known alike');
   site.sql(`INSERT INTO rubizh_accounts(id,email,first_name,last_name,created_at,updated_at) VALUES('${'b'.repeat(32)}','c@fixture.test','Тест','Покупець',UTC_TIMESTAMP(),UTC_TIMESTAMP())`);
   site.sql(`INSERT INTO rubizh_customer_identities(provider,subject,customer_id,created_at) VALUES('phone','+380673338888','${'b'.repeat(32)}',UTC_TIMESTAMP())`);
   // Above 60% everybody gets the same check (no customer/stranger difference there); a customer then still gets the code.
@@ -92,7 +92,7 @@ test('Q-6: in the browser the check is solved invisibly after the second press a
  const site=await smsSite(",'sms_test_outbox'=>__DIR__.'/../sms-outbox.jsonl'");let browser;
  try{
   // Two recent requests from this browser's address make the next ones suspicious (but under the hard limit).
-  for(let i=0;i<3;i++)site.sql(`INSERT INTO rubizh_phone_challenges(id,phone,code_hash,flow_hash,ip_hash,sent_at,expires_at,state) VALUES('${String(i).padStart(32,'d')}','+38067555000${i}','${'0'.repeat(64)}','${'0'.repeat(64)}','${sha('127.0.0.1')}',UNIX_TIMESTAMP()-60,UNIX_TIMESTAMP()+240,'sent')`);
+  for(let i=0;i<5;i++)site.sql(`INSERT INTO rubizh_phone_challenges(id,phone,code_hash,flow_hash,ip_hash,sent_at,expires_at,state) VALUES('${String(i).padStart(32,'d')}','+38067555000${i}','${'0'.repeat(64)}','${'0'.repeat(64)}','${sha('127.0.0.1')}',UNIX_TIMESTAMP()-60,UNIX_TIMESTAMP()+240,'sent')`);
   browser=await chromium.launch({executablePath:(process.env.CHROMIUM_PATH||'/usr/bin/chromium'),args:['--no-sandbox']});
   const page=await browser.newPage({viewport:{width:390,height:844}});
   await page.goto(site.base+'/auth/');await page.locator('#entry-phone').fill('0675550009');

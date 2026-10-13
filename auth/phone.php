@@ -68,7 +68,7 @@ function phoneCheckValid(string $phone): bool {
 function phoneRequest(string $phone): void {
     if (!smsEnabled()) { throw new RuntimeException('SMS-вхід ще не підключений. Скористайтеся email.'); }
     $phone=authPhone($phone); $flowHash=phoneFlowHash(); $db=phoneDatabase();
-    $now=time(); $ip=hash('sha256',(string)($_SERVER['REMOTE_ADDR'] ?? 'unknown')); $id=bin2hex(random_bytes(16));
+    $now=time(); $ip=hash('sha256',rubizhNetworkIdentity()); $id=bin2hex(random_bytes(16));
     $code=str_pad((string)random_int(0,999999),6,'0',STR_PAD_LEFT);
     $got=(int)$db->query("SELECT GET_LOCK('rubizh_sms_request',5)")->fetchColumn();
     if ($got!==1) { throw new RuntimeException('Спробуйте за хвилину.'); }
@@ -76,30 +76,28 @@ function phoneRequest(string $phone): void {
         $db->beginTransaction();
         $q=$db->prepare('SELECT COUNT(*) FROM rubizh_phone_challenges WHERE phone=? AND sent_at>?');
         $q->execute([$phone,$now-60]); if ((int)$q->fetchColumn()>0) { throw new RuntimeException('Повторне SMS можна надіслати через хвилину.'); }
-        $q->execute([$phone,$now-3600]); if ((int)$q->fetchColumn()>=5) { throw new RuntimeException('Забагато запитів. Спробуйте пізніше.'); }
-        $q->execute([$phone,$now-86400]); if ((int)$q->fetchColumn()>=10) { throw new RuntimeException('Забагато запитів. Спробуйте пізніше.'); }
+        $q->execute([$phone,$now-3600]); if ((int)$q->fetchColumn()>=5) { throw new RubizhHttpException(429,'Забагато SMS для цього номера. Зачекайте годину або увійдіть через email.',3600); }
+        $q->execute([$phone,$now-86400]); if ((int)$q->fetchColumn()>=10) { throw new RubizhHttpException(429,'Забагато SMS для цього номера. Спробуйте завтра або увійдіть через email.',86400); }
         $q=$db->prepare('SELECT COUNT(*) FROM rubizh_phone_challenges WHERE ip_hash=? AND sent_at>?');
-        $q->execute([$ip,$now-86400]); if ((int)$q->fetchColumn()>=20) { throw new RuntimeException('Забагато запитів. Спробуйте пізніше.'); }
+        $q->execute([$ip,$now-86400]); if ((int)$q->fetchColumn()>=150) { throw new RubizhHttpException(429,'Забагато SMS із цієї мережі. Спробуйте завтра або увійдіть через email.',86400); }
         $q->execute([$ip,$now-600]); $ipBurst=(int)$q->fetchColumn();
-        if ($ipBurst>=5) { throw new RuntimeException('Забагато запитів з цієї мережі. Спробуйте пізніше або увійдіть через email.'); }
+
         // Wrong codes across today's codes for this number from this address (re-requesting to brute force); counted per
         // address so wrong codes typed elsewhere cannot lock the number's owner out.
         $q=$db->prepare('SELECT COALESCE(SUM(attempts),0) FROM rubizh_phone_challenges WHERE phone=? AND ip_hash=? AND sent_at>? AND used_at IS NULL');
-        $q->execute([$phone,$ip,$now-86400]); if ((int)$q->fetchColumn()>=15) { throw new RuntimeException('Забагато невдалих спроб для цього номера. Спробуйте завтра або увійдіть через email.'); }
+        $q->execute([$phone,$ip,$now-86400]); if ((int)$q->fetchColumn()>=15) { throw new RubizhHttpException(429,'Забагато невдалих спроб для цього номера. Спробуйте завтра або увійдіть через email.',86400); }
         $q=$db->prepare('SELECT COUNT(*) FROM rubizh_phone_challenges WHERE sent_at>?'); $q->execute([$now-86400]); $global=(int)$q->fetchColumn();
         $limit=max(1,(int)(authConfig()['sms_daily_limit'] ?? 100));
-        if ($global>=$limit) { throw new RuntimeException('SMS-вхід тимчасово недоступний. Скористайтеся email.'); }
-        // D-15: 30% of the daily budget stays for numbers that already belong to a customer.
-        $known=identityFind('phone',$phone)!==null;
-        if (!$known && $global>=(int)floor($limit*0.7)) { throw new RuntimeException('SMS-вхід тимчасово недоступний. Скористайтеся email.'); }// same text as the global limit: no account-existence oracle
+        if ($global>=$limit) { throw new RubizhHttpException(429,'SMS-вхід тимчасово недоступний. Скористайтеся email або зверніться до менеджера.',86400); }
         $q=$db->prepare('SELECT COUNT(*) FROM rubizh_phone_challenges WHERE phone=? AND sent_at>?'); $q->execute([$phone,$now-3600]); $phoneHour=(int)$q->fetchColumn();
         // The check is a deterrent (hard limits above do the protecting); above 60% it applies to every number alike.
-        $suspicious=$ipBurst>=3 || $phoneHour>=2 || $global>=(int)floor($limit*0.6);
+        $device=rubizhDeviceIdentity();$deviceSoft=!rubizhRateCheck('sms-device',$device,6,86400);
+        $suspicious=$deviceSoft || $ipBurst>=5 || $phoneHour>=2 || $global>=(int)floor($limit*0.6);
         if ($suspicious && !phoneCheckValid($phone)) { phoneCheckIssue($phone); throw new PhoneCheckRequired('Підтверджуємо, що запит робить людина: натисніть «Надіслати код» ще раз. Якщо не виходить — увійдіть через email.'); }
         $db->prepare("UPDATE rubizh_phone_challenges SET state='cancelled' WHERE flow_hash=? AND used_at IS NULL")->execute([$flowHash]);
         $db->prepare('INSERT INTO rubizh_phone_challenges(id,phone,code_hash,flow_hash,ip_hash,sent_at,expires_at) VALUES(?,?,?,?,?,?,?)')->execute([$id,$phone,phoneCodeHash($id,$phone,$code),$flowHash,$ip,$now,$now+300]);
-        $db->commit();
-    } catch (Throwable $e) { if ($db->inTransaction()) { $db->rollBack(); } throw $e; }
+        $db->commit();rubizhRateAllow('sms-device',$device,PHP_INT_MAX,86400);
+    } catch (Throwable $e) { if ($db->inTransaction()) { $db->rollBack(); }if($e instanceof RubizhHttpException){header('Retry-After: '.$e->retryAfter);throw $e;}if(!$e instanceof PhoneCheckRequired&&$e instanceof RuntimeException&&!$e instanceof PDOException){header('Retry-After: 60');throw new RubizhHttpException(429,$e->getMessage().' Скористайтеся email або зверніться до менеджера.',60);}throw $e; }
     finally { $db->query("SELECT RELEASE_LOCK('rubizh_sms_request')"); }
     try { sendPhoneCode($phone,$code,$id); }
     catch (Throwable $e) { $db->prepare("UPDATE rubizh_phone_challenges SET state='failed' WHERE id=?")->execute([$id]); throw $e; }

@@ -1,6 +1,8 @@
 <?php
 // РУБІЖ · API магазина. Скопируйте этот файл в config.php и заполните.
 return [
+  // Trust X-Forwarded-For only from these proxy addresses/CIDR networks. Default: direct clients.
+  'trusted_proxies' => [],
   // Доступ к базе MySQL (adm.tools → MySQL → ваша база)
   'db_host' => 'localhost',
   'db_name' => 'xk589064_rubizh',

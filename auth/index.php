@@ -94,17 +94,20 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
             $email = strtolower($email);
             $db=database(); $now=time();
             // Серверне обмеження; REMOTE_ADDR не береться з підроблюваних HTTP-заголовків.
-            $ip=hash('sha256',(string)($_SERVER['REMOTE_ADDR'] ?? 'unknown'));
+            $ip=hash('sha256',rubizhNetworkIdentity());
             $db->beginTransaction();
             $got=(int)$db->query("SELECT GET_LOCK('rubizh_auth_request',2)")->fetchColumn();
             if ($got!==1) { $db->rollBack(); throw new RuntimeException('Спробуйте за хвилину.'); }
             try {
-                $q=$db->prepare('SELECT COUNT(*) FROM rubizh_auth_attempts WHERE created_at>? AND (ip_hash=? OR email=?)'); $q->execute([$now-3600,$ip,$email]);
+                $q=$db->prepare('SELECT COUNT(*) FROM rubizh_auth_attempts WHERE created_at>? AND email=?'); $q->execute([$now-3600,$email]);
                 $hour=(int)$q->fetchColumn();
                 $q=$db->prepare('SELECT COUNT(*) FROM rubizh_auth_attempts WHERE email=? AND created_at>?'); $q->execute([$email,$now-60]);
                 $recent=(int)$q->fetchColumn();
                 $q=$db->prepare('SELECT COUNT(*) FROM rubizh_auth_attempts WHERE created_at>?'); $q->execute([$now-86400]);
-                if ($hour>=6 || $recent>0 || (int)$q->fetchColumn()>=100) { throw new RuntimeException('Забагато запитів. Зачекайте та спробуйте пізніше.'); }
+                $global=(int)$q->fetchColumn();
+                if ($hour>=3 || $recent>0)throw new RubizhHttpException(429,'Забагато запитів для цієї адреси. Зачекайте або увійдіть через телефон; також можна звернутися до менеджера.',$recent>0?60:3600);
+                $q=$db->prepare('SELECT COUNT(*) FROM rubizh_auth_attempts WHERE created_at>? AND ip_hash=?');$q->execute([$now-3600,$ip]);$networkHour=(int)$q->fetchColumn();
+                if(($networkHour>=30||$global>=100)&&!phoneCheckValid('email:'.$email)){phoneCheckIssue('email:'.$email);throw new PhoneCheckRequired('Підтверджуємо запит: натисніть «Отримати посилання» ще раз. Якщо не виходить — увійдіть через телефон або зверніться до менеджера.');}
                 $q=$db->prepare('INSERT INTO rubizh_auth_attempts(email,ip_hash,created_at) VALUES(?,?,?)'); $q->execute([$email,$ip,$now]);
                 $db->commit();
             } finally { if ($db->inTransaction()) { $db->rollBack(); } $db->query("SELECT RELEASE_LOCK('rubizh_auth_request')"); }
@@ -148,7 +151,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
             $owner=$owner ?? customerResolve($row['email']); customerLogin($owner,'email');
             header('Location: /auth/', true, 303); exit;
         }
-    } catch (RuntimeException $e) { $message=$e instanceof PDOException ? 'Сервер тимчасово недоступний. Спробуйте пізніше.' : $e->getMessage(); }
+    } catch (RuntimeException $e) {if($e instanceof PhoneCheckRequired){http_response_code(428);header('Retry-After: 1');}if($e instanceof RubizhHttpException){http_response_code($e->status);if($e->retryAfter)header('Retry-After: '.$e->retryAfter);} $message=$e instanceof PDOException ? 'Сервер тимчасово недоступний. Спробуйте пізніше.' : $e->getMessage(); }
       catch (Throwable $e) { $message='Сервер тимчасово недоступний. Спробуйте пізніше.'; }
 }
 if ($token!=='') {
@@ -204,4 +207,4 @@ if ($authed && !$pending && !$phoneView) {
 <?php if ($message !== ''): ?><div class="msg <?=$success ? 'msg-success' : 'msg-error'?>" role="<?=$success ? 'status' : 'alert'?>"><?=esc($message)?></div><?php endif; ?>
 <?php require __DIR__.'/account-view.php'; ?>
 <?php else: ?><?php require __DIR__.'/login-view.php'; ?><?php endif; ?>
-</main><?php if (($linkSent || $phoneView) && !$pending): ?><script defer src="/auth/login.js?v=2"></script><?php endif; ?></body></html>
+</main><?php if (($linkSent || $phoneView || !empty($_SESSION['sms_check'])) && !$pending): ?><script defer src="/auth/login.js?v=2"></script><?php endif; ?></body></html>

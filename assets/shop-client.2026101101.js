@@ -1606,12 +1606,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
         };
         refreshCustomerSession=async () => {
             if ("rubizh.shop" === window.location.hostname || "www.rubizh.shop" === window.location.hostname) try {
-                const t = await fetch("/auth/session.php", {
-                    credentials: "same-origin",
-                    cache: "no-store"
-                });
-                if (!t.ok) return;
-                const e = await t.json();
+                const e = await this.storeRequest("/auth/session.php");
                 if (this.customerUnmounted || !e || !0 !== e.ok) return;
                 this.setState({
                     authed: !0 === e.authed,
@@ -6011,7 +6006,8 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
         };
         _catalogSeq=0;
         _productSeq=0;
-        storeRequest=async (t, e, i) => {
+        storeRequest=async (t, e, i, proofState={}) => {
+            const rateProof=proofState.account;
             const s = new AbortController;
             this._requestControllers = this._requestControllers || new Set, this._requestControllers.add(s),
             i && (this[i]?.abort(), this[i] = s);
@@ -6022,12 +6018,13 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
             try {
                 const i = await fetch(t, {
                     credentials: "same-origin",
+                    headers: rateProof?{"X-Rubizh-Rate-Proof":rateProof}:{},
                     cache: !e && t.startsWith("/shop/catalog.php") ? "default" : "no-store",
                     signal: s.signal,
                     ...e ? {
                         method: "POST",
                         headers: {
-                            "Content-Type": "application/json"
+                            "Content-Type": "application/json",...(rateProof?{"X-Rubizh-Rate-Proof":rateProof}:{})
                         },
                         body: JSON.stringify({
                             ...e,
@@ -6040,6 +6037,15 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                     o = await i.json();
                 } catch (t) {
                     throw new Error("Сервер тимчасово недоступний. Спробуйте ще раз.");
+                }
+                if(i.status===428&&o.challenge&&!proofState[o.challenge.purpose]&&['account','checkout'].includes(o.challenge.purpose)&&window.crypto?.subtle){
+                    this.setState({checkoutError:'Перевіряємо запит. Зачекайте кілька секунд…'});
+                    const {nonce,bits}=o.challenge;
+                    if(!/^[a-f0-9]{32}$/.test(nonce)||!Number.isInteger(bits)||bits<8||bits>20)throw new Error('Не вдалося перевірити запит. Зверніться до менеджера.');
+                    let n=0,zero=0;const encoder=new TextEncoder();
+                    do{const hash=new Uint8Array(await crypto.subtle.digest('SHA-256',encoder.encode(nonce+':'+n)));zero=0;for(const byte of hash){if(byte===0){zero+=8;continue;}zero+=Math.clz32(byte)-24;break;}if(zero<bits)n++;}while(zero<bits&&!s.signal.aborted);
+                    if(s.signal.aborted)throw new Error('Перевірка триває довше. Повторіть запит або зверніться до менеджера.');
+                    const nextProof={...proofState,[o.challenge.purpose]:String(n)};return await this.storeRequest(t,o.challenge.purpose==='checkout'?{...e,rate_proof:String(n)}:e,undefined,nextProof);
                 }
                 if (!i.ok || !o.ok) {
                     const t = new Error(o.error || "Спробуйте ще раз.");

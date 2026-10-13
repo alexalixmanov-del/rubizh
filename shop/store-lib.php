@@ -60,9 +60,11 @@ function shopCsrf(array $input): void {
     if(isset($_SERVER['HTTP_ORIGIN']) && !in_array($_SERVER['HTTP_ORIGIN'],shopAllowedOrigins(),true))shopJson(['ok'=>false,'error'=>'Недозволений запит.'],403);
 }
 function shopLimit(PDO $db,string $kind,int $max,int $window=3600): void {
-    $key=hash('sha256',$kind.'|'.($_SERVER['REMOTE_ADDR'] ?? 'unknown'));$start=(int)(floor(time()/$window)*$window);
+    $scope=(string)($_SESSION['checkout_scope']??session_id());
+    $identity=$scope!==''?'session:'.$scope.'|device:'.rubizhDeviceIdentity():'network:'.rubizhNetworkIdentity();
+    $key=hash('sha256',$kind.'|'.$identity);$start=(int)(floor(time()/$window)*$window);
     $db->prepare('INSERT INTO rubizh_shop_limits(bucket,window_start,hits) VALUES(?,?,1) ON DUPLICATE KEY UPDATE hits=IF(window_start=VALUES(window_start),hits+1,1),window_start=VALUES(window_start)')->execute([$key,$start]);
-    $q=$db->prepare('SELECT hits FROM rubizh_shop_limits WHERE bucket=?');$q->execute([$key]);if((int)$q->fetchColumn()>$max)shopJson(['ok'=>false,'error'=>'Забагато запитів. Спробуйте пізніше.'],429);
+    $q=$db->prepare('SELECT hits FROM rubizh_shop_limits WHERE bucket=?');$q->execute([$key]);if((int)$q->fetchColumn()>$max){header('Retry-After: '.max(1,$start+$window-time()));shopJson(['ok'=>false,'error'=>'Забагато запитів. Зачекайте або зверніться до менеджера.'],429);}
     if(random_int(1,64)===1)$db->prepare('DELETE FROM rubizh_shop_limits WHERE window_start<? LIMIT 500')->execute([time()-172800]);
 }
 function shopFavoriteIds(PDO $db,string $id): array {
@@ -161,4 +163,22 @@ function shopCancelOrder(PDO $db,int $id,bool $expired=false): void {
  if(!in_array($o['status'],['new','confirmed','processing'],true)||in_array($o['payment_status'],['paid','refunded'],true)||!shopNoOpenCardInvoice($db,$id))throw new RuntimeException('Для цього замовлення потрібне скасування через менеджера.');
  foreach(npShipments($db,$id) as $s)if(!in_array($s['status'],['draft','error','cancelled'],true))throw new RuntimeException('Посилку вже передано на оформлення. Зверніться до менеджера.');
  $db->beginTransaction();try{$db->prepare("UPDATE rubizh_customer_orders SET status='cancelled',updated_at=UTC_TIMESTAMP() WHERE id=?")->execute([$id]);shopReservationTransition($db,$id,$expired?'EXPIRED':'RELEASED','SYSTEM');if(!empty($GLOBALS['rubizh_pim_v3_columns']))$db->prepare("UPDATE rubizh_customer_orders SET pim_order_state='CANCELLED' WHERE id=? AND pim_contract_version=3")->execute([$id]);$db->prepare("UPDATE rubizh_order_shipments SET status='cancelled',updated_at=UTC_TIMESTAMP() WHERE order_id=? AND status IN ('draft','error')")->execute([$id]);shopQueueEvent($db,$id,'cancelled');shopQueueBuyerMail($db,$id,'cancelled');npAudit($db,str_repeat('0',32),'customer_cancelled',$id);$db->commit();}catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}});
+}
+
+function shopCheckoutRateKeys(?string $verifiedPhone,string $scope,string $device): array {
+    $keys=[['order-session',$scope,10,3600],['order-device',$device,10,3600],['order-network',rubizhNetworkIdentity(),300,3600]];
+    if($verifiedPhone!==null&&$verifiedPhone!==''){$keys[]=['order-phone-hour',$verifiedPhone,5,3600];$keys[]=['order-phone-day',$verifiedPhone,15,86400];}
+    usort($keys,fn($a,$b)=>strcmp($a[0].'|'.$a[1],$b[0].'|'.$b[1]));return $keys;
+}
+function shopCheckoutLimit(PDO $db,array $keys,bool $consume=false,bool $proof=false): void {
+    if($consume&&!$db->inTransaction())throw new LogicException('Order limits require the order transaction');
+    foreach($keys as [$kind,$identity,$max,$window]){
+        $key=hash('sha256',$kind.'|'.$identity);$start=(int)(floor(time()/$window)*$window);
+        if($consume)$db->prepare('INSERT INTO rubizh_shop_limits(bucket,window_start,hits) VALUES(?,?,0) ON DUPLICATE KEY UPDATE bucket=VALUES(bucket)')->execute([$key,$start]);
+        $q=$db->prepare('SELECT window_start,hits FROM rubizh_shop_limits WHERE bucket=?'.($consume?' FOR UPDATE':''));$q->execute([$key]);$row=$q->fetch(PDO::FETCH_ASSOC);$hits=$row&&(int)$row['window_start']===$start?(int)$row['hits']:0;
+        $retry=max(1,$start+$window-time());
+        if($hits>=$max)throw new RubizhHttpException(429,'Забагато замовлень за короткий час. Зачекайте або зверніться до менеджера.',$retry);
+        if($kind==='order-network'&&$hits>=60&&!$proof)throw new RubizhHttpException(428,'Підтвердьте запит ще раз. Якщо перевірка не працює — зверніться до менеджера.',1);
+        if($consume)$db->prepare('UPDATE rubizh_shop_limits SET window_start=?,hits=? WHERE bucket=?')->execute([$start,$hits+1,$key]);
+    }
 }
