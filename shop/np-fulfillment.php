@@ -279,7 +279,13 @@ function npAggregateOrder(PDO $db,int $order): void {
     if($returned===count($ships))$status='returned';elseif($returned>0)$status='partially_returned';
     elseif($covered&&count(array_filter($states,fn($s)=>$s==='delivered'))===count($ships))$status='delivered';
     elseif($covered&&$moving===count($ships))$status='shipped';elseif($moving>0)$status='partially_shipped';
-    if($status)$db->prepare('UPDATE rubizh_customer_orders SET status=?,updated_at=UTC_TIMESTAMP() WHERE id=?')->execute([$status,$order]);
+    if($status){
+        $own=$status==='returned'&&!$db->inTransaction();if($own)$db->beginTransaction();
+        try{$db->prepare('UPDATE rubizh_customer_orders SET status=?,updated_at=UTC_TIMESTAMP() WHERE id=?')->execute([$status,$order]);
+            if($status==='returned')shopReservationTransition($db,$order,'RELEASED','SYSTEM');
+            if($own)$db->commit();
+        }catch(Throwable $e){if($own&&$db->inTransaction())$db->rollBack();throw $e;}
+    }
     // PIM v3 orders keep fulfillment separate from order/payment state.
     if(!empty($GLOBALS['rubizh_pim_v3_columns'])&&(int)($o['pim_contract_version']??0)===3){
         $delivered=count(array_filter($states,fn($s)=>$s==='delivered'));$ttn=count(array_filter($ships,fn($s)=>trim((string)($s['tracking_number']??''))!==''));
