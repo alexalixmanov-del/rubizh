@@ -50,3 +50,24 @@ test('R1 direct failed legacy mutation rolls back its owned catalog transaction'
  assert.equal(+s.sql("SELECT COUNT(*) n FROM variants WHERE sku='ROLLBACK-1'")[0].n,0);
  }finally{s.stop();}
 });
+test('R1 permitted legacy housekeeping cannot mutate hidden contract 3 model routing',{skip,timeout:180000},async()=>{
+ const s=await startSite({extraConfig:",'pim_legacy_sync'=>true"});
+ try{
+ assert.equal((await publish(s,wire)).status,200);
+ assert.equal((await publish(s,{...wire,products:[]},{hide:['m-jacket']})).status,200);
+ const query="SELECT * FROM rubizh_catalog_supplier_articles WHERE product_id='m-jacket' ORDER BY sku",routes="SELECT * FROM rubizh_catalog_fulfillment WHERE product_id='m-jacket' ORDER BY sku";
+ const before=s.sql(query),routeBefore=s.sql(routes);assert.ok(before.length&&routeBefore.length);
+ const config=s.site+'/api/config.php';writeFileSync(config,readFileSync(config,'utf8').replace("'pim_v3_sync'=>true","'pim_v3_sync'=>false"));
+ const r=await s.post('/api/pim/sync',{products:[]},s.auth);assert.equal(r.status,200,JSON.stringify(r.data));
+ assert.deepEqual(s.sql(query),before);assert.deepEqual(s.sql(routes),routeBefore);
+ }finally{s.stop();}
+});
+test('R1 contract 3 model protection does not depend on the activation or schema metadata flag',{skip,timeout:180000},async()=>{
+ const s=await startSite({extraConfig:",'pim_legacy_sync'=>true"});
+ try{
+ assert.equal((await publish(s,wire)).status,200);
+ s.sql("UPDATE meta SET v='0' WHERE k='pim_v3_schema'");
+ const r=php(`require '${s.site}/api/lib.php';try{save_product(db(),['id'=>'m-jacket']);echo 'UNGUARDED';}catch(Throwable $e){echo $e->getMessage();}`);
+ assert.match(r.stdout,/CONTRACT_V3_REQUIRED/);
+ }finally{s.stop();}
+});

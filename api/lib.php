@@ -235,10 +235,16 @@ final class PimLegacySyncRejected extends RuntimeException {
 function pimRequireLegacySync(): void {
   if(cfg('pim_legacy_sync')!==true)throw new PimLegacySyncRejected('LEGACY_SYNC_DISABLED');
 }
+/** Inspect the real column, independently of activation and migration metadata flags. */
+function pimLegacyHasContractColumn(PDO $pdo): bool {
+  static $known=null;if($known===null)$known=new WeakMap;
+  if(isset($known[$pdo]))return true;
+  $q=$pdo->query("SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='products' AND column_name='pim_contract_version'");
+  if((int)$q->fetchColumn()>0){$known[$pdo]=true;return true;}return false;
+}
 function pimAssertLegacyModels(PDO $pdo,array $ids): void {
   pimRequireLegacySync();
-  pimV3DetectColumns($pdo);
-  if(empty($GLOBALS['rubizh_pim_v3_columns']))return;
+  if(!pimLegacyHasContractColumn($pdo))return;
   foreach(array_chunk(array_values(array_unique(array_filter(array_map(fn($id)=>trim((string)$id),$ids)))),500) as $chunk){
     $q=$pdo->prepare('SELECT id FROM products WHERE pim_contract_version=3 AND id IN ('.implode(',',array_fill(0,count($chunk),'?')).') LIMIT 1'.($pdo->inTransaction()?' FOR UPDATE':''));
     $q->execute($chunk);if($q->fetchColumn()!==false)throw new PimLegacySyncRejected('CONTRACT_V3_REQUIRED');
@@ -253,8 +259,7 @@ function pimLegacyWrite(PDO $pdo,callable $write): mixed {
 }
 function hide_unavailable(PDO $pdo,bool $hide): void {
   pimLegacyWrite($pdo,function()use($pdo,$hide){
-    pimV3DetectColumns($pdo);
-    if(!empty($GLOBALS['rubizh_pim_v3_columns'])&&$pdo->query('SELECT id FROM products WHERE pim_contract_version=3 LIMIT 1 FOR UPDATE')->fetchColumn()!==false)throw new PimLegacySyncRejected('CONTRACT_V3_REQUIRED');
+    if(pimLegacyHasContractColumn($pdo)&&$pdo->query('SELECT id FROM products WHERE pim_contract_version=3 LIMIT 1 FOR UPDATE')->fetchColumn()!==false)throw new PimLegacySyncRejected('CONTRACT_V3_REQUIRED');
     $pdo->prepare("INSERT INTO meta(k,v) VALUES('hide_unavailable',?) ON DUPLICATE KEY UPDATE v=VALUES(v)")->execute([$hide?'1':'0']);
   });
 }

@@ -54,8 +54,9 @@ if ($isPim) {
     }
     $hidden = hide_products($pdo, is_array($b['hide_ids'] ?? null) ? $b['hide_ids'] : []);
     // Absence from a full PIM list is not a hide command: only explicit hide_ids hide (contract rule G07).
-    $pdo->exec('DELETE a FROM rubizh_catalog_supplier_articles a LEFT JOIN variants v ON v.sku=a.sku AND v.product_id=a.product_id LEFT JOIN products p ON p.id=a.product_id WHERE v.sku IS NULL OR p.id IS NULL OR p.visible=0');
-    $pdo->exec('DELETE f FROM rubizh_catalog_fulfillment f LEFT JOIN variants v ON v.sku=f.sku AND v.product_id=f.product_id LEFT JOIN products p ON p.id=f.product_id WHERE v.sku IS NULL OR p.id IS NULL OR p.visible=0');
+    $legacyOnly=pimLegacyHasContractColumn($pdo)?' AND (p.pim_contract_version IS NULL OR p.pim_contract_version<>3)':'';
+    $pdo->exec('DELETE a FROM rubizh_catalog_supplier_articles a LEFT JOIN variants v ON v.sku=a.sku AND v.product_id=a.product_id LEFT JOIN products p ON p.id=a.product_id WHERE (v.sku IS NULL OR p.id IS NULL OR p.visible=0)'.$legacyOnly);
+    $pdo->exec('DELETE f FROM rubizh_catalog_fulfillment f LEFT JOIN variants v ON v.sku=f.sku AND v.product_id=f.product_id LEFT JOIN products p ON p.id=f.product_id WHERE (v.sku IS NULL OR p.id IS NULL OR p.visible=0)'.$legacyOnly);
     if(isset($b['kits'])){if(!is_array($b['kits']))throw new RuntimeException('Невірний склад комплектів');require_once __DIR__.'/kits.php';sync_kits($pdo,$b['kits']);}
     if ($cnt['created'] || $cnt['updated'] || $hidden || isset($b['categories'])) recount_categories($pdo);
     $pdo->prepare("INSERT INTO sync_log (at,mode,received,saved,unchanged,hidden,errors,note) VALUES (?,?,?,?,?,?,?,?)")
