@@ -77,20 +77,20 @@
 
 ## Глобальный этап 2 — 2026-10-12 UTC: **INCOMPLETE / production NO-GO** (checkpoint)
 
-Исторический GO этапа 1 выше относится к его закреплённому коду и переходу к аудиту. Он не подтверждает текущий release candidate. Исходный независимый аудит: SITE `51c83d808228a26328081b02211b4e3605353755`; итоговый код после поздних коррекций и повторной browser matrix: `1fcca317f381c33ea29b40ccb12d99b2b65c439b`.
+Исторический GO этапа 1 выше относится к его закреплённому коду и переходу к аудиту. Он не подтверждает текущий release candidate. Исходный независимый аудит: SITE `51c83d808228a26328081b02211b4e3605353755`; итоговый код после поздних коррекций и повторной browser matrix: `e9ce24dffb41751b8e08b13b4dff5a5c6056d203`.
 
 PIM остаётся `21198461f8ebb2eadef6dcd6fb77a50a8a038ea9`; отдельный CRM-репозиторий — read-only. Ни merge/deploy, ни production-миграции, ни provider activation, ни удаление assets не выполнялись и этим документом не разрешаются.
 
 | Gate | Проверенное доказательство | Текущий итог |
 |---|---|---|
 | Linux baseline SITE | **351/351 pass; 0 fail/skipped** (`baseline-compatible.tap`) | PASS для исходной базы |
-| Первый полный SITE regression | **435/435 pass; 0 fail/skipped** (`final-regression.tap`) | PASS до поздних изменений; новый итог `450/450 PASS;0FAIL/SKIP/CANCELLED;626167ms, exact code1fcca317` |
+| Первый полный SITE regression | **435/435 pass; 0 fail/skipped** (`final-regression.tap`) | PASS до поздних изменений; новый итог `450/450 PASS;0FAIL/SKIP/CANCELLED;626167ms, tested1fcca317, identical app/tests in e9ce24d` |
 | PIM, без изменений | **682/682 pass; 0 fail/skipped** (`pim-tests.log`) | PASS выбранного read-only workflow; предложения не применены |
 | Полная browser matrix | **315/315 загрузок +21/21 потоков**, ADDENDUM210/210, cabinet21/21;3движка×7ширин, final application tree | PASS локального synthetic scope; latest commits QA-only |
 | UI/a11y и SEO | Scoped UI/a11y **15/15**, SEO **7/7**, без skipped; дополнительные stock/SKU/canonical сценарии зелёные | PASS в указанном scope; не полная WCAG/provider-сертификация |
 | Release / ops rehearsal | Fail-closed artifact/schema/smoke gates; восстановлены **61 таблица и 2 триггера**, исходники/private config/media | Локально проверено; production artifact/backup/scheduler не подтверждены |
-| Финальное независимое review | Выполнены отдельные selected runs, найдены поздние пункты; security execution отмечено как незавершённое | **INCOMPLETE**; `Scoped payment/changes/QA review approved; whole SECURITY BLOCKED(tool)/INCOMPLETE` |
-| CI для точного итогового SHA | Exact code CI PHP8.2/8.3 SUCCESS | **[38304082586](https://github.com/lieverifying/rubizh/actions/runs/38304082586), SUCCESS; exact doc-only checkpoint CI checked after commit**; старый зелёный CI не заменяет новый |
+| Финальное независимое review | Payment/changes/QA follow-up approved; new whole SECURITY source review COMPLETED | **COMPLETED source review**;15checks+1probe, no blanket dynamic/production PASS |
+| CI для точного итогового SHA | Exact schedulinge9 CI PHP8.2/8.3 SUCCESS; final doc-only checkpoint separately | **[38307425169](https://github.com/lieverifying/rubizh/actions/runs/38307425169) SUCCESS on e9ce24d, PHP8.2/8.3; exact final doc-only checkpoint CI checked after push**; старый зелёный CI не заменяет новый |
 | Внешние HIGH и решения владельца | Окончательный статус фиксирует координатор в `03-DEFECT_REGISTER.md` | Остаются открытыми; общий GO не выдаётся |
 
 В matrix нет JS pageerror, horizontal overflow и битых синтетических изображений. Ожидаемые console-сообщения HTTP 404 для тестовой отсутствующей карточки сохранены отдельно; их не надо ни скрывать, ни считать JavaScript-сбоем. Проверка выполнялась на локальных fixture-данных с mock-провайдерами; это не реальная покупка.
@@ -112,7 +112,7 @@ PIM остаётся `21198461f8ebb2eadef6dcd6fb77a50a8a038ea9`; отдельн�
 
 ### Что остаётся после NO-GO checkpoint
 
-1. Провести fresh whole SECURITY review в доступной среде/человеком и exhaustive endpoint/method/role dynamic verification. Tool-blocked execution не считается PASS.
+1. Fresh whole SECURITY review завершён новым independent agent; соблюдать coverage limits финального dynamic endpoint gate и решить историческую приватностьQA-20.
 2. Exact code CI success подтверждён; doc-only checkpoint exact-SHA CI выполняется после push и фиксируется в итоговом ответе/retained metadata.
 3. Оставить нерешённые внешние пункты и решения владельца открытыми. Предложения по архитектуре, performance, CGNAT, резервам, наблюдаемости, настройкам, CRM и Q-9 перечислены в `04-ECC_IMPLEMENTATION_PLAN.md`, этап 2 §7; наличие предложений не означает согласие на реализацию.
 4. Подготовить новый проверенный release artifact и целевые hosting prerequisites в отдельно разрешённом release-процессе. Нынешний исторический архив намеренно отсекается installer; успешной новой установки не было.
@@ -121,3 +121,5 @@ Live HTTPS webhook, sandbox/live оплата, SMS/email, НП/ТТН и фин�
 
 
 **Ограничение приватности:** GitHub repository visibility проверено как public. Унаследованный commit2a338da содержит исходные HIGH raw; обычный push сохранил эти версии в истории. Текущие документы редактированы, новые полные доказательства остаются local/private, но обещать приватность исторических raw нельзя. История не переписывалась: force-push запрещён владельцем. QA-20 MEDIUM / OWNER DECISION фиксирует процессный дефект; cleanup требует отдельного решения и не отменяет уже случившуюся публикацию. Технические подробности неразрешённых HIGH здесь не повторяются.
+
+Final endpoint Quality Gate:132inventory rows,1920HTTP requests;831/831explicit expectations,2697/2697overlapping semantic checks,975snapshots+2A↔B whole-domain comparisons;0final assertion failures. ANY232/232 and narrowaction36/36; all inventory endpoints requested, full state/role/token combinations remainPARTIAL. Details and limits:stage-2/endpoint-quality-gate.md. Fresh SECURITY source review COMPLETED(15checks+1probe), no newHIGH/CRITICAL; MEDIUM SEC-FRESH-01 unapplied CRM proposal. OverallNO-GO: exhaustive dynamic certification and historical privacy requirement unmet, noStage2verifiedtag/Stage3.

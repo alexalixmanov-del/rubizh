@@ -31,7 +31,7 @@
 
 ## Глобальный этап 2 — дополнение 2026-10-12 UTC (checkpoint)
 
-Этот раздел дополняет исторический аудит этапа 1. Независимые направления сначала читали закреплённый SITE `51c83d808228a26328081b02211b4e3605353755`, PIM `21198461f8ebb2eadef6dcd6fb77a50a8a038ea9` и карту системы; проверки исправлений и финальное ревью относятся к более позднему коду. Итоговый проверяемый код — `1fcca317f381c33ea29b40ccb12d99b2b65c439b`; doc-only checkpoint не меняет application/test tree. Общий статус этапа NO-GO, без verified tag.
+Этот раздел дополняет исторический аудит этапа 1. Независимые направления сначала читали закреплённый SITE `51c83d808228a26328081b02211b4e3605353755`, PIM `21198461f8ebb2eadef6dcd6fb77a50a8a038ea9` и карту системы; проверки исправлений и финальное ревью относятся к более позднему коду. Итоговый проверяемый код — `e9ce24dffb41751b8e08b13b4dff5a5c6056d203`; doc-only checkpoint не меняет application/test tree. Общий статус этапа NO-GO, без verified tag.
 
 Стенд: Linux, PHP 8.4, MariaDB, Playwright Chromium/WebKit/Firefox; синтетические данные, отдельные fixture-схемы, локальные mock-транспорты. Production PHP 8.2, реальные провайдеры, данные покупателей и устройства iOS/Android этим стендом не проверены. PIM и отдельный репозиторий CRM только читались; их код не менялся. Полные доказательства и подробности неразрешённых HIGH хранятся вне репозитория.
 
@@ -60,9 +60,11 @@
 
 ### Состояние checkpoint
 
-**INCOMPLETE; production NO-GO.** Неразрешённые HIGH публикуются только как ID и severity в итоговом реестре; эта оценка не превращает неподтверждённое предположение в production-факт. Остаются решения владельца и обязательное fresh whole SECURITY review; exact code CI success, doc-only checkpoint CI проверяется после push. Текущие исправления и checkpointи не дают права на merge, deploy, миграции, активацию провайдеров, изменение PIM/CRM или удаление assets.
+**INCOMPLETE; production NO-GO.** Неразрешённые HIGH публикуются только как ID и severity в итоговом реестре; эта оценка не превращает неподтверждённое предположение в production-факт. Остаются решения владельца и оставшиеся dynamic coverage/privacy условия; exact code CI success, doc-only checkpoint CI проверяется после push. Текущие исправления и checkpointи не дают права на merge, deploy, миграции, активацию провайдеров, изменение PIM/CRM или удаление assets.
 
-Итоговая привязка: `1fcca317f381c33ea29b40ccb12d99b2b65c439b`, `450/450 PASS;0FAIL/SKIP/CANCELLED;626167ms, exact code1fcca317`, `Scoped payment/changes/QA review approved; whole SECURITY BLOCKED(tool)/INCOMPLETE`, `[38304082586](https://github.com/lieverifying/rubizh/actions/runs/38304082586), SUCCESS; exact doc-only checkpoint CI checked after commit`. Живой сквозной E2E сохраняет статус **DEFERRED → глобальный этап 6**, а не PASS.
+Итоговая привязка: `e9ce24dffb41751b8e08b13b4dff5a5c6056d203`, `450/450 PASS;0FAIL/SKIP/CANCELLED;626167ms, tested1fcca317, identical app/tests in e9ce24d`, `Scoped payment/changes/QA review approved; fresh whole SECURITY source review COMPLETED;15 selected checks+1 bounded probe`, `[38307425169](https://github.com/lieverifying/rubizh/actions/runs/38307425169) SUCCESS on e9ce24d, PHP8.2/8.3; exact final doc-only checkpoint CI checked after push`. Живой сквозной E2E сохраняет статус **DEFERRED → глобальный этап 6**, а не PASS.
 
 
 **Ограничение приватности:** GitHub repository visibility проверено как public. Унаследованный commit2a338da содержит исходные HIGH raw; обычный push сохранил эти версии в истории. Текущие документы редактированы, новые полные доказательства остаются local/private, но обещать приватность исторических raw нельзя. История не переписывалась: force-push запрещён владельцем. QA-20 MEDIUM / OWNER DECISION фиксирует процессный дефект; cleanup требует отдельного решения и не отменяет уже случившуюся публикацию. Технические подробности неразрешённых HIGH здесь не повторяются.
+
+Final endpoint Quality Gate:132inventory rows,1920HTTP requests;831/831explicit expectations,2697/2697overlapping semantic checks,975snapshots+2A↔B whole-domain comparisons;0final assertion failures. ANY232/232 and narrowaction36/36; all inventory endpoints requested, full state/role/token combinations remainPARTIAL. Details and limits:stage-2/endpoint-quality-gate.md. Fresh SECURITY source review COMPLETED(15checks+1probe), no newHIGH/CRITICAL; MEDIUM SEC-FRESH-01 unapplied CRM proposal. OverallNO-GO: exhaustive dynamic certification and historical privacy requirement unmet, noStage2verifiedtag/Stage3.

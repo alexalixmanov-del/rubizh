@@ -1,0 +1,121 @@
+--- a/staff/auth.php
++++ b/staff/auth.php
+@@ -14,6 +14,16 @@
+  $q=$db->prepare('SELECT permission FROM rubizh_staff_permissions WHERE role=?');$q->execute([$a['role']]);$a['permissions']=$q->fetchAll(PDO::FETCH_COLUMN);unset($a['enabled'],$a['session_version']);$_SESSION['staff_seen_at']=time();return $GLOBALS['crm_staff_actor']=$a;
+ }
+ function crmPermit(array $actor,string $permission): void {if(!in_array($permission,$actor['permissions']??[],true))throw new CrmError('PERMISSION_DENIED',403,['permission'=>$permission]);if(in_array($permission,['payment.refund.execute','payment.manual_reconcile','order.price_override','order.total_override','settings.manage','staff.manage','inventory.return'],true)&&$actor['role']!=='OWNER')throw new CrmError('PERMISSION_DENIED',403);}
++// Match the existing money-action step-up window. Only the acting staff session
++// supplies proof; a customer login or another verified actor cannot refresh it.
++function crmRequireFreshLogin(array $actor): void {
++ if(PHP_SAPI==='cli')return; // Preserve the existing trusted CLI/system contract.
++ $id=$actor['id']??null;$loginAt=(int)($_SESSION['staff_login_at']??0);
++ $window=max(60,(int)(cfg('staff_stepup_seconds')??900));$at=time();
++ if(($actor['role']??null)!=='OWNER'||!is_string($id)
++  ||($_SESSION['staff_id']??null)!==$id||($GLOBALS['crm_staff_actor']['id']??null)!==$id
++  ||$loginAt<=0||$loginAt>$at||$at-$loginAt>$window)throw new CrmError('REAUTH_REQUIRED',403);
++}
+ function crmRequestId(mixed $id): string {if(!is_string($id)||!preg_match('/^[a-f0-9]{32}$/D',$id))throw new CrmError('INVALID_REQUEST_ID');return $id;}
+ function crmAudit(PDO $db,?array $a,string $entity,string $id,string $action,array $old,array $new,string $reason='',?string $request=null,string $source='STAFF'): void {
+  $db->prepare('INSERT INTO rubizh_staff_audit(actor_id,actor_role,source,entity,entity_id,action,before_json,after_json,reason,request_id,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,UTC_TIMESTAMP())')->execute([$a['id']??str_repeat('0',32),$a['role']??'SYSTEM',$source,$entity,$id,$action,json_encode($old,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),json_encode($new,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),$reason,$request??$GLOBALS['crm_request_id']??bin2hex(random_bytes(16))]);
+--- a/staff/reports.php
++++ b/staff/reports.php
+@@ -32,6 +32,6 @@
+  if(!empty($q['state'])){$where[]=($entity==='returns'?'e.state':'e.status').'=?';$args[]=$q['state'];}$where=implode(' AND ',$where);$total=(int)crmOne($db,"SELECT COUNT(*) n FROM $table e JOIN rubizh_customer_orders o ON o.id=e.order_id WHERE $where",$args)['n'];$rows=crmQuery($db,"SELECT e.*,o.order_number,o.payment_status,o.pim_payment_state,o.email FROM $table e JOIN rubizh_customer_orders o ON o.id=e.order_id WHERE $where ORDER BY e.id DESC LIMIT {$p['limit']} OFFSET {$p['offset']}",$args);return ['rows'=>$rows,'pagination'=>['page'=>$p['page'],'limit'=>$p['limit'],'total'=>$total,'pages'=>(int)ceil($total/$p['limit'])]];
+ }
+ function crmStaffSave(PDO $db,array $actor,array $b,?string $id=null): array {
+- crmPermit($actor,'staff.manage');$reason=shopFinancialReason((string)($b['reason']??''));$role=(string)($b['role']??'');$email=mb_strtolower(trim((string)($b['email']??'')));$name=trim((string)($b['name']??''));$enabled=($b['enabled']??true)===true;$password=$b['password']??null;if(!filter_var($email,FILTER_VALIDATE_EMAIL)||mb_strlen($name)<2||mb_strlen($name)>120||!in_array($role,['OWNER','MANAGER','LOGISTICS','READ_ONLY'],true)||$password!==null&&(!is_string($password)||strlen($password)<12||strlen($password)>72)||$id===null&&$password===null)throw new CrmError('INVALID_STAFF');
++ crmPermit($actor,'staff.manage');crmRequireFreshLogin($actor);$reason=shopFinancialReason((string)($b['reason']??''));$role=(string)($b['role']??'');$email=mb_strtolower(trim((string)($b['email']??'')));$name=trim((string)($b['name']??''));$enabled=($b['enabled']??true)===true;$password=$b['password']??null;if(!filter_var($email,FILTER_VALIDATE_EMAIL)||mb_strlen($name)<2||mb_strlen($name)>120||!in_array($role,['OWNER','MANAGER','LOGISTICS','READ_ONLY'],true)||$password!==null&&(!is_string($password)||strlen($password)<12||strlen($password)>72)||$id===null&&$password===null)throw new CrmError('INVALID_STAFF');
+  return crmTransaction($db,function()use($db,$actor,$b,$id,$role,$email,$name,$enabled,$password,$reason){$old=$id?crmOne($db,'SELECT id,email,name,role,enabled,session_version FROM rubizh_staff_users WHERE id=? FOR UPDATE',[$id]):null;if($id&&!$old)throw new CrmError('NOT_FOUND',404);if($old&&($old['role']==='OWNER')&&(!$enabled||$role!=='OWNER')){$owners=crmQuery($db,"SELECT id FROM rubizh_staff_users WHERE role='OWNER' AND enabled=1 FOR UPDATE");if(count($owners)<=1)throw new CrmError('LAST_OWNER_REQUIRED',409);}if($old&&(int)($b['session_version']??0)!==(int)$old['session_version'])throw new CrmError('STALE_ORDER',409);$id??=bin2hex(random_bytes(16));if(!$old)$db->prepare('INSERT INTO rubizh_staff_users(id,email,name,role,enabled,password_hash,created_at,updated_at) VALUES(?,?,?,?,?,?,UTC_TIMESTAMP(),UTC_TIMESTAMP())')->execute([$id,$email,$name,$role,(int)$enabled,password_hash($password,PASSWORD_BCRYPT,['cost'=>12])]);else{$sql='UPDATE rubizh_staff_users SET email=?,name=?,role=?,enabled=?,session_version=session_version+1,updated_at=UTC_TIMESTAMP()'.($password!==null?',password_hash=?':'').' WHERE id=?';$db->prepare($sql)->execute([$email,$name,$role,(int)$enabled,...($password!==null?[password_hash($password,PASSWORD_BCRYPT,['cost'=>12])]:[]),$id]);}crmAudit($db,$actor,'staff',$id,'staff.update',$old??[],['email'=>$email,'name'=>$name,'role'=>$role,'enabled'=>$enabled,'password_changed'=>$password!==null],$reason);return crmOne($db,'SELECT id,email,name,role,enabled,session_version FROM rubizh_staff_users WHERE id=?',[$id]);});
+ }
+--- a/staff/operations.php
++++ b/staff/operations.php
+@@ -36,7 +36,7 @@
+ }
+ function crmSenderComplete(array $p): bool {foreach(['city_ref','warehouse_ref','sender_ref','contact_ref'] as $k)if(!npRef($p[$k]??''))return false;return trim((string)($p['region']??''))!==''&&!empty($p['confirmed'])&&crmPhone($p['phone']??'')!==null;}
+ function crmSenderSave(PDO $db,string $code,array $actor,array $b): array {
+- crmPermit($actor,'settings.manage');$reason=shopFinancialReason((string)($b['reason']??''));$old=crmOne($db,'SELECT * FROM rubizh_sender_profiles WHERE code=?',[$code]);if(!$old)throw new CrmError('NOT_FOUND',404);if((int)$old['version']!==(int)($b['version']??0))throw new CrmError('STALE_ORDER',409);$fields=['name','city','region','branch','cargo_branch','city_ref','warehouse_ref','cargo_warehouse_ref','sender_ref','contact_ref','phone','confirmed'];$new=$old;foreach($fields as $f)if(array_key_exists($f,$b))$new[$f]=$f==='confirmed'?(int)($b[$f]===true):(string)$b[$f];foreach($new as $k=>$v)if(is_string($v)&&strlen($v)>400)throw new CrmError('INVALID_PROFILE');foreach(['city_ref','warehouse_ref','cargo_warehouse_ref','sender_ref','contact_ref'] as $f)if($new[$f]!==''&&!npRef($new[$f]))throw new CrmError('INVALID_NP_REF');if($new['confirmed']&&!crmSenderComplete($new))throw new CrmError('SENDER_PROFILE_INCOMPLETE',409);
++ crmPermit($actor,'settings.manage');crmRequireFreshLogin($actor);$reason=shopFinancialReason((string)($b['reason']??''));$old=crmOne($db,'SELECT * FROM rubizh_sender_profiles WHERE code=?',[$code]);if(!$old)throw new CrmError('NOT_FOUND',404);if((int)$old['version']!==(int)($b['version']??0))throw new CrmError('STALE_ORDER',409);$fields=['name','city','region','branch','cargo_branch','city_ref','warehouse_ref','cargo_warehouse_ref','sender_ref','contact_ref','phone','confirmed'];$new=$old;foreach($fields as $f)if(array_key_exists($f,$b))$new[$f]=$f==='confirmed'?(int)($b[$f]===true):(string)$b[$f];foreach($new as $k=>$v)if(is_string($v)&&strlen($v)>400)throw new CrmError('INVALID_PROFILE');foreach(['city_ref','warehouse_ref','cargo_warehouse_ref','sender_ref','contact_ref'] as $f)if($new[$f]!==''&&!npRef($new[$f]))throw new CrmError('INVALID_NP_REF');if($new['confirmed']&&!crmSenderComplete($new))throw new CrmError('SENDER_PROFILE_INCOMPLETE',409);
+  return crmTransaction($db,function()use($db,$code,$actor,$new,$old,$fields,$reason){$q=$db->prepare('UPDATE rubizh_sender_profiles SET '.implode(',',array_map(fn($f)=>"$f=?",$fields)).',version=version+1,updated_by=?,updated_at=UTC_TIMESTAMP() WHERE code=? AND version=?');$q->execute([...array_map(fn($f)=>$new[$f],$fields),$actor['id'],$code,$old['version']]);if(!$q->rowCount())throw new CrmError('STALE_ORDER',409);crmAudit($db,$actor,'sender',$code,'sender.update',$old,array_intersect_key($new,array_flip($fields)),$reason);return crmOne($db,'SELECT * FROM rubizh_sender_profiles WHERE code=?',[$code]);});
+ }
+ function crmConfigureSender(PDO $db,string $code): void {$p=crmOne($db,'SELECT * FROM rubizh_sender_profiles WHERE code=?',[$code]);if(!$p||!crmSenderComplete($p))throw new CrmError('SENDER_PROFILE_INCOMPLETE',409,['supplier'=>$code]);$refs=cfg('np_origin_refs')??[];$refs[$code]=['city_ref'=>$p['city_ref'],'warehouse_ref'=>$p['warehouse_ref'],'cargo_warehouse_ref'=>$p['cargo_warehouse_ref'],'confirmed'=>true,'cargo_confirmed'=>npRef($p['cargo_warehouse_ref']),'expected_area'=>$p['region']];$GLOBALS['crm_domain_config']=['np_staff_origin'=>[$code=>array_intersect_key($p,array_flip(['name','city','region','branch','cargo_branch']))],'np_origin_refs'=>$refs,'np_sender'=>['ref'=>$p['sender_ref'],'contact_ref'=>$p['contact_ref'],'phone'=>$p['phone'],'confirmed'=>true]];}
+--- a/api/staff/index.php
++++ b/api/staff/index.php
+@@ -33,4 +33,4 @@
+  if(preg_match('~^/settings/senders/([a-z_0-9]+)$~D',$path,$m)&&$method==='PUT')crmOut(crmSenderSave($db,$m[1],$a,$b));
+  if(preg_match('~^/settings/staff(?:/([a-f0-9]{32}))?$~D',$path,$m)&&in_array($method,['POST','PUT'],true))crmOut(crmStaffSave($db,$a,$b,$m[1]??null));
+  throw new CrmError('NOT_FOUND',404);
+-}catch(Throwable $e){if(isset($db)&&$db->inTransaction())$db->rollBack();$status=$e instanceof CrmError?$e->status:($e instanceof ShopOrderConflict?409:($e instanceof ShopPermissionException?403:($e instanceof JsonException?400:($e instanceof PDOException?503:409))));$code=$e instanceof CrmError?$e->reason:($e instanceof ShopOrderConflict?$e->reason:($e instanceof ShopPermissionException?'PERMISSION_DENIED':($e instanceof JsonException?'INVALID_JSON':($e instanceof PDOException?'SERVICE_UNAVAILABLE':'DOMAIN_CONFLICT'))));$details=$e instanceof CrmError||$e instanceof ShopOrderConflict?$e->details:[];http_response_code($status);$messages=['AUTH_REQUIRED'=>'Увійдіть до робочого простору.','PERMISSION_DENIED'=>'Недостатньо прав для цієї дії.','STALE_ORDER'=>'Замовлення змінилось. Оновіть дані перед повтором.','LOGIN_FAILED'=>'Перевірте email і пароль.','SENDER_PROFILE_INCOMPLETE'=>'Профіль відправника потребує підтверджених даних НП.'];$message=$messages[$code]??($e instanceof ShopOrderConflict?$e->getMessage():($code==='DOMAIN_CONFLICT'?$e->getMessage():$code));if($e instanceof PDOException)error_log('CRM database failure '.$GLOBALS['crm_request_id'].' '.$e->getCode());echo json_encode(['ok'=>false,'error'=>['code'=>$code,'message'=>$message,'details'=>$details],'meta'=>['request_id'=>$GLOBALS['crm_request_id'],'csrf'=>$_SESSION['staff_csrf']??null]],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);}
++}catch(Throwable $e){if(isset($db)&&$db->inTransaction())$db->rollBack();$status=$e instanceof CrmError?$e->status:($e instanceof ShopOrderConflict?409:($e instanceof ShopPermissionException?403:($e instanceof JsonException?400:($e instanceof PDOException?503:409))));$code=$e instanceof CrmError?$e->reason:($e instanceof ShopOrderConflict?$e->reason:($e instanceof ShopPermissionException?'PERMISSION_DENIED':($e instanceof JsonException?'INVALID_JSON':($e instanceof PDOException?'SERVICE_UNAVAILABLE':'DOMAIN_CONFLICT'))));$details=$e instanceof CrmError||$e instanceof ShopOrderConflict?$e->details:[];http_response_code($status);$messages=['AUTH_REQUIRED'=>'Увійдіть до робочого простору.','PERMISSION_DENIED'=>'Недостатньо прав для цієї дії.','STALE_ORDER'=>'Замовлення змінилось. Оновіть дані перед повтором.','LOGIN_FAILED'=>'Перевірте email і пароль.','REAUTH_REQUIRED'=>'Для цієї дії підтвердьте вхід: вийдіть і увійдіть ще раз.','SENDER_PROFILE_INCOMPLETE'=>'Профіль відправника потребує підтверджених даних НП.'];$message=$messages[$code]??($e instanceof ShopOrderConflict?$e->getMessage():($code==='DOMAIN_CONFLICT'?$e->getMessage():$code));if($e instanceof PDOException)error_log('CRM database failure '.$GLOBALS['crm_request_id'].' '.$e->getCode());echo json_encode(['ok'=>false,'error'=>['code'=>$code,'message'=>$message,'details'=>$details],'meta'=>['request_id'=>$GLOBALS['crm_request_id'],'csrf'=>$_SESSION['staff_csrf']??null]],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);}
+--- /dev/null
++++ b/tests/crm-settings-stepup.test.mjs
+@@ -0,0 +1,70 @@
++// Proposed regression tests for SEC-FRESH-01; not executed during the checkpoint.
++import {test} from 'node:test';
++import assert from 'node:assert/strict';
++import {readFileSync,writeFileSync} from 'node:fs';
++import {startCrm,password} from './helpers/crm-fixture.mjs';
++
++const skip=!process.env.RUBIZH_TEST_MYSQL_SOCKET;
++const reason='Synthetic settings freshness verification';
++
++test('staff and sender mutations refuse an aged OWNER before writes, then succeed after password re-login',{skip,timeout:180000},async()=>{
++ const s=await startCrm();
++ try{
++  let owner=await s.login('OWNER');
++  const settings=await owner.get('/settings');assert.equal(settings.status,200);
++  const sender=settings.data.data.sender_profiles.find(p=>p.code==='m_vin');assert.ok(sender);
++  const staffBody={email:'new-staff@fixture.test',name:'New Synthetic Staff',role:'READ_ONLY',password,reason};
++  const senderBody={...sender,name:'Updated Synthetic Sender',confirmed:false,reason};
++  const sid=owner.cookie.split('=')[1],file=s.dir+'/sess_'+sid;
++  const session=readFileSync(file,'utf8');assert.match(session,/staff_login_at\|i:\d+;/);
++  writeFileSync(file,session.replace(/staff_login_at\|i:\d+;/,'staff_login_at|i:'+(Math.floor(Date.now()/1000)-3600)+';'));
++  const auditCount=()=>+s.sql("SELECT COUNT(*) n FROM rubizh_staff_audit WHERE action IN ('staff.update','sender.update')")[0].n;
++  const beforeAudit=auditCount(),beforeSender=s.sql("SELECT name,version FROM rubizh_sender_profiles WHERE code='m_vin'")[0];
++  for(const [route,body,method] of [['/settings/staff',staffBody,'POST'],['/settings/senders/m_vin',senderBody,'PUT']]){
++   const rejected=await owner.send(route,body,method);
++   assert.equal(rejected.status,403);assert.equal(rejected.data.error.code,'REAUTH_REQUIRED');
++  }
++  assert.equal(s.sql("SELECT id FROM rubizh_staff_users WHERE email='new-staff@fixture.test'").length,0);
++  assert.deepEqual(s.sql("SELECT name,version FROM rubizh_sender_profiles WHERE code='m_vin'")[0],beforeSender);
++  assert.equal(auditCount(),beforeAudit);
++  assert.equal((await owner.get('/settings')).status,200,'stale login still permits authorized reads');
++  owner=await s.login('OWNER');
++  assert.equal((await owner.send('/settings/staff',staffBody)).status,200);
++  assert.equal((await owner.send('/settings/senders/m_vin',senderBody,'PUT')).status,200);
++  assert.equal(s.sql("SELECT id FROM rubizh_staff_users WHERE email='new-staff@fixture.test'").length,1);
++  assert.equal(+s.sql("SELECT version FROM rubizh_sender_profiles WHERE code='m_vin'")[0].version,+beforeSender.version+1);
++  assert.equal(auditCount(),beforeAudit+2);
++  const reader=await s.login('READ_ONLY');
++  const denied=await reader.send('/settings/staff',{...staffBody,email:'reader-denied@fixture.test'});
++  assert.equal(denied.status,403);assert.equal(denied.data.error.code,'PERMISSION_DENIED');
++ }finally{s.stop();}
++});
++
++test('settings freshness proof is bound to the acting staff session and verified actor, with the configured window',{skip,timeout:180000},async()=>{
++ const s=await startCrm();
++ try{
++  // A function probe on the isolated HTTP PHP SAPI, with no database or mutation.
++  writeFileSync(s.site+'/stepup-probe.php',`<?php
++  function cfg($key){return $key==='staff_stepup_seconds'?120:null;}
++  require __DIR__.'/staff/auth.php';
++  $id=str_repeat('1',32);$other=str_repeat('2',32);$actor=['id'=>$id,'role'=>'OWNER'];
++  $_SESSION=['staff_id'=>$id,'staff_login_at'=>time()];$GLOBALS['crm_staff_actor']=$actor;
++  switch($_GET['case']??''){
++   case 'wrong-session':$_SESSION['staff_id']=$other;break;
++   case 'wrong-verified':$GLOBALS['crm_staff_actor']['id']=$other;break;
++   case 'customer-only':unset($_SESSION['staff_id'],$_SESSION['staff_login_at']);$_SESSION['customer_id']=$id;$_SESSION['login_time']=time();break;
++   case 'missing-time':unset($_SESSION['staff_login_at']);break;
++   case 'future-time':$_SESSION['staff_login_at']=time()+60;break;
++   case 'outside-window':$_SESSION['staff_login_at']=time()-121;break;
++   case 'inside-window':$_SESSION['staff_login_at']=time()-119;break;
++  }
++  header('Content-Type: application/json');try{crmRequireFreshLogin($actor);echo json_encode(['ok'=>true]);}
++  catch(CrmError $e){http_response_code($e->status);echo json_encode(['code'=>$e->reason]);}
++  `);
++  for(const name of ['wrong-session','wrong-verified','customer-only','missing-time','future-time','outside-window']){
++   const rejected=await s.get('/stepup-probe.php?case='+name);
++   assert.equal(rejected.status,403,name);assert.equal(rejected.data.code,'REAUTH_REQUIRED');
++  }
++  assert.equal((await s.get('/stepup-probe.php?case=inside-window')).status,200);
++ }finally{s.stop();}
++});

@@ -101,16 +101,16 @@ Production deploy, production migrations, включение v3, PIM-патчи,
 
 ## Глобальный этап 2 — план checkpoint, 2026-10-12 UTC (checkpoint)
 
-Рабочая ветка: `hardening/stage-2-audit-fixes`; исходный аудит SITE `51c83d8`, итоговый код `1fcca317f381c33ea29b40ccb12d99b2b65c439b`. История этапа 1 выше сохраняется. PIM и отдельный CRM-репозиторий остаются read-only; миграции и live-операции в этот план выполнения не входят.
+Рабочая ветка: `hardening/stage-2-audit-fixes`; исходный аудит SITE `51c83d8`, итоговый код `e9ce24dffb41751b8e08b13b4dff5a5c6056d203`. История этапа 1 выше сохраняется. PIM и отдельный CRM-репозиторий остаются read-only; миграции и live-операции в этот план выполнения не входят.
 
 | Шаг | Фактическое состояние | Что ещё требуется |
 |---|---|---|
-| Независимый аудит направлений | Отчёты и частные доказательства собраны; воспроизводимые сценарии отделены от статических предположений | 126 строк/36 FIXED; confidence/disposition в03; unresolved HIGH details private |
-| Разрешённые SITE-коррекции | Q-8 K1–K6, контрактная валидация, сохранение оплаченного snapshot, синхронизация диагностики/версий, доставка, UI/a11y, SEO, локальная readiness и installer gates реализованы | Поздние коррекции зафиксированы и scoped review approved; whole SECURITY remains incomplete |
-| Повтор проверки кода | Baseline 351/351; первый полный SITE 435/435; неизменённый PIM 682/682; все без skipped | Полный прогон точного итогового кода: `450/450 PASS;0FAIL/SKIP/CANCELLED;626167ms, exact code1fcca317` |
+| Независимый аудит направлений | Отчёты и частные доказательства собраны; воспроизводимые сценарии отделены от статических предположений | 127 строк/36 FIXED; confidence/disposition в03; unresolved HIGH details private |
+| Разрешённые SITE-коррекции | Q-8 K1–K6, контрактная валидация, сохранение оплаченного snapshot, синхронизация диагностики/версий, доставка, UI/a11y, SEO, локальная readiness и installer gates реализованы | Поздние коррекции зафиксированы и scoped review approved; fresh whole SECURITY source review completed with explicit limits |
+| Повтор проверки кода | Baseline 351/351; первый полный SITE 435/435; неизменённый PIM 682/682; все без skipped | Полный прогон точного итогового кода: `450/450 PASS;0FAIL/SKIP/CANCELLED;626167ms, tested1fcca317, identical app/tests in e9ce24d` |
 | Browser matrix | Финальный повтор315/315+21/21, ADDENDUM210/210, cabinet21/21;3движка×7ширин | Final app tree verified; no production/provider certification |
-| Независимое финальное ревью | Отдельные платежные, changes и security-проверки выполнены; выявлены поздние пункты | **INCOMPLETE** до итогового fresh whole SECURITY-заключения; corrections scoped approved |
-| CI и checkpoint | Exact code CI PHP8.2/8.3 SUCCESS | `1fcca317f381c33ea29b40ccb12d99b2b65c439b`, `[38304082586](https://github.com/lieverifying/rubizh/actions/runs/38304082586), SUCCESS; exact doc-only checkpoint CI checked after commit`; затем документы и статус без преждевременного verified-тега |
+| Независимое финальное ревью | Отдельные платежные, changes и security-проверки выполнены; выявлены поздние пункты | **COMPLETED source review**; dynamic/runtime limits remain explicit |
+| CI и checkpoint | Exact schedulinge9 CI PHP8.2/8.3 SUCCESS; final doc-only checkpoint separately | `e9ce24dffb41751b8e08b13b4dff5a5c6056d203`, `[38307425169](https://github.com/lieverifying/rubizh/actions/runs/38307425169) SUCCESS on e9ce24d, PHP8.2/8.3; exact final doc-only checkpoint CI checked after push`; затем документы и статус без преждевременного verified-тега |
 
 Проверки после `56acdcb` включают дополнительные денежные границы, сохранение количества и N комплектов при восстановлении корзины, а также доказанный источник email для прав сотрудника. Детали неразрешённых HIGH остаются частными; перечень для публикации — только ID/severity. Зелёный локальный набор не закрывает отдельную внешнюю находку или решение владельца.
 
@@ -132,6 +132,8 @@ Production deploy, production migrations, включение v3, PIM-патчи,
 | Q-9: inventory assets и баннеры | Сверить реальные ссылки, release artifact и файлы отката; обновить документ инвентаризации и отдельный перечень недостающих баннеров | **Без удаления и генерации.** Удаление — отдельное решение с планом отката; баннеры требуют утверждённых файлов |
 | Live E2E глобального этапа 6 | Отдельно согласовать sandbox/live webhook, оплату, SMS/email, НП/ТТН, scheduler и восстановление на целевом хостинге | **DEFERRED**, не PASS. Нужны конкретный разрешённый режим, безопасные данные и provider/hosting-конфигурация; текущие mock-прогоны не заменяют live-доказательства |
 
-Текущий doc-only checkpoint фиксирует завершённые коррекции, проверки и незавершённые gate честно. Обязательный whole SECURITY проход и exhaustive endpoint/method/role evidence остаются следующим аудитным действием. При остающихся внешних HIGH, решениях владельца или незавершённом review статус остаётся **INCOMPLETE / production NO-GO**; этапы 3–6 не объявляются выполненными.
+Текущий doc-only checkpoint фиксирует завершённые коррекции, проверки и незавершённые gate честно. Fresh whole SECURITY source pass завершён; dynamic endpoint evidence и его coverage limits приведены в итоговом отчёте. При остающихся внешних HIGH, решениях владельца или незавершённом review статус остаётся **INCOMPLETE / production NO-GO**; этапы 3–6 не объявляются выполненными.
 
 QA-20: historical raw privacy не обеспечивается current redaction в public repo. No force/history rewrite performed; separate owner decision required.
+
+Final endpoint Quality Gate:132inventory rows,1920HTTP requests;831/831explicit expectations,2697/2697overlapping semantic checks,975snapshots+2A↔B whole-domain comparisons;0final assertion failures. ANY232/232 and narrowaction36/36; all inventory endpoints requested, full state/role/token combinations remainPARTIAL. Details and limits:stage-2/endpoint-quality-gate.md. Fresh SECURITY source review COMPLETED(15checks+1probe), no newHIGH/CRITICAL; MEDIUM SEC-FRESH-01 unapplied CRM proposal. OverallNO-GO: exhaustive dynamic certification and historical privacy requirement unmet, noStage2verifiedtag/Stage3.

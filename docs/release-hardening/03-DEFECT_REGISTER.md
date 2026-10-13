@@ -233,3 +233,7 @@ QA-12: CI PHP8.2 reproduced an order-retry timeout; fixed1500ms sleeps replaced 
 QA-12 additional correction: `1fcca31` observes HTTP200/networkidle before existing light-theme assertions; all21 route/width cases,8000ms locator bound,4.5 contrast and no-overflow assertions retained. Independent scoped review accepted exact file bytes; targeted1/1 PASS. Full final outcome is recorded below in checkpoint, not inferred from this targeted run.
 
 | QA-20 | MEDIUM | OWNER DECISION | CONFIRMED / Git object + API visibility | Унаследованные unredacted raw присутствуют в публичной Git history; current redaction не удаляет историю. Rewrite/force-push запрещён владельцем и не выполнен | Исторический2a338da; privacy metadata retained locally |
+
+| SEC-FRESH-01 | MEDIUM | CRM OWNER DECISION | CONFIRMED / fresh source + bounded HTTP probe | Stale OWNER login can reach staff/sender mutation validation; proposed actor-bound settings freshness gate, not applied | stage-2/proposals/CRM-SEC-FRESH-01.patch; fresh review1fcca, identical sourcee9ce24d |
+
+QA-12 latest scheduling correction e9ce24d: doc-only2c06cde CI PHP8.3 failed bounded8-client capacity assertion with protective503 (PHP8.2 PASS). Workflow now selects all files with concurrency1;8/96 still requiresall200,32/160 still200/503, no assertions/skips/timeouts weakened. Isolated existing runtime test1/1PASS,16.36s; independent review repeated6/6actualCI guard controls. Failedrun38306094757 retained asFAIL; later exactcheckpointCI is separate evidence.
