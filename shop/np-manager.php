@@ -7,7 +7,7 @@ $notice='';$error='';$diagnostics=[];$orderId=max(0,(int)($_GET['order']??$_POST
 if(($_SERVER['REQUEST_METHOD']??'GET')==='POST'){
  try{
   if(!is_string($_POST['csrf']??null)||!hash_equals($_SESSION['csrf'],$_POST['csrf']))throw new RuntimeException('Оновіть сторінку: токен форми змінився.');
-  if(isset($_SERVER['HTTP_ORIGIN'])&&!in_array($_SERVER['HTTP_ORIGIN'],['https://rubizh.shop','https://www.rubizh.shop'],true))throw new RuntimeException('Недозволений запит.');
+  if(!shopRequestOriginAllowed(['https://rubizh.shop','https://www.rubizh.shop']))throw new RuntimeException('Недозволений запит.');
   shopLimit($db,'np-manager',30,60);$action=(string)($_POST['action']??'');if(!in_array($action,['mono_refund','mono_reconcile','mono_not_created','confirm'],true))shopRequirePermission($actor,'shipment.manage');$shipId=(int)($_POST['shipment_id']??0);
   if($action==='mail_retry'){
     $db->prepare("UPDATE rubizh_order_mail SET status='pending',attempts=0,next_at=UTC_TIMESTAMP(),locked_at=NULL,error='',updated_at=UTC_TIMESTAMP() WHERE order_id=? AND status='failed'")->execute([$orderId]);$db->prepare("UPDATE rubizh_buyer_mail SET status='pending',attempts=0,next_at=UTC_TIMESTAMP(),locked_at=NULL,error='' WHERE order_id=? AND status='failed'")->execute([$orderId]);npAudit($db,$actor,'buyer_mail_retry',$orderId);$notice='Невдалі листи повернено в чергу. Планувальник повторить надсилання.';

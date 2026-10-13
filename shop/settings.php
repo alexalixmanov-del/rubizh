@@ -8,7 +8,7 @@ try{$db=shopStoreDatabase();$actor=npManagerId();shopRequirePermission($actor,'p
 $error='';
 if(($_SERVER['REQUEST_METHOD']??'GET')==='POST')try{
  if(!is_string($_POST['csrf']??null)||!hash_equals($_SESSION['csrf'],$_POST['csrf']))throw new RuntimeException('Оновіть сторінку.');
- if(isset($_SERVER['HTTP_ORIGIN'])&&!in_array($_SERVER['HTTP_ORIGIN'],['https://rubizh.shop','https://www.rubizh.shop'],true))throw new RuntimeException('Недозволений запит.');shopLimit($db,'site-settings',10,60);
+ if(!shopRequestOriginAllowed(['https://rubizh.shop','https://www.rubizh.shop']))throw new RuntimeException('Недозволений запит.');shopLimit($db,'site-settings',10,60);
  $raw=['seller'=>$_POST['seller']??[],'ga4_id'=>$_POST['ga4_id']??'','meta_pixel_id'=>$_POST['meta_pixel_id']??'','order_notification_email'=>$_POST['order_notification_email']??'','donation_enabled'=>isset($_POST['donation_enabled']),'donation_percent'=>$_POST['donation_percent']??3,'donation_report_url'=>$_POST['donation_report_url']??'','donation_schedule'=>$_POST['donation_schedule']??'','instagram_url'=>$_POST['instagram_url']??'','tiktok_url'=>$_POST['tiktok_url']??'','supplier_contacts'=>[]];
  foreach(is_array($_POST['supplier']??null)?$_POST['supplier']:[] as $code=>$row)if(is_array($row))$raw['supplier_contacts'][$code]=['channel'=>$row['channel']??'email','recipient'=>$row['recipient']??'','enabled'=>isset($row['enabled'])];
  shopSettingsSave($raw);npAudit($db,$actor,'site_settings_saved');$_SESSION['settings_notice']='Налаштування збережено. Оновіть вітрину, щоб перевірити зміни.';header('Location: /shop/settings.php',true,303);exit;

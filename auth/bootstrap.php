@@ -33,7 +33,7 @@ try{rubizhPublicGate('account',600);}catch(RubizhHttpException $e){
 function authCsrf(array $input): void {
     $token=$input['csrf']??null;$expected=$_SESSION['csrf']??null;
     if(!is_string($token)||!is_string($expected)||$expected===''||!hash_equals($expected,$token)
-       ||isset($_SERVER['HTTP_ORIGIN'])&&!in_array($_SERVER['HTTP_ORIGIN'],shopAllowedOrigins(),true))
+       ||!shopRequestOriginAllowed(shopAllowedOrigins()))
         throw new RuntimeException('Оновіть сторінку та спробуйте ще раз.');
 }
 function esc(string $s): string { return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); }

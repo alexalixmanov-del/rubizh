@@ -55,9 +55,19 @@ function shopAllowedOrigins(): array {
         if(cfg('staging_allow_loopback')===true&&isset($_SERVER['HTTP_ORIGIN'])&&preg_match('~^http://127\.0\.0\.1:\d+$~D',(string)$_SERVER['HTTP_ORIGIN']))$out[]=(string)$_SERVER['HTTP_ORIGIN'];}
     return $out;
 }
+// Callers validate CSRF before changing data. no-referrer gives native forms an
+// opaque Origin; browser-controlled metadata identifies their same-origin navigation.
+function shopRequestOriginAllowed(array $allowed): bool {
+    $origin=$_SERVER['HTTP_ORIGIN']??null;
+    return $origin===null||in_array($origin,$allowed,true)
+        ||$origin==='null'
+            &&($_SERVER['HTTP_SEC_FETCH_SITE']??'')==='same-origin'
+            &&($_SERVER['HTTP_SEC_FETCH_MODE']??'')==='navigate'
+            &&($_SERVER['HTTP_SEC_FETCH_DEST']??'')==='document';
+}
 function shopCsrf(array $input): void {
     if(!is_string($input['csrf'] ?? null) || !hash_equals($_SESSION['csrf'],$input['csrf']))shopJson(['ok'=>false,'error'=>'Оновіть сторінку та спробуйте ще раз.'],403);
-    if(isset($_SERVER['HTTP_ORIGIN']) && !in_array($_SERVER['HTTP_ORIGIN'],shopAllowedOrigins(),true))shopJson(['ok'=>false,'error'=>'Недозволений запит.'],403);
+    if(!shopRequestOriginAllowed(shopAllowedOrigins()))shopJson(['ok'=>false,'error'=>'Недозволений запит.'],403);
 }
 function shopLimit(PDO $db,string $kind,int $max,int $window=3600): void {
     $scope=(string)($_SESSION['checkout_scope']??session_id());
