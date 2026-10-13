@@ -5,8 +5,7 @@ require_once __DIR__.'/google-client.php';
 try {
     if (!googleEnabled()) { throw new RuntimeException('Вхід через Google ще не підключений. Скористайтеся email.'); }
     if ($_SERVER['REQUEST_METHOD']==='POST') {
-        $csrf=$_POST['csrf'] ?? '';
-        if (!is_string($csrf) || !hash_equals($_SESSION['csrf'],$csrf)) { throw new RuntimeException('Оновіть сторінку та спробуйте ще раз.'); }
+        authCsrf($_POST);
         if (strtolower((string)($_SERVER['HTTP_HOST'] ?? ''))!=='rubizh.shop') { throw new RuntimeException('Відкрийте rubizh.shop та почніть вхід ще раз.'); }
         $mode=$_POST['mode'] ?? 'login';
         if (!in_array($mode,['login','link'],true)) { throw new RuntimeException('Почніть вхід ще раз.'); }

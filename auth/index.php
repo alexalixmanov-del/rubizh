@@ -29,8 +29,7 @@ $token = $_GET['token'] ?? '';
 if (!is_string($token)) { $token = ''; }
 if ($_SERVER['REQUEST_METHOD']==='POST') {
     try {
-        $csrf = $_POST['csrf'] ?? '';
-        if (!is_string($csrf) || !hash_equals($_SESSION['csrf'], $csrf)) { throw new RuntimeException('Оновіть сторінку та спробуйте ще раз.'); }
+        authCsrf($_POST);
         $action = $_POST['action'] ?? '';
         if ($action==='logout') {
             $_SESSION=[]; session_regenerate_id(true); $_SESSION['csrf']=bin2hex(random_bytes(32));

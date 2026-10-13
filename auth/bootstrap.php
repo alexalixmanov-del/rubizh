@@ -29,6 +29,13 @@ try{rubizhPublicGate('account',600);}catch(RubizhHttpException $e){
         echo '<p><a href="/#contacts">Звернутися до менеджера</a></p></html>';
     }exit;
 }
+// All customer-auth POST actions share the storefront's exact origin policy.
+function authCsrf(array $input): void {
+    $token=$input['csrf']??null;$expected=$_SESSION['csrf']??null;
+    if(!is_string($token)||!is_string($expected)||$expected===''||!hash_equals($expected,$token)
+       ||isset($_SERVER['HTTP_ORIGIN'])&&!in_array($_SERVER['HTTP_ORIGIN'],shopAllowedOrigins(),true))
+        throw new RuntimeException('Оновіть сторінку та спробуйте ще раз.');
+}
 function esc(string $s): string { return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); }
 function database(): PDO {
     static $db;
