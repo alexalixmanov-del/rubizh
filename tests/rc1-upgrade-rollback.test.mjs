@@ -170,6 +170,13 @@ for(const baseline of baselines)test(`RC1 upgrade over production-era SITE ${bas
   assert.ok(readFileSync(path.join(www,'api/config.php'),'utf8').includes("'np_manager_emails'"),'private config with manager list preserved');
   for(const [rel,hash] of Object.entries(JSON.parse(readFileSync(path.join(unpacked,'rubizh/RELEASE-MANIFEST.json'),'utf8')).files))if(!privateFiles.includes(rel))assert.equal(sha(path.join(www,rel)),hash,'installed '+rel);
   step('deploy-update',{installed_files:built.files});
+  // The live window between the code swap and the remaining migrations: RC1 code on the P0-only schema keeps the
+  // shop and the cabinet serving; the staff API refuses until its own migration instead of failing half-way.
+  server=await serve(dir,www);
+  for(const p of ['/','/shop/catalog.php','/sitemap.php'])assert.equal((await server.req(p)).status,200,'window '+p+server.errors());
+  const windowCabinet=await server.req('/auth/?tab=orders&order=1001',{headers:signed(dir,A)});assert.equal(windowCabinet.status,200);assert.ok(windowCabinet.text.includes('RZ-OLD-1001'),'cabinet during the migration window');
+  assert.equal((await server.req('/api/staff/auth/session')).status,503,'staff API waits for the CRM migration');
+  server.stop();server=null;step('code-swap window',{storefront:200,cabinet:200,staff_api:503});
   // 5. Remaining guarded migrations in operator order.
   const migrate=()=>{
    ok(cli(path.join(www,'dev/prepare-runtime.php')),'prepare-runtime');
@@ -185,12 +192,18 @@ for(const baseline of baselines)test(`RC1 upgrade over production-era SITE ${bas
   const after=digest(db,dir);
   // No data loss: every production-era table keeps its rows and the values of its original columns.
   const oldOnly=digest(db,dir,Object.fromEntries(Object.entries(oldColumns).filter(([t])=>!volatile.has(t))));
-  const lost=[];for(const [t,v] of Object.entries(oldOnly.tables)){const b=before.tables[t];if(t==='meta')continue;if(!v||v==='MISSING_COLUMNS'||v.count!==b.count||v.sha256!==b.sha256)lost.push(t);}
+  // Live requests in the code-swap window may append rows (e.g. the cabinet records a legacy order's creation event),
+  // so the check is: every production-era row survives with identical original columns (multiset); additions are reported.
+  const lost=[],added={};for(const [t,v] of Object.entries(oldOnly.tables)){if(t==='meta')continue;if(!v||v==='MISSING_COLUMNS'){lost.push(t);continue;}
+   const left=new Map();for(const r of oldOnly.rows[t]){const k=JSON.stringify(r);left.set(k,(left.get(k)||0)+1);}
+   let missing=0;for(const r of before.rows[t]){const k=JSON.stringify(r);if(left.get(k))left.set(k,left.get(k)-1);else missing++;}
+   if(missing)lost.push(t);if(v.count>before.tables[t].count)added[t]=v.count-before.tables[t].count;}
   // meta: every production-era key survives with its value; only schema-version markers may advance.
   const metaNow=Object.fromEntries(oldOnly.rows.meta),metaChanged=before.rows.meta.filter(([k,v])=>metaNow[k]!==v).map(([k,v])=>[k,v,metaNow[k]??null]);
   assert.deepEqual(metaChanged.filter(([k,,now])=>now===null||!/schema$/.test(k)),[],'production-era meta keys lost or changed');
-  assert.deepEqual(lost,[],'production-era rows/columns changed or lost: '+JSON.stringify(lost.map(t=>[t,before.columns[t],before.rows[t],oldOnly.rows[t]])));
-  step('data retained',{tables_compared:Object.keys(oldOnly.tables).length,lost:lost.length,meta_schema_markers_advanced:metaChanged,new_tables:Object.keys(after.tables).filter(t=>!(t in before.tables)).length,triggers:after.triggers});
+  assert.ok(Object.keys(added).every(t=>t==='rubizh_order_timeline')&&(added.rubizh_order_timeline??0)<=1,'only the cabinet window may add one legacy creation event: '+JSON.stringify(added));
+  assert.deepEqual(lost,[],'production-era rows/columns changed or lost: '+JSON.stringify(lost.map(t=>[t,before.columns[t],before.rows[t],oldOnly.rows?.[t]])));
+  step('data retained',{tables_compared:Object.keys(oldOnly.tables).length,lost:lost.length,rows_added_by_live_requests:added,meta_schema_markers_advanced:metaChanged,new_tables:Object.keys(after.tables).filter(t=>!(t in before.tables)).length,triggers:after.triggers});
   // R4: terminal orders release stock, paid ones stay committed, open orders stay reserved.
   const res=Object.fromEntries(JSON.parse(ok(sqlClient(db,['-N','-e','SELECT JSON_ARRAYAGG(JSON_ARRAY(order_id,status)) FROM rubizh_stock_reservations']),'reservations').trim()));
   assert.deepEqual(res,{1001:'ACTIVE',1002:'ACTIVE',1003:'COMMITTED',1004:'COMMITTED',1005:'COMMITTED',1007:'RELEASED',1008:'RELEASED',1009:'RELEASED',1011:'ACTIVE',1012:'COMMITTED',1013:'ACTIVE',1014:'ACTIVE',1015:'ACTIVE'});
