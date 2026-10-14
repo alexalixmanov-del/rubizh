@@ -1,5 +1,40 @@
 # 03 — DEFECT REGISTER
 
+> Этап 2-B: этот блок — текущая сверка реестра; Stage2 remains **GO_STAGE2_ONLY**, production **NO-GO**. Статусы FIXED ниже означают независимо рассмотренные локальные исправления, не завершённый полный final gate. R9/runtime, full SITE, purchase/native browser proof, paired Lighthouse, root review и exact code CI завершены по hash-bound private root validation. Публикация единственного doc-only checkpoint, его exact CI и verified tag ещё подтверждаются отдельно retained metadata; этот private patch их выполнение не заявляет. Остальные OWNER/PIM/CRM решения не изменены.
+
+## Текущий реестр этапа 2-B
+
+GO этапа2 вступает в силу после SUCCESS CI точного doc-only checkpoint; production NO-GO сохраняется. Локальный annotated rubizh-stage-2-verified и обычный push тега разрешены владельцем после этого CI.
+
+Stage2 rows: 128; unique IDs: 128. Counts computed from the rendered Stage2 table, not copied from historical totals.
+
+| Status | Count |
+|---|---|
+| ACCEPTED(owner), nonblocking | 1 |
+| CRM OWNER DECISION | 3 |
+| FIXED | 39 |
+| FIXED (approved variant A); measured mixed deltas; B/C deferred | 1 |
+| FIXED (owner R1 scope) | 2 |
+| FIXED (owner R5 follow-up) | 1 |
+| FIXED / Linux green; macOS not rerun | 7 |
+| FIXED; proxy value BLOCKED(owner) | 2 |
+| OPEN | 18 |
+| OWNER DECISION | 13 |
+| PARTIAL / OPEN | 2 |
+| PIM OWNER DECISION | 5 |
+| UNCONFIRMED | 33 |
+| UNCONFIRMED / provider decision | 1 |
+
+Public unresolved HIGH/CRITICAL: ID/severity only; the older retained body is historical, not a new disclosure or release approval.
+
+| ID | Severity |
+|---|---|
+
+CRM dependency stays read-only/deferred stage4; PIM scope stays PIMC-P1 only; QA-20 accepted historical risk remains nonblocking; no history rewrite or live operations. R8 hosting trusted_proxies value stays BLOCKED(owner).
+
+## Historical register body with scoped Stage2 dispositions
+
+
 Обновлено 2026-10-11 (сессия 2: P2/P3, QA, ADDENDUM №2, независимое ревью). Статусы: **FIXED** — исправлено + regression test зелёный локально; **OPEN** — не исправлено; **DECISION** — нужен ответ владельца; **NO-DEFECT** — проверено, дефекта нет; **PIM** — только предложение, PIM не трогаем.
 
 Все исправления в ветке `hardening/site-release-20261011`. Тесты: `tests/release-hardening.test.mjs`, `tests/color-gallery.test.mjs`, `tests/ui-hardening.test.mjs`, `tests/seo-hardening.test.mjs`, добавления в `tests/pim-v3-sync.test.mjs`, `tests/pim-v3-browser.test.mjs`.
@@ -106,8 +141,8 @@ CONFIRMED-RAW означает подтверждение в исходном ra
 | A11Y-11 | LOW | UNCONFIRMED | CANDIDATE | мелкий текст 8–11 px (`head-bundle…css:246,251`, `auth/login-refresh.css:44,49,50`); ссылки-кнопки без min-height. | [raw/accessibility.md](stage-2/raw/accessibility.md) |
 | A11Y-12 | LOW | UNCONFIRMED | CANDIDATE | нет живой области для итога/количества корзины (`index.html:1003-1015`). | [raw/accessibility.md](stage-2/raw/accessibility.md) |
 | ARCH-01 | HIGH | FIXED | CANDIDATE | детали в закрытом хранилище | `336ddd2` |
-| ARCH-02 | HIGH | OWNER DECISION | private | Детали приватны до исправления | [raw/architecture.md](stage-2/raw/architecture.md) |
-| ARCH-03 | MEDIUM | OWNER DECISION | CANDIDATE | выключение `pim_v3_sync` — не откат | [raw/architecture.md](stage-2/raw/architecture.md) |
+| ARCH-02 | HIGH | FIXED | red/green + independent review | Server opt-in строго true; контракт 3 всегда защищён | 4a28331,9e8dc28 |
+| ARCH-03 | MEDIUM | FIXED (owner R1 scope) | red/green + independent review | Legacy opt-in не позволяет писать contract3; metadata flag не обходит физическую версию модели | 4a28331,9e8dc28 |
 | ARCH-04 | HIGH | FIXED | CANDIDATE | детали в закрытом хранилище | `d5384a8` |
 | ARCH-05 | MEDIUM | OWNER DECISION | CANDIDATE | две реализации возврата с разными условиями | [raw/architecture.md](stage-2/raw/architecture.md) |
 | ARCH-06 | MEDIUM | OWNER DECISION | CANDIDATE | проекция состояния заказа считается в нескольких местах и расходится | [raw/architecture.md](stage-2/raw/architecture.md) |
@@ -118,9 +153,9 @@ CONFIRMED-RAW означает подтверждение в исходном ra
 | ARCH-11 | LOW | UNCONFIRMED | CANDIDATE | клиент дублирует расчёт цен; мёртвый промокод «РУБІЖ10» (`assets/shop-client.2026101101.js:4074,5560-5563`); 19 старых бандлов в `assets/`. | [raw/architecture.md](stage-2/raw/architecture.md) |
 | ARCH-12 | LOW | UNCONFIRMED | CANDIDATE | отмена из CRM записывается как отмена покупателем (`staff/operations.php:16` → `shopCancelOrder`). | [raw/architecture.md](stage-2/raw/architecture.md) |
 | ARCH-P1 | LOW | PIM OWNER DECISION | CANDIDATE | `PRODUCTION_SYNC_ENABLED`/`PRODUCTION_AUTOPRICES_ENABLED` (`app/lib/production-ui.inc.js:3`) не блокируют публикацию; `app/server-contract.md:3`  | [raw/architecture.md](stage-2/raw/architecture.md) |
-| DB-01 | HIGH | UNCONFIRMED end-to-end | private | Детали приватны до исправления | [raw/database.md](stage-2/raw/database.md) |
-| DB-02 | HIGH | OWNER DECISION | private | Детали приватны до исправления | [raw/database.md](stage-2/raw/database.md) |
-| DB-03 | HIGH | OWNER DECISION | private | Детали приватны до исправления | [raw/database.md](stage-2/raw/database.md) |
+| DB-01 | HIGH | FIXED | two-SKU regression + independent review | SKU lock serializes reserves; no secondary-index gap lock; one bounded transaction retry | 17adae4 |
+| DB-02 | HIGH | FIXED | nonwaiting/version-race regression + independent review | Quote/version read unlocked; final optimistic PRICE_CHANGED; sync-only version writer lock | c946be4 |
+| DB-03 | HIGH | FIXED | feed/terminal/refund/timezone regressions + independent review | Observed stock reconciles committed sales; returned/refunded/cancelled release; production migration not executed | 4775903,56f5c40,a2d577f,62518b9 |
 | DB-04 | MEDIUM | UNCONFIRMED | CANDIDATE | ленивая DDL создаёт `rubizh_stock_reservations` без `status/committed_at/released_at` | [raw/database.md](stage-2/raw/database.md) |
 | DB-05 | MEDIUM | UNCONFIRMED | CANDIDATE | запросы тика жизненного цикла и воркера оплат без индексов | [raw/database.md](stage-2/raw/database.md) |
 | DB-06 | MEDIUM | UNCONFIRMED | CANDIDATE | `SELECT p.*` для карточек каталога тянет MEDIUMTEXT | [raw/database.md](stage-2/raw/database.md) |
@@ -132,22 +167,22 @@ CONFIRMED-RAW означает подтверждение в исходном ra
 | FPAY-02 | HIGH | FIXED | red/green + independent review | Неполные cancelList facts не устанавливают полный возврат | `d041484` |
 | FPAY-03 | MEDIUM | UNCONFIRMED / provider decision | code CONFIRMED, provider unverified | cancelList на invoice success: требуется подтверждение provider contract | final payment review private |
 | LOG-01 | HIGH | FIXED | CANDIDATE | детали в закрытом хранилище | `b690451` |
-| LOG-02 | HIGH | OWNER DECISION | private | Детали приватны до исправления | [raw/logistics.md](stage-2/raw/logistics.md) |
-| LOG-03 | MEDIUM | OPEN | CONFIRMED-RAW | состояния отправки не монотонны; удалённая в НП ТТН оставляет заказ «отправлен» | [raw/logistics.md](stage-2/raw/logistics.md) |
+| LOG-02 | HIGH | FIXED | late-match/owner recovery regressions + independent review | Fresh OWNER login/reason/audit; complete aged reconciliation before no-created; verified14digit bind | 4c58f8b |
+| LOG-03 | MEDIUM | FIXED | monotonic raw-status regressions + independent review | Shipment status moves forward; provider deletion becomes explicit supplier notice | 4c58f8b |
 | LOG-04 | MEDIUM | OWNER DECISION | CANDIDATE | два источника точек отправки и отправителя | [raw/logistics.md](stage-2/raw/logistics.md) |
 | LOG-05 | MEDIUM | OWNER DECISION | CANDIDATE | строки без поставщика в оплаченном заказе нельзя исправить | [raw/logistics.md](stage-2/raw/logistics.md) |
 | LOG-06 | MEDIUM | OWNER DECISION | CANDIDATE | CRM не может исправить/проверить адрес доставки | [raw/logistics.md](stage-2/raw/logistics.md) |
 | LOG-07 | LOW | UNCONFIRMED | CANDIDATE | legacy-черновик без оплаты; черновик у отменённого по истечению заказа; «повтор заблоковано» при сбое чтения до `creating` (`np-manager.php:28-31 | [raw/logistics.md](stage-2/raw/logistics.md) |
 | LOG-08 | LOW | UNCONFIRMED | CANDIDATE | агрегация отправки игнорирует последующий возврат денег (`np-fulfillment.php:206-214`) — флаг `SHIPMENT_REVIEW_REQUIRED`. | [raw/logistics.md](stage-2/raw/logistics.md) |
 | PAY-01 | HIGH | FIXED | CANDIDATE | детали в закрытом хранилище | `4439b1d` |
-| PAY-02 | HIGH | OWNER DECISION | private | Детали приватны до исправления | [raw/payments.md](stage-2/raw/payments.md) |
-| PAY-03 | MEDIUM | OPEN | CONFIRMED-RAW | MEDIUM, CONFIRMED (существующим тестом) | [raw/payments.md](stage-2/raw/payments.md) |
+| PAY-02 | HIGH | FIXED | mock bank-truth regressions + independent review | Uncertain invoice recovery audited; no paid without bank confirmation; owner bank-not-created option | 6c3818c,62518b9 |
+| PAY-03 | MEDIUM | FIXED | signed expiry/deadline regressions + independent review | Invoice expiry fails payment; order stays payable until unchanged payment_due | 6c3818c,1722bed,62518b9 |
 | PAY-04 | MEDIUM | UNCONFIRMED | CANDIDATE | MEDIUM, LIKELY | [raw/payments.md](stage-2/raw/payments.md) |
 | PAY-05 | MEDIUM | UNCONFIRMED | CANDIDATE | MEDIUM, LIKELY | [raw/payments.md](stage-2/raw/payments.md) |
 | PAY-06 | LOW | OPEN | CONFIRMED-RAW | LOW, CONFIRMED (статически) | [raw/payments.md](stage-2/raw/payments.md) |
 | PERF-01 | MEDIUM | OWNER DECISION | CANDIDATE | First visible storefront depends on runtime compilation (MEDIUM, high confidence) | [raw/performance.md](stage-2/raw/performance.md) |
 | PERF-02 | MEDIUM | OWNER DECISION | CANDIDATE | Cold catalogs still perform broad JSON/REGEXP/facet work before HTML (MEDIUM, high confidence on code/local evidence; production magnitude unveri | [raw/performance.md](stage-2/raw/performance.md) |
-| PERF-03 | MEDIUM | OWNER DECISION | CANDIDATE | Blocking CSS includes duplicate template styles and below-screen rules (MEDIUM, high confidence) | [raw/performance.md](stage-2/raw/performance.md) |
+| PERF-03 | MEDIUM | FIXED (approved variant A); measured mixed deltas; B/C deferred | CSSdeterministic3/3;8visualpairs; CSSgzip−29.8%;32pairedLHactualcompleted0runtimeerrors; mobilemedianshome49→54,catalog50→51,product54→57,kit54→51; independent reviewer root independent source/visual review; final_checkpoint_review raw32LHmetrics | Approved variant A CSS cleanup; 32 paired measurements MEASURED_MIXED_DELTAS; baseline d1dbfde5af7ea1e95e218f960a192faf985e7665 to f2264c6fc16deac69118bbfbfa760099fd0c4bdb; mobile home: score 49→54, LCP 7.36→7.42s, TBT 1021→712ms; catalog: score 50→51, LCP 7.12→7.01s, TBT 1021→923ms; product: score 54→57, LCP 6.37→5.75s, TBT 765→749ms; kit: score 54→51, LCP 6.82→7.37s, TBT 738→876ms; desktop home: score 78→90, LCP 1.66→1.50s, TBT 290→139ms; catalog: score 90→92, LCP 1.56→1.49s, TBT 165→142ms; product: score 93→95, LCP 1.34→1.25s, TBT 136→122ms; kit: score 93→94, LCP 1.49→1.35s, TBT 118→108ms; deltas CSS gzip44107→30974bytes (−29.8%); mobileLCP home+0.89%,catalog−1.58%,product−9.77%,kit+7.99%; mixed measurements, no numeric80 gate/CWV certification; B/C deferred; no B/C | e150e43 |
 | PHP-01 | MEDIUM | CRM OWNER DECISION | CONFIRMED-RAW | CRM API отдаёт внутренние сообщения PHP и пути сервера, с неверным статусом | [raw/php-backend.md](stage-2/raw/php-backend.md) |
 | PHP-02 | LOW | UNCONFIRMED | CANDIDATE | sitemap отдаёт обрезанный XML при ошибке посреди потока | [raw/php-backend.md](stage-2/raw/php-backend.md) |
 | PHP-03 | LOW | OPEN | CONFIRMED-RAW | sitemap пишет в лог `$e->getMessage()` (PDO-сообщение может содержать SQL) | [raw/php-backend.md](stage-2/raw/php-backend.md) |
@@ -165,7 +200,7 @@ CONFIRMED-RAW означает подтверждение в исходном ra
 | PIMC-12 | MEDIUM | FIXED | red/green | Валидация элементов корневых MODEL photos | `63450c5` |
 | PIMC-13 | MEDIUM | FIXED | red/green | Строго UAH в envelope до записи staged chunk | `78f639f` |
 | PIMC-C1 | LOW | PIM OWNER DECISION | CONFIRMED | Manifest hash точной wire fixture | proposals/PIMC-C1.patch |
-| PIMC-P1 | HIGH | PIM OWNER DECISION | private | Детали приватны до исправления | [raw/pim-contracts.md](stage-2/raw/pim-contracts.md) |
+| PIMC-P1 | HIGH | FIXED | 2new red-base regressions/full684 + independent review | One-time authorized PIM-only patch; generated release/runtime hash chain verified | PIM5fd46cb |
 | PIMC-P2 | MEDIUM | PIM OWNER DECISION | CANDIDATE | устаревший остаток не понижается (часть PIMC-01): `classification-ui.inc.js:190`, `final-workflow.inc.js:153,242`. | [raw/pim-contracts.md](stage-2/raw/pim-contracts.md) |
 | PIMC-P3 | MEDIUM | PIM OWNER DECISION | CONFIRMED | Broken-photo evidence для color galleries | proposals/PIMC-P3.patch |
 | PIMC-P4 | MEDIUM | PIM OWNER DECISION | CONFIRMED | Request-only size assortment ограничен своим COLOR | proposals/PIMC-P4.patch |
@@ -197,10 +232,10 @@ CONFIRMED-RAW означает подтверждение в исходном ra
 | SEC-02 | MEDIUM | OPEN | CONFIRMED-RAW | SMS-вход раскрывает, зарегистрирован ли номер | [raw/security.md](stage-2/raw/security.md) |
 | SEC-03 | MEDIUM | OWNER DECISION | CANDIDATE | дешёвый отказ во входе (email-ссылка, SMS) | [raw/security.md](stage-2/raw/security.md) |
 | SEC-04 | MEDIUM | UNCONFIRMED | CANDIDATE | неподтверждённый email гостевого заказа импортируется в аккаунт и получает письма | [raw/security.md](stage-2/raw/security.md) |
-| SEC-05 | MEDIUM / conditional HIGH | OWNER DECISION | private | Детали приватны до исправления | [raw/security.md](stage-2/raw/security.md) |
-| SEC-06 | MEDIUM | OWNER DECISION | CANDIDATE | слабости лимитов: IPv6, переполнение корзин, fail-closed 503 | [raw/security.md](stage-2/raw/security.md) |
-| SEC-07 | MEDIUM | OWNER DECISION | CANDIDATE | блокировка входа сотрудника CRM посторонним | [raw/security.md](stage-2/raw/security.md) |
-| SEC-08 | MEDIUM | OWNER DECISION | CANDIDATE | пробелы HTTPS-редиректа и HSTS | [raw/security.md](stage-2/raw/security.md) |
+| SEC-05 | MEDIUM / conditional HIGH | FIXED; proxy value BLOCKED(owner) | identity/proof/order regressions + independent review | Verified phone/session/device/network limits; successful order counting; readable Retry-After | 43df5e9 |
+| SEC-06 | MEDIUM | FIXED; proxy value BLOCKED(owner) | IPv4/IPv6/XFF regressions + independent review | Default trusted_proxies=[]; XFF only from explicit trusted peers; IPv6 /64 | 43df5e9 |
+| SEC-07 | MEDIUM | FIXED | failed-only login/proof/UI regressions + independent review | Staff budget IP+account counts failed passwords; bounded pre-password challenge | 43df5e9,c90d06d,f2264c6 (reviewed local-font CSP follow-up; 1 RED→1 GREEN) |
+| SEC-08 | MEDIUM | FIXED (owner R1 scope) | actual Apache8 checks + independent review | HTTPS redirects and dot-file denial in API/feeds; other raw suggestions retain scope disposition | 4a28331 |
 | SEC-09 | MEDIUM | OWNER DECISION | CANDIDATE | служебные и релизные файлы в дереве и не закрыты | [raw/security.md](stage-2/raw/security.md) |
 | SEC-10 | LOW | OPEN | CONFIRMED-RAW | секреты в query string, неограниченный подбор ключей | [raw/security.md](stage-2/raw/security.md) |
 | SEC-11 | LOW | OPEN | CONFIRMED-RAW | изменение состояния по GET в `shop/cart-return.php:10-12` | [raw/security.md](stage-2/raw/security.md) |
@@ -232,8 +267,9 @@ QA-12: CI PHP8.2 reproduced an order-retry timeout; fixed1500ms sleeps replaced 
 
 QA-12 additional correction: `1fcca31` observes HTTP200/networkidle before existing light-theme assertions; all21 route/width cases,8000ms locator bound,4.5 contrast and no-overflow assertions retained. Independent scoped review accepted exact file bytes; targeted1/1 PASS. Full final outcome is recorded below in checkpoint, not inferred from this targeted run.
 
-| QA-20 | MEDIUM | OWNER DECISION | CONFIRMED / Git object + API visibility | Унаследованные unredacted raw присутствуют в публичной Git history; current redaction не удаляет историю. Rewrite/force-push запрещён владельцем и не выполнен | Исторический2a338da; privacy metadata retained locally |
+| QA-20 | MEDIUM | ACCEPTED(owner), nonblocking | explicit owner R10 decision | History unchanged; accepted inherited public-history risk; R1 and future production key rotation mitigate | Stage2-B checkpoint |
 
 | SEC-FRESH-01 | MEDIUM | CRM OWNER DECISION | CONFIRMED / fresh source + bounded HTTP probe | Stale OWNER login can reach staff/sender mutation validation; proposed actor-bound settings freshness gate, not applied | stage-2/proposals/CRM-SEC-FRESH-01.patch; fresh review1fcca, identical sourcee9ce24d |
+| BLIND-PAY-02 | HIGH | FIXED (owner R5 follow-up) | 2 RED→2 GREEN; independent compatibility 10+2 | Reconfirmation preserves the original unpaid payment and reservation deadlines | bcb3c2f8a8d330dda47304e7925ff04210869f9b |
 
 QA-12 latest scheduling correction e9ce24d: doc-only2c06cde CI PHP8.3 failed bounded8-client capacity assertion with protective503 (PHP8.2 PASS). Workflow now selects all files with concurrency1;8/96 still requiresall200,32/160 still200/503, no assertions/skips/timeouts weakened. Isolated existing runtime test1/1PASS,16.36s; independent review repeated6/6actualCI guard controls. Failedrun38306094757 retained asFAIL; later exactcheckpointCI is separate evidence.
