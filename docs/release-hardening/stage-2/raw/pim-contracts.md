@@ -1,0 +1,23 @@
+# RAW — PIM CONTRACTS, агент PIMC (general-purpose), SITE 51c83d8, PIM 21198461
+
+Тесты воспроизведения: `scratchpad/audit/tmp-pimc/pimc.test.mjs`, `pimc2.test.mjs`, `pimc3.test.mjs` (зелёные на изолированной БД через `publish()`).
+
+## SITE / SITE + PIM
+- **PIMC-01 — MEDIUM (решение владельца), CONFIRMED** — устаревший остаток в v3 никогда не перестаёт быть оплачиваемым; IN_STOCK по статусу без количества — без лимита и резерва. `shop/pim-v3-checkout.php:49-50` (блокирует только явный `expires_at`), `:58-59,76-79` (проверка количества и резерв только при `pim_stock_quantity`); ср. legacy 48 ч `store-lib.php:103-105` и Q-7 (сразу оплата только при числовом остатке); PIM `classification-ui.inc.js:188,190`, `final-workflow.inc.js:153`. Два заказа RUB-F0003 по 99 шт. — оба CONFIRMED, оплата сразу, резервов нет. Существующий тест считает 500 ч «только предупреждением». Исправление: v3 IN_STOCK без количества — как legacy, или предельный возраст; в PIM — `stale_source` в хеш или понижение до UNKNOWN.
+- **PIMC-02 — MEDIUM, CONFIRMED** — явно истёкшее наблюдение поставщика показывается «В наявності» везде, кроме оформления: `shop/units.php:46` (`shopBuyableSql` v3 без `pim_expires_at`), `shop/pim-v3-read.php:30-31`, фильтр `availability=in`, `sitemap.php:9`, `kit-data.php:56`; только `pim-v3-checkout.php:50` проверяет. Исправление: условие истечения в `shopBuyableSql`; в DTO — UNKNOWN.
+- **PIMC-03 — MEDIUM, LIKELY (сервер CONFIRMED)** — повтор заказа и общие комплекты превращают запрос размера в неверный размер: `shop/repeat-order.php:4`; клиент `storeRepeatOrder`/`storeOpenKit` ищут вариант по `sku` (у опций `sku:''` → первая опция, 42 вместо 48); `shop/kits.php:10` не хранит `option_id`/`color_id`. Исправление: сопоставлять по `option_id` при пустом sku, хранить `color_id` и `option_id`.
+- **PIMC-04 — MEDIUM, CONFIRMED** — пол цены выше цены принимается молча: `shop/pricing-policy.php:25-26` (пол отбрасывается, розница принимается; kit/опт при нарушении отклоняются). RUB-F0002 с полом 5000 при цене 2860 → 200, `minimum_cents=null`, заказ CONFIRMED на 2860. Исправление: отклонять синхронизацию.
+- **PIMC-05 — MEDIUM, CONFIRMED** — legacy «неизвестный остаток» показывается и принимается как наличие: `shop/units.php:42,57`, `catalog-lib.php:55-56` (`in`, `stock:null` → «В наявності»), `store-lib.php:97` (без проверки количества); PIM legacy шлёт именно это (`simple-ui.inc.js:46`). Заказ на 50 шт. принят (`new`); JSON-LD, фиды и Q-7 считают это неподтверждённым. 48 ч `synced_at` только при оформлении. Исправление: «Наявність уточнюється», исключить из фильтра «в наявності», возраст `synced_at` в `shopBuyableLegacySql`.
+- **PIMC-06 — MEDIUM, LIKELY** — фото не выбранного цвета в корзине, кабинете и фидах: строка корзины `photo: s?.photoData?.[0]?.thumb||s?.photos?.[0]`; `shop/customer-ui.php:49-50` (`shopOrderThumbs`), `auth/order-detail.php:4`; `feeds/feed.php:10`. Страница товара корректна. Исправление: миниатюра по цвету строки, иначе заглушка.
+- **PIMC-07 — LOW, CONFIRMED** — `expires_at` 1000.0 проходит схему, но сохраняется как «не истекает»: `pim-v3-contract.php:29` vs `pim-v3-sync.php:195` (`is_int`).
+- **PIMC-08 — LOW, CONFIRMED** — типы приводятся вместо отказа: цена строкой, `wire.schema.json` нигде не применяется; `size_display:""` → `variants.size=''` (`pim-v3-sync.php:198`); `http://` фото (безопасно).
+- **PIMC-09 — LOW** — legacy-оформление не требует пригодного фото (`store-lib.php:90`).
+- **PIMC-10 — LOW / INFO** — фиды фактически пусты (PIM legacy `ads_allowed:false`; v3 без `ads_allowed`); логика фида только legacy. Вопрос владельцу: фиды выключены намеренно?
+- **PIMC-11 — LOW, CONFIRMED** — legacy-синхронизация после отката v3 отклоняет весь пакет (400 `SYNC_FAILED`, вероятно FK `pim_color_owner` при `DELETE FROM variants`, `api/lib.php:~311`); безопасно, но непонятная ошибка.
+
+## Дефекты PIM (владелец PIM)
+- **PIMC-P1 — HIGH** — подтверждён независимым локальным воспроизведением; детали и полный proposal остаются приватными до исправления.
+- **PIMC-P2 — MEDIUM** — устаревший остаток не понижается (часть PIMC-01): `classification-ui.inc.js:190`, `final-workflow.inc.js:153,242`.
+
+## Проверено, чисто
+MODEL → COLOR → SIZE → реальный SKU (оформление, расчёт, счёт; SKU не создаются); CRM resolve-item; восстановление корзины; v3 UNKNOWN/OUT_OF_STOCK не заказываются; PREORDER/ORDER_ON_REQUEST/SIZE_CONFIRMATION — ожидание менеджера, оплата только после CONFIRMED; JSON-LD без availability при неизвестном остатке; архивные скрыты, не удалены; без фото — не публикуются; цена — только сервер, `PRICE_CHANGED`, блокировка версии каталога; галерея цвета на странице товара; строгие типы флагов/наличия/остатка/времени.

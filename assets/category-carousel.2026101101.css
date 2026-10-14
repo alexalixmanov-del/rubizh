@@ -1,0 +1,12 @@
+/* Phones (≤699px): category cards are a horizontal touch carousel — swipe, snap, the next card peeks in.
+   Desktop and tablet layouts are untouched. Loaded last; overrides the grid rules of catalog-redesign/mobile-polish. */
+@media (max-width:699px){
+ html body .rz-category-grid{display:flex!important;gap:10px!important;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;padding:0 0 10px;touch-action:pan-x pan-y;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+ html body .rz-category-grid::-webkit-scrollbar{display:none}
+ /* Two cards and a slice of the third on any phone width: the basis follows the carousel, not the viewport. */
+ html body .rz-category-grid>.rz-category{flex:0 0 calc((100% - 20px) / 2.2);aspect-ratio:4/5;scroll-snap-align:start}
+ html body .rz-category-grid>.rz-category:hover{transform:none}
+ html body .rz-catalog [data-catalog-sections]{display:flex!important;grid-template-columns:none!important;grid-auto-rows:auto!important;gap:10px!important;overflow-x:auto!important;overflow-y:hidden;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;padding:0 0 10px!important;touch-action:pan-x pan-y;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+ html body .rz-catalog [data-catalog-sections]::-webkit-scrollbar{display:none}
+ html body .rz-catalog [data-catalog-section]{flex:0 0 calc((100% - 20px) / 2.4)!important;min-width:0;scroll-snap-align:start}
+}

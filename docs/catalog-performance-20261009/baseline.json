@@ -1,0 +1,235 @@
+{
+  "environment": "isolated MariaDB; legacy source snapshot 2026-10-08, not live production DB",
+  "schema": "fixture_catalog_perf_20261009",
+  "server_version": "11.8.6-MariaDB-0+deb13u1 from Debian",
+  "historical_source_commit": "1b88ab516031e23119b23e655278b3ea5bf81753",
+  "endpoint": "GET /shop/catalog.php?slot=med",
+  "source_counts": {
+    "products": 3103,
+    "variants": 8682,
+    "photos": 19025,
+    "categories": 348,
+    "rubizh_catalog_fulfillment": 0,
+    "rubizh_catalog_supplier_articles": 0,
+    "rubizh_product_categories": 3103,
+    "rubizh_canonical_categories": 137,
+    "rubizh_category_aliases": 348
+  },
+  "production_indexes_available": false,
+  "log_sql_complete": false,
+  "count": {
+    "sql_file": "before-count.sql",
+    "explain": [
+      {
+        "id": 1,
+        "select_type": "PRIMARY",
+        "table": "av",
+        "type": "ALL",
+        "possible_keys": "prod",
+        "key": null,
+        "key_len": null,
+        "ref": null,
+        "rows": "8474",
+        "Extra": "Using where; Start temporary"
+      },
+      {
+        "id": 1,
+        "select_type": "PRIMARY",
+        "table": "p",
+        "type": "eq_ref",
+        "possible_keys": "PRIMARY,vis",
+        "key": "PRIMARY",
+        "key_len": "258",
+        "ref": "fixture_catalog_perf_20261009.av.product_id",
+        "rows": "1",
+        "Extra": "Using where; End temporary"
+      },
+      {
+        "id": 1,
+        "select_type": "PRIMARY",
+        "table": "sph",
+        "type": "ref",
+        "possible_keys": "prodpos",
+        "key": "prodpos",
+        "key_len": "258",
+        "ref": "fixture_catalog_perf_20261009.av.product_id",
+        "rows": "7",
+        "Extra": "Using index; FirstMatch(p)"
+      },
+      {
+        "id": 1,
+        "select_type": "PRIMARY",
+        "table": "sv",
+        "type": "ref",
+        "possible_keys": "prod",
+        "key": "prod",
+        "key_len": "258",
+        "ref": "fixture_catalog_perf_20261009.av.product_id",
+        "rows": "2",
+        "Extra": "Using where; FirstMatch(sph)"
+      }
+    ],
+    "runs": [
+      {
+        "time_ms": 214.168253,
+        "rows_examined": 15221,
+        "rows_sent": 1,
+        "result_rows": 1
+      },
+      {
+        "time_ms": 268.519163,
+        "rows_examined": 15221,
+        "rows_sent": 1,
+        "result_rows": 1
+      },
+      {
+        "time_ms": 235.526774,
+        "rows_examined": 15221,
+        "rows_sent": 1,
+        "result_rows": 1
+      },
+      {
+        "time_ms": 208.851528,
+        "rows_examined": 15221,
+        "rows_sent": 1,
+        "result_rows": 1
+      },
+      {
+        "time_ms": 229.465933,
+        "rows_examined": 15221,
+        "rows_sent": 1,
+        "result_rows": 1
+      },
+      {
+        "time_ms": 213.914817,
+        "rows_examined": 15221,
+        "rows_sent": 1,
+        "result_rows": 1
+      }
+    ],
+    "count_result": 9,
+    "median_time_ms": 221.817093,
+    "indexes_used": [
+      "PRIMARY",
+      "prod",
+      "prodpos"
+    ],
+    "sql_sha256": "f1e61f93ec84566943ebbb88c482a0e82b75fa93dc005de837b6162bf153d4dd",
+    "sql_operations": {
+      "REGEXP": 19,
+      "JSON_VALID": 12,
+      "JSON_EXTRACT": 12,
+      "JSON_UNQUOTE": 10,
+      "CAST": 2,
+      "EXISTS": 3
+    }
+  },
+  "catalog": {
+    "sql_file": "before-catalog.sql",
+    "explain": [
+      {
+        "id": 1,
+        "select_type": "PRIMARY",
+        "table": "av",
+        "type": "ALL",
+        "possible_keys": "prod",
+        "key": null,
+        "key_len": null,
+        "ref": null,
+        "rows": "8474",
+        "Extra": "Using where; Start temporary; Using temporary; Using filesort"
+      },
+      {
+        "id": 1,
+        "select_type": "PRIMARY",
+        "table": "p",
+        "type": "eq_ref",
+        "possible_keys": "PRIMARY,vis",
+        "key": "PRIMARY",
+        "key_len": "258",
+        "ref": "fixture_catalog_perf_20261009.av.product_id",
+        "rows": "1",
+        "Extra": "Using where; End temporary"
+      },
+      {
+        "id": 1,
+        "select_type": "PRIMARY",
+        "table": "sph",
+        "type": "ref",
+        "possible_keys": "prodpos",
+        "key": "prodpos",
+        "key_len": "258",
+        "ref": "fixture_catalog_perf_20261009.av.product_id",
+        "rows": "7",
+        "Extra": "Using index; FirstMatch(p)"
+      },
+      {
+        "id": 1,
+        "select_type": "PRIMARY",
+        "table": "sv",
+        "type": "ref",
+        "possible_keys": "prod",
+        "key": "prod",
+        "key_len": "258",
+        "ref": "fixture_catalog_perf_20261009.av.product_id",
+        "rows": "2",
+        "Extra": "Using where; FirstMatch(sph)"
+      }
+    ],
+    "runs": [
+      {
+        "time_ms": 218.736295,
+        "rows_examined": 15239,
+        "rows_sent": 9,
+        "result_rows": 9
+      },
+      {
+        "time_ms": 220.405921,
+        "rows_examined": 15239,
+        "rows_sent": 9,
+        "result_rows": 9
+      },
+      {
+        "time_ms": 218.338075,
+        "rows_examined": 15239,
+        "rows_sent": 9,
+        "result_rows": 9
+      },
+      {
+        "time_ms": 217.367209,
+        "rows_examined": 15239,
+        "rows_sent": 9,
+        "result_rows": 9
+      },
+      {
+        "time_ms": 210.451731,
+        "rows_examined": 15239,
+        "rows_sent": 9,
+        "result_rows": 9
+      },
+      {
+        "time_ms": 218.714823,
+        "rows_examined": 15239,
+        "rows_sent": 9,
+        "result_rows": 9
+      }
+    ],
+    "count_result": null,
+    "median_time_ms": 218.526449,
+    "indexes_used": [
+      "PRIMARY",
+      "prod",
+      "prodpos"
+    ],
+    "sql_sha256": "e9580f40ce59bfb1c3a2c04ea7e8188a62039efbd48829e480cab30813d9fdb5",
+    "sql_operations": {
+      "REGEXP": 19,
+      "JSON_VALID": 12,
+      "JSON_EXTRACT": 12,
+      "JSON_UNQUOTE": 10,
+      "CAST": 2,
+      "EXISTS": 3
+    }
+  },
+  "snapshot_sha256": "6bb6485d7347ee8ed30106321a9dc21c977a363eab98887a1f6e45db1bb6ed12"
+}

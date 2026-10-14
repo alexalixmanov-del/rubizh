@@ -4,13 +4,13 @@ import {mkdtempSync,mkdirSync,readdirSync,copyFileSync,writeFileSync,rmSync} fro
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
-const root=path.resolve(import.meta.dirname,'..'),runtime='/workspace/php-runtime/root/usr';
+const root=path.resolve(import.meta.dirname,'..'),runtime=(process.env.RUBIZH_PHP_RUNTIME||'/workspace/php-runtime/root/usr')+'';
 test('Category migration is reversible, preserves full rows/media, filters old URLs and rejects unknown PIM IDs',{skip:!process.env.RUBIZH_TEST_MYSQL_SOCKET},()=>{
  const dir=mkdtempSync(path.join(tmpdir(),'rubizh-taxonomy-test-')),backup=mkdtempSync(path.join(tmpdir(),'rubizh-taxonomy-backup-')),schema='fixture_taxonomy_'+Math.random().toString(16).slice(2);
  try{
   for(const folder of ['api','shop']){mkdirSync(path.join(dir,folder));for(const f of readdirSync(path.join(root,folder)))if((f.endsWith('.php')||f==='canonical-taxonomy.json')&&!['config.php','mono-private.php','np-private.php'].includes(f))copyFileSync(path.join(root,folder,f),path.join(dir,folder,f));}
   mkdirSync(path.join(dir,'media'));writeFileSync(path.join(dir,'media','source.webp'),'original-image-byte-fixture');
-  writeFileSync(path.join(dir,'api','config.php'),`<?php return ['db_host'=>'localhost','db_name'=>'${schema}','db_user'=>'root','db_pass'=>'','media_dir'=>'${dir}/media','media_url'=>'/media','cache_dir'=>'${dir}/cache'];`);
+  writeFileSync(path.join(dir,'api','config.php'),`<?php return ['pim_legacy_sync'=>true,'db_host'=>'localhost','db_name'=>'${schema}','db_user'=>'root','db_pass'=>'','media_dir'=>'${dir}/media','media_url'=>'/media','cache_dir'=>'${dir}/cache'];`);
   const source=String.raw`require '${dir}/shop/taxonomy-migration.php';
   $db=new PDO('mysql:unix_socket='.getenv('RUBIZH_TEST_MYSQL_SOCKET').';charset=utf8mb4','root','',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);$db->exec('CREATE DATABASE ${schema} CHARACTER SET utf8mb4');$db->exec('USE ${schema}');function check($ok,$msg){if(!$ok)throw new RuntimeException($msg);}try{migrate($db);
   $items=[['jacket','Куртка зимова',"Одяг та форма / Чоловічий одяг / Зимові та утеплені куртки",['Сезон'=>'Зима','supplier_id'=>'s1','external_id'=>'e1']],['female','Жіноча бойова сорочка UBACS',"Одяг та форма / Жіночий одяг / Убакси та бойові сорочки",['Стать'=>'Унісекс']],['net','Маскувальна сітка',"Маскування / Маскувальні сітки Militex / Мультикам",[]],['review','Невідомий предмет','Невідома гілка',[]]];

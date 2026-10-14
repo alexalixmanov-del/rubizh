@@ -1,5 +1,8 @@
 # Все запросы к /api/... обрабатывает index.php
 RewriteEngine On
+RewriteRule (^|/)\. - [F,L]
+RewriteCond %{HTTPS} !=on
+RewriteRule ^ https://rubizh.shop%{REQUEST_URI} [R=301,L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^ index.php [QSA,L]
 # Секреты и служебные файлы снаружи не читаются

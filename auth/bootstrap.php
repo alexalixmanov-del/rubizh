@@ -3,8 +3,9 @@ declare(strict_types=1);
 ini_set('display_errors', '0');
 define('RUBIZH_AUTH', true);
 require_once __DIR__.'/../shop/runtime.php';
+require_once __DIR__.'/../api/lib.php';
 rubizhHeaders();
-try{rubizhPublicGate('account',180);rubizhHttpWork(defined('RUBIZH_AUTH_NO_SESSION')?'bank-callback':'account',defined('RUBIZH_AUTH_NO_SESSION')?4:12);}catch(RubizhHttpException $e){http_response_code($e->status);header('Cache-Control: no-store');header('Content-Type: application/json; charset=UTF-8');if($e->retryAfter)header('Retry-After: '.$e->retryAfter);echo json_encode(['ok'=>false,'error'=>$e->getMessage()],JSON_UNESCAPED_UNICODE);exit;}
+try{rubizhHttpWork(defined('RUBIZH_AUTH_NO_SESSION')?'bank-callback':'account',defined('RUBIZH_AUTH_NO_SESSION')?4:12);}catch(RubizhHttpException $e){http_response_code($e->status);header('Cache-Control: no-store');header('Content-Type: application/json; charset=UTF-8');if($e->retryAfter)header('Retry-After: '.$e->retryAfter);echo json_encode(['ok'=>false,'error'=>$e->getMessage()],JSON_UNESCAPED_UNICODE);exit;}
 header('Content-Type: text/html; charset=UTF-8');
 header('Cache-Control: no-store, private');
 header('Referrer-Policy: no-referrer');
@@ -16,6 +17,25 @@ session_cache_limiter('');
 ini_set('session.use_strict_mode', '1');
 session_set_cookie_params(['lifetime'=>0,'path'=>'/','secure'=>true,'httponly'=>true,'samesite'=>'Lax']);
 if(!defined('RUBIZH_AUTH_NO_SESSION')){session_start();if (empty($_SESSION['csrf'])) { $_SESSION['csrf'] = bin2hex(random_bytes(32)); }}else{$_SESSION=[];}
+if(!defined('RUBIZH_AUTH_NO_SESSION'))rubizhDeviceIdentity();
+try{rubizhPublicGate('account',600);}catch(RubizhHttpException $e){
+    http_response_code($e->status);header('Retry-After: '.max(1,$e->retryAfter));
+    $proof=$_SESSION['rate_proof']??null;$challenge=$e->status===428&&is_array($proof)?['nonce'=>$proof['nonce'],'bits'=>$proof['bits'],'purpose'=>'account']:null;
+    if(str_starts_with((string)($_SERVER['REQUEST_URI']??''),'/shop/')||parse_url((string)($_SERVER['REQUEST_URI']??''),PHP_URL_PATH)==='/auth/session.php'||str_contains((string)($_SERVER['CONTENT_TYPE']??''),'application/json')){
+        header('Content-Type: application/json; charset=UTF-8');echo json_encode(['ok'=>false,'error_code'=>$challenge?'CHECK_REQUIRED':'RATE_LIMITED','error'=>$e->getMessage(),'challenge'=>$challenge],JSON_UNESCAPED_UNICODE);
+    }else{
+        header('Content-Type: text/html; charset=UTF-8');echo '<!doctype html><html lang="uk"><meta charset="UTF-8"><title>Перевірка запиту — РУБІЖ</title><p>'.htmlspecialchars($e->getMessage(),ENT_QUOTES,'UTF-8').'</p>';
+        if($challenge)echo '<meta name="rubizh-rate-check" content="'.$challenge['nonce'].':'.$challenge['bits'].'"><button id="rubizh-rate-continue">Продовжити</button><script defer src="/auth/rate-check.js"></script>';
+        echo '<p><a href="/#contacts">Звернутися до менеджера</a></p></html>';
+    }exit;
+}
+// All customer-auth POST actions share the storefront's exact origin policy.
+function authCsrf(array $input): void {
+    $token=$input['csrf']??null;$expected=$_SESSION['csrf']??null;
+    if(!is_string($token)||!is_string($expected)||$expected===''||!hash_equals($expected,$token)
+       ||!shopRequestOriginAllowed(shopAllowedOrigins()))
+        throw new RuntimeException('Оновіть сторінку та спробуйте ще раз.');
+}
 function esc(string $s): string { return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); }
 function database(): PDO {
     static $db;

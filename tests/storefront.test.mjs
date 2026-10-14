@@ -3,15 +3,16 @@ import assert from 'node:assert/strict';
 import {existsSync} from 'node:fs';
 import {chromium} from 'playwright';
 import {startPreview} from '../dev/preview.mjs';
+import {kitGuideSeen} from './helpers/visitor.mjs';
 let browser,server,base;
 before(async()=>{
   server=await startPreview(0);base='http://127.0.0.1:'+server.address().port;
-  const executable=process.env.CHROMIUM_PATH||(existsSync('/usr/bin/chromium')?'/usr/bin/chromium':undefined);
+  const executable=process.env.CHROMIUM_PATH||(existsSync((process.env.CHROMIUM_PATH||'/usr/bin/chromium'))?(process.env.CHROMIUM_PATH||'/usr/bin/chromium'):undefined);
   browser=await chromium.launch({executablePath:executable,headless:true,args:['--no-sandbox']});
 });
 after(async()=>{await browser?.close();await new Promise(resolve=>server?.close(resolve));});
 async function withPage(run,viewport={width:1440,height:1000}) {
-  const context=await browser.newContext({viewport});const page=await context.newPage();
+  const context=await browser.newContext({viewport});await context.addInitScript(kitGuideSeen);const page=await context.newPage();
   page.setDefaultTimeout(8000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
   try{await run(page);assert.deepEqual(errors,[],'No uncaught browser errors');}finally{await context.close();}
 }
@@ -55,11 +56,12 @@ test('Disabled payment methods and donation claims are absent at checkout',()=>w
   assert.equal(await page.getByText('Куди надіслати скрін донату',{exact:true}).count(),0);
   assert.equal(await page.locator('input[name="name"][aria-label]').count(),1);
 }));
-test('Card and COD options appear when the server enables them',()=>withPage(async page=>{
+test('Card appears when the server enables it; COD never appears, even with a stale server flag',()=>withPage(async page=>{
   await page.route('**/shop/customer.php',route=>route.fulfill({contentType:'application/json',body:JSON.stringify({ok:true,csrf:'preview-only',authed:false,customer_id:null,profile:null,favorites:[],items:[],mono_enabled:true,np_enabled:false,np_cod_enabled:true})}));
   await addUniform(page);
   await page.getByText('Оплата карткою',{exact:true}).waitFor();
-  await page.getByText('Післяплата',{exact:true}).waitFor();
+  assert.equal(await page.getByText('Післяплата',{exact:true}).count(),0);
+  assert.equal(await page.getByText(/Оплата при отриманні/).count(),0);
 }));
 test('Cart quantity cannot exceed the known stock',()=>withPage(async page=>{
   await addUniform(page);
@@ -132,13 +134,13 @@ async function chooseKitItem(page,slot,product,size){
   await page.locator('.rz-kit-modal-card').filter({hasText:product}).getByRole('button',{name:size,exact:true}).click();
   await page.locator('.rz-kit-modal').waitFor({state:'detached'});
 }
-test('Mobile kit selection, replacement and checkout preserve sizes and calculated prices',()=>withPage(async page=>{
+test('Mobile kit selection preserves sizes and uses retail when PIM has not confirmed special prices',()=>withPage(async page=>{
   await loaded(page,'/kit');await page.locator('.rz-kit-slot').first().waitFor();
   await chooseKitItem(page,'Тіло','Тактичний костюм','L');
   await chooseKitItem(page,'Взуття','Берці','43');
-  await page.waitForFunction(()=>document.querySelector('.rz-kit-total')?.innerText.includes('5\u00a0917'));
+  await page.waitForFunction(()=>document.querySelector('.rz-kit-total')?.innerText.includes('6\u00a0100'));
   await page.waitForTimeout(500);
-  assert.match(await page.locator('[data-kit-aside]').innerText(),/183\s*₴/);
+  assert.match(await page.locator('[data-kit-aside]').innerText(),/0\s*₴/);
   assert.equal(await page.locator('.rz-kit-item').count(),2);
   assert.equal(await page.getByText(/Донат бригаді:/).count(),0);
   await page.reload();await page.locator('.rz-kit-item').nth(1).waitFor();
@@ -153,7 +155,7 @@ test('Mobile kit selection, replacement and checkout preserve sizes and calculat
   await page.getByRole('heading',{name:'Оформлення замовлення'}).waitFor();
   await page.getByText('DEMO-UNIFORM-M',{exact:true}).waitFor();
   await page.getByText('DEMO-BOOTS-43',{exact:true}).waitFor();
-  assert.match(await page.locator('body').innerText(),/5\s*917\s*₴/);
+  assert.match(await page.locator('body').innerText(),/6\s*100\s*₴/);
 },{width:390,height:844}));
 test('Seller settings do not recursively copy mounted React elements when reopening the kit selector',()=>withPage(async page=>{
   await page.route('**/shop/analytics.php',route=>route.fulfill({contentType:'application/json',body:JSON.stringify({ok:true,ga4:'',meta:'',settings:{seller:{name:'Демонстраційний продавець'},donation:{enabled:false,percent:0}}})}));
@@ -198,11 +200,13 @@ test('Kit mobile parameters expand and selectors close with Escape without layou
     await page.keyboard.press('Escape');await page.locator('.rz-kit-modal').waitFor({state:'detached'});
   }
 },{width:390,height:900}));
-test('Responsive hero uses distinct images and places the extra logo only on desktop',()=>withPage(async page=>{
+test('Responsive hero uses distinct images and places the extra logo only on wide desktop, off the product',()=>withPage(async page=>{
   await loaded(page);await page.waitForFunction(()=>document.querySelector('.rz-hero-image')?.complete);
   assert.match(await page.locator('.rz-hero-image').evaluate(e=>e.currentSrc),/hero-desktop/);
+  // QA 2026-10-10: the badge covered the boots (lower right); it sits in the empty upper-right corner and only from 1440px.
   const logo=await page.locator('.rz-hero-logo').boundingBox();const hero=await page.locator('.rz-hero').boundingBox();
-  assert.ok(logo.x>hero.x+hero.width/2&&logo.y>hero.y+hero.height/2);
+  assert.ok(logo.x>hero.x+hero.width/2&&logo.y+logo.height<hero.y+hero.height/2);
+  await page.setViewportSize({width:1280,height:900});assert.equal(await page.locator('.rz-hero-logo').isVisible(),false);
   await page.setViewportSize({width:390,height:844});
   await page.waitForFunction(()=>document.querySelector('.rz-hero-image')?.currentSrc.includes('hero-mobile')&&document.querySelector('.rz-hero-image')?.naturalWidth>0);
   assert.equal(await page.locator('.rz-hero-logo').isVisible(),false);
@@ -255,7 +259,7 @@ test('Light theme keeps header text, icons and the logo readable across storefro
   for(const width of [320,390,1440]){
     await page.setViewportSize({width,height:1000});
     for(const path of ['/','/catalog','/kit','/categories','/product/demo-uniform','/porady','/auth/']){
-      await page.goto(base+path);
+      const response=await page.goto(base+path);assert.equal(response.status(),200,`${width}${path}: route must load`);await page.waitForLoadState('networkidle');
       await page.locator(path==='/auth/'?'.auth-shell':'[data-header-brand]').waitFor();
       assert.equal(await page.locator('html').getAttribute('data-theme'),'light');
       const problems=await page.evaluate(()=>{

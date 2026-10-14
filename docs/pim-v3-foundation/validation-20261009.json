@@ -1,0 +1,821 @@
+{
+  "date": "2026-10-09",
+  "integration_base_commit": "b5b767c52da8b2a1c5343f0e3b8659cf292b6523",
+  "main_pin": "0e7dafa39e632690220d5d93669e571254286388",
+  "pricing_pin": "bee58327e859efb618faea3631229de3fd3c1e39",
+  "audit_pin": "858faaffdcaaab62f644ca56fa2339c9e6fb3a5d",
+  "environment": {
+    "php": "8.4 cloud runtime (production 8.2 not executed)",
+    "database": "MariaDB 11.8.6, Unix-socket-only isolated synthetic schemas",
+    "browser": "system Chromium through Playwright",
+    "production_writes": 0,
+    "real_pim_sync_calls": 0,
+    "real_payment_calls": 0,
+    "real_np_calls": 0
+  },
+  "capabilities_advertised": {
+    "pricing_policy_version": 1
+  },
+  "v3_sync_enabled": false,
+  "runs": [
+    {
+      "label": "Integration base tracked baseline",
+      "command": "RUBIZH_TEST_MYSQL_SOCKET=/workspace/test-runtime/mariadb/mysql.sock node --test --test-concurrency=1 $(git ls-files 'tests/*.test.mjs')",
+      "counts": {
+        "tests": 116,
+        "pass": 116,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "duration_ms": 118247.181679,
+      "tests": [
+        "Production account view fits both themes, all main tabs, and phone/tablet/desktop widths",
+        "Phone badge reflects verification and profile/delivery keep their POST fields and CSRF token",
+        "Existing orders retain links and do not show the empty-order illustration",
+        "Empty checkout hides recipient, delivery and submit; comparison survives reload and can be cleared",
+        "Real unknown stock has no false scarcity; confirmed sizes sort logically even with native fallback",
+        "Canonical size matching combines heights, variants and footwear without guessing missing sizes",
+        "New-order email waits for confirmation; confirmed card email has a payment link and no premature bank details",
+        "Database availability matches buy buttons; missing local originals and duplicate copies are repaired",
+        "Private authentication config remains usable when environment overrides are absent",
+        "Explicit environment flags disable SMS and Google even with enabled private config",
+        "SMS requires the token, sender, explicit enablement and a long application secret",
+        "Environment credentials override private values and mailbox password spacing is preserved",
+        "Empty environment stubs preserve Monobank and Nova Poshta keys stored on hosting",
+        "Phone normalization and code hashes bind verification to the phone and challenge",
+        "TurboSMS success requires an accepted result for the exact recipient and a message ID",
+        "Hosting secret initializer preserves settings, uses private permissions and is safe to repeat",
+        "Private hosting credential merge preserves the database and supplier settings and guards activation",
+        "Cart mail has escaped real variants, quantities and a limited recovery link; order stages include one tracking section",
+        "Reminder eligibility uses UTC, checks deadline and expiry and never re-sends terminal carts",
+        "Real MySQL queue: consent, validated catalogue, debounce, delivery, conversion, retries, locks and parcel dedupe",
+        "Scheduler runs each worker once, respects its interval, isolates failures and prevents concurrent overlap",
+        "Read-only launch report distinguishes fresh, failed and missing workers without printing private credentials",
+        "Cache cron preserves private existing tasks, is idempotent and does not overwrite unreadable schedules",
+        "Automation cron replaces cache-only scheduling, preserves unrelated jobs, is idempotent and handles hosting denial",
+        "Cart reminders require a valid email and explicit opt-in; quantity updates, reload and opt-out remain consistent",
+        "Returning from a reminder restores a real available variant and keeps its kit group without creating an order",
+        "Description attributes use labelled source values and preserve confirmed fields",
+        "Misclassified clothing moves out of camouflage while genuine camouflage remains",
+        "PHP size facets retain native sizes, heights, footwear halves and canonical order",
+        "Stale public cache returns promptly, queues refresh, then worker replaces it; GC retains fallback",
+        "A stalled refresh stops serving stale data after the five-minute grace period",
+        "Long branches keep equal compact cards; native dialog scrolls and closes with keyboard",
+        "Catalog category pages have two short rows, correct arrows, and no generic glove fallback",
+        "Directory and product grid fit narrow and wide screens in both themes",
+        "All supplied banners have optimized assets and exact category assignments",
+        "Deployment preserves private configs, media and legacy provider keys; invalid checksum changes nothing",
+        "Small patch without api files still backs up private config and installs successfully",
+        "Custom brigade is validated; old and empty orders retain the previous destination",
+        "Receipt and email use the saved brigade and HTML escapes its name",
+        "Donation batching rejects mixed brigades before writing a transfer",
+        "Brigade is the first field in the donation block, updates the summary, and reaches the order payload",
+        "A cold kit page reserves bandwidth for equipment instead of downloading homepage hero artwork",
+        "Homepage switches exact supplied artwork on both screen sizes, persists theme, and survives SPA navigation",
+        "Two blank clothing variants never become one-size SKU buttons or buyable products",
+        "Confirmed letter sizes and native fallback stay available; unconfirmed sibling is hidden",
+        "Only confirmed sibling is displayed as its actual size",
+        "Backend rejects blank clothing and footwear sizes but preserves native sizes and one-size accessories",
+        "Catalog API recovers native/database size labels and marks blank clothing variants unavailable",
+        "Repeated sizes across colours are shown once, and the chosen colour/size adds its own SKU",
+        "A single size for the chosen colour remains one size despite other colours and duplicate offers",
+        "All picker slots, pagination, combined filters, stock and source sizes work against MySQL",
+        "Picker immediately shows preloaded products, exposes API failure and retries; reopening reuses the response",
+        "Search displays loading before a real empty result, reset restores products, and confirmed sizes can add to a slot",
+        "Instructions and selection buttons are highlighted in both themes without mobile overflow",
+        "Mobile category controls, product actions and checkout actions stay centered and usable",
+        "Account order tabs and catalog action remain centered on mobile",
+        "NP setup dry run resolves directories and sender without changing private configuration",
+        "NP setup preserves credentials, backs up configuration, adds manager and both Kiborg origins, and disables COD",
+        "Ambiguous contacts and invalid manager identity leave hosting configuration unchanged",
+        "Ambiguous depots and missing cargo branches remain unavailable rather than guessing",
+        "Kiborg shipment payload uses branch 9 through 30 kg and branch 36 above 30 kg, with no COD",
+        "NP setup retries bounded rate-limited reads, caches duplicate lookups, and never retries document writes or other rejections",
+        "Public WebP and thumbnails are readable under private cron umask; permission repair never touches private files or symlinks",
+        "Overlapping photo processors skip without changing queue state or waiting for a download",
+        "First catalogue images have priority while later cards stay lazy on mobile and desktop",
+        "Selected SKU changes retail and actual wholesale amounts without exposing a private floor",
+        "Mobile kit total sums exact selected PIM kit prices instead of a quantity percentage",
+        "HTTP PIM pricing sync, private projection, atomic failure, checkout replay, stale quote and reservations",
+        "PIM retail, both wholesale levels and kit values are authoritative, percentage cannot change them",
+        "Expensive SKU uses passed 14710/13340/13700 without guessing the supplier payout",
+        "RRP/manual restrictions can raise every price and are never recalculated by shop",
+        "Missing floor, malformed floor and legacy pricing disable special discounts",
+        "Null kit price refuses special kit while retail remains available",
+        "Money rejects NaN, negative, subkopeck and boolean; fractional quantity is exact",
+        "Wholesale cannot be self-approved or stack with promo; retail promo obeys exact floor",
+        "Two separate plates are charged twice, packaged pair once; no duplicate size inference",
+        "Ready kit membership, exact SKU/color and complete quantity are checked",
+        "Public line quote never contains the margin floor, supplier constraints or wholesale grant",
+        "Semantic parsing resolves relations and complete phrases, while real primary-type conflicts remain for review",
+        "360 labelled real products across 18 roots retain their independently specified categories",
+        "V2 dry-run is read-only; reviewed apply preserves data, manual locks and PIM authority across imports",
+        "Real HTTP: nonce CSP, banner loading, bounded reads, duplicate checkout and concurrent stock reservation",
+        "Catalogue rejects malformed and excessive filters before SQL, while normalizing pagination",
+        "Supplier image downloader blocks private IPv4/IPv6, credentials, unusual ports and unsafe redirect destinations",
+        "Rate quota counts, expires, isolates identities and has a fixed number of disk shards",
+        "Independent processes cannot exceed the work pool; completion releases all slots",
+        "Same-version cache growth is pruned and nested stripe collisions do not deadlock",
+        "Every numbered banner has an existing image, exact category ID and the corrected 7/8 assignment",
+        "External database configuration requires certificate verification and rejects DSN injection",
+        "A missing, failed or stale cache worker heartbeat fails readiness without revealing customer information",
+        "Home images load, categories navigate, and layout fits desktop",
+        "Direct product links load correct product and preserve its URL",
+        "Selected size and cart survive reload, with accurate totals",
+        "Disabled payment methods and donation claims are absent at checkout",
+        "Card and COD options appear when the server enables them",
+        "Cart quantity cannot exceed the known stock",
+        "Keyboard favourite activation happens once and persists",
+        "Search returns matching product and zero-result recovery",
+        "Mobile menu closes with Escape and home fits small screens",
+        "Theme preference persists and reduced motion is supported",
+        "Mobile catalog, product and checkout fit the viewport",
+        "Catalog server errors surface without pretending to succeed",
+        "Preview rejects real order/payment writes and private file requests",
+        "Mobile kit selection preserves sizes and uses retail when PIM has not confirmed special prices",
+        "Seller settings do not recursively copy mounted React elements when reopening the kit selector",
+        "Catalogue cards stay separate and controls fit at phone, tablet and desktop widths in both themes",
+        "Kit mobile parameters expand and selectors close with Escape without layout overlap",
+        "Responsive hero uses distinct images and places the extra logo only on desktop",
+        "Real anonymous PHP login renders accessibly without overflow and preview rejects login writes",
+        "Mobile price and size filters combine, clear, and preserve a usable result grid",
+        "Kit colour filters with no matches remain responsive and all-category links work on mobile",
+        "Light theme keeps header text, icons and the logo readable across storefront pages and login",
+        "Compact mobile login keeps email, phone and SMS confirmation actions in the first screen",
+        "Kit recommendations filter before limiting, prioritise proper clothing and avoid eight facet requests",
+        "Category migration is reversible, preserves full rows/media, filters old URLs and rejects unknown PIM IDs",
+        "Canonical categories navigate with stable IDs and their own banners on phone and desktop in both themes"
+      ]
+    },
+    {
+      "label": "Pre-existing workspace extras",
+      "command": "RUBIZH_TEST_MYSQL_SOCKET=/workspace/test-runtime/mariadb/mysql.sock node --test --test-concurrency=1 tests/model-migration.test.mjs",
+      "counts": {
+        "tests": 9,
+        "pass": 9,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "duration_ms": 830.22206,
+      "tests": [
+        "Explicit model/color/SKU mappings preserve all source values and old URLs without inferred merges",
+        "Lost SKU, prices, stock, native sizes, supplier identities and photos are individually reported",
+        "Mapping ambiguity, cross-model photos, duplicate variants and category regressions block migration",
+        "Unknown gallery ownership is preserved without silently becoming a color photo; unreadable images block public models",
+        "Required but absent sizes cannot become fake preorder, and decimal comparison preserves missing stock",
+        "A wrong color gallery and changed established variant IDs, barcodes or kit prices block migration",
+        "Migration reports are immutable and private, and refuse a public output directory",
+        "10,000 models and 20,000 SKU are planned without quadratic joins or a public catalogue fetch",
+        "Database snapshot is read-only and neither creates tables nor modifies catalogue rows"
+      ]
+    },
+    {
+      "label": "Full post-foundation regression",
+      "command": "RUBIZH_TEST_MYSQL_SOCKET=/workspace/test-runtime/mariadb/mysql.sock node --test --test-concurrency=1 tests/*.test.mjs",
+      "counts": {
+        "tests": 177,
+        "pass": 177,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "duration_ms": 116613.993052,
+      "tests": [
+        "Production account view fits both themes, all main tabs, and phone/tablet/desktop widths",
+        "Phone badge reflects verification and profile/delivery keep their POST fields and CSRF token",
+        "Existing orders retain links and do not show the empty-order illustration",
+        "Empty checkout hides recipient, delivery and submit; comparison survives reload and can be cleared",
+        "Real unknown stock has no false scarcity; confirmed sizes sort logically even with native fallback",
+        "Canonical size matching combines heights, variants and footwear without guessing missing sizes",
+        "New-order email waits for confirmation; confirmed card email has a payment link and no premature bank details",
+        "Database availability matches buy buttons; missing local originals and duplicate copies are repaired",
+        "Private authentication config remains usable when environment overrides are absent",
+        "Explicit environment flags disable SMS and Google even with enabled private config",
+        "SMS requires the token, sender, explicit enablement and a long application secret",
+        "Environment credentials override private values and mailbox password spacing is preserved",
+        "Empty environment stubs preserve Monobank and Nova Poshta keys stored on hosting",
+        "Phone normalization and code hashes bind verification to the phone and challenge",
+        "TurboSMS success requires an accepted result for the exact recipient and a message ID",
+        "Hosting secret initializer preserves settings, uses private permissions and is safe to repeat",
+        "Private hosting credential merge preserves the database and supplier settings and guards activation",
+        "Cart mail has escaped real variants, quantities and a limited recovery link; order stages include one tracking section",
+        "Reminder eligibility uses UTC, checks deadline and expiry and never re-sends terminal carts",
+        "Real MySQL queue: consent, validated catalogue, debounce, delivery, conversion, retries, locks and parcel dedupe",
+        "Scheduler runs each worker once, respects its interval, isolates failures and prevents concurrent overlap",
+        "Read-only launch report distinguishes fresh, failed and missing workers without printing private credentials",
+        "Cache cron preserves private existing tasks, is idempotent and does not overwrite unreadable schedules",
+        "Automation cron replaces cache-only scheduling, preserves unrelated jobs, is idempotent and handles hosting denial",
+        "Cart reminders require a valid email and explicit opt-in; quantity updates, reload and opt-out remain consistent",
+        "Returning from a reminder restores a real available variant and keeps its kit group without creating an order",
+        "Description attributes use labelled source values and preserve confirmed fields",
+        "Misclassified clothing moves out of camouflage while genuine camouflage remains",
+        "PHP size facets retain native sizes, heights, footwear halves and canonical order",
+        "Stale public cache returns promptly, queues refresh, then worker replaces it; GC retains fallback",
+        "A stalled refresh stops serving stale data after the five-minute grace period",
+        "Long branches keep equal compact cards; native dialog scrolls and closes with keyboard",
+        "Catalog category pages have two short rows, correct arrows, and no generic glove fallback",
+        "Directory and product grid fit narrow and wide screens in both themes",
+        "All supplied banners have optimized assets and exact category assignments",
+        "Deployment preserves private configs, media and legacy provider keys; invalid checksum changes nothing",
+        "Small patch without api files still backs up private config and installs successfully",
+        "Custom brigade is validated; old and empty orders retain the previous destination",
+        "Receipt and email use the saved brigade and HTML escapes its name",
+        "Donation batching rejects mixed brigades before writing a transfer",
+        "Brigade is the first field in the donation block, updates the summary, and reaches the order payload",
+        "A cold kit page reserves bandwidth for equipment instead of downloading homepage hero artwork",
+        "Homepage switches exact supplied artwork on both screen sizes, persists theme, and survives SPA navigation",
+        "Two blank clothing variants never become one-size SKU buttons or buyable products",
+        "Confirmed letter sizes and native fallback stay available; unconfirmed sibling is hidden",
+        "Only confirmed sibling is displayed as its actual size",
+        "Backend rejects blank clothing and footwear sizes but preserves native sizes and one-size accessories",
+        "Catalog API recovers native/database size labels and marks blank clothing variants unavailable",
+        "Repeated sizes across colours are shown once, and the chosen colour/size adds its own SKU",
+        "A single size for the chosen colour remains one size despite other colours and duplicate offers",
+        "All picker slots, pagination, combined filters, stock and source sizes work against MySQL",
+        "Picker immediately shows preloaded products, exposes API failure and retries; reopening reuses the response",
+        "Search displays loading before a real empty result, reset restores products, and confirmed sizes can add to a slot",
+        "Instructions and selection buttons are highlighted in both themes without mobile overflow",
+        "Mobile category controls, product actions and checkout actions stay centered and usable",
+        "Account order tabs and catalog action remain centered on mobile",
+        "Explicit model/color/SKU mappings preserve all source values and old URLs without inferred merges",
+        "Lost SKU, prices, stock, native sizes, supplier identities and photos are individually reported",
+        "Mapping ambiguity, cross-model photos, duplicate variants and category regressions block migration",
+        "Unknown gallery ownership is preserved without silently becoming a color photo; unreadable images block public models",
+        "Required but absent sizes cannot become fake preorder, and decimal comparison preserves missing stock",
+        "A wrong color gallery and changed established variant IDs, barcodes or kit prices block migration",
+        "Migration reports are immutable and private, and refuse a public output directory",
+        "10,000 models and 20,000 SKU are planned without quadratic joins or a public catalogue fetch",
+        "Database snapshot is read-only and neither creates tables nor modifies catalogue rows",
+        "NP setup dry run resolves directories and sender without changing private configuration",
+        "NP setup preserves credentials, backs up configuration, adds manager and both Kiborg origins, and disables COD",
+        "Ambiguous contacts and invalid manager identity leave hosting configuration unchanged",
+        "Ambiguous depots and missing cargo branches remain unavailable rather than guessing",
+        "Kiborg shipment payload uses branch 9 through 30 kg and branch 36 above 30 kg, with no COD",
+        "NP setup retries bounded rate-limited reads, caches duplicate lookups, and never retries document writes or other rejections",
+        "Public WebP and thumbnails are readable under private cron umask; permission repair never touches private files or symlinks",
+        "Overlapping photo processors skip without changing queue state or waiting for a download",
+        "First catalogue images have priority while later cards stay lazy on mobile and desktop",
+        "Pinned schema/hash and all 143 category identities are preserved separately from production taxonomy",
+        "Versioned quantity fixture passes offline contract; stale observation is warning, not TTL",
+        "Versioned status fixture passes offline contract; stale observation is warning, not TTL",
+        "Versioned feed_presence fixture passes offline contract; stale observation is warning, not TTL",
+        "Typed PREORDER input preserves null/confirmation semantics without changing checkout",
+        "Typed ORDER_ON_REQUEST input preserves null/confirmation semantics without changing checkout",
+        "Typed UNKNOWN input preserves null/confirmation semantics without changing checkout",
+        "Typed SIZE_CONFIRMATION_REQUIRED input preserves null/confirmation semantics without changing checkout",
+        "Typed OUT_OF_STOCK input preserves null/confirmation semantics without changing checkout",
+        "Typed PRICE_NOT_READY input preserves null/confirmation semantics without changing checkout",
+        "ONE_SIZE remains a real SKU with explicit typed size",
+        "NO_SIZE_REQUIRED remains a real SKU with explicit typed size",
+        "Foundation rejects unsupported batch version",
+        "Foundation rejects wrong policy version",
+        "Foundation rejects missing required timestamp",
+        "Foundation rejects legacy combined checkout permission",
+        "Foundation rejects unknown effective availability",
+        "Foundation rejects numeric unknown quantity",
+        "Foundation rejects zero QUANTITY cannot authorize in stock",
+        "Foundation rejects false confirmed binding while payable",
+        "Foundation rejects unconfirmed price while payable",
+        "Foundation rejects request option must not invent SKU",
+        "Foundation rejects request option cannot authorize payment",
+        "Foundation rejects request option cannot invent stock",
+        "Foundation rejects COLOR scope requires owned color",
+        "Foundation rejects duplicate sizes rejected",
+        "Foundation rejects unknown canonical ID rejected",
+        "Foundation rejects color object extension validated",
+        "Foundation rejects orphan SKU color rejected",
+        "Foundation rejects wrong color gallery rejected",
+        "Foundation rejects duplicate model rejected",
+        "Foundation rejects SKU ownership across models rejected",
+        "Foundation rejects G02 exporter missing v1 SKU pricing rejected",
+        "Foundation rejects missing site price rejected",
+        "Foundation rejects price disagreement rejected",
+        "Foundation rejects sub-kopeck rounding forbidden",
+        "Foundation rejects kit below private floor rejected",
+        "Foundation rejects credentials in photo URL rejected",
+        "Foundation rejects internal photo URL rejected",
+        "Foundation rejects structured size cannot leak private object",
+        "Foundation rejects structured color cannot leak private object",
+        "Foundation rejects color list cannot claim another SKU",
+        "Foundation rejects confirmation flag cannot authorize payment",
+        "Foundation rejects stock precision cannot be silently rounded",
+        "Foundation rejects bounded catalog prevents quadratic unique-size work",
+        "Foundation rejects SKU case collision under legacy DB collation",
+        "Schema interpreter rejects unknown keywords; JSON object/array distinction, conditional and contains checks are real",
+        "Color identity is composite per model, unknown photos stay unassigned, absent floor disables discounts without guessing",
+        "Public whitelist strips nested supplier/source/pricing/evidence/key canaries and retains decimal public prices",
+        "Explicit mappings require proof and owned model/color/SKU; unknown photo has null target and redirects remain data only",
+        "Pure inclusion/plan has no DDL or configuration side effects; foundation advertises no capability and records single-payment mixed policy",
+        "Isolated CLI: additive schema, legacy/pricing/order/account preservation, composite FK, null SKU options, replay/journal drift and public GET refusal",
+        "Selected SKU changes retail and actual wholesale amounts without exposing a private floor",
+        "Mobile kit total sums exact selected PIM kit prices instead of a quantity percentage",
+        "HTTP PIM pricing sync, private projection, atomic failure, checkout replay, stale quote and reservations",
+        "PIM retail, both wholesale levels and kit values are authoritative, percentage cannot change them",
+        "Expensive SKU uses passed 14710/13340/13700 without guessing the supplier payout",
+        "RRP/manual restrictions can raise every price and are never recalculated by shop",
+        "Missing floor, malformed floor and legacy pricing disable special discounts",
+        "Null kit price refuses special kit while retail remains available",
+        "Money rejects NaN, negative, subkopeck and boolean; fractional quantity is exact",
+        "Wholesale cannot be self-approved or stack with promo; retail promo obeys exact floor",
+        "Two separate plates are charged twice, packaged pair once; no duplicate size inference",
+        "Ready kit membership, exact SKU/color and complete quantity are checked",
+        "Public line quote never contains the margin floor, supplier constraints or wholesale grant",
+        "Semantic parsing resolves relations and complete phrases, while real primary-type conflicts remain for review",
+        "360 labelled real products across 18 roots retain their independently specified categories",
+        "V2 dry-run is read-only; reviewed apply preserves data, manual locks and PIM authority across imports",
+        "Real HTTP: nonce CSP, banner loading, bounded reads, duplicate checkout and concurrent stock reservation",
+        "Catalogue rejects malformed and excessive filters before SQL, while normalizing pagination",
+        "Supplier image downloader blocks private IPv4/IPv6, credentials, unusual ports and unsafe redirect destinations",
+        "Rate quota counts, expires, isolates identities and has a fixed number of disk shards",
+        "Independent processes cannot exceed the work pool; completion releases all slots",
+        "Same-version cache growth is pruned and nested stripe collisions do not deadlock",
+        "Every numbered banner has an existing image, exact category ID and the corrected 7/8 assignment",
+        "External database configuration requires certificate verification and rejects DSN injection",
+        "A missing, failed or stale cache worker heartbeat fails readiness without revealing customer information",
+        "Home images load, categories navigate, and layout fits desktop",
+        "Direct product links load correct product and preserve its URL",
+        "Selected size and cart survive reload, with accurate totals",
+        "Disabled payment methods and donation claims are absent at checkout",
+        "Card and COD options appear when the server enables them",
+        "Cart quantity cannot exceed the known stock",
+        "Keyboard favourite activation happens once and persists",
+        "Search returns matching product and zero-result recovery",
+        "Mobile menu closes with Escape and home fits small screens",
+        "Theme preference persists and reduced motion is supported",
+        "Mobile catalog, product and checkout fit the viewport",
+        "Catalog server errors surface without pretending to succeed",
+        "Preview rejects real order/payment writes and private file requests",
+        "Mobile kit selection preserves sizes and uses retail when PIM has not confirmed special prices",
+        "Seller settings do not recursively copy mounted React elements when reopening the kit selector",
+        "Catalogue cards stay separate and controls fit at phone, tablet and desktop widths in both themes",
+        "Kit mobile parameters expand and selectors close with Escape without layout overlap",
+        "Responsive hero uses distinct images and places the extra logo only on desktop",
+        "Real anonymous PHP login renders accessibly without overflow and preview rejects login writes",
+        "Mobile price and size filters combine, clear, and preserve a usable result grid",
+        "Kit colour filters with no matches remain responsive and all-category links work on mobile",
+        "Light theme keeps header text, icons and the logo readable across storefront pages and login",
+        "Compact mobile login keeps email, phone and SMS confirmation actions in the first screen",
+        "Kit recommendations filter before limiting, prioritise proper clothing and avoid eight facet requests",
+        "Category migration is reversible, preserves full rows/media, filters old URLs and rejects unknown PIM IDs",
+        "Canonical categories navigate with stable IDs and their own banners on phone and desktop in both themes"
+      ]
+    },
+    {
+      "label": "Final focused foundation validation",
+      "command": "RUBIZH_TEST_MYSQL_SOCKET=/workspace/test-runtime/mariadb/mysql.sock node --test --test-concurrency=1 tests/pim-v3-foundation.test.mjs",
+      "counts": {
+        "tests": 52,
+        "pass": 52,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "duration_ms": 2200.156178,
+      "tests": [
+        "Pinned schema/hash and all 143 category identities are preserved separately from production taxonomy",
+        "Versioned quantity fixture passes offline contract; stale observation is warning, not TTL",
+        "Versioned status fixture passes offline contract; stale observation is warning, not TTL",
+        "Versioned feed_presence fixture passes offline contract; stale observation is warning, not TTL",
+        "Typed PREORDER input preserves null/confirmation semantics without changing checkout",
+        "Typed ORDER_ON_REQUEST input preserves null/confirmation semantics without changing checkout",
+        "Typed UNKNOWN input preserves null/confirmation semantics without changing checkout",
+        "Typed SIZE_CONFIRMATION_REQUIRED input preserves null/confirmation semantics without changing checkout",
+        "Typed OUT_OF_STOCK input preserves null/confirmation semantics without changing checkout",
+        "Typed PRICE_NOT_READY input preserves null/confirmation semantics without changing checkout",
+        "ONE_SIZE remains a real SKU with explicit typed size",
+        "NO_SIZE_REQUIRED remains a real SKU with explicit typed size",
+        "Foundation rejects unsupported batch version",
+        "Foundation rejects wrong policy version",
+        "Foundation rejects missing required timestamp",
+        "Foundation rejects legacy combined checkout permission",
+        "Foundation rejects unknown effective availability",
+        "Foundation rejects numeric unknown quantity",
+        "Foundation rejects zero QUANTITY cannot authorize in stock",
+        "Foundation rejects false confirmed binding while payable",
+        "Foundation rejects unconfirmed price while payable",
+        "Foundation rejects request option must not invent SKU",
+        "Foundation rejects request option cannot authorize payment",
+        "Foundation rejects request option cannot invent stock",
+        "Foundation rejects COLOR scope requires owned color",
+        "Foundation rejects duplicate sizes rejected",
+        "Foundation rejects unknown canonical ID rejected",
+        "Foundation rejects color object extension validated",
+        "Foundation rejects orphan SKU color rejected",
+        "Foundation rejects wrong color gallery rejected",
+        "Foundation rejects duplicate model rejected",
+        "Foundation rejects SKU ownership across models rejected",
+        "Foundation rejects G02 exporter missing v1 SKU pricing rejected",
+        "Foundation rejects missing site price rejected",
+        "Foundation rejects price disagreement rejected",
+        "Foundation rejects sub-kopeck rounding forbidden",
+        "Foundation rejects kit below private floor rejected",
+        "Foundation rejects credentials in photo URL rejected",
+        "Foundation rejects internal photo URL rejected",
+        "Foundation rejects structured size cannot leak private object",
+        "Foundation rejects structured color cannot leak private object",
+        "Foundation rejects color list cannot claim another SKU",
+        "Foundation rejects confirmation flag cannot authorize payment",
+        "Foundation rejects stock precision cannot be silently rounded",
+        "Foundation rejects bounded catalog prevents quadratic unique-size work",
+        "Foundation rejects SKU case collision under legacy DB collation",
+        "Schema interpreter rejects unknown keywords; JSON object/array distinction, conditional and contains checks are real",
+        "Color identity is composite per model, unknown photos stay unassigned, absent floor disables discounts without guessing",
+        "Public whitelist strips nested supplier/source/pricing/evidence/key canaries and retains decimal public prices",
+        "Explicit mappings require proof and owned model/color/SKU; unknown photo has null target and redirects remain data only",
+        "Pure inclusion/plan has no DDL or configuration side effects; foundation advertises no capability and records single-payment mixed policy",
+        "Isolated CLI: additive schema, legacy/pricing/order/account preservation, composite FK, null SKU options, replay/journal drift and public GET refusal"
+      ]
+    }
+  ],
+  "schema_plan": {
+    "steps": 70,
+    "by_kind": {
+      "column": 55,
+      "index": 4,
+      "table": 10,
+      "constraint": 1
+    },
+    "additional_journal_table": "rubizh_pim_foundation_journal",
+    "new_tables": [
+      "rubizh_product_colors",
+      "rubizh_model_photos",
+      "rubizh_color_photos",
+      "rubizh_size_catalogs",
+      "rubizh_size_options",
+      "rubizh_pim_batches",
+      "rubizh_pim_batch_chunks",
+      "rubizh_pim_legacy_mappings",
+      "rubizh_pim_history",
+      "rubizh_order_request_selections",
+      "rubizh_pim_foundation_journal"
+    ],
+    "steps_with_ddl_hash": [
+      {
+        "id": "products.pim_contract_version",
+        "kind": "column",
+        "sha256": "92b46de377c087e3c113ec1769e0e96ec008d7dbc8a5a119b51492ebcffdb9e9"
+      },
+      {
+        "id": "products.pim_model_id",
+        "kind": "column",
+        "sha256": "c871ca7e94ba24365ada17da12c4f4f2681421bfb80610c7a17f60ebda65ae61"
+      },
+      {
+        "id": "products.pim_publication_state",
+        "kind": "column",
+        "sha256": "eecc3071da7ead2c1f23d0de20a7b6ba97a79b5c5182e64bbd2cab1ecb9ce64b"
+      },
+      {
+        "id": "products.pim_publication_reason",
+        "kind": "column",
+        "sha256": "2308094ce3dbc0daf9992c5fab4044917191ca578058f97f3f35c1603c0d9f28"
+      },
+      {
+        "id": "products.pim_revision",
+        "kind": "column",
+        "sha256": "c509d14a7b3111fd34f8f14f2b10d3177e0aff057632a00b600a2edd80bbb074"
+      },
+      {
+        "id": "products.pim_usable_photo_count",
+        "kind": "column",
+        "sha256": "8cadab2886d2fc205c6537f4a133628502c937af7e577930bac3e77e49e935d2"
+      },
+      {
+        "id": "products.pim_media_revision",
+        "kind": "column",
+        "sha256": "220a79c8e66a12689ed40bb98a9dfc66d9115a9a37ed3a337799e74c32819d5f"
+      },
+      {
+        "id": "products.pim_classification_version",
+        "kind": "column",
+        "sha256": "6018de8c3031f65453bb8c7b3fec50faee3b90796598e3eb8a77e332f584748b"
+      },
+      {
+        "id": "products.pim_category_catalog_version",
+        "kind": "column",
+        "sha256": "f3b203213c0180ab211ac4de22480cb4f71847339b2856b7e30f2c7cf387f76b"
+      },
+      {
+        "id": "products.pim_size_catalog_version",
+        "kind": "column",
+        "sha256": "757124b41c6ac709c72dbb6d468d3b320dadd5f3273ec349a3d192b2389d690d"
+      },
+      {
+        "id": "products.pim_order_policy_version",
+        "kind": "column",
+        "sha256": "b175d8315d36bbcb5422a6ee57071313224082bf27d9dee7de11062d820bc298"
+      },
+      {
+        "id": "products.pim_inventory_policy_version",
+        "kind": "column",
+        "sha256": "3c63b133830782f2b3ceec763c1fc40bf691d1e222d99a79bb4caec86a256128"
+      },
+      {
+        "id": "products.pim_pricing_policy_version",
+        "kind": "column",
+        "sha256": "a2d7f7584299cbcdd4381cd9539ef3a4f72f694e8e039d11ed6a0fbdd3391b58"
+      },
+      {
+        "id": "variants.pim_variant_id",
+        "kind": "column",
+        "sha256": "6d74b54f58e47451c53a1283a5b994e32f0ab3fa8613c543567519064ad9d632"
+      },
+      {
+        "id": "variants.pim_color_id",
+        "kind": "column",
+        "sha256": "cc2213e7dd315257062625c1baf4036c9a2edbc6dcf9d018eec753f3669d89cf"
+      },
+      {
+        "id": "variants.pim_size_system",
+        "kind": "column",
+        "sha256": "a29673933a157b635d16bfbd56a44b04e4b1c682b1715fb6391f3be86fe85bf0"
+      },
+      {
+        "id": "variants.pim_size_raw",
+        "kind": "column",
+        "sha256": "cfeb3e9d57efe961e44d10870b03cfc94ad956f00dcc7d11305af1d1464781b3"
+      },
+      {
+        "id": "variants.pim_size_normalized",
+        "kind": "column",
+        "sha256": "3b960c4d067699d3e2f37a2b871fda223cc5c58a3e004f1c35db85a75261bf0d"
+      },
+      {
+        "id": "variants.pim_size_display",
+        "kind": "column",
+        "sha256": "6b050d948a8db22d89c62d2bda0bc1ed4ac38ab9823fd3c790e41ce7c9fdd37c"
+      },
+      {
+        "id": "variants.pim_size_status",
+        "kind": "column",
+        "sha256": "a862917b35a9bfc9bf2448785e9119a2b2a3c9a9c610066a235ffed53087de50"
+      },
+      {
+        "id": "variants.pim_size_confidence_tier",
+        "kind": "column",
+        "sha256": "25b6b5e974989e6b2b9b73edb858f1a99144d028a2d3ff6c4c40a3176a3e69f3"
+      },
+      {
+        "id": "variants.pim_source_binding_status",
+        "kind": "column",
+        "sha256": "09f20ab51df45ef547343c92e9fe6fcf2c3fd49bcc6ad402e37e9c417028ccee"
+      },
+      {
+        "id": "variants.pim_effective_availability",
+        "kind": "column",
+        "sha256": "76ccda61cacb6bfbb4e760713b64afd4a65f044768133b26809088c0261e2a16"
+      },
+      {
+        "id": "variants.pim_stock_status",
+        "kind": "column",
+        "sha256": "4cb11e2deb96dcba35877bb32bd3966b6b8e37cf3eaa880951f3d6fe3bec7199"
+      },
+      {
+        "id": "variants.pim_stock_quantity",
+        "kind": "column",
+        "sha256": "2e39fa9ee6a5c0bd7e936a31cb89198bad81a6756250296a712ae3c08626a830"
+      },
+      {
+        "id": "variants.pim_availability_status",
+        "kind": "column",
+        "sha256": "cdfc0d870b114da8908b0bbd00d22d01b588a0c340429bd7abf03f6686762b1f"
+      },
+      {
+        "id": "variants.pim_availability_source",
+        "kind": "column",
+        "sha256": "574622cf501684b57809599c341b2104a632ea9e379ab5decddb9d686d58d9dc"
+      },
+      {
+        "id": "variants.pim_availability_confirmation",
+        "kind": "column",
+        "sha256": "c2247780d99eb037c1ff8f95699e099a24b51e6cc70b1a8c278704c83e83752c"
+      },
+      {
+        "id": "variants.pim_inventory_mode",
+        "kind": "column",
+        "sha256": "75c066b08d3cbf5dcee79bcf7da62532b3680e18aa1b5324298ec9e55afe5dfa"
+      },
+      {
+        "id": "variants.pim_inventory_policy_id",
+        "kind": "column",
+        "sha256": "3a3afacec1bd6fe02d83fcadffd74f3f3daf39d9a0aee3fd20a7857806001a18"
+      },
+      {
+        "id": "variants.pim_inventory_policy_version",
+        "kind": "column",
+        "sha256": "46ed26cfb544277c35b4c951bb9f1e63dcc29ea472c5b02da933df95b1d64ee9"
+      },
+      {
+        "id": "variants.pim_stock_observed_at",
+        "kind": "column",
+        "sha256": "56e33da13ab0aed285f284758c5907cca05d7f5252f2e9ab5b50be5c829a07b6"
+      },
+      {
+        "id": "variants.pim_source_updated_at",
+        "kind": "column",
+        "sha256": "db0ec9f6af84283e0a6412bfbf63dd32c4a799a3d1707ec41b35826e40cad271"
+      },
+      {
+        "id": "variants.pim_stock_data_age_hours",
+        "kind": "column",
+        "sha256": "6833047a07c921f95e38b7f098bd4f58772efa4dd799fc01a6658ebb798325b4"
+      },
+      {
+        "id": "variants.pim_stock_warning_hours",
+        "kind": "column",
+        "sha256": "2540b22926fbdff4240a88d446b2f963c49dc21f1a2cb584b3ddd5e063858c45"
+      },
+      {
+        "id": "variants.pim_expires_at",
+        "kind": "column",
+        "sha256": "6b872071799b54531b7869f8f40590f803feff3a9edf66e905dc6a035ab80dbd"
+      },
+      {
+        "id": "variants.pim_delivery_lead_time_days",
+        "kind": "column",
+        "sha256": "94e6fdce232de9fdca6e5b6b731726f554bb2fc42f2e69043f7c016910bf38bf"
+      },
+      {
+        "id": "variants.pim_revision",
+        "kind": "column",
+        "sha256": "893c063e7266cfb5ceb9540536b08f7b93c0e0de6432ad492e8aa1753c2ac09f"
+      },
+      {
+        "id": "variants.pim_order_submission_allowed",
+        "kind": "column",
+        "sha256": "db706b907bd4bdf873333b976996bcd7b0d42705c4b8d55f42993f811c05d0d5"
+      },
+      {
+        "id": "variants.pim_payment_allowed",
+        "kind": "column",
+        "sha256": "3430ea91134b61922c0d7d106789a187601f36a1e201c22a8e44538b9c2419fe"
+      },
+      {
+        "id": "variants.pim_requires_order_confirmation",
+        "kind": "column",
+        "sha256": "14a93e5ea715b84ab9280eb25299b74444858a20c7d135878d6f87ef8b0d7300"
+      },
+      {
+        "id": "variants.pim_inventory_policy_confirmed",
+        "kind": "column",
+        "sha256": "eb42c1254b04cc571f2598725188ee7e560b30d0ff18c127e162f51eeced58be"
+      },
+      {
+        "id": "variants.pim_stale_source",
+        "kind": "column",
+        "sha256": "d97e406b6b979a7df221df81ae6ae4f6d48aa9d583c4f2f6971b29c402833b04"
+      },
+      {
+        "id": "variants.pim_ready_to_dispatch",
+        "kind": "column",
+        "sha256": "aead7e72ac10ff77a5a7637f17746352861ff824a81a192164baa291615ff18d"
+      },
+      {
+        "id": "variants.pim_price_ready",
+        "kind": "column",
+        "sha256": "093b6473d01cad5363d5c847f947cbd4f8d0c70ab5000f5c2f02a0352aac1540"
+      },
+      {
+        "id": "variants.pim_binding_confirmation_required",
+        "kind": "column",
+        "sha256": "992172bb7d81b68baa620a0b737860326c9384131b9b151246d5658a404b743f"
+      },
+      {
+        "id": "variants.pim_size_confirmation_required",
+        "kind": "column",
+        "sha256": "d907da876a01ccae2a435f050b9b9db39e84f3f6ee1409ad79f49f3dac775ce8"
+      },
+      {
+        "id": "variants.pim_active",
+        "kind": "column",
+        "sha256": "a5bcfcc390e619e5c352bf9d37af28f678f983083b757caa6b7bd372bae50d6f"
+      },
+      {
+        "id": "photos.pim_photo_id",
+        "kind": "column",
+        "sha256": "55a711f161b1d1574841b85871937dda29fa038f1c44e96eb8c79f93054bedf3"
+      },
+      {
+        "id": "photos.pim_media_revision",
+        "kind": "column",
+        "sha256": "31d878330b46a30909650b80dd522a8e019ec978318bf9a2e189c16fda51fa90"
+      },
+      {
+        "id": "rubizh_customer_orders.pim_order_state",
+        "kind": "column",
+        "sha256": "4b417cb4e42fb6de09344a9c44cdf288e763fe65dc8a2ae157861b120142d066"
+      },
+      {
+        "id": "rubizh_customer_orders.pim_fulfillment_state",
+        "kind": "column",
+        "sha256": "8af9f8b08dee989849e4ecf9c1d75dfc3e80544a1300783c017f5250e9026689"
+      },
+      {
+        "id": "rubizh_customer_orders.pim_contract_version",
+        "kind": "column",
+        "sha256": "945d4b986e23108d0db598c512a90b7e52d4f0fe3f27f955e9fec7912933a72e"
+      },
+      {
+        "id": "rubizh_customer_orders.pim_catalog_revision",
+        "kind": "column",
+        "sha256": "2f0ad0cc90e949aa1f633da1fb7c84010767a5e98e669bf36097eb22e7c552f9"
+      },
+      {
+        "id": "rubizh_customer_orders.pim_confirmation_revision",
+        "kind": "column",
+        "sha256": "4689546b5c6756d5467d22767871732cdb970f60674b19e7620e37848956ee75"
+      },
+      {
+        "id": "products.pim_model_identity",
+        "kind": "index",
+        "sha256": "92713e8c9b4cc90a37d9451ee47f931c8b7d4667e07d32e4cfdff0d7a729b506"
+      },
+      {
+        "id": "variants.pim_sku_owner",
+        "kind": "index",
+        "sha256": "719139e7e6183719dd87dd83f2e6a7366c88719276038732c9d2e5374a766436"
+      },
+      {
+        "id": "variants.pim_variant_identity",
+        "kind": "index",
+        "sha256": "8fbd3ec86d56bd8ef958c8ef70658aedb02880c946ef72c519be3c07096282c3"
+      },
+      {
+        "id": "variants.pim_color_selection",
+        "kind": "index",
+        "sha256": "0204eb7a566945bf3baf822625d26cac4e7eab3336be99f8b750ce6047ce40ec"
+      },
+      {
+        "id": "rubizh_product_colors",
+        "kind": "table",
+        "sha256": "710265109bd7b8f87d02bf39a493f0be80edad71fa8045faaefc1e7ab6875b57"
+      },
+      {
+        "id": "rubizh_model_photos",
+        "kind": "table",
+        "sha256": "06dc82af69580414f884b595f9319e5cb331fc83bbf922b78573d6ce61ee2e36"
+      },
+      {
+        "id": "rubizh_color_photos",
+        "kind": "table",
+        "sha256": "f43379edabb4393930811bfad0b2e42363447c2e26bf029837b490aacadc60e3"
+      },
+      {
+        "id": "rubizh_size_catalogs",
+        "kind": "table",
+        "sha256": "27e80fc68e0925b5920bc074543564a46d8ef4b9cedb3c6aacc17f83d8994970"
+      },
+      {
+        "id": "rubizh_size_options",
+        "kind": "table",
+        "sha256": "b5750c04f2a9c3c7a1b3cbc0cc13b8657ca8914bb576e706d8c97da461e34644"
+      },
+      {
+        "id": "rubizh_pim_batches",
+        "kind": "table",
+        "sha256": "3bad0e64383d8760cd5e7cc0dc30f195e4db423b927259e4a1c4229663498f0b"
+      },
+      {
+        "id": "rubizh_pim_batch_chunks",
+        "kind": "table",
+        "sha256": "d8a580456d74cdbf3420b02c169773ff5b1239573893f66b88bfd1429edf8635"
+      },
+      {
+        "id": "rubizh_pim_legacy_mappings",
+        "kind": "table",
+        "sha256": "5b53468e8a0a7d9a6e189ae607a5b160c1fc34609fa6ff912944fe97a53baa20"
+      },
+      {
+        "id": "rubizh_pim_history",
+        "kind": "table",
+        "sha256": "2c34af4cc7f34f44d21bb46efef4ff44472fc37705c617edb37939a7b77fb3c4"
+      },
+      {
+        "id": "rubizh_order_request_selections",
+        "kind": "table",
+        "sha256": "8192573c7c528c35ff2eb0da76916b6517d36364c3c1b952d2de8df661908315"
+      },
+      {
+        "id": "variants.pim_color_owner",
+        "kind": "constraint",
+        "sha256": "941bbf6ff233e10ac97809c5841904862a41aaa170a9521afeecd60b3cad2b4c"
+      }
+    ]
+  },
+  "syntax_checks": {
+    "php_helpers": 3,
+    "new_node_test": "passed"
+  },
+  "isolated_restart_probe": "stop/restart and repeated PDO SELECT 1 passed",
+  "limitations": [
+    "No actual PIM export roundtrip, production migration or live catalog LOST_* certification",
+    "MySQL 8 and deployment PHP 8.2 were not executed",
+    "No Commit 2/3, status negotiation, ingest, redirects, live public resolver or payment behavior changes"
+  ]
+}

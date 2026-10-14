@@ -1,0 +1,13 @@
+# Final dynamic endpoint Quality Gate — PARTIAL
+
+Дата фиксации:2026-10-13 Europe/Kyiv. Application/test files unchanged from1fcca317; final workflow codee9ce24d adds only serialized CI scheduling.
+
+132 endpoint/action-method inventory rows (105 concrete endpoint-method keys) were requested. Final aggregate:1920HTTP requests,831/831 explicit expectations,2697/2697 overlapping semantic checks,975per-request no-effect snapshots plus2whole-domain A↔B comparisons;0failed final expectations/checks. These overlapping checks must not be added as distinct tests.
+
+Main traversal uses real synthetic staff password sessions (READ_ONLY/MANAGER/OWNER/LOGISTICS), customer/anonymous/PIM identities, wrong/missingCSRF and foreignOrigin, guarded response codes/messages and before/after states. Empty service queues, real synthetic own payment-start success and foreign payment/return/repeat/account refusals were exercised. Additional17ANY route families×8methods:232/232; preflight204 requires empty body and is a protocol observation, not an auth PASS. Readiness heartbeat belongs only to generated fixture. Additional36/36 valid multipart donation and narrow NP/financial role probes; denied domain state unchanged. No auth/CSRF/ownership source gates were modified.
+
+Earlier supplement expectation failures were retained privately: health required a current fixture heartbeat; API OPTIONS intentionally returns empty204; SITE full-refund uses payment.refund.request whereas CRM uses payment.refund.execute. Corrected private helpers repeat the same source-contract checks; no application assertions were weakened or app source changed.
+
+Union evidence: actual current-source full450/450 includes isolated staff sessions/CSRF/role revocation; OWNER money step-up; CRM real API browser operation; verified paid/partial+full refund/physical returns; NP fulfillment and PIM contract/sync tests. This supports these named boundaries without inventing exhaustive coverage. Full suite and browser matrix were not repeated by endpoint auditor.
+
+Remaining limits: Apache/direct-library/CLI exposure, full enabled identity-provider/capability/race combinations, every permitted-role successful business operation across all state/token/slug variants, and the complete mutation ownership Cartesian product are not certified by this manifest. Provider transport mocks and empty queues do not certify real provider operations (Stage6DEFERRED). Verdict remains PARTIAL, not exhaustive PASS. Detailed per-route manifest/unconfirmed fields, helpers and red/green response histories retained privately in /workspace/onboarding/stage2-private/endpoint-quality-gate. Source/dependency checkouts unchanged; no real provider/production/PIM-sync/AUTOPRICES action.

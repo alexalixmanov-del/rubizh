@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 const root=path.resolve(import.meta.dirname,'..');
-const php=process.env.PHP_PATH||(existsSync('/workspace/php-runtime/root/usr/bin/php8.4')?'/workspace/php-runtime/root/usr/bin/php8.4':'php');
+const php=process.env.PHP_PATH||(existsSync((process.env.RUBIZH_PHP_RUNTIME||'/workspace/php-runtime/root/usr')+'/bin/php8.4')?(process.env.RUBIZH_PHP_RUNTIME||'/workspace/php-runtime/root/usr')+'/bin/php8.4':'php');
 function runPHP(source,environment={},privateConfig=null){
   const dir=mkdtempSync(path.join(tmpdir(),'rubizh-auth-check-'));
   try{
@@ -13,7 +13,7 @@ function runPHP(source,environment={},privateConfig=null){
     for(const file of ['mono-private.php','np-private.php'])copyFileSync(path.join(root,'api',file),path.join(dir,file));
     if(privateConfig!==null)writeFileSync(path.join(dir,'config.php'),'<?php return '+privateConfig+';');
     writeFileSync(path.join(dir,'test.php'),`<?php define('RUBIZH_AUTH',true);define('RUBIZH_PRIVATE_CONFIG',true);require __DIR__.'/identities.php';require __DIR__.'/phone.php';function check($value,$message){if(!$value)throw new RuntimeException($message);}\n${source}\necho 'passed';`);
-    const env={...process.env,LD_LIBRARY_PATH:process.env.LD_LIBRARY_PATH||'/workspace/php-runtime/root/usr/lib/x86_64-linux-gnu'};
+    const env={...process.env,LD_LIBRARY_PATH:process.env.LD_LIBRARY_PATH||(process.env.RUBIZH_PHP_RUNTIME||'/workspace/php-runtime/root/usr')+'/lib/x86_64-linux-gnu'};
     for(const name of Object.keys(env))if(name.startsWith('RUBIZH_'))delete env[name];
     Object.assign(env,environment);
     const result=spawnSync(php,['-n','-d','display_errors=0',path.join(dir,'test.php')],{encoding:'utf8',env,timeout:5000});
@@ -44,7 +44,7 @@ test('Hosting secret initializer preserves settings, uses private permissions an
     mkdirSync(path.join(dir,'dev'));mkdirSync(path.join(dir,'auth'));
     copyFileSync(path.join(root,'dev/init-auth-secret.php'),path.join(dir,'dev/init-auth-secret.php'));
     const file=path.join(dir,'auth/config.php');writeFileSync(file,"<?php return ['noreply_password'=>'fixture-mail','turbosms_token'=>'fixture-token','sms_enabled'=>true];");
-    const env={...process.env,LD_LIBRARY_PATH:process.env.LD_LIBRARY_PATH||'/workspace/php-runtime/root/usr/lib/x86_64-linux-gnu'};delete env.RUBIZH_AUTH_SECRET;
+    const env={...process.env,LD_LIBRARY_PATH:process.env.LD_LIBRARY_PATH||(process.env.RUBIZH_PHP_RUNTIME||'/workspace/php-runtime/root/usr')+'/lib/x86_64-linux-gnu'};delete env.RUBIZH_AUTH_SECRET;
     const execute=()=>spawnSync(php,['-n',path.join(dir,'dev/init-auth-secret.php')],{encoding:'utf8',env,timeout:5000});
     const result=execute();assert.equal(result.status,0);const contents=readFileSync(file,'utf8');const match=contents.match(/'auth_secret'\s*=>\s*'([a-f0-9]{64})'/);
     assert.ok(match,'A long random application secret should be generated');assert.ok(contents.includes("'noreply_password' => 'fixture-mail'"));assert.ok(contents.includes("'turbosms_token' => 'fixture-token'"));assert.ok(contents.includes("'sms_enabled' => true"));assert.equal(statSync(file).mode&0o777,0o600);
@@ -62,11 +62,11 @@ test('Private hosting credential merge preserves the database and supplier setti
  writeFileSync(api,"<?php return ['db_host'=>'localhost','db_name'=>'fixture-db','db_pass'=>'fixture-db-password','supplier_contacts'=>['fixture'=>'preserved'],'mono_activation_confirmed'=>false];");
  writeFileSync(auth,"<?php return ['noreply_password'=>'existing-mail','auth_secret'=>str_repeat('x',48),'sms_enabled'=>false];");
  writeFileSync(source,JSON.stringify({mono_token:'fixture-mono',nova_poshta_api_key:'fixture-np',google_client_id:'fixture-id',google_client_secret:'fixture-secret'}));
- const run=args=>spawnSync(php,['-n',path.join(root,'dev/configure-services.php'),'--file='+source,...args],{encoding:'utf8',env:{...process.env,LD_LIBRARY_PATH:'/workspace/php-runtime/root/usr/lib/x86_64-linux-gnu'}});
+ const run=args=>spawnSync(php,['-n',path.join(root,'dev/configure-services.php'),'--file='+source,...args],{encoding:'utf8',env:{...process.env,LD_LIBRARY_PATH:(process.env.RUBIZH_PHP_RUNTIME||'/workspace/php-runtime/root/usr')+'/lib/x86_64-linux-gnu'}});
  try{
   const failed=run(['--enable-auth']);assert.notEqual(failed.status,0);assert.equal(readFileSync(api,'utf8').includes('fixture-mono'),false);
   const result=run([]);assert.equal(result.status,0,result.stderr);assert.equal(result.stdout.includes('fixture-secret'),false);assert.equal(statSync(auth).mode&0o777,0o600);
-  const saved=spawnSync(php,['-n','-r',`echo json_encode([require '${api}',require '${auth}']);`],{encoding:'utf8',env:{...process.env,LD_LIBRARY_PATH:'/workspace/php-runtime/root/usr/lib/x86_64-linux-gnu'}});const [a,b]=JSON.parse(saved.stdout);
+  const saved=spawnSync(php,['-n','-r',`echo json_encode([require '${api}',require '${auth}']);`],{encoding:'utf8',env:{...process.env,LD_LIBRARY_PATH:(process.env.RUBIZH_PHP_RUNTIME||'/workspace/php-runtime/root/usr')+'/lib/x86_64-linux-gnu'}});const [a,b]=JSON.parse(saved.stdout);
   assert.equal(a.db_pass,'fixture-db-password');assert.deepEqual(a.supplier_contacts,{fixture:'preserved'});assert.equal(a.mono_token,'fixture-mono');assert.equal(a.mono_activation_confirmed,false);assert.equal(b.noreply_password,'existing-mail');assert.equal(b.sms_enabled,false);assert.equal(b.auth_secret,'x'.repeat(48));
   writeFileSync(source,JSON.stringify({turbosms_token:'fixture-sms',turbosms_sender:'RUBIZH'}));assert.equal(run(['--enable-auth']).status,0);
  }finally{rmSync(parent,{recursive:true,force:true});}

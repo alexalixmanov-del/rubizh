@@ -4,7 +4,7 @@ import {existsSync} from 'node:fs';
 import {chromium} from 'playwright';
 import {startPreview} from '../dev/preview.mjs';
 let browser,server,base;
-before(async()=>{server=await startPreview(0);base='http://127.0.0.1:'+server.address().port;browser=await chromium.launch({executablePath:existsSync('/usr/bin/chromium')?'/usr/bin/chromium':undefined,headless:true,args:['--no-sandbox']});});
+before(async()=>{server=await startPreview(0);base='http://127.0.0.1:'+server.address().port;browser=await chromium.launch({executablePath:existsSync((process.env.CHROMIUM_PATH||'/usr/bin/chromium'))?(process.env.CHROMIUM_PATH||'/usr/bin/chromium'):undefined,headless:true,args:['--no-sandbox']});});
 after(async()=>{await browser?.close();await new Promise(resolve=>server.close(resolve));});
 async function run(fn){const context=await browser.newContext();const page=await context.newPage();try{await fn(page); }finally{await context.close();}}
 test('Production account view fits both themes, all main tabs, and phone/tablet/desktop widths',()=>run(async page=>{

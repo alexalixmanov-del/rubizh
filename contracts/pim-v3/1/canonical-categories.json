@@ -1,0 +1,1587 @@
+{
+  "schema_version": 1,
+  "categories": [
+    {
+      "id": "clothing",
+      "name": "Одяг та форма",
+      "parent_id": null,
+      "aliases": []
+    },
+    {
+      "id": "clothing_suits",
+      "name": "Костюми та комплекти",
+      "parent_id": "clothing",
+      "aliases": [
+        "тактичний костюм",
+        "формений комплект",
+        "костюм",
+        "комплект форми",
+        "форма мм14",
+        "suit",
+        "uniform set"
+      ]
+    },
+    {
+      "id": "clothing_combat_shirts",
+      "name": "Убакси та бойові сорочки",
+      "parent_id": "clothing",
+      "aliases": [
+        "убакс",
+        "убакси",
+        "ubacs",
+        "combat shirt",
+        "бойова сорочка",
+        "боевая рубашка",
+        "тактична сорочка",
+        "тактическая рубашка"
+      ]
+    },
+    {
+      "id": "clothing_pants",
+      "name": "Штани",
+      "parent_id": "clothing",
+      "aliases": [
+        "штани",
+        "брюки",
+        "pants",
+        "trousers",
+        "tactical pants"
+      ]
+    },
+    {
+      "id": "clothing_jackets",
+      "name": "Куртки",
+      "parent_id": "clothing",
+      "aliases": [
+        "куртка",
+        "куртки",
+        "куртки та вітровки",
+        "вітровка",
+        "ветровка",
+        "jacket",
+        "куртки тактические",
+        "зимняя куртка",
+        "зимова куртка",
+        "анорак",
+        "бушлат",
+        "кітель",
+        "китель"
+      ]
+    },
+    {
+      "id": "clothing_fleece",
+      "name": "Фліс та кофти",
+      "parent_id": "clothing",
+      "aliases": [
+        "флісова кофта",
+        "флисовая кофта",
+        "флісова куртка",
+        "флисовая куртка",
+        "фліс, кофти та худі",
+        "флиска",
+        "худі",
+        "толстовка",
+        "fleece",
+        "фліс",
+        "флис"
+      ]
+    },
+    {
+      "id": "clothing_tshirts",
+      "name": "Футболки та поло",
+      "parent_id": "clothing",
+      "aliases": [
+        "футболка",
+        "футболки",
+        "поло",
+        "майка",
+        "тільняшка",
+        "t-shirt",
+        "tshirt",
+        "polo",
+        "лонгслів",
+        "лонгслив"
+      ]
+    },
+    {
+      "id": "clothing_thermal",
+      "name": "Термобілизна",
+      "parent_id": "clothing",
+      "aliases": [
+        "термобілизна",
+        "термобелье",
+        "термобельё",
+        "термокофта",
+        "термоштани",
+        "thermal underwear"
+      ]
+    },
+    {
+      "id": "clothing_shorts",
+      "name": "Шорти",
+      "parent_id": "clothing",
+      "aliases": [
+        "шорти",
+        "шорты",
+        "shorts"
+      ]
+    },
+    {
+      "id": "clothing_rainwear",
+      "name": "Дощовики та пончо",
+      "parent_id": "clothing",
+      "aliases": [
+        "дощовик",
+        "дождевик",
+        "пончо",
+        "poncho",
+        "rainwear",
+        "raincoat"
+      ]
+    },
+    {
+      "id": "clothing_gloves",
+      "name": "Рукавички",
+      "parent_id": "clothing",
+      "aliases": [
+        "рукавички",
+        "рукавичка",
+        "рукавиці",
+        "перчатки",
+        "gloves"
+      ]
+    },
+    {
+      "id": "clothing_headwear",
+      "name": "Головні убори",
+      "parent_id": "clothing",
+      "aliases": [
+        "кепка",
+        "кепки",
+        "панама",
+        "панами",
+        "бейсболка",
+        "шапка",
+        "шапки",
+        "головні убори",
+        "cap",
+        "beanie"
+      ]
+    },
+    {
+      "id": "clothing_balaclavas",
+      "name": "Балаклави та бафи",
+      "parent_id": "clothing",
+      "aliases": [
+        "балаклава",
+        "балаклави",
+        "баф",
+        "бафф",
+        "балаклави та бафи",
+        "балаклавы",
+        "balaclava"
+      ]
+    },
+    {
+      "id": "clothing_belts",
+      "name": "Ремені одягу",
+      "parent_id": "clothing",
+      "aliases": [
+        "ремінь для штанів",
+        "ремень для брюк",
+        "тактичний ремінь",
+        "тактичні ремені",
+        "тактический ремень",
+        "ремені та портупеї",
+        "clothing belt"
+      ]
+    },
+    {
+      "id": "footwear",
+      "name": "Взуття",
+      "parent_id": null,
+      "aliases": []
+    },
+    {
+      "id": "footwear_boots",
+      "name": "Берці",
+      "parent_id": "footwear",
+      "aliases": [
+        "берці",
+        "берцы",
+        "combat boots",
+        "bertsy",
+        "берци"
+      ]
+    },
+    {
+      "id": "footwear_tactical_boots",
+      "name": "Тактичні черевики",
+      "parent_id": "footwear",
+      "aliases": [
+        "черевики",
+        "черевик",
+        "ботинки",
+        "ботинок",
+        "тактичне взуття",
+        "tactical boots",
+        "взуття"
+      ]
+    },
+    {
+      "id": "footwear_sneakers",
+      "name": "Кросівки",
+      "parent_id": "footwear",
+      "aliases": [
+        "кросівки",
+        "кроссовки",
+        "кросівка",
+        "sneakers"
+      ]
+    },
+    {
+      "id": "footwear_socks",
+      "name": "Шкарпетки",
+      "parent_id": "footwear",
+      "aliases": [
+        "шкарпетки",
+        "термошкарпетки",
+        "носки",
+        "socks"
+      ]
+    },
+    {
+      "id": "footwear_gaiters",
+      "name": "Гамаші та бахіли",
+      "parent_id": "footwear",
+      "aliases": [
+        "гамаші",
+        "гамаши",
+        "бахіли",
+        "бахилы",
+        "gaiters"
+      ]
+    },
+    {
+      "id": "footwear_insoles",
+      "name": "Устілки",
+      "parent_id": "footwear",
+      "aliases": [
+        "устілки",
+        "стельки",
+        "insoles"
+      ]
+    },
+    {
+      "id": "armor",
+      "name": "Бронезахист",
+      "parent_id": null,
+      "aliases": []
+    },
+    {
+      "id": "armor_plate_carriers",
+      "name": "Плитоноски",
+      "parent_id": "armor",
+      "aliases": [
+        "плитоноска",
+        "плитоноски",
+        "plate carrier",
+        "platecarrier",
+        "plitonoska"
+      ]
+    },
+    {
+      "id": "armor_vests",
+      "name": "Бронежилети",
+      "parent_id": "armor",
+      "aliases": [
+        "бронежилет",
+        "бронежилети",
+        "бронежилеты",
+        "body armor vest"
+      ]
+    },
+    {
+      "id": "armor_plates",
+      "name": "Бронеплити",
+      "parent_id": "armor",
+      "aliases": [
+        "бронеплита",
+        "бронеплити",
+        "бронеплиты",
+        "armor plate",
+        "ballistic plate",
+        "broneplita"
+      ]
+    },
+    {
+      "id": "armor_soft",
+      "name": "М'які балістичні пакети",
+      "parent_id": "armor",
+      "aliases": [
+        "бронепакет",
+        "балістичний пакет",
+        "баллистический пакет",
+        "м'які балістичні пакети",
+        "soft armor"
+      ]
+    },
+    {
+      "id": "armor_sets",
+      "name": "Бронекомплекти",
+      "parent_id": "armor",
+      "aliases": [
+        "бронекомплект",
+        "бронекомплекти",
+        "комплект бронезахисту",
+        "armor set"
+      ]
+    },
+    {
+      "id": "armor_accessories",
+      "name": "Аксесуари бронезахисту",
+      "parent_id": "armor",
+      "aliases": [
+        "аксесуари для плитоносок",
+        "аксесуари бронезахисту",
+        "ремінь для плитоноски",
+        "ремень для плитоноски",
+        "камербанд",
+        "кумербанд",
+        "cummerbund"
+      ]
+    },
+    {
+      "id": "helmets",
+      "name": "Шоломи та захист голови",
+      "parent_id": null,
+      "aliases": []
+    },
+    {
+      "id": "helmets_ballistic",
+      "name": "Балістичні шоломи",
+      "parent_id": "helmets",
+      "aliases": [
+        "балістичний шолом",
+        "баллистический шлем",
+        "шолом",
+        "шоломи",
+        "шлем",
+        "ballistic helmet"
+      ]
+    },
+    {
+      "id": "helmets_covers",
+      "name": "Кавери на шоломи",
+      "parent_id": "helmets",
+      "aliases": [
+        "кавер на шолом",
+        "кавер на шлем",
+        "кавер",
+        "чохол на шолом",
+        "чехол на шлем",
+        "helmet cover"
+      ]
+    },
+    {
+      "id": "helmets_padding",
+      "name": "Подушки та підвісні системи",
+      "parent_id": "helmets",
+      "aliases": [
+        "подушки для шолома",
+        "подушки для шлема",
+        "підвісна система шолома",
+        "підвісні системи та подушки",
+        "helmet padding",
+        "helmet pads"
+      ]
+    },
+    {
+      "id": "helmets_rails",
+      "name": "Рейки для шоломів",
+      "parent_id": "helmets",
+      "aliases": [
+        "рейки для шолома",
+        "рейки для шлема",
+        "helmet rails"
+      ]
+    },
+    {
+      "id": "helmets_mounts",
+      "name": "Кріплення для шоломів",
+      "parent_id": "helmets",
+      "aliases": [
+        "кріплення для навушників",
+        "кріплення на шолом",
+        "крепление на шлем",
+        "helmet mount"
+      ]
+    },
+    {
+      "id": "helmets_accessories",
+      "name": "Аксесуари шоломів",
+      "parent_id": "helmets",
+      "aliases": [
+        "аксесуари для шоломів",
+        "аксессуары для шлемов",
+        "helmet accessories"
+      ]
+    },
+    {
+      "id": "communications",
+      "name": "Тактичний зв'язок та слух",
+      "parent_id": null,
+      "aliases": []
+    },
+    {
+      "id": "communications_headsets",
+      "name": "Навушники",
+      "parent_id": "communications",
+      "aliases": [
+        "активні навушники",
+        "активные наушники",
+        "навушники",
+        "наушники",
+        "headset",
+        "headphones"
+      ]
+    },
+    {
+      "id": "communications_radios",
+      "name": "Рації",
+      "parent_id": "communications",
+      "aliases": [
+        "рація",
+        "рації",
+        "рация",
+        "рации",
+        "радіостанція",
+        "радиостанция",
+        "walkie talkie",
+        "radio"
+      ]
+    },
+    {
+      "id": "communications_ptt",
+      "name": "Кнопки PTT",
+      "parent_id": "communications",
+      "aliases": [
+        "ptt",
+        "кнопка тангента",
+        "тангента"
+      ]
+    },
+    {
+      "id": "communications_antennas",
+      "name": "Антени",
+      "parent_id": "communications",
+      "aliases": [
+        "антена",
+        "антенна",
+        "antenna"
+      ]
+    },
+    {
+      "id": "communications_accessories",
+      "name": "Аксесуари зв'язку",
+      "parent_id": "communications",
+      "aliases": [
+        "аксесуари для рацій",
+        "аксессуары для раций",
+        "radio accessories"
+      ]
+    },
+    {
+      "id": "bags",
+      "name": "Рюкзаки, сумки та баули",
+      "parent_id": null,
+      "aliases": []
+    },
+    {
+      "id": "bags_backpacks",
+      "name": "Рюкзаки",
+      "parent_id": "bags",
+      "aliases": [
+        "рюкзак",
+        "рюкзаки",
+        "backpack",
+        "ryukzak"
+      ]
+    },
+    {
+      "id": "bags_assault_backpacks",
+      "name": "Штурмові рюкзаки",
+      "parent_id": "bags",
+      "aliases": [
+        "штурмовий рюкзак",
+        "штурмові рюкзаки",
+        "штурмовой рюкзак",
+        "assault backpack"
+      ]
+    },
+    {
+      "id": "bags_hydration",
+      "name": "Гідратори",
+      "parent_id": "bags",
+      "aliases": [
+        "гідратор",
+        "гідратори",
+        "гидратор",
+        "hydration",
+        "hydrator"
+      ]
+    },
+    {
+      "id": "bags_duffels",
+      "name": "Баули та транспортні сумки",
+      "parent_id": "bags",
+      "aliases": [
+        "баул",
+        "баули",
+        "транспортна сумка",
+        "транспортні сумки",
+        "duffel",
+        "duffle"
+      ]
+    },
+    {
+      "id": "bags_tactical",
+      "name": "Тактичні сумки",
+      "parent_id": "bags",
+      "aliases": [
+        "тактична сумка",
+        "тактическая сумка",
+        "сумка для шолома",
+        "сумка для шлема",
+        "сумка",
+        "tactical bag"
+      ]
+    },
+    {
+      "id": "bags_waist",
+      "name": "Поясні сумки",
+      "parent_id": "bags",
+      "aliases": [
+        "поясна сумка",
+        "поясні сумки",
+        "поясная сумка",
+        "бананка",
+        "waist bag"
+      ]
+    },
+    {
+      "id": "bags_shoulder",
+      "name": "Сумки через плече",
+      "parent_id": "bags",
+      "aliases": [
+        "сумка через плече",
+        "сумка через плечо",
+        "shoulder bag",
+        "сумка тактична через плече"
+      ]
+    },
+    {
+      "id": "bags_organizers",
+      "name": "Сумки-органайзери",
+      "parent_id": "bags",
+      "aliases": [
+        "сумка органайзер",
+        "сумки органайзери",
+        "сумки-органайзери",
+        "bag organizer"
+      ]
+    },
+    {
+      "id": "pouches",
+      "name": "Підсумки",
+      "parent_id": null,
+      "aliases": []
+    },
+    {
+      "id": "pouches_magazine",
+      "name": "Для магазинів",
+      "parent_id": "pouches",
+      "aliases": [
+        "підсумок для магазину",
+        "підсумок під магазин",
+        "подсумок под магазин",
+        "подсумок для магазина",
+        "підсум магазину",
+        "mag pouch",
+        "magazine pouch",
+        "для магазинів"
+      ]
+    },
+    {
+      "id": "pouches_grenade",
+      "name": "Для гранат",
+      "parent_id": "pouches",
+      "aliases": [
+        "підсумок для гранати",
+        "підсумок під гранату",
+        "подсумок для гранаты",
+        "подсумок под гранату",
+        "для гранат",
+        "grenade pouch"
+      ]
+    },
+    {
+      "id": "pouches_tourniquet",
+      "name": "Для турнікетів",
+      "parent_id": "pouches",
+      "aliases": [
+        "підсумок для турнікета",
+        "підсумок для турнікету",
+        "подсумок для турникета",
+        "для турнікету",
+        "tourniquet pouch"
+      ]
+    },
+    {
+      "id": "pouches_medical",
+      "name": "Медичні підсумки",
+      "parent_id": "pouches",
+      "aliases": [
+        "підсумок для аптечки",
+        "подсумок для аптечки",
+        "медичний підсумок",
+        "медицинский подсумок",
+        "сумка для аптечки",
+        "medical pouch",
+        "ifak pouch"
+      ]
+    },
+    {
+      "id": "pouches_radio",
+      "name": "Для рацій",
+      "parent_id": "pouches",
+      "aliases": [
+        "підсумок для рації",
+        "подсумок для рации",
+        "подсумок под рацию",
+        "для рацій",
+        "radio pouch"
+      ]
+    },
+    {
+      "id": "pouches_phone",
+      "name": "Для телефонів",
+      "parent_id": "pouches",
+      "aliases": [
+        "підсумок для телефону",
+        "подсумок для телефона",
+        "для телефону",
+        "phone pouch"
+      ]
+    },
+    {
+      "id": "pouches_utility",
+      "name": "Утилітарні підсумки",
+      "parent_id": "pouches",
+      "aliases": [
+        "утилітарний підсумок",
+        "утилітарні підсумки",
+        "утилитарный подсумок",
+        "utility pouch"
+      ]
+    },
+    {
+      "id": "pouches_dump",
+      "name": "Скидання магазинів",
+      "parent_id": "pouches",
+      "aliases": [
+        "скидання магазинів",
+        "сумка скиду",
+        "сумка сброса",
+        "подсумок сброса",
+        "dump pouch"
+      ]
+    },
+    {
+      "id": "pouches_dangler",
+      "name": "Напашні підсумки",
+      "parent_id": "pouches",
+      "aliases": [
+        "напашник",
+        "напашна сумка",
+        "напашні сумки",
+        "dangler",
+        "сумка для захисту паху"
+      ]
+    },
+    {
+      "id": "pouches_panels",
+      "name": "Панелі підсумків",
+      "parent_id": "pouches",
+      "aliases": [
+        "панель підсумків",
+        "панель подсумков",
+        "placard",
+        "панель molle"
+      ]
+    },
+    {
+      "id": "pouches_other",
+      "name": "Інші підсумки",
+      "parent_id": "pouches",
+      "aliases": [
+        "інші підсумки",
+        "підсумок для навушників",
+        "підсумок для планшета",
+        "other pouches"
+      ]
+    },
+    {
+      "id": "load_bearing",
+      "name": "РПС та розвантаження",
+      "parent_id": null,
+      "aliases": []
+    },
+    {
+      "id": "load_bearing_rps",
+      "name": "Ремінно-плечові системи",
+      "parent_id": "load_bearing",
+      "aliases": [
+        "рпс",
+        "ремінно плечова система",
+        "ремінно-плечові системи",
+        "ременно плечевая система",
+        "рпс розвантаження"
+      ]
+    },
+    {
+      "id": "load_bearing_belts",
+      "name": "Розвантажувальні пояси",
+      "parent_id": "load_bearing",
+      "aliases": [
+        "розвантажувальний пояс",
+        "розвантажувальні ремені",
+        "бойовий пояс",
+        "боевой пояс",
+        "battle belt",
+        "war belt"
+      ]
+    },
+    {
+      "id": "load_bearing_systems",
+      "name": "Розвантажувальні системи",
+      "parent_id": "load_bearing",
+      "aliases": [
+        "розвантажувальна система",
+        "разгрузочная система",
+        "разгрузочный жилет",
+        "chest rig"
+      ]
+    },
+    {
+      "id": "load_bearing_harness",
+      "name": "Плечові лямки",
+      "parent_id": "load_bearing",
+      "aliases": [
+        "плечові лямки",
+        "плечевые лямки",
+        "плечова система",
+        "harness"
+      ]
+    },
+    {
+      "id": "load_bearing_accessories",
+      "name": "Аксесуари розвантаження",
+      "parent_id": "load_bearing",
+      "aliases": [
+        "аксесуари рпс",
+        "аксесуари розвантаження",
+        "load bearing accessories"
+      ]
+    },
+    {
+      "id": "protection_knee_elbow",
+      "name": "Захист колін та ліктів",
+      "parent_id": null,
+      "aliases": []
+    },
+    {
+      "id": "protection_knee",
+      "name": "Наколінники",
+      "parent_id": "protection_knee_elbow",
+      "aliases": [
+        "наколінники",
+        "наколенники",
+        "knee pads"
+      ]
+    },
+    {
+      "id": "protection_elbow",
+      "name": "Налокітники",
+      "parent_id": "protection_knee_elbow",
+      "aliases": [
+        "налокітники",
+        "налокотники",
+        "elbow pads"
+      ]
+    },
+    {
+      "id": "protection_kits",
+      "name": "Комплекти захисту",
+      "parent_id": "protection_knee_elbow",
+      "aliases": [
+        "наколінники + налокітники",
+        "комплект наколінників",
+        "комплект защиты коленей",
+        "knee elbow kit"
+      ]
+    },
+    {
+      "id": "medical",
+      "name": "Тактична медицина",
+      "parent_id": null,
+      "aliases": []
+    },
+    {
+      "id": "medical_tourniquets",
+      "name": "Турнікети та джгути",
+      "parent_id": "medical",
+      "aliases": [
+        "турнікет",
+        "турникет",
+        "джгут",
+        "жгут",
+        "tourniquet"
+      ]
+    },
+    {
+      "id": "medical_hemostatic",
+      "name": "Гемостатичні засоби",
+      "parent_id": "medical",
+      "aliases": [
+        "гемостатик",
+        "гемостатична губка",
+        "гемостатична марля",
+        "hemostatic"
+      ]
+    },
+    {
+      "id": "medical_bandages",
+      "name": "Бандажі та бинти",
+      "parent_id": "medical",
+      "aliases": [
+        "бандаж",
+        "бандажі",
+        "бинт",
+        "bandage"
+      ]
+    },
+    {
+      "id": "medical_ifak",
+      "name": "Укомплектовані аптечки IFAK",
+      "parent_id": "medical",
+      "aliases": [
+        "аптечка",
+        "аптечки",
+        "ifak",
+        "first aid kit"
+      ]
+    },
+    {
+      "id": "medical_scissors",
+      "name": "Медичні ножиці",
+      "parent_id": "medical",
+      "aliases": [
+        "медичні ножиці",
+        "медицинские ножницы",
+        "trauma scissors"
+      ]
+    },
+    {
+      "id": "medical_occlusive",
+      "name": "Оклюзійні наліпки",
+      "parent_id": "medical",
+      "aliases": [
+        "оклюзійна наліпка",
+        "окклюзионная наклейка",
+        "chest seal"
+      ]
+    },
+    {
+      "id": "medical_other",
+      "name": "Інші медичні засоби",
+      "parent_id": "medical",
+      "aliases": [
+        "інші медичні засоби",
+        "інше медичне обладнання",
+        "medical supplies"
+      ]
+    },
+    {
+      "id": "medical_training",
+      "name": "Навчальні медичні засоби",
+      "parent_id": "medical",
+      "aliases": [
+        "тренувальний турнікет",
+        "навчальний турнікет",
+        "учебный турникет",
+        "training tourniquet"
+      ]
+    },
+    {
+      "id": "camouflage",
+      "name": "Маскування",
+      "parent_id": null,
+      "aliases": []
+    },
+    {
+      "id": "camouflage_nets",
+      "name": "Маскувальні сітки",
+      "parent_id": "camouflage",
+      "aliases": [
+        "маскувальна сітка",
+        "маскувальні сітки",
+        "маскировочная сеть",
+        "маскировочная сетка",
+        "camouflage net"
+      ]
+    },
+    {
+      "id": "camouflage_antidrone",
+      "name": "Антидронові сітки",
+      "parent_id": "camouflage",
+      "aliases": [
+        "антидронова сітка",
+        "антидронові сітки",
+        "антидроновая сетка",
+        "anti drone net",
+        "anti-drone net"
+      ]
+    },
+    {
+      "id": "camouflage_suits",
+      "name": "Маскувальні костюми",
+      "parent_id": "camouflage",
+      "aliases": [
+        "маскувальний костюм",
+        "маскувальні костюми",
+        "маскировочный костюм",
+        "кікімора",
+        "кикимора",
+        "ghillie suit",
+        "маскхалат",
+        "маскхалати"
+      ]
+    },
+    {
+      "id": "camouflage_materials",
+      "name": "Матеріали маскування",
+      "parent_id": "camouflage",
+      "aliases": [
+        "маскувальна стрічка",
+        "маскувальна тканина",
+        "маскировочная ткань",
+        "camouflage material"
+      ]
+    },
+    {
+      "id": "field_gear",
+      "name": "Туризм та польове спорядження",
+      "parent_id": null,
+      "aliases": []
+    },
+    {
+      "id": "field_sleeping_bags",
+      "name": "Спальні мішки",
+      "parent_id": "field_gear",
+      "aliases": [
+        "спальний мішок",
+        "спальні мішки",
+        "спальный мешок",
+        "sleeping bag"
+      ]
+    },
+    {
+      "id": "field_mats",
+      "name": "Каремати",
+      "parent_id": "field_gear",
+      "aliases": [
+        "каремат",
+        "каремати",
+        "килимок туристичний",
+        "туристичні каремати",
+        "camping mat"
+      ]
+    },
+    {
+      "id": "field_seats",
+      "name": "Сидушки",
+      "parent_id": "field_gear",
+      "aliases": [
+        "сидушка",
+        "сидушки",
+        "тактична сидушка",
+        "seat pad",
+        "п’ятиточка",
+        "пятиточка",
+        "п’ятиточки",
+        "пятиточки"
+      ]
+    },
+    {
+      "id": "field_thermal_blankets",
+      "name": "Термоковдри",
+      "parent_id": "field_gear",
+      "aliases": [
+        "термоковдра",
+        "термоковдри",
+        "термоодеяло",
+        "thermal blanket"
+      ]
+    },
+    {
+      "id": "field_cookware",
+      "name": "Польовий посуд",
+      "parent_id": "field_gear",
+      "aliases": [
+        "польовий посуд",
+        "казанок",
+        "котелок",
+        "ложка",
+        "кружка",
+        "mess kit"
+      ]
+    },
+    {
+      "id": "field_thermos",
+      "name": "Термоси",
+      "parent_id": "field_gear",
+      "aliases": [
+        "термос",
+        "термоси",
+        "thermos"
+      ]
+    },
+    {
+      "id": "field_burners",
+      "name": "Пальники",
+      "parent_id": "field_gear",
+      "aliases": [
+        "пальник",
+        "пальники",
+        "горелка",
+        "горелки",
+        "camping stove"
+      ]
+    },
+    {
+      "id": "field_carabiners",
+      "name": "Карабіни та кріплення",
+      "parent_id": "field_gear",
+      "aliases": [
+        "карабін",
+        "карабіни",
+        "карабин",
+        "carabiner"
+      ]
+    },
+    {
+      "id": "field_hygiene",
+      "name": "Гігієна",
+      "parent_id": "field_gear",
+      "aliases": [
+        "гігієна",
+        "гигиена",
+        "засоби гігієни",
+        "hygiene",
+        "нейтралізатор запаху",
+        "присипка-дезодорант"
+      ]
+    },
+    {
+      "id": "field_other",
+      "name": "Інше польове спорядження",
+      "parent_id": "field_gear",
+      "aliases": [
+        "польове спорядження",
+        "інше спорядження",
+        "field gear"
+      ]
+    },
+    {
+      "id": "electronics",
+      "name": "Електроніка та спостереження",
+      "parent_id": null,
+      "aliases": []
+    },
+    {
+      "id": "electronics_action_cameras",
+      "name": "Екшн-камери",
+      "parent_id": "electronics",
+      "aliases": [
+        "екшн камера",
+        "екшн-камери",
+        "экшн камера",
+        "action camera",
+        "helmet camera",
+        "екшн-камера",
+        "экшн-камера"
+      ]
+    },
+    {
+      "id": "electronics_monoculars",
+      "name": "Монокуляри",
+      "parent_id": "electronics",
+      "aliases": [
+        "монокуляр",
+        "монокуляри",
+        "monocular"
+      ]
+    },
+    {
+      "id": "electronics_mounts",
+      "name": "Кріплення електроніки",
+      "parent_id": "electronics",
+      "aliases": [
+        "кріплення для пнб",
+        "кріплення для тепловізора",
+        "крепление для пнв",
+        "night vision mount"
+      ]
+    },
+    {
+      "id": "electronics_memory",
+      "name": "Карти пам'яті",
+      "parent_id": "electronics",
+      "aliases": [
+        "карта пам'яті",
+        "карта памяти",
+        "memory card",
+        "micro sd",
+        "microsd"
+      ]
+    },
+    {
+      "id": "electronics_accessories",
+      "name": "Аксесуари електроніки",
+      "parent_id": "electronics",
+      "aliases": [
+        "аксесуари електроніки",
+        "аксессуары электроники",
+        "electronics accessories"
+      ]
+    },
+    {
+      "id": "lighting",
+      "name": "Освітлення",
+      "parent_id": null,
+      "aliases": []
+    },
+    {
+      "id": "lighting_handheld",
+      "name": "Ручні ліхтарі",
+      "parent_id": "lighting",
+      "aliases": [
+        "ручний ліхтар",
+        "ручні ліхтарі",
+        "ручной фонарь",
+        "ліхтар",
+        "фонарик",
+        "flashlight"
+      ]
+    },
+    {
+      "id": "lighting_headlamps",
+      "name": "Налобні ліхтарі",
+      "parent_id": "lighting",
+      "aliases": [
+        "налобний ліхтар",
+        "налобні ліхтарі",
+        "налобный фонарь",
+        "headlamp"
+      ]
+    },
+    {
+      "id": "lighting_tactical",
+      "name": "Тактичні ліхтарі",
+      "parent_id": "lighting",
+      "aliases": [
+        "тактичний ліхтар",
+        "тактический фонарь",
+        "підствольний ліхтар",
+        "weapon light"
+      ]
+    },
+    {
+      "id": "lighting_accessories",
+      "name": "Аксесуари освітлення",
+      "parent_id": "lighting",
+      "aliases": [
+        "аксесуари ліхтарів",
+        "аксессуары фонарей",
+        "flashlight accessories"
+      ]
+    },
+    {
+      "id": "power",
+      "name": "Автономне живлення",
+      "parent_id": null,
+      "aliases": []
+    },
+    {
+      "id": "power_banks",
+      "name": "Павербанки",
+      "parent_id": "power",
+      "aliases": [
+        "павербанк",
+        "powerbank",
+        "power bank"
+      ]
+    },
+    {
+      "id": "power_stations",
+      "name": "Зарядні станції",
+      "parent_id": "power",
+      "aliases": [
+        "зарядна станція",
+        "зарядні станції",
+        "зарядная станция",
+        "power station"
+      ]
+    },
+    {
+      "id": "power_solar",
+      "name": "Сонячні панелі",
+      "parent_id": "power",
+      "aliases": [
+        "сонячна панель",
+        "солнечная панель",
+        "solar panel"
+      ]
+    },
+    {
+      "id": "power_batteries",
+      "name": "Акумулятори та батарейки",
+      "parent_id": "power",
+      "aliases": [
+        "акумулятор",
+        "акумулятори",
+        "батарейка",
+        "батарейки",
+        "battery",
+        "акумуляторна батарея",
+        "аккумуляторная батарея"
+      ]
+    },
+    {
+      "id": "power_cables",
+      "name": "Кабелі живлення",
+      "parent_id": "power",
+      "aliases": [
+        "кабель живлення",
+        "кабель питания",
+        "usb кабель",
+        "charging cable"
+      ]
+    },
+    {
+      "id": "power_accessories",
+      "name": "Аксесуари живлення",
+      "parent_id": "power",
+      "aliases": [
+        "аксесуари живлення",
+        "аксессуары питания",
+        "power accessories"
+      ]
+    },
+    {
+      "id": "weapon_accessories",
+      "name": "Збройові аксесуари",
+      "parent_id": null,
+      "aliases": []
+    },
+    {
+      "id": "weapon_slings",
+      "name": "Ремені для зброї",
+      "parent_id": "weapon_accessories",
+      "aliases": [
+        "ремінь для зброї",
+        "ремень для оружия",
+        "збройовий ремінь",
+        "двоточковий ремінь",
+        "двоточкові ремені",
+        "одноточковий ремінь",
+        "трьохточковий ремінь",
+        "weapon sling"
+      ]
+    },
+    {
+      "id": "weapon_magazines",
+      "name": "Магазини для зброї",
+      "parent_id": "weapon_accessories",
+      "aliases": [
+        "магазин ак",
+        "магазин ar",
+        "магазини ак",
+        "магазини для зброї",
+        "магазини ак та ar15",
+        "weapon magazine"
+      ]
+    },
+    {
+      "id": "weapon_grips",
+      "name": "Руків'я та упори",
+      "parent_id": "weapon_accessories",
+      "aliases": [
+        "руків'я та упори",
+        "руків'я для зброї",
+        "рукоятка для оружия",
+        "тактична рукоятка",
+        "weapon grip"
+      ]
+    },
+    {
+      "id": "weapon_stocks",
+      "name": "Приклади та щоки",
+      "parent_id": "weapon_accessories",
+      "aliases": [
+        "приклад",
+        "приклади",
+        "приклади та щоки",
+        "weapon stock"
+      ]
+    },
+    {
+      "id": "weapon_bipods",
+      "name": "Сошки",
+      "parent_id": "weapon_accessories",
+      "aliases": [
+        "сошки",
+        "сошка",
+        "bipod"
+      ]
+    },
+    {
+      "id": "weapon_holsters",
+      "name": "Кобури",
+      "parent_id": "weapon_accessories",
+      "aliases": [
+        "кобура",
+        "кобури",
+        "кобуры",
+        "holster"
+      ]
+    },
+    {
+      "id": "weapon_cases",
+      "name": "Чохли для зброї",
+      "parent_id": "weapon_accessories",
+      "aliases": [
+        "чохол для зброї",
+        "чохли для зброї",
+        "чехол для оружия",
+        "weapon case",
+        "rifle case"
+      ]
+    },
+    {
+      "id": "weapon_cleaning",
+      "name": "Догляд за зброєю",
+      "parent_id": "weapon_accessories",
+      "aliases": [
+        "набір для чищення",
+        "набор для чистки",
+        "набори для чищення",
+        "мастило для зброї",
+        "weapon cleaning"
+      ]
+    },
+    {
+      "id": "weapon_other",
+      "name": "Інші збройові аксесуари",
+      "parent_id": "weapon_accessories",
+      "aliases": [
+        "інші збройові аксесуари",
+        "weapon accessories"
+      ]
+    },
+    {
+      "id": "eye_face",
+      "name": "Захист очей та обличчя",
+      "parent_id": null,
+      "aliases": []
+    },
+    {
+      "id": "eye_glasses",
+      "name": "Окуляри",
+      "parent_id": "eye_face",
+      "aliases": [
+        "тактичні окуляри",
+        "тактические очки",
+        "окуляри",
+        "glasses"
+      ]
+    },
+    {
+      "id": "eye_masks",
+      "name": "Маски",
+      "parent_id": "eye_face",
+      "aliases": [
+        "захисна маска",
+        "захисні маски",
+        "баллистическая маска",
+        "ballistic mask",
+        "face mask"
+      ]
+    },
+    {
+      "id": "eye_accessories",
+      "name": "Аксесуари окулярів",
+      "parent_id": "eye_face",
+      "aliases": [
+        "чохол для окулярів",
+        "чехол для очков",
+        "ремінець окулярів",
+        "glasses accessories"
+      ]
+    },
+    {
+      "id": "tools",
+      "name": "Інструменти та ножі",
+      "parent_id": null,
+      "aliases": []
+    },
+    {
+      "id": "tools_knives",
+      "name": "Ножі",
+      "parent_id": "tools",
+      "aliases": [
+        "ніж",
+        "ножі",
+        "нож",
+        "ножи",
+        "knife",
+        "нiж"
+      ]
+    },
+    {
+      "id": "tools_multitools",
+      "name": "Мультитули",
+      "parent_id": "tools",
+      "aliases": [
+        "мультитул",
+        "мультитули",
+        "multitool"
+      ]
+    },
+    {
+      "id": "tools_other",
+      "name": "Інші інструменти",
+      "parent_id": "tools",
+      "aliases": [
+        "сокира",
+        "топор",
+        "лопата",
+        "інструмент",
+        "tools",
+        "шестигранний ключ"
+      ]
+    },
+    {
+      "id": "tools_accessories",
+      "name": "Аксесуари інструментів",
+      "parent_id": "tools",
+      "aliases": [
+        "чохол для ножа",
+        "чехол для ножа",
+        "точило",
+        "ножеточка",
+        "knife sheath",
+        "точилка для ножів",
+        "точилка для ножей"
+      ]
+    },
+    {
+      "id": "symbols",
+      "name": "Символіка",
+      "parent_id": null,
+      "aliases": []
+    },
+    {
+      "id": "armor_ballistic_blankets",
+      "name": "Балістичні ковдри",
+      "parent_id": "armor",
+      "aliases": [
+        "бронековдра",
+        "баллистическое одеяло"
+      ]
+    },
+    {
+      "id": "clothing_insulated_vests",
+      "name": "Утеплені жилети",
+      "parent_id": "clothing",
+      "aliases": [
+        "утеплена жилетка",
+        "жилетка утеплена",
+        "утепленный жилет"
+      ]
+    },
+    {
+      "id": "footwear_care",
+      "name": "Догляд за взуттям",
+      "parent_id": "footwear",
+      "aliases": [
+        "спрей для взуття",
+        "догляд за взуттям",
+        "крем для обуви"
+      ]
+    },
+    {
+      "id": "footwear_shoes",
+      "name": "Туфлі та лофери",
+      "parent_id": "footwear",
+      "aliases": [
+        "лофери",
+        "лоферы",
+        "туфлі",
+        "туфли"
+      ]
+    },
+    {
+      "id": "communications_earplugs",
+      "name": "Пасивні беруші",
+      "parent_id": "communications",
+      "aliases": [
+        "пасивні беруші",
+        "беруші багаторазові",
+        "беруши пассивные"
+      ]
+    },
+    {
+      "id": "electronics_rf_detectors",
+      "name": "Детектори радіосигналів та РЕР",
+      "parent_id": "electronics",
+      "aliases": [
+        "пристрій радіоелектронної розвідки",
+        "детектор радіосигналів",
+        "детектор fpv"
+      ]
+    },
+    {
+      "id": "symbols_flags",
+      "name": "Прапори",
+      "parent_id": "symbols",
+      "aliases": [
+        "прапор України",
+        "флаг Украины"
+      ]
+    },
+    {
+      "id": "field_watches",
+      "name": "Польові та тактичні годинники",
+      "parent_id": "field_gear",
+      "aliases": [
+        "годинник наручний",
+        "наручний годинник",
+        "тактичний годинник",
+        "наручные часы",
+        "wristwatch"
+      ]
+    }
+  ]
+}

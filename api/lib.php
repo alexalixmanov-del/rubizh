@@ -4,13 +4,15 @@ declare(strict_types=1);
 ini_set('display_errors','0');
 
 const API_VERSION = '1.3.0';
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 require_once __DIR__.'/../shop/runtime.php';
 require_once __DIR__ . '/perf.php';
 require_once __DIR__.'/database.php';
+require_once __DIR__.'/../shop/pricing-policy.php';
 require_once __DIR__.'/../shop/units.php';
 require_once __DIR__.'/../shop/normalization.php';
 require_once __DIR__.'/../shop/taxonomy.php';
+require_once __DIR__.'/../shop/pim-v3-read.php';
 
 function cfg(string $k = null) {
   static $c = null;
@@ -22,6 +24,7 @@ function cfg(string $k = null) {
     $monoPrivate=__DIR__.'/mono-private.php';if(is_file($monoPrivate)){if(!defined('RUBIZH_PRIVATE_CONFIG'))define('RUBIZH_PRIVATE_CONFIG',true);$c=array_replace($c,require $monoPrivate);}
     require_once __DIR__.'/../shop/settings-lib.php';$settings=shopSettingsRead();if(isset($settings['seller']))$settings['seller']=array_replace(is_array($c['seller']??null)?$c['seller']:[],$settings['seller']);$c=array_replace($c,$settings);
   }
+  if($k!==null&&in_array($k,['np_origin_refs','np_sender','np_staff_origin'],true)&&array_key_exists($k,$GLOBALS['crm_domain_config']??[]))return $GLOBALS['crm_domain_config'][$k];
   return $k === null ? $c : ($c[$k] ?? null);
 }
 
@@ -41,6 +44,7 @@ function db(): PDO {
     catch(PDOException $e){error_log('rubizh public SQL deadline unavailable');}
   }
   migrate($pdo);
+  pimV3DetectColumns($pdo);
   return $pdo;
 }
 
@@ -48,6 +52,10 @@ function db(): PDO {
 function migrate(PDO $pdo): void {
   try { $v=(int)$pdo->query("SELECT v FROM meta WHERE k='schema'")->fetchColumn(); if($v>=SCHEMA_VERSION)return; }
   catch(PDOException $e){if($e->getCode()!=='42S02')throw $e;}
+  $schemaLock='rubizh-schema-'.substr(hash('sha256',(string)$pdo->query('SELECT DATABASE()')->fetchColumn()),0,32);
+  $claim=$pdo->prepare('SELECT GET_LOCK(?,10)');$claim->execute([$schemaLock]);
+  if((int)$claim->fetchColumn()!==1)throw new RuntimeException('Схема бази оновлюється; повторіть запит.');
+  try {
   $pdo->exec("CREATE TABLE IF NOT EXISTS meta (k VARCHAR(64) PRIMARY KEY, v TEXT) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
   $v = (int)($pdo->query("SELECT v FROM meta WHERE k='schema'")->fetchColumn() ?: 0);
   if ($v >= SCHEMA_VERSION) return;
@@ -93,7 +101,12 @@ function migrate(PDO $pdo): void {
     supplier_name VARCHAR(191) NOT NULL, supplier_sku VARCHAR(120) NOT NULL,
     updated_at DATETIME NOT NULL, KEY product_id(product_id)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+  $pdo->exec("CREATE TABLE IF NOT EXISTS rubizh_catalog_pricing(sku VARCHAR(64) PRIMARY KEY,product_id VARCHAR(64) NOT NULL,policy_json TEXT NOT NULL,revision CHAR(64) NOT NULL,updated_at DATETIME NOT NULL,KEY product_id(product_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+  $pdo->exec('ALTER TABLE variants MODIFY price DECIMAL(14,2) NULL, MODIFY kit_price DECIMAL(14,2) NULL');
+  $pdo->exec('ALTER TABLE products MODIFY price_min DECIMAL(14,2) NULL, MODIFY price_max DECIMAL(14,2) NULL');
+  $pdo->exec("INSERT IGNORE INTO meta(k,v) VALUES('pricing_catalog_version','legacy')");
   $pdo->exec("INSERT INTO meta (k,v) VALUES ('schema','" . SCHEMA_VERSION . "') ON DUPLICATE KEY UPDATE v=VALUES(v)");
+  }finally{$release=$pdo->prepare('SELECT RELEASE_LOCK(?)');$release->execute([$schemaLock]);}
 }
 
 /* ---------- HTTP ---------- */
@@ -145,7 +158,7 @@ function slugify(string $s): string {
 const AVAIL = ['in' => 3, 'order' => 2, 'out' => 1];
 function clean_avail($a): string {
   $a = (string)$a;
-  $map = ['in_stock' => 'in', 'available' => 'in', 'backorder' => 'order', 'preorder' => 'order', 'out_of_stock' => 'out'];
+  $map = ['in_stock' => 'in', 'available' => 'in', 'backorder' => 'order', 'preorder' => 'order', 'out_of_stock' => 'out','IN_STOCK'=>'in','ORDER_ON_REQUEST'=>'order','order_on_request'=>'order','OUT_OF_STOCK'=>'out'];
   $a = $map[$a] ?? $a;
   return isset(AVAIL[$a]) ? $a : 'out';
 }
@@ -195,7 +208,7 @@ function unique_slug(PDO $pdo, string $slug, string $id): string {
 
 function catalog_public_data(array $data): array {
   foreach($data as $key=>$value){
-    if(is_string($key) && in_array(strtolower($key),['fulfillment_supplier','fulfillment_supplier_sku','supplier','suppliers','supplier_code','supplier_name','supplier_sku','cost','purchase_price','procurement_price','documents','docs','supplier_description'],true)){unset($data[$key]);continue;}
+    if(is_string($key) && in_array(strtolower($key),['fulfillment_supplier','fulfillment_supplier_sku','supplier','suppliers','supplier_code','supplier_name','supplier_sku','cost','purchase_price','procurement_price','documents','docs','supplier_description','minimum_sale_price','discount_margin_floor_pct','supplier_payout','profit','profit_margin','pricing_rules','minimum_cents','_pricing','supplier_payment','buy_price','supplier_cost','cost_price','margin','margin_pct','target_margin_pct','tax_pct','acquiring_pct','pricing_policy','profit_after_donation','api_key','token','password'],true)){unset($data[$key]);continue;}
     if(is_array($value))$data[$key]=catalog_public_data($value);
   }
   return $data;
@@ -216,7 +229,51 @@ function catalog_order_articles(PDO $pdo,array $lines): array {
  return $out;
 }
 
-function save_product(PDO $pdo, array $p): array {
+final class PimLegacySyncRejected extends RuntimeException {
+  public function __construct(public readonly string $reason) { parent::__construct($reason,409); }
+}
+function pimRequireLegacySync(): void {
+  if(cfg('pim_legacy_sync')!==true)throw new PimLegacySyncRejected('LEGACY_SYNC_DISABLED');
+}
+/** Inspect the real column, independently of activation and migration metadata flags. */
+function pimLegacyHasContractColumn(PDO $pdo): bool {
+  static $known=null;if($known===null)$known=new WeakMap;
+  if(isset($known[$pdo]))return true;
+  $q=$pdo->query("SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='products' AND column_name='pim_contract_version'");
+  if((int)$q->fetchColumn()>0){$known[$pdo]=true;return true;}return false;
+}
+function pimAssertLegacyModels(PDO $pdo,array $ids): void {
+  pimRequireLegacySync();
+  if(!pimLegacyHasContractColumn($pdo))return;
+  foreach(array_chunk(array_values(array_unique(array_filter(array_map(fn($id)=>trim((string)$id),$ids)))),500) as $chunk){
+    $q=$pdo->prepare('SELECT id FROM products WHERE pim_contract_version=3 AND id IN ('.implode(',',array_fill(0,count($chunk),'?')).') LIMIT 1'.($pdo->inTransaction()?' FOR UPDATE':''));
+    $q->execute($chunk);if($q->fetchColumn()!==false)throw new PimLegacySyncRejected('CONTRACT_V3_REQUIRED');
+  }
+}
+/** Legacy writers serialize with contract-3 publication before inspecting model ownership. */
+function pimLegacyWrite(PDO $pdo,callable $write): mixed {
+  pimRequireLegacySync();$owns=!$pdo->inTransaction();
+  if($owns)$pdo->beginTransaction();
+  try {shopPricingCatalogVersion($pdo,true);$result=$write();if($owns){if(is_array($result)&&($result['status']??null)==='error')$pdo->rollBack();else $pdo->commit();}return $result;}
+  catch(Throwable $e){if($owns&&$pdo->inTransaction())$pdo->rollBack();throw $e;}
+}
+function hide_unavailable(PDO $pdo,bool $hide): void {
+  pimLegacyWrite($pdo,function()use($pdo,$hide){
+    if(pimLegacyHasContractColumn($pdo)&&$pdo->query('SELECT id FROM products WHERE pim_contract_version=3 LIMIT 1 FOR UPDATE')->fetchColumn()!==false)throw new PimLegacySyncRejected('CONTRACT_V3_REQUIRED');
+    $pdo->prepare("INSERT INTO meta(k,v) VALUES('hide_unavailable',?) ON DUPLICATE KEY UPDATE v=VALUES(v)")->execute([$hide?'1':'0']);
+  });
+}
+function save_product(PDO $pdo,array $p): array {
+  $p['id']=trim((string)($p['id']??''));
+  pimAssertLegacyModels($pdo,[$p['id']]);
+  if(($categoryError=shopTaxonomySyncValidate($pdo,$p))!==null)return ['id'=>$p['id'],'status'=>'error','error'=>$categoryError];
+  return pimLegacyWrite($pdo,function()use($pdo,$p){pimAssertLegacyModels($pdo,[(string)($p['id']??'')]);return pimSaveLegacyProduct($pdo,$p);});
+}
+
+function pimSaveLegacyProduct(PDO $pdo, array $p): array {
+  if(!$pdo->inTransaction())return save_product($pdo,$p);
+  shopPricingCatalogVersion($pdo,true);
+  pimAssertLegacyModels($pdo,[(string)($p['id']??'')]);
   $id = trim((string)($p['id'] ?? ''));
   if ($id === '' || strlen($id) > 64) return ['id' => $id, 'status' => 'error', 'error' => 'нет id'];
   if(($categoryError=shopTaxonomySyncValidate($pdo,$p))!==null)return ['id'=>$id,'status'=>'error','error'=>$categoryError];
@@ -229,6 +286,20 @@ function save_product(PDO $pdo, array $p): array {
     if($sku==='' || strlen($sku)>64 || isset($seen[$sku]))return ['id'=>$id,'status'=>'error','error'=>'Невірний або повторений SKU'];
     $seen[$sku]=true;
   }
+  $policies=[];
+  try {
+    if(isset($p['pricing_policy_version'])&&$p['pricing_policy_version']!==1)throw new ShopPricingException('DISCOUNT_NOT_ALLOWED','Непідтримувана версія цін.');
+    foreach($vars as &$v){
+      if(in_array($v['availability']??'', ['ORDER_ON_REQUEST','order_on_request'],true))$v['order_on_request']=true;
+      if(($v['pricing_policy_version']??null)===1&&($p['pricing_policy_version']??null)!==1)throw new ShopPricingException('DISCOUNT_NOT_ALLOWED','Товар без версії цін PIM.');
+      if(($p['pricing_policy_version']??null)===1&&($v['pricing_policy_version']??null)!==1)throw new ShopPricingException('DISCOUNT_NOT_ALLOWED','SKU без версії цін PIM.');
+      $policy=shopPricingPolicy($v);$policies[$v['sku']]=$policy;
+      $v=array_replace($v,shopPricingPublic($policy));
+    }unset($v);
+    $owner=$pdo->prepare('SELECT product_id FROM variants WHERE sku=?');
+    foreach(array_keys($seen) as $sku){$owner->execute([$sku]);$found=$owner->fetchColumn();if($found!==false&&$found!==$id)throw new ShopPricingException('INVALID_VARIANT','SKU вже належить іншому товару; потрібен підтверджений mapping.');}
+  }catch(ShopPricingException $e){return ['id'=>$id,'status'=>'error','error'=>$e->getMessage(),'error_code'=>$e->reason];}
+  $ownsTransaction=!$pdo->inTransaction();
   // A protected PIM sync may carry the chosen supplier for each variant.
   // Store it separately, then remove all private fields before hashing and saving public data.
   $hasFulfillment = false; $fulfillment = []; $hasArticles=false; $articles=[];
@@ -246,28 +317,29 @@ function save_product(PDO $pdo, array $p): array {
   $p['attributes']=shopDescriptionAttributes((string)($p['description']??''),is_array($p['attributes']??null)?$p['attributes']:[]);
   $p['category']=shopCorrectCategory($name,(string)($p['category']??''));
 
-  $hash = sha1(json_encode($p, JSON_UNESCAPED_UNICODE));
+  $hash = sha1(json_encode([$p,$policies], JSON_UNESCAPED_UNICODE));
   $old = $pdo->prepare("SELECT hash, visible FROM products WHERE id=?"); $old->execute([$id]); $o = $old->fetch();
   if ($o && $o['hash'] === $hash && (int)$o['visible'] === 1) {
     try {
-      $pdo->beginTransaction();
+      if($ownsTransaction)$pdo->beginTransaction();
       if ($hasFulfillment) sync_product_fulfillment($pdo,$id,$fulfillment);
       if($hasArticles)sync_product_supplier_articles($pdo,$id,$articles);
       $pdo->prepare("UPDATE products SET synced_at=? WHERE id=?")->execute([now(), $id]);
+      shopPricingStore($pdo,$id,$policies);
       shopTaxonomySyncProduct($pdo,$p);
-      $pdo->commit();
+      if($ownsTransaction)$pdo->commit();
     } catch (Throwable $e) {
-      if ($pdo->inTransaction()) $pdo->rollBack();
+      if ($ownsTransaction && $pdo->inTransaction()) $pdo->rollBack();
       return ['id'=>$id,'status'=>'error','error'=>'Не вдалося оновити відправника товару.'];
     }
-    return ['id' => $id, 'status' => 'unchanged'];
+    return ['id' => $id, 'status' => 'unchanged'] + (($p['pricing_policy_version']??null)===1?['pricing_policy_version'=>1]:[]);
   }
   $path = implode(' / ', array_values(array_filter(array_map('trim', explode(' / ', (string)($p['category'] ?? ''))), 'strlen')));
   $prices = []; $best = 'out';
-  foreach ($vars as $v) { $pr = (int)round((float)($v['price'] ?? 0)); if ($pr > 0) $prices[] = $pr; $a = clean_avail($v['availability'] ?? 'out'); if (AVAIL[$a] > AVAIL[$best]) $best = $a; }
+  foreach ($vars as $v) { $pr = shopMoneyValue(shopMoney($v['price'] ?? 0)); if ($pr > 0) $prices[] = $pr; $a = clean_avail($v['availability'] ?? 'out'); if (AVAIL[$a] > AVAIL[$best]) $best = $a; }
   $slug = unique_slug($pdo, slugify((string)($p['slug'] ?? '')) ?: slugify($name), $id);
   $p['slug'] = $slug;
-  $pdo->beginTransaction();
+  if($ownsTransaction)$pdo->beginTransaction();
   try {
     $pdo->prepare("INSERT INTO products (id,slug,name,brand,category_id,category_path,description,attributes,links,has_docs,docs_note,price_min,price_max,availability,variants_count,visible,hash,data,created_at,updated_at,synced_at)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?,?,?,?)
@@ -285,7 +357,7 @@ function save_product(PDO $pdo, array $p): array {
     foreach ($vars as $i => $v) {
       $sku = trim((string)($v['sku'] ?? '')); if ($sku === '') continue;
       $vs->execute([$sku, $id, mb_substr((string)($v['size_display'] ?? $v['size'] ?? ''), 0, 120), mb_substr((string)($v['color'] ?? ''), 0, 120), mb_substr((string)($v['barcode'] ?? ''), 0, 64),
-        ($v['price'] ?? null) !== null ? (int)round((float)$v['price']) : null, ($v['kit_price'] ?? null) !== null ? (int)round((float)$v['kit_price']) : null,
+        ($v['price'] ?? null) !== null ? shopMoneyValue(shopMoney($v['price'])) : null, ($v['kit_price'] ?? null) !== null ? shopMoneyValue(shopMoney($v['kit_price'])) : null,
         clean_avail($v['availability'] ?? 'out'), mb_substr((string)($v['lead_time'] ?? ''), 0, 60), $i, json_encode($v, JSON_UNESCAPED_UNICODE)]);
     }
     if ($hasFulfillment) sync_product_fulfillment($pdo,$id,$fulfillment);
@@ -299,16 +371,23 @@ function save_product(PDO $pdo, array $p): array {
       ON DUPLICATE KEY UPDATE src_url=VALUES(src_url), src_hash=VALUES(src_hash), file='', thumb='', status='pending', error='', tries=0, updated_at=VALUES(updated_at)");
     foreach ($photos as $pos => $u) { $h = sha1($u); if (($have[$pos] ?? null) !== $h) $ins->execute([$id, $pos, $u, $h, now()]); }
     $pdo->prepare("DELETE FROM photos WHERE product_id=? AND pos>=?")->execute([$id, count($photos)]);
+    shopPricingStore($pdo,$id,$policies);
     shopTaxonomySyncProduct($pdo,$p);
-    $pdo->commit();
+    if($ownsTransaction)$pdo->commit();
   } catch (Throwable $e) {
-    $pdo->rollBack();
-    return ['id' => $id, 'status' => 'error', 'error' => mb_substr($e->getMessage(), 0, 200)];
+    if($ownsTransaction&&$pdo->inTransaction())$pdo->rollBack();
+    return ['id' => $id, 'status' => 'error', 'error' => 'Не вдалося атомарно зберегти товар і ціни.'];
   }
-  return ['id' => $id, 'status' => $o ? 'updated' : 'created', 'slug' => $slug];
+  return ['id' => $id, 'status' => $o ? 'updated' : 'created', 'slug' => $slug] + (($p['pricing_policy_version']??null)===1?['pricing_policy_version'=>1]:[]);
 }
 
-function hide_products(PDO $pdo, array $ids): int {
+function hide_products(PDO $pdo,array $ids): int {
+  return pimLegacyWrite($pdo,function()use($pdo,$ids){pimAssertLegacyModels($pdo,$ids);return pimHideLegacyProducts($pdo,$ids);});
+}
+function pimHideLegacyProducts(PDO $pdo, array $ids): int {
+  if(!$pdo->inTransaction())return hide_products($pdo,$ids);
+  shopPricingCatalogVersion($pdo,true);
+  pimAssertLegacyModels($pdo,$ids);
   $ids = array_values(array_filter(array_map('strval', $ids), 'strlen'));
   if (!$ids) return 0;
   $n = 0;
@@ -377,18 +456,18 @@ function media_url(string $rel): string { return rtrim((string)cfg('media_url'),
 function product_photos(PDO $pdo, array $ids): array {
   if (!$ids) return [];
   $in = implode(',', array_fill(0, count($ids), '?'));
-  $st = $pdo->prepare("SELECT product_id, pos, src_url, file, thumb, width, height, status FROM photos WHERE product_id IN ($in) ORDER BY product_id, pos");
+  $st = $pdo->prepare("SELECT product_id, pos, src_url, src_hash, file, thumb, width, height, status FROM photos WHERE product_id IN ($in) ORDER BY product_id, pos");
   $st->execute($ids); $out = [];
   foreach ($st->fetchAll() as $r) {
     $ok = $r['status'] === 'ok' && media_file_exists((string)$r['file']);
     // Пока фото не обработано, отдаём ссылку поставщика — сайт не остаётся без картинок
-    $out[$r['product_id']][] = ['url' => $ok ? media_url($r['file']) : $r['src_url'], 'thumb' => $ok ? media_url(media_file_exists((string)$r['thumb'])?$r['thumb']:$r['file']) : $r['src_url'], 'width' => (int)$r['width'], 'height' => (int)$r['height'], 'local' => $ok];
+    $out[$r['product_id']][] = ['url' => $ok ? media_url($r['file']) : $r['src_url'], 'thumb' => $ok ? media_url(media_file_exists((string)$r['thumb'])?$r['thumb']:$r['file']) : $r['src_url'], 'width' => (int)$r['width'], 'height' => (int)$r['height'], 'local' => $ok, 'key' => (string)($r['src_hash'] ?: sha1((string)$r['src_url']))];
   }
   return $out;
 }
 function card_row(array $r, array $photos): array {
   return ['id' => $r['id'], 'slug' => $r['slug'], 'name' => $r['name'], 'brand' => $r['brand'], 'category' => $r['category_path'],
-    'price_min' => $r['price_min'] !== null ? (int)$r['price_min'] : null, 'price_max' => $r['price_max'] !== null ? (int)$r['price_max'] : null,
+    'price_min' => $r['price_min'] !== null ? (float)$r['price_min'] : null, 'price_max' => $r['price_max'] !== null ? (float)$r['price_max'] : null,
     'availability' => $r['availability'], 'variants_count' => (int)$r['variants_count'], 'has_docs' => (bool)$r['has_docs'],
     'photo' => $photos[$r['id']][0] ?? null];
 }

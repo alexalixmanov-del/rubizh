@@ -4,9 +4,10 @@
 //   Сайт (открыто):  GET /api/categories · GET /api/catalog · GET /api/product/{slug} · GET /api/health
 //   Планировщик:     GET /api/cron/photos?key=...
 declare(strict_types=1);
+if(preg_match('~^/api/staff(?:/|$)~',parse_url($_SERVER['REQUEST_URI']??'/',PHP_URL_PATH)?:'/')){require __DIR__.'/staff/index.php';exit;}
 require __DIR__ . '/lib.php';
 ini_set('display_errors', '0');
-set_exception_handler(function (Throwable $e) { error_log('rubizh api: '.get_class($e).' code '.(string)$e->getCode());header('Cache-Control: no-store');if($e instanceof RubizhHttpException){if($e->retryAfter)header('Retry-After: '.$e->retryAfter);fail($e->status,$e->getMessage());}fail(500,'Ошибка сервера. Попробуйте позже.'); });
+set_exception_handler(function (Throwable $e) { error_log('rubizh api: '.get_class($e).' code '.(string)$e->getCode());header('Cache-Control: no-store');if($e instanceof PimLegacySyncRejected)out(['ok'=>false,'error'=>$e->reason,'error_code'=>$e->reason],409);if($e instanceof RubizhHttpException){if($e->retryAfter)header('Retry-After: '.$e->retryAfter);fail($e->status,$e->getMessage());}fail(500,'Ошибка сервера. Попробуйте позже.'); });
 rubizhHeaders();
 
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
@@ -25,32 +26,51 @@ if ($isPim) {
   if ($path === '/pim/cache-clear') out(['ok' => true, 'removed' => shopCacheClear()]);
   if ($path === '/pim/sync' && $method === 'POST') {
     @set_time_limit(120);
-    $b = body();
+    require_once __DIR__.'/../shop/pim-v3-sync.php';
+    if((int)($_SERVER['CONTENT_LENGTH']??0)>16*1024*1024)fail(413,'Запрос слишком большой');
+    $raw=(string)file_get_contents('php://input',false,null,0,16*1024*1024+1);if(strlen($raw)>16*1024*1024)fail(413,'Запрос слишком большой');
+    $peek=json_decode($raw,true,64);
+    if(is_array($peek)&&array_key_exists('contract_version',$peek)){
+      try{out(pimV3HandleSync($pdo,$raw));}
+      catch(PimV3Rejected $e){out(['ok'=>false,'error'=>'PIM contract 3: '.$e->reason,'error_code'=>$e->reason,'results'=>$e->results],$e->getCode()?:422);}
+    }
+    pimRequireLegacySync();
+    if(pimV3Enabled($pdo))fail(409,'CONTRACT_V3_REQUIRED: legacy PIM sync is disabled after contract 3 activation.');
+    $b = is_array($peek) ? $peek : body();
     if((int)$pdo->query("SELECT GET_LOCK('rubizh-category-migration',10)")->fetchColumn()!==1)fail(503,'Каталог оновлюється; повторіть синхронізацію пізніше.');
     register_shutdown_function(fn()=> $pdo->query("SELECT RELEASE_LOCK('rubizh-category-migration')"));
-    if(isset($b['settings']['hide_unavailable']))$pdo->prepare("INSERT INTO meta(k,v) VALUES('hide_unavailable',?) ON DUPLICATE KEY UPDATE v=VALUES(v)")->execute([$b['settings']['hide_unavailable']===false?'0':'1']);
+    $pdo->beginTransaction();
+    try {
+    shopPricingCatalogVersion($pdo,true);
+    if(isset($b['settings']['pricing_policy_version'])&&($b['settings']['pricing_policy_version']!==1||($b['settings']['discount_margin_floor_pct']??null)!==15))throw new ShopPricingException('DISCOUNT_NOT_ALLOWED','Непідтримувані правила цін PIM.');
+    if(($b['settings']['pricing_policy_version']??null)===1)foreach($b['products']??[] as $product)if(($product['pricing_policy_version']??null)!==1)throw new ShopPricingException('DISCOUNT_NOT_ALLOWED','Товар без pricing_policy_version.');
+    if(isset($b['settings']['hide_unavailable']))hide_unavailable($pdo,$b['settings']['hide_unavailable']!==false);
     $mode = ($b['mode'] ?? 'delta') === 'full' ? 'full' : 'delta';
     if (isset($b['categories']) && is_array($b['categories'])) sync_categories($pdo, $b['categories']);
     $results = []; $cnt = ['created' => 0, 'updated' => 0, 'unchanged' => 0, 'error' => 0];
     foreach ((is_array($b['products'] ?? null) ? $b['products'] : []) as $p) {
       $r = save_product($pdo, is_array($p) ? $p : []); $results[] = $r; $cnt[$r['status']] = ($cnt[$r['status']] ?? 0) + 1;
+      if($r['status']==='error')throw new ShopPricingException($r['error_code']??'SYNC_FAILED',$r['error']??'Не вдалося зберегти пакет.');
     }
     $hidden = hide_products($pdo, is_array($b['hide_ids'] ?? null) ? $b['hide_ids'] : []);
-    // Полная синхронизация: всё, чего нет в списке PIM, скрываем (не удаляем — ссылки и заказы не ломаются)
-    if ($mode === 'full' && !empty($b['finalize']) && is_array($b['all_ids'] ?? null)) {
-      $keep = array_flip(array_map('strval', $b['all_ids']));
-      if (count($keep) === 0) fail(400, 'Пустой список товаров при полной синхронизации — отменено, чтобы не скрыть весь каталог');
-      $vis = $pdo->query("SELECT id FROM products WHERE visible=1")->fetchAll(PDO::FETCH_COLUMN);
-      $hidden += hide_products($pdo, array_values(array_filter($vis, fn($id) => !isset($keep[$id]))));
-    }
-    $pdo->exec('DELETE a FROM rubizh_catalog_supplier_articles a LEFT JOIN variants v ON v.sku=a.sku AND v.product_id=a.product_id LEFT JOIN products p ON p.id=a.product_id WHERE v.sku IS NULL OR p.id IS NULL OR p.visible=0');
-    $pdo->exec('DELETE f FROM rubizh_catalog_fulfillment f LEFT JOIN variants v ON v.sku=f.sku AND v.product_id=f.product_id LEFT JOIN products p ON p.id=f.product_id WHERE v.sku IS NULL OR p.id IS NULL OR p.visible=0');
-    if(isset($b['kits'])){if(!is_array($b['kits']))fail(400,'Невірний склад комплектів');require_once __DIR__.'/kits.php';sync_kits($pdo,$b['kits']);}
+    // Absence from a full PIM list is not a hide command: only explicit hide_ids hide (contract rule G07).
+    $legacyOnly=pimLegacyHasContractColumn($pdo)?' AND (p.pim_contract_version IS NULL OR p.pim_contract_version<>3)':'';
+    $pdo->exec('DELETE a FROM rubizh_catalog_supplier_articles a LEFT JOIN variants v ON v.sku=a.sku AND v.product_id=a.product_id LEFT JOIN products p ON p.id=a.product_id WHERE (v.sku IS NULL OR p.id IS NULL OR p.visible=0)'.$legacyOnly);
+    $pdo->exec('DELETE f FROM rubizh_catalog_fulfillment f LEFT JOIN variants v ON v.sku=f.sku AND v.product_id=f.product_id LEFT JOIN products p ON p.id=f.product_id WHERE (v.sku IS NULL OR p.id IS NULL OR p.visible=0)'.$legacyOnly);
+    if(isset($b['kits'])){if(!is_array($b['kits']))throw new RuntimeException('Невірний склад комплектів');require_once __DIR__.'/kits.php';sync_kits($pdo,$b['kits']);}
     if ($cnt['created'] || $cnt['updated'] || $hidden || isset($b['categories'])) recount_categories($pdo);
     $pdo->prepare("INSERT INTO sync_log (at,mode,received,saved,unchanged,hidden,errors,note) VALUES (?,?,?,?,?,?,?,?)")
       ->execute([now(), $mode, count($results), $cnt['created'] + $cnt['updated'], $cnt['unchanged'], $hidden, $cnt['error'], mb_substr((string)($b['note'] ?? ''), 0, 255)]);
     $pdo->exec("INSERT INTO meta (k,v) VALUES ('catalog_updated','" . now() . "') ON DUPLICATE KEY UPDATE v=VALUES(v)");
     $pending = (int)$pdo->query("SELECT COUNT(*) FROM photos WHERE status='pending'")->fetchColumn();
+    if($cnt['created']||$cnt['updated']||$hidden||isset($b['kits'])||isset($b['categories']))$pdo->prepare("UPDATE meta SET v=? WHERE k='pricing_catalog_version'")->execute([bin2hex(random_bytes(16))]);
+    $pdo->commit();
+    } catch(Throwable $e) {
+      if($pdo->inTransaction())$pdo->rollBack();
+      if($e instanceof PimLegacySyncRejected)out(['ok'=>false,'error'=>$e->reason,'error_code'=>$e->reason],409);
+      error_log('rubizh pricing sync rejected: '.($e instanceof ShopPricingException?$e->reason:get_class($e)));
+      out(['ok'=>false,'counts'=>['created'=>0,'updated'=>0,'unchanged'=>0,'error'=>count(is_array($b['products']??null)?$b['products']:[])], 'results'=>array_map(fn($p)=>['id'=>(is_array($p)?($p['id']??''):''),'status'=>'error','error_code'=>$e instanceof ShopPricingException?$e->reason:'SYNC_FAILED','error'=>'Пакет відхилено; товари і ціни не змінено.'],is_array($b['products']??null)?$b['products']:[])],400);
+    }
     out(['ok' => true, 'mode' => $mode, 'counts' => $cnt, 'hidden' => $hidden, 'photos_pending' => $pending, 'results' => $results]);
   }
 
@@ -62,7 +82,8 @@ if ($isPim) {
 
   if ($path === '/pim/status') {
     $q = fn($sql) => $pdo->query($sql)->fetchColumn();
-    out(['ok' => true, 'api_version' => API_VERSION,
+    require_once __DIR__.'/../shop/pim-v3-sync.php';
+    out(['ok' => true, 'api_version' => API_VERSION, 'capabilities'=>pimV3Capabilities($pdo),
       'products' => ['visible' => (int)$q("SELECT COUNT(*) FROM products WHERE visible=1"), 'hidden' => (int)$q("SELECT COUNT(*) FROM products WHERE visible=0")],
       'variants' => (int)$q("SELECT COUNT(*) FROM variants v JOIN products p ON p.id=v.product_id WHERE p.visible=1"),
       'categories' => (int)$q("SELECT COUNT(*) FROM categories WHERE product_count>0"),
@@ -97,8 +118,10 @@ if ($path === '/health') {
   foreach ($files as $f) {
     $local = $dir . '/' . ltrim((string)$f, '/'); $okFile = $dir !== '' && is_file($local) && is_readable($local);
     $type = $okFile && function_exists('mime_content_type') ? (string)@mime_content_type($local) : '';
-    $code = null; $url = media_url((string)$f); if (str_starts_with($url, '/')) $url = 'https://' . ($_SERVER['HTTP_HOST'] ?? 'rubizh.shop') . $url;
-    if (function_exists('curl_init')) { $ch = curl_init($url); curl_setopt_array($ch, [CURLOPT_NOBODY => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => true, CURLOPT_TIMEOUT => 5, CURLOPT_CONNECTTIMEOUT => 3]); curl_exec($ch); $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE); $ctype = (string)curl_getinfo($ch, CURLINFO_CONTENT_TYPE); curl_close($ch); if ($type === '') $type = $ctype; }
+    // Public readiness is a local file check. It must not turn an untrusted Host
+    // or a media redirect into an outbound request; external delivery monitoring
+    // belongs to a separately configured monitor.
+    $code = null;
     $good = $okFile && ($code === null || $code === 200) && ($type === '' || str_starts_with($type, 'image/'));
     $checks[] = ['file' => $f, 'ok' => $good, 'http' => $code, 'type' => $type];
   }
@@ -124,7 +147,7 @@ if ($path === '/categories') {
 
 if ($path === '/catalog'&&shopTaxonomyActive($pdo)){require_once __DIR__.'/../shop/catalog-lib.php';$input=$_GET;if(isset($input['brand']))$input['brands']=$input['brand'];$input['sort']=['price_asc'=>'cheap','price_desc'=>'exp'][$input['sort']??'']??($input['sort']??'');$catalog=shopCatalog($pdo,$input);foreach($catalog['items'] as &$card){$card['photo']=$card['photos'][0]??null;$card['variants_count']=count($card['variants']);$card['price_max']=$card['variants']?max(array_column($card['variants'],'price')):null;}unset($card);out($catalog);}
 if ($path === '/catalog') {
-  $where = ['p.visible=1']; $args = [];if($pdo->query("SELECT v FROM meta WHERE k='hide_unavailable'")->fetchColumn()!=='0')$where[]="EXISTS(SELECT 1 FROM variants av WHERE av.product_id=p.id AND av.availability IN ('in','order') AND av.price>0 AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(av.data,'$.size_unconfirmed')),'false') NOT IN ('true','1'))";
+  $where = ['p.visible=1',shopUsablePhotoSql('p')]; $args = [];if($pdo->query("SELECT v FROM meta WHERE k='hide_unavailable'")->fetchColumn()!=='0')$where[]="EXISTS(SELECT 1 FROM variants av WHERE av.product_id=p.id AND av.availability IN ('in','order') AND av.price>0 AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(av.data,'$.size_unconfirmed')),'false') NOT IN ('true','1'))";
   if (($c = trim((string)($_GET['category'] ?? ''))) !== '') {   // url категории: odiah-ta-forma/cholovichyi-odiah
     $st = $pdo->prepare("SELECT path FROM categories WHERE url_path=?"); $st->execute([trim($c, '/')]); $cp = $st->fetchColumn();
     if (!$cp) out(['ok' => true, 'total' => 0, 'items' => []]);
@@ -136,8 +159,8 @@ if ($path === '/catalog') {
   if (($b = trim((string)($_GET['brand'] ?? ''))) !== '') { $where[] = 'p.brand=?'; $args[] = $b; }
   if (($a = (string)($_GET['availability'] ?? '')) === 'in') $where[] = "p.availability='in'";
   elseif ($a === 'available') $where[] = "p.availability IN ('in','order')";
-  if (is_numeric($_GET['price_from'] ?? null)) { $where[] = 'p.price_min>=?'; $args[] = (int)$_GET['price_from']; }
-  if (is_numeric($_GET['price_to'] ?? null)) { $where[] = 'p.price_min<=?'; $args[] = (int)$_GET['price_to']; }
+  if (is_numeric($_GET['price_from'] ?? null)) { $where[] = 'p.price_min>=?'; $args[] = (float)$_GET['price_from']; }
+  if (is_numeric($_GET['price_to'] ?? null)) { $where[] = 'p.price_min<=?'; $args[] = (float)$_GET['price_to']; }
   $sort = ['price_asc' => 'p.price_min IS NULL, p.price_min ASC', 'price_desc' => 'p.price_min DESC', 'new' => 'p.created_at DESC', 'name' => 'p.name ASC'][$_GET['sort'] ?? ''] ?? "FIELD(p.availability,'in','order','out'), p.updated_at DESC";
   $limit = max(1, min(100, (int)($_GET['limit'] ?? 24))); $page = max(1, (int)($_GET['page'] ?? 1));
   $w = implode(' AND ', $where);
@@ -148,13 +171,14 @@ if ($path === '/catalog') {
 }
 
 if (preg_match('~^/product/([a-z0-9-]{1,191})$~', $path, $m)) {
-  $st = $pdo->prepare("SELECT * FROM products WHERE slug=? AND visible=1"); $st->execute([$m[1]]); $r = $st->fetch();
+  $st = $pdo->prepare("SELECT * FROM products p WHERE slug=? AND visible=1 AND ".shopUsablePhotoSql('p')); $st->execute([$m[1]]); $r = $st->fetch();
   if (!$r) fail(404, 'Товар не найден');
+  if(pimV3IsModel($r)){require_once __DIR__.'/../shop/catalog-lib.php';out(['ok'=>true,'product'=>pimV3ProductDto($pdo,$r)]);}
   $taxonomy=shopTaxonomyProduct($pdo,$r);
   $d = json_decode((string)$r['data'], true) ?: [];
   $ph = product_photos($pdo, [$r['id']]);
   $vs = $pdo->prepare("SELECT data FROM variants WHERE product_id=? ORDER BY sort"); $vs->execute([$r['id']]);
-  $variants = array_map(fn($x) => json_decode((string)$x['data'], true), $vs->fetchAll());
+  $variants = array_map(fn($x) => catalog_public_data(json_decode((string)$x['data'], true)?:[]), $vs->fetchAll());
   // Связанные товары: только видимые; аналоги — только в наличии
   $links = [];
   foreach (['related', 'analogs', 'kit'] as $t) {
@@ -170,7 +194,7 @@ if (preg_match('~^/product/([a-z0-9-]{1,191})$~', $path, $m)) {
     'id' => $r['id'], 'slug' => $r['slug'], 'name' => $r['name'], 'brand' => $r['brand'], 'category' => $taxonomy['category']??$r['category_path'],'canonical_category_id'=>$taxonomy['canonical_category_id']??null,
     'category_url' => $taxonomy['category_url']??implode('/', array_map('slugify', array_filter(explode(' / ', $r['category_path']), 'strlen'))),
     'description' => $r['description'], 'attributes' => (object)array_replace($taxonomy['derived_attributes']??[],json_decode((string)$r['attributes'],true)?:[]),
-    'price_min' => $r['price_min'] !== null ? (int)$r['price_min'] : null, 'price_max' => $r['price_max'] !== null ? (int)$r['price_max'] : null,
+    'price_min' => $r['price_min'] !== null ? (float)$r['price_min'] : null, 'price_max' => $r['price_max'] !== null ? (float)$r['price_max'] : null,
     'availability' => $r['availability'], 'has_docs' => (bool)$r['has_docs'], 'docs_note' => $r['docs_note'],
     'size_scale' => $d['size_scale'] ?? '', 'photos' => $ph[$r['id']] ?? [], 'variants' => $variants, 'links' => $links]]);
 }

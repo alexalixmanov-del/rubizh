@@ -1,0 +1,30 @@
+# UNAPPLIED PIM proposal; base SHA 21198461f8ebb2eadef6dcd6fb77a50a8a038ea9
+# Keep request assortment scoped to selected color; MODEL options stay request-only and the SITE filters matching real sizes.
+--- a/app/lib/classification-ui.inc.js
++++ b/app/lib/classification-ui.inc.js
+@@ -165,7 +165,9 @@
+  p.classification_fingerprint=classificationHash([CLASSIFICATION_VERSION,classificationSources(p),d.classification,p.size_catalogs,p.classification_exceptions]);p.classification_input_fingerprint=classificationInputFingerprint(p);markProduct(p);
+ }
+ function classificationOptions(p){
+- return (p.size_catalogs||[]).flatMap(c=>c.allowed_sizes.filter(size=>!p.variants.some(v=>v.size_status==='EXACT_SIZE'&&String(v.size_normalized??v.size)===size)).map(size=>({option_id:c.catalog_id+':'+size,catalog_id:c.catalog_id,scope:c.scope,color_id:c.color_id,size,size_system:c.size_system,variant_sku:null,supplier_sku:null,stock:null,stock_quantity:null,stock_status:'UNKNOWN',availability_status:'UNKNOWN',availability_source:null,availability_confirmation:'UNKNOWN',availability:'SIZE_CONFIRMATION_REQUIRED',...classificationPermissions('SIZE_CONFIRMATION_REQUIRED'),selectable_for_request:true})));
++ const colorBySku=new Map(mcColors(p).flatMap(c=>c.variant_skus.map(sku=>[sku,c.id])));
++ // MODEL options remain available across colors; SITE removes same-color real-size duplicates.
++ return (p.size_catalogs||[]).flatMap(c=>c.allowed_sizes.filter(size=>c.scope==='MODEL'||!p.variants.some(v=>colorBySku.get(v.sku)===c.color_id&&v.size_status==='EXACT_SIZE'&&String(v.size_normalized??v.size)===size)).map(size=>({option_id:c.catalog_id+':'+size,catalog_id:c.catalog_id,scope:c.scope,color_id:c.color_id,size,size_system:c.size_system,variant_sku:null,supplier_sku:null,stock:null,stock_quantity:null,stock_status:'UNKNOWN',availability_status:'UNKNOWN',availability_source:null,availability_confirmation:'UNKNOWN',availability:'SIZE_CONFIRMATION_REQUIRED',...classificationPermissions('SIZE_CONFIRMATION_REQUIRED'),selectable_for_request:true})));
+ }
+ const STOCK_WARNING_DEFAULT_HOURS=36;
+ function classificationFreshnessHours(sid){
+--- a/app/tests/final-workflow.test.cjs
++++ b/app/tests/final-workflow.test.cjs
+@@ -130,3 +130,12 @@
+  assert.equal(v.size_normalized,'41');for(const f of ['size_raw','size_display','size_normalized','size_system','size_type','size_alpha','size_fit','size_height'])assert.ok(v[f]==null||typeof v[f]==='string',f);
+  assert.equal(h.run('S.products.get("p-a").variants[0].size_normalized'),41,'stored PIM data unchanged');
+ });
++
++test('request assortment keeps missing sizes across colors without inventing real SKUs',()=>{
++ const h=setup();h.run('const p=S.products.get("p-a");Object.assign(p.variants[0],{size_status:"EXACT_SIZE",size_normalized:"M"});Object.assign(p.variants[1],{size_status:"EXACT_SIZE",size_normalized:"L"});p.size_catalogs=[{catalog_id:"assortment",scope:"MODEL",color_id:null,size_system:"clothing_alpha",allowed_sizes:["M","L","XL"]}];bumpData()');
++ const options=()=>JSON.parse(JSON.stringify(h.run('classificationOptions(S.products.get("p-a"))')));
++ assert.deepEqual(options().map(o=>o.size),['M','L','XL']);
++ h.run('S.products.get("p-a").size_catalogs[0].scope="COLOR";S.products.get("p-a").size_catalogs[0].color_id=mcColors(S.products.get("p-a"))[0].id;bumpData()');
++ const scoped=options();assert.deepEqual(scoped.map(o=>o.size),['L','XL']);
++ assert.ok(scoped.every(o=>o.variant_sku===null&&o.stock_quantity===null&&o.payment_allowed===false&&o.requires_order_confirmation===true));
++});

@@ -19,15 +19,10 @@ User-agent: Perplexity-User
 Allow: /$
 Allow: /catalog
 Allow: /product/
+Allow: /categories
 Allow: /porady
-Allow: /sizes
-Allow: /delivery
-Allow: /contacts
-Allow: /about
 Allow: /offer
 Allow: /privacy
-Allow: /returns
-Allow: /warranty
 Allow: /assets/
 Allow: /media/
 Allow: /sitemap.xml

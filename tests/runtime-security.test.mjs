@@ -5,11 +5,24 @@ import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {spawnSync,spawn} from 'node:child_process';
 import {createHash} from 'node:crypto';
-const root=path.resolve(import.meta.dirname,'..'),runtime='/workspace/php-runtime/root/usr';
+import {mkdirSync,copyFileSync,existsSync} from 'node:fs';
+import {startSite,php as fixturePhp} from './helpers/site-fixture.mjs';
+const root=path.resolve(import.meta.dirname,'..'),runtime=(process.env.RUBIZH_PHP_RUNTIME||'/workspace/php-runtime/root/usr')+'';
 const php=runtime+'/bin/php8.4',options=['-n','-d','error_reporting=24575',...['pdo','mysqlnd','pdo_mysql','mbstring'].flatMap(x=>['-d','extension='+runtime+'/lib/php/20240924/'+x+'.so'])];
 const env={...process.env,LD_LIBRARY_PATH:runtime+'/lib/x86_64-linux-gnu'};
-function run(source){const p=spawnSync(php,[...options,'-r',source],{env,encoding:'utf8'});assert.equal(p.status,0,p.stderr+p.stdout);return p.stdout;}
+function run(source,extra=[]){const p=spawnSync(php,[...options,...extra,'-r',source],{env,encoding:'utf8'});assert.equal(p.status,0,p.stderr+p.stdout);return p.stdout;}
 function asyncRun(source){return new Promise((resolve,reject)=>{const p=spawn(php,[...options,'-r',source],{env});let out='',err='';p.stdout.on('data',x=>out+=x);p.stderr.on('data',x=>err+=x);p.on('close',code=>code?reject(Error(err+out)):resolve(out));});}
+test('stage-2 SEC-01: public media health reads local files without sending requests to a caller-selected Host',{skip:!process.env.RUBIZH_TEST_MYSQL_SOCKET},async()=>{
+ const site=await startSite({enableV3:false});try{
+  const photo=path.join(site.dir,'media','probe.webp'),calls=path.join(site.dir,'health-calls');mkdirSync(path.dirname(photo),{recursive:true});
+  const asset=readdirSync(path.join(root,'assets')).find(f=>f.endsWith('.webp'));copyFileSync(path.join(root,'assets',asset),photo);
+  fixturePhp(`require '${site.site}/api/lib.php';$db=db();$db->exec("INSERT INTO products(id,slug,name,category_path,data,visible,created_at,updated_at,synced_at) VALUES('health-probe','health-probe','Health fixture','','{}',1,UTC_TIMESTAMP(),UTC_TIMESTAMP(),UTC_TIMESTAMP())");$db->exec("INSERT INTO photos(product_id,src_url,src_hash,pos,file,status,updated_at) VALUES('health-probe','https://img.test/probe','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',0,'probe.webp','ok',UTC_TIMESTAMP())");$db->exec("INSERT INTO meta(k,v) VALUES('catalog_updated',UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE v=VALUES(v)");`);
+  // Instrument only this isolated CLI request; no real HTTP or private destination is contacted.
+  const output=run(`foreach(['CURLOPT_NOBODY','CURLOPT_RETURNTRANSFER','CURLOPT_FOLLOWLOCATION','CURLOPT_TIMEOUT','CURLOPT_CONNECTTIMEOUT','CURLINFO_HTTP_CODE','CURLINFO_CONTENT_TYPE'] as $i=>$c)define($c,$i+1);function curl_init($url){file_put_contents('${calls}',$url."\\n",FILE_APPEND);return $url;}function curl_setopt_array($h,$o){return true;}function curl_exec($h){return '';}function curl_getinfo($h,$key){return $key===CURLINFO_HTTP_CODE?200:'image/webp';}function curl_close($h){}$_SERVER['REQUEST_URI']='/api/health';$_SERVER['REQUEST_METHOD']='GET';$_SERVER['REMOTE_ADDR']='127.0.0.1';$_SERVER['HTTP_HOST']='127.0.0.1:8080';require '${site.site}/api/index.php';`,['-d','pdo_mysql.default_socket='+process.env.RUBIZH_TEST_MYSQL_SOCKET]);
+  const result=JSON.parse(output);assert.ok(Array.isArray(result.photos_checked),JSON.stringify(result));assert.equal(result.photos_checked.length,1);assert.equal(result.photos_checked[0].ok,true);assert.equal(result.photos_checked[0].http,null);
+  assert.equal(existsSync(calls),false,'the public health handler must not initiate network traffic');
+ }finally{site.stop();}
+});
 test('Catalogue rejects malformed and excessive filters before SQL, while normalizing pagination',()=>{
  const value=JSON.parse(run(`require '${root}/shop/runtime.php';$n=0;foreach([['q'=>str_repeat('x',161)],['page'=>'1 OR 1=1'],['q'=>['array']],['attrs'=>'{"bad":[]}'],['attrs'=>json_encode(array_fill(0,25,'x'))],['q'=>"\\xff"]] as $v){try{rubizhCatalogInput($v);}catch(RubizhHttpException $e){if($e->status===400)$n++;}}echo json_encode([$n,rubizhCatalogInput(['page'=>'999999','limit'=>'9999','q'=>' куртка '])]);`));
  assert.equal(value[0],6);assert.deepEqual(value[1],{page:'1000',limit:'100',q:'куртка'});

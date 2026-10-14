@@ -7,7 +7,7 @@ import {tmpdir} from 'node:os';
 import {createServer} from 'node:net';
 import {chromium} from 'playwright';
 import {products} from '../dev/fixtures.mjs';
-const root=path.resolve(import.meta.dirname,'..'),runtime='/workspace/php-runtime/root/usr';
+const root=path.resolve(import.meta.dirname,'..'),runtime=(process.env.RUBIZH_PHP_RUNTIME||'/workspace/php-runtime/root/usr')+'';
 const args=['-n','-d','error_reporting=24575','-d','pdo_mysql.default_socket='+process.env.RUBIZH_TEST_MYSQL_SOCKET,...['pdo','mysqlnd','pdo_mysql','mbstring','curl','gd'].flatMap(x=>['-d','extension='+runtime+'/lib/php/20240924/'+x+'.so'])];
 const env={...process.env,LD_LIBRARY_PATH:runtime+'/lib/x86_64-linux-gnu'};
 function php(code){const p=spawnSync(runtime+'/bin/php8.4',[...args,'-r',code],{env,encoding:'utf8',timeout:180000});assert.equal(p.status,0,p.stderr+p.stdout);return p.stdout;}
@@ -19,7 +19,7 @@ test('Real HTTP: nonce CSP, banner loading, bounded reads, duplicate checkout an
  try{
   for(const folder of ['api','auth','shop','assets','dev']){mkdirSync(path.join(site,folder));for(const f of readdirSync(path.join(root,folder)))if(!['config.php','mono-private.php','np-private.php','site-settings.json','site-settings.lock'].includes(f)&&!f.startsWith('.')&&['.php','.json','.js','.css','.woff2','.webp','.sh','.svg'].includes(path.extname(f))){try{copyFileSync(path.join(root,folder,f),path.join(site,folder,f));}catch(e){if(e.code!=='EISDIR')throw e;}}}
   for(const f of ['index.html','storefront.php','health.php','offer.html','privacy.html'])copyFileSync(path.join(root,f),path.join(site,f));
-  writeFileSync(path.join(site,'api/config.php'),`<?php return ['db_host'=>'localhost','db_name'=>'${schema}','db_user'=>'root','db_pass'=>'','cache_dir'=>'${site}/cache','media_dir'=>'${site}/media','nova_poshta_api_key'=>'','mono_token'=>''];`);
+  writeFileSync(path.join(site,'api/config.php'),`<?php return ['pim_legacy_sync'=>true,'db_host'=>'localhost','db_name'=>'${schema}','db_user'=>'root','db_pass'=>'','cache_dir'=>'${site}/cache','media_dir'=>'${site}/media','nova_poshta_api_key'=>'','mono_token'=>''];`);
   writeFileSync(path.join(site,'auth/config.php'),"<?php return ['sms_enabled'=>false,'google_enabled'=>false,'noreply_password'=>'','auth_secret'=>'test-fixture-secret-at-least-forty-characters'];");
   let catalog=process.env.RUBIZH_CAPACITY_CATALOG?JSON.parse(readFileSync(process.env.RUBIZH_CAPACITY_CATALOG)):structuredClone(products);
   for(const id of ['race-stock','repeat-order','reverse-a','reverse-b']){const p=structuredClone(products.find(x=>x.slot==='body'));p.id=id;p.slug=id;p.name='Куртка '+id;p.variants=[{...p.variants[0],sku:id+'-L',price:1000,kit_price:1000,stock:id==='race-stock'?1:20,availability:'in',size_display:'L',size_native:'L'}];catalog.push(p);}
@@ -46,7 +46,7 @@ test('Real HTTP: nonce CSP, banner loading, bounded reads, duplicate checkout an
   const stale=await fetch(base+'/health.php');assert.equal(stale.status,503);assert.deepEqual(await stale.json(),{ready:false});php(`require '${site}/shop/cache-worker.php';`);
   const initial=await (await fetch(base+'/shop/catalog.php?action=storefront')).json();assert.equal(initial.ok,true);assert.ok(initial.products.length<=96);
   report.initial_recommendations={products:initial.products.length,json_bytes:Buffer.byteLength(JSON.stringify(initial))};
-  browser=await chromium.launch({executablePath:existsSync('/usr/bin/chromium')?'/usr/bin/chromium':undefined,headless:true,args:['--no-sandbox']});
+  browser=await chromium.launch({executablePath:existsSync((process.env.CHROMIUM_PATH||'/usr/bin/chromium'))?(process.env.CHROMIUM_PATH||'/usr/bin/chromium'):undefined,headless:true,args:['--no-sandbox']});
   for(const theme of ['light','dark']){
    const page=await browser.newPage({viewport:{width:390,height:844}}),violations=[],jsErrors=[];page.on('pageerror',e=>jsErrors.push(e.message));
    await page.addInitScript(t=>{localStorage.setItem('rubizh.theme',t);window.cspViolations=[];document.addEventListener('securitypolicyviolation',e=>window.cspViolations.push(e.violatedDirective+' '+e.blockedURI));},theme);
@@ -74,7 +74,7 @@ test('Real HTTP: nonce CSP, banner loading, bounded reads, duplicate checkout an
   assert.ok(repeats.every(r=>r.status===200),JSON.stringify(repeats));assert.equal(new Set(repeats.map(r=>r.data.order.id)).size,1);report.duplicate_checkout={requests:8,orders:1};
   assert.equal((await post(b,{...same,expected_total:1,lines:[{product_id:'repeat-order',sku:'repeat-order-L',qty:2}]})).status,409);
   const buyers=[];for(let i=0;i<8;i++)buyers.push(await buyer());const stock=await Promise.all(buyers.map((b,i)=>post(b,order(b,(i+1).toString(16).padStart(32,'0'),'race-stock'))));
-  assert.equal(stock.filter(x=>x.status===200).length,1,JSON.stringify(stock));assert.ok(stock.every(x=>[200,400,503].includes(x.status)));report.stock_race={buyers:8,available:1,saved_orders:1};
+  assert.equal(stock.filter(x=>x.status===200).length,1,JSON.stringify(stock));assert.ok(stock.every(x=>[200,409,503].includes(x.status)));report.stock_race={buyers:8,available:1,saved_orders:1};
   const reverseBuyers=[await buyer(),await buyer()];const reverseResults=await Promise.all(reverseBuyers.map((b,i)=>{const lines=['reverse-a','reverse-b'].map(s=>({product_id:s,sku:s+'-L',qty:1}));if(i)lines.reverse();return post(b,{...order(b,String(i+9).padStart(32,'0'),'reverse-a'),lines,expected_total:2000});}));assert.ok(reverseResults.every(x=>x.status===200),JSON.stringify(reverseResults));report.opposite_cart_order={buyers:2,orders:2,deadlocks:0};
   report.order_rows=Number(php(`${admin}echo $a->query('SELECT COUNT(*) FROM ${schema}.rubizh_customer_orders')->fetchColumn();`));assert.equal(report.order_rows,4);
   const reservations=Number(php(`${admin}echo $a->query("SELECT SUM(qty) FROM ${schema}.rubizh_stock_reservations WHERE sku='race-stock-L'")->fetchColumn();`));assert.equal(reservations,1);

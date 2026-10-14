@@ -4,7 +4,7 @@ import {chromium} from 'playwright';
 import {startPreview} from '../dev/preview.mjs';
 import {products} from '../dev/fixtures.mjs';
 let browser,server,base;
-before(async()=>{server=await startPreview(0);base='http://127.0.0.1:'+server.address().port;browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox']});});
+before(async()=>{server=await startPreview(0);base='http://127.0.0.1:'+server.address().port;browser=await chromium.launch({executablePath:(process.env.CHROMIUM_PATH||'/usr/bin/chromium'),args:['--no-sandbox']});});
 after(async()=>{await browser?.close();await new Promise(resolve=>server?.close(resolve));});
 async function scenario(run,{restore=false}={}){
  const context=await browser.newContext({viewport:{width:1440,height:1000}}),page=await context.newPage();page.setDefaultTimeout(8000);const errors=[],requests=[];let active=false,email='',restorePending=restore;
@@ -25,14 +25,14 @@ test('Cart reminders require a valid email and explicit opt-in; quantity updates
  await checkout(page);const checkbox=page.locator('[data-cart-reminder] input');await checkbox.waitFor();assert.equal(await checkbox.isChecked(),false);
  await checkbox.click();await page.getByText('Спочатку вкажіть коректний email.',{exact:true}).waitFor();assert.equal(await checkbox.isChecked(),false);assert.equal(requests.length,0);
  await page.locator('input[name="email"]').fill('buyer@example.com');await page.waitForTimeout(700);assert.equal(requests.length,0,'Email alone must not opt in');
- await checkbox.check();await page.getByText(/Нагадування збережено/).waitFor();assert.equal(requests[0].consent,true);assert.equal(requests[0].csrf,'preview-only');assert.deepEqual(requests[0].lines,[{product_id:'demo-uniform',sku:'DEMO-UNIFORM-L',qty:1,kit_group:''}]);
+ await checkbox.check();await page.getByText(/Нагадування збережено/).waitFor();assert.equal(requests[0].consent,true);assert.equal(requests[0].csrf,'preview-only');assert.deepEqual(requests[0].lines,[{product_id:'demo-uniform',sku:'DEMO-UNIFORM-L',qty:1,price_mode:'retail',kit_group:''}]);
  await page.getByRole('button',{name:'+',exact:true}).click();await page.waitForTimeout(900);assert.equal(requests.at(-1).lines[0].qty,2);
  await page.reload();await checkbox.waitFor();assert.equal(await checkbox.isChecked(),true);assert.equal(await page.locator('input[name="email"]').inputValue(),'buyer@example.com');
  await checkbox.uncheck();await page.getByText('Нагадування вимкнено.',{exact:true}).waitFor();assert.equal(requests.at(-1).action,'cancel');
  for(const width of [1440,768,390,320]){await page.setViewportSize({width,height:1000});for(const theme of ['dark','light']){await page.evaluate(theme=>window.rubizhTheme.save(theme),theme);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);}}
 }));
 test('Returning from a reminder restores a real available variant and keeps its kit group without creating an order',()=>scenario(async(page,requests)=>{
- await page.goto(base+'/#cart');await page.getByRole('heading',{name:'Оформлення замовлення'}).waitFor();await page.getByText('Кошик відновлено. Перевірте товари перед оформленням.',{exact:true}).waitFor();assert.deepEqual(requests.map(r=>r.action),['restore']);await page.getByText('DEMO-UNIFORM-L',{exact:true}).waitFor();assert.match(await page.locator('body').innerText(),/L/);
+ await page.goto(base+'/#cart');await page.getByRole('heading',{name:'Оформлення замовлення'}).waitFor();await page.getByText(/^Кошик відновлено. Перевірте товари перед оформленням./).waitFor();assert.deepEqual(requests.map(r=>r.action),['restore']);await page.getByText('DEMO-UNIFORM-L',{exact:true}).waitFor();assert.match(await page.locator('body').innerText(),/L/);
  const stored=await page.evaluate(()=>Object.entries(localStorage).map(([key,value])=>({key,value})));assert.ok(stored.some(({value})=>value.includes('kit-fixture')&&value.includes('DEMO-UNIFORM-L')));
  await page.reload();await page.getByRole('heading',{name:'Оформлення замовлення'}).waitFor();assert.equal(requests.filter(r=>r.action==='restore').length,1);
 },{restore:true}));

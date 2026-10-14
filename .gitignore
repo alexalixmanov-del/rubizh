@@ -12,3 +12,6 @@ cache/*
 !cache/.htaccess
 media/
 *.log
+
+# Stage 2: unresolved high-risk audit evidence stays local
+docs/release-hardening/stage-2/private/

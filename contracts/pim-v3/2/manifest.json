@@ -1,0 +1,17 @@
+{
+  "contract_version": 3,
+  "snapshot": 2,
+  "wire_contract_status": "CONFIRMED_FROM_SHIPPED_EXPORTER",
+  "envelope": "products",
+  "exporter": "pim.rubizh app/lib/final-workflow.inc.js pimSiteWire()",
+  "fixture_generator": "pim.rubizh app/tools/export-wire-fixture.cjs",
+  "fixture_catalog_input": "SYNTHETIC_REPRESENTATIVE",
+  "wire_exact_sha256": "66a1b714f52310b831592d58f26b3db5a1ea5afb5248caf0d1da2fde03f41512",
+  "versions": {"pricing_policy_version": 1, "category_catalog_version": 2, "size_catalog_version": 1, "inventory_policy_version": 1, "order_policy_version": 1, "model_colors_version": 1},
+  "sync_enabled_by_default": false,
+  "enable": "api/config.php 'pim_v3_sync'=>true after dev/install-pim-v3.sh",
+  "order_states": ["NEW", "WAITING_CONFIRMATION", "CONFIRMED", "CANCELLED", "COMPLETED"],
+  "payment_states": ["UNPAID", "PAYMENT_PENDING", "PAID", "PARTIALLY_REFUNDED", "REFUNDED"],
+  "fulfillment_states": ["NOT_READY", "READY_TO_SHIP", "TTN_CREATED", "SHIPPED", "IN_TRANSIT", "DELIVERED"],
+  "mixed_cart": {"confirmation_state": "WAITING_CONFIRMATION", "payment_strategy": "SINGLE_ORDER_PAYMENT_AFTER_CONFIRMATION", "automatic_split": false}
+}

@@ -4,7 +4,7 @@ import {readFileSync,writeFileSync,mkdtempSync,mkdirSync,readdirSync,copyFileSyn
 import {spawnSync} from 'node:child_process';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
-const root=path.resolve(import.meta.dirname,'..'),runtime='/workspace/php-runtime/root/usr';
+const root=path.resolve(import.meta.dirname,'..'),runtime=(process.env.RUBIZH_PHP_RUNTIME||'/workspace/php-runtime/root/usr')+'';
 const phpArgs=['-n','-d','error_reporting=24575',...['pdo','mysqlnd','pdo_mysql','mbstring'].flatMap(e=>['-d',`${'extension='+runtime}/lib/php/20240924/${e}.so`]),'-d','pdo_mysql.default_socket='+process.env.RUBIZH_TEST_MYSQL_SOCKET];
 function php(code){const r=spawnSync(runtime+'/bin/php8.4',[...phpArgs,'-r',code],{encoding:'utf8',timeout:120000,env:{...process.env,LD_LIBRARY_PATH:runtime+'/lib/x86_64-linux-gnu'}});assert.equal(r.status,0,r.stderr+r.stdout);return r.stdout;}
 test('Semantic parsing resolves relations and complete phrases, while real primary-type conflicts remain for review',()=>{
@@ -28,13 +28,13 @@ test('360 labelled real products across 18 roots retain their independently spec
  assert.equal(result.length,360);
  const wrong=result.filter(p=>p.expected!==p.after);assert.deepEqual(wrong,[]);
  const metrics={label_source:'Reviewed regression fixture; not a calibrated whole-catalogue accuracy estimate',products:result.length,correct_before:result.filter(x=>x.expected===x.before).length,correct_after:result.filter(x=>x.expected===x.after).length,fixed:result.filter(x=>x.expected!==x.before&&x.expected===x.after).length,regressions:result.filter(x=>x.expected===x.before&&x.expected!==x.after).length,false_conflicts:result.filter(x=>x.status==='REAL_CONFLICT').length};
- mkdirSync('/workspace/output/rubizh-reclassification-v2-20261008',{recursive:true});writeFileSync('/workspace/output/rubizh-reclassification-v2-20261008/golden-regression.json',JSON.stringify(metrics,null,2));
+ const outDir=path.join(process.env.RUBIZH_TEST_OUTPUT||tmpdir(),'rubizh-reclassification-v2-20261008');mkdirSync(outDir,{recursive:true});writeFileSync(path.join(outDir,'golden-regression.json'),JSON.stringify(metrics,null,2));
 });
 test('V2 dry-run is read-only; reviewed apply preserves data, manual locks and PIM authority across imports',{skip:!process.env.RUBIZH_TEST_MYSQL_SOCKET},()=>{
  const d=mkdtempSync(path.join(tmpdir(),'rubizh-v2-test-')),site=path.join(d,'www'),schema='fixture_v2_'+Math.random().toString(16).slice(2);mkdirSync(site);
  try{
   for(const folder of ['api','shop']){mkdirSync(path.join(site,folder));for(const f of readdirSync(path.join(root,folder)))if((f.endsWith('.php')||f==='canonical-taxonomy.json')&&!['config.php','mono-private.php','np-private.php'].includes(f))copyFileSync(path.join(root,folder,f),path.join(site,folder,f));}
-  writeFileSync(path.join(site,'api/config.php'),`<?php return ['db_host'=>'localhost','db_name'=>'${schema}','db_user'=>'root','db_pass'=>'','media_dir'=>'${site}/media','cache_dir'=>'${site}/cache'];`);
+  writeFileSync(path.join(site,'api/config.php'),`<?php return ['pim_legacy_sync'=>true,'db_host'=>'localhost','db_name'=>'${schema}','db_user'=>'root','db_pass'=>'','media_dir'=>'${site}/media','cache_dir'=>'${site}/cache'];`);
   const code=String.raw`require '${site}/shop/reclassification-v2.php';$a=new PDO('mysql:unix_socket='.getenv('RUBIZH_TEST_MYSQL_SOCKET'),'root','');$a->exec('CREATE DATABASE ${schema} CHARACTER SET utf8mb4');function check($v,$m){if(!$v)throw new Exception($m);}try{$db=db();
    $items=[['medical','Підсумок медичний з панеллю швидкого скидання','Підсумки / Скидання магазинів'],['costume','Костюм (Кітель + Штани)','Одяг та форма / Штани'],['locked','Рюкзак тактичний 35 л','Рюкзаки, сумки та баули / Тактичні рюкзаки'],['pim','Акумуляторний LED ліхтарик','Автономне живлення / Акумулятори та батарейки'],['unknown','Річ без визначеного типу','Невідома категорія']];
    $payload=[];foreach($items as [$id,$name,$category]){$p=['id'=>$id,'slug'=>$id,'name'=>$name,'category'=>$category,'supplier_id'=>'S1','external_id'=>'native-'.$id,'description'=>'Original','variants'=>[['sku'=>$id.'-L','size_display'=>'L','color'=>'Мультикам','price'=>1000,'stock'=>5,'availability'=>'in']],'photos'=>['https://example.com/'.$id.'.jpg']];$payload[$id]=$p;check(save_product($db,$p)['status']!=='error','Seed');}

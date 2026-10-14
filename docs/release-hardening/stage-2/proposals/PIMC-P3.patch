@@ -1,0 +1,48 @@
+# UNAPPLIED PIM proposal; base SHA 21198461f8ebb2eadef6dcd6fb77a50a8a038ea9
+# Filter known broken/invalid URLs consistently before color decision and exact export; retain all original internal photo records.
+--- a/app/lib/final-workflow.inc.js
++++ b/app/lib/final-workflow.inc.js
+@@ -29,7 +29,9 @@
+  price_unit:['Цена за единицу площади, не за товар','Поставщик продаёт индивидуальный размер по цене за 1 кв.м: такую цену нельзя оплачивать как цену товара. Решите, как продавать (заявка с расчётом) или снимите с сайта.'],
+  variant_cell:['Варианты не различаются на сайте','У нескольких SKU одинаковые цвет и размер: укажите размер/цвет каждого SKU или разделите модель.']
+ };
+-function finalUsablePhotos(p){return simplePhotos(p).filter(url=>p.photoMeta?.[url]?.broken!==true&&p.photoMeta?.[url]?.invalid!==true);}
++function finalPhotoUsable(p,url){return p.photoMeta?.[url]?.broken!==true&&p.photoMeta?.[url]?.invalid!==true;}
++function finalUsablePhotos(p){return simplePhotos(p).filter(url=>finalPhotoUsable(p,url));}
++function finalUsableColors(p,colors){return colors.map(c=>{const photos=c.photos.filter(url=>finalPhotoUsable(p,url));return {...c,photos,photo_assignment:photos.length?c.photo_assignment:'unknown'};});}
+ // Supplier titles join descriptor segments with «|» («Тактические шорты BR Stinger | Стрейч, серые | Лето, ТрО, …»). When
+ // every segment after the first carries no model identity (no digit at all, no Latin word once colour/size words are gone),
+ // the public title is cut back to the first segment — only if the title verifiably starts
+@@ -131,7 +133,7 @@
+  if(!p.canonical_category_id||openCategory)add(moderate,'category',FINAL_MODERATION_TEXT.category[1],[p.category_review_status||'NEEDS_REVIEW',p.suggested_category_id?'Предложено: '+canonicalPath(p.suggested_category_id):''].filter(Boolean));
+  if(variants.length>modelLimit(p)||finalModelReview().has(p.id))add(moderate,'grouping',FINAL_MODERATION_TEXT.grouping[1],[variants.length+' SKU']);
+  const unknownColors=uniq(variants.flatMap(v=>simplePalette(v).unknown));if(unknownColors.length)add(moderate,'color',FINAL_MODERATION_TEXT.color[1],unknownColors.slice(0,5));
+- if(classificationEnabled()||mcEnabled()){const colors=mcColors(p);if(colors.length>1&&colors.some(c=>!c.photos.length))add(moderate,'photo_ownership',FINAL_MODERATION_TEXT.photo_ownership[1],colors.filter(c=>!c.photos.length).map(c=>[c.color,c.camouflage].filter(Boolean).join(' / ')||c.id));}
++ if(classificationEnabled()||mcEnabled()){const colors=finalUsableColors(p,mcColors(p));if(colors.length>1&&colors.some(c=>!c.photos.length))add(moderate,'photo_ownership',FINAL_MODERATION_TEXT.photo_ownership[1],colors.filter(c=>!c.photos.length).map(c=>[c.color,c.camouflage].filter(Boolean).join(' / ')||c.id));}
+  const unitPriced=variants.filter(finalUnitPriced);if(unitPriced.length)add(moderate,'price_unit',FINAL_MODERATION_TEXT.price_unit[1],unitPriced.slice(0,5).map(v=>v.sku));
+  const sameTitle=(finalTitleOwners().get((p.canonical_category_id||'')+'\u0000'+norm(finalTitle(p)))||[]).filter(id=>id!==p.id);if(sameTitle.length)add(moderate,'grouping',FINAL_MODERATION_TEXT.grouping[1],['Та сама назва: '+sameTitle.slice(0,3).join(', ')]);
+  const publicCells=finalPublicCells(p),cells=new Map(),same=[];for(const v of variants){const k=publicCells.get(v.sku);if(cells.has(k))same.push(cells.get(k),v.sku);else cells.set(k,v.sku);}
+@@ -163,7 +165,7 @@
+ }
+ function finalWireProduct(p){
+  const out=simpleProductPayload(simpleAssess(p)),photos=finalUsablePhotos(p);
+- out.colors=(out.colors||[]).map(c=>Object.fromEntries(FINAL_COLOR_FIELDS.filter(k=>Object.hasOwn(c,k)).map(k=>[k,structuredClone(c[k])])));
++ out.colors=finalUsableColors(p,out.colors||[]).map(c=>Object.fromEntries(FINAL_COLOR_FIELDS.filter(k=>Object.hasOwn(c,k)).map(k=>[k,structuredClone(c[k])])));
+  out.photos=photos;out.unassigned_photos=photos.filter(url=>!out.colors.some(c=>c.photos.includes(url)));
+  // U+02BC is missing from the storefront fonts (the word breaks into «Ім ʼ я»): publish the typographic apostrophe ’.
+  const typo=t=>String(t??'').replace(/(?<=\p{L})\u02bc(?=\p{L})/gu,'\u2019');
+--- a/app/tests/final-workflow.test.cjs
++++ b/app/tests/final-workflow.test.cjs
+@@ -130,3 +130,12 @@
+  assert.equal(v.size_normalized,'41');for(const f of ['size_raw','size_display','size_normalized','size_system','size_type','size_alpha','size_fit','size_height'])assert.ok(v[f]==null||typeof v[f]==='string',f);
+  assert.equal(h.run('S.products.get("p-a").variants[0].size_normalized'),41,'stored PIM data unchanged');
+ });
++
++test('broken color photo blocks readiness and is absent from every exported gallery',()=>{
++ const h=setup();h.run('S.products.get("p-a").photoMeta={"https://rubizh.shop/media/black.webp":{broken:true}};bumpData()');
++ assert.equal(h.run('finalDecision(S.products.get("p-a")).state'),'MODERATION');
++ const m=JSON.parse(JSON.stringify(h.run('finalWireProduct(S.products.get("p-a"))'))),black=m.colors.find(c=>c.color==='Чорний');
++ assert.deepEqual(black.photos,[]);assert.equal(black.photo_assignment,'unknown');
++ assert.deepEqual(m.variants.find(v=>v.sku==='RUB-00002').photos,[]);
++ assert.ok(!m.photos.includes('https://rubizh.shop/media/black.webp'));
++});

@@ -7,10 +7,10 @@ import path from 'node:path';
 import {chromium} from 'playwright';
 import {startPreview} from '../dev/preview.mjs';
 import {products} from '../dev/fixtures.mjs';
-const root=path.resolve(import.meta.dirname,'..'),runtime='/workspace/php-runtime/root/usr',ext=runtime+'/lib/php/20240924/';
+const root=path.resolve(import.meta.dirname,'..'),runtime=(process.env.RUBIZH_PHP_RUNTIME||'/workspace/php-runtime/root/usr')+'',ext=runtime+'/lib/php/20240924/';
 function php(source){const r=spawnSync(runtime+'/bin/php8.4',['-n','-d','error_reporting=24575',...['pdo','mysqlnd','pdo_mysql','mbstring'].flatMap(x=>['-d','extension='+ext+x+'.so']),'-r',source],{env:{...process.env,LD_LIBRARY_PATH:runtime+'/lib/x86_64-linux-gnu'},encoding:'utf8',timeout:20000});assert.equal(r.status,0,r.stderr+'\n'+r.stdout);return r.stdout;}
 let server,browser,base;
-before(async()=>{server=await startPreview(0);base='http://127.0.0.1:'+server.address().port;browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox']});});
+before(async()=>{server=await startPreview(0);base='http://127.0.0.1:'+server.address().port;browser=await chromium.launch({executablePath:(process.env.CHROMIUM_PATH||'/usr/bin/chromium'),args:['--no-sandbox']});});
 after(async()=>{await browser?.close();await new Promise(resolve=>server?.close(resolve));});
 test('Empty checkout hides recipient, delivery and submit; comparison survives reload and can be cleared',async()=>{
  const page=await browser.newPage({viewport:{width:390,height:844}});try{
@@ -28,7 +28,9 @@ test('Real unknown stock has no false scarcity; confirmed sizes sort logically e
   await page.route('**/shop/catalog.php*',route=>{const action=new URL(route.request().url()).searchParams.get('action');if(action==='product')return route.fulfill({contentType:'application/json',body:JSON.stringify({ok:true,product})});if(action==='storefront')return route.fulfill({contentType:'application/json',body:JSON.stringify({ok:true,products:[product],kits:[]})});return route.continue();});
   await page.goto(base+'/product/demo-uniform');await page.locator('[data-size-grid]').waitFor();
   assert.deepEqual(await page.locator('[data-size-grid] [role=button]>span:first-child').allTextContents(),['S','M','L','XL','2XL','3XL']);
-  assert.doesNotMatch(await page.locator('body').innerText(),/Мало залишилось/);assert.match(await page.locator('body').innerText(),/За даними постачальника/i);
+  assert.doesNotMatch(await page.locator('body').innerText(),/Мало залишилось/);assert.match(await page.locator('body').innerText(),/В наявності/i);
+  // Provenance stays internal: the buyer never sees «За даними постачальника» as an availability badge.
+  assert.doesNotMatch(await page.locator('body').innerText(),/За даними постачальника/i);
  }finally{await page.close();}
 });
 test('Canonical size matching combines heights, variants and footwear without guessing missing sizes',()=>{

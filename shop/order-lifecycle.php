@@ -10,10 +10,13 @@ function shopDonationAmount(float $total): int {return (int)round($total*0.03,0,
 function shopPaymentReady(array $o): bool {return in_array($o['status']??'',['confirmed','processing','shipped','completed'],true)&&in_array($o['payment_status']??'',['pending','failed'],true);}
 function shopStartPaymentTiming(PDO $db,array $o): void {
  $now=gmdate('Y-m-d H:i:s');$due=shopWorkdayDeadline($now,2);$remind=(new DateTimeImmutable($now,new DateTimeZone('UTC')))->modify('+24 hours')->format('Y-m-d H:i:s');
- $db->prepare('INSERT INTO rubizh_order_timing(order_id,payment_due,remind_at) VALUES(?,?,?) ON DUPLICATE KEY UPDATE payment_due=VALUES(payment_due),remind_at=VALUES(remind_at)')->execute([$o['id'],$due,$remind]);
+ // Confirmation may be repeated; it must never reopen an elapsed payment window.
+ $db->prepare('INSERT INTO rubizh_order_timing(order_id,payment_due,remind_at) VALUES(?,?,?) ON DUPLICATE KEY UPDATE order_id=VALUES(order_id)')->execute([$o['id'],$due,$remind]);
+ $due=(string)shopEnsureTiming($db,$o)['payment_due'];
  $db->prepare('UPDATE rubizh_stock_reservations SET expires_at=? WHERE order_id=?')->execute([$due,$o['id']]);
  if(trim((string)($o['email']??''))!=='')shopQueueBuyerMail($db,(int)$o['id'],'confirmed');
 }
+function shopPaymentRetryText(): string {return 'Оплату не підтверджено. Можна спробувати ще раз до строку оплати замовлення; строк резерву не змінюється.';}
 function shopReceiptStage(array $o): string {return in_array($o['status']??'',['cancelled','returned'],true)||($o['payment_status']??'')==='refunded'?'cancelled':(($o['payment_status']??'')==='paid'?'paid':'pending');}
 function shopLifecycleMigrate(PDO $db): void {if(function_exists('rubizhSchemaPrepared')&&rubizhSchemaPrepared($db))return;
  static $ready=false;if($ready)return;
@@ -29,15 +32,9 @@ function shopEnsureTiming(PDO $db,array $o): array {
  $due=shopWorkdayDeadline($o['created_at'],2);$remind=(new DateTimeImmutable($o['created_at'],new DateTimeZone('UTC')))->modify('+24 hours')->format('Y-m-d H:i:s');
  $db->prepare('INSERT IGNORE INTO rubizh_order_timing(order_id,payment_due,remind_at) VALUES(?,?,?)')->execute([$o['id'],$due,$remind]);$q->execute([$o['id']]);return $q->fetch(PDO::FETCH_ASSOC);
 }
-function shopReserveLines(PDO $db,int $id,array $lines,string $expires): void {
- $totals=[];foreach($lines as $l)$totals[$l['sku']]=($totals[$l['sku']]??0)+(float)$l['qty'];foreach($totals as $sku=>$qty)$db->prepare('INSERT INTO rubizh_stock_reservations(order_id,sku,qty,expires_at) VALUES(?,?,?,?)')->execute([$id,$sku,$qty,$expires]);
-}
-function shopReservedQty(PDO $db,string $sku): float {
- $q=$db->prepare("SELECT COALESCE(SUM(r.qty),0) FROM rubizh_stock_reservations r JOIN rubizh_customer_orders o ON o.id=r.order_id WHERE r.sku=? AND r.expires_at>UTC_TIMESTAMP() AND o.payment_status IN ('pending','failed','cod') AND o.status IN ('new','confirmed','processing')");$q->execute([$sku]);return (float)$q->fetchColumn();
-}
 function shopQueueBuyerMail(PDO $db,int $order,string $event,string $shipment=''): void {if(!in_array($event,['confirmed','paid','reminder','cancelled','shipped','arrived','received'],true)||($shipment!==''&&!preg_match('/^\d{14}$/D',$shipment)))throw new InvalidArgumentException('mail event');$event.=$shipment!==''?':'.$shipment:'';$db->prepare('INSERT IGNORE INTO rubizh_buyer_mail(order_id,event,next_at) VALUES(?,?,UTC_TIMESTAMP())')->execute([$order,$event]);}
 function shopRecordPaid(PDO $db,int $id): void {
- $o=npOrder($db,$id);if(($o['payment_status']??'')!=='paid')return;$t=shopEnsureTiming($db,$o);
+ $o=npOrder($db,$id);if(($o['payment_status']??'')!=='paid')return;$own=!$db->inTransaction();if($own)$db->beginTransaction();try{shopReservationTransition($db,$id,'COMMITTED','SYSTEM');if($own)$db->commit();}catch(Throwable $e){if($own&&$db->inTransaction())$db->rollBack();throw $e;}$t=shopEnsureTiming($db,$o);
  if(empty($t['paid_at'])){$now=$o['updated_at']??gmdate('Y-m-d H:i:s');$q=$db->prepare("SELECT modified_at FROM rubizh_mono_invoices WHERE order_id=? AND status='success' ORDER BY modified_at LIMIT 1");$q->execute([$id]);$bank=$q->fetchColumn();if(is_string($bank)&&$bank!==''&&strtotime($bank)!==false)$now=(new DateTimeImmutable($bank))->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s');else{$q=$db->prepare("SELECT confirmed_at FROM rubizh_np_order_confirmations WHERE order_id=? AND payment_proof<>''");$q->execute([$id]);$confirmed=$q->fetchColumn();if(is_string($confirmed)&&$confirmed!=='')$now=$confirmed;}if($now<$o['created_at']||$now>gmdate('Y-m-d H:i:s'))$now=gmdate('Y-m-d H:i:s');$db->prepare('UPDATE rubizh_order_timing SET paid_at=? WHERE order_id=? AND paid_at IS NULL')->execute([$now,$id]);$t['paid_at']=$now;}
  if(!in_array($o['status'],['cancelled','returned'],true)){$db->prepare('INSERT IGNORE INTO rubizh_order_donations(order_id,amount,paid_at,due_at) VALUES(?,?,?,?)')->execute([$id,shopDonationAmount((float)$o['total']),$t['paid_at'],shopWorkdayDeadline($t['paid_at'],3)]);shopQueueBuyerMail($db,$id,'paid');}
  // A late bank payment on a cancelled order remains visible to the manager; no donation is accrued.
@@ -47,18 +44,19 @@ function shopDonationForOrder(PDO $db,int $id): ?array {
  $q=$db->prepare("SELECT d.*,b.transferred_at,b.reference FROM rubizh_order_donations d LEFT JOIN rubizh_donation_batches b ON b.id=d.batch_id JOIN rubizh_customer_orders o ON o.id=d.order_id WHERE d.order_id=? AND o.payment_status='paid' AND o.status NOT IN ('cancelled','returned')");$q->execute([$id]);$d=$q->fetch(PDO::FETCH_ASSOC);if(!$d)return null;return ['amount'=>(int)$d['amount'],'due_at'=>$d['due_at'],'sent_at'=>$d['sent_at'],'transferred_at'=>$d['transferred_at'],'proof_url'=>$d['batch_id']?'/shop/donation-proof.php?order='.$id:''];
 }
 function shopOrderReceipt(PDO $db,int $id): array {
- $o=npOrder($db,$id);$t=shopEnsureTiming($db,$o);if($o['payment_status']==='paid')shopRecordPaid($db,$id);$stage=shopReceiptStage($o);$ready=shopPaymentReady($o);
+ $o=npOrder($db,$id);$canonical=shopCanonicalOrderDto($db,$o);$t=shopEnsureTiming($db,$o);if($o['payment_status']==='paid')shopRecordPaid($db,$id);$stage=shopReceiptStage($o);$ready=shopPaymentReady($o);
  require_once __DIR__.'/../api/seller.php';$s=rubizhSeller();$c=$o['contact'];$due=new DateTimeImmutable($t['payment_due'],new DateTimeZone('UTC'));
- return ['id'=>$id,'number'=>$o['order_number'],'total'=>(float)$o['total'],'items'=>$o['items'],'lines'=>$o['items'],'delivery'=>$o['delivery_label'],'status'=>$o['status'],'payment_status'=>$o['payment_status'],'payment_method'=>$c['payment']??'invoice','was_paid'=>!empty($t['paid_at'])||in_array($o['payment_status'],['paid','refunded'],true),'stage'=>$stage,'payment_ready'=>$ready,'title'=>$stage==='pending'&&!$ready?'Замовлення отримано — очікуйте підтвердження':['pending'=>'Наявність підтверджено — можна оплатити','paid'=>'Замовлення оформлено','cancelled'=>'Скасовано'][$stage],
+ return ['id'=>$id,'number'=>$o['order_number'],'total'=>(float)$o['total'],'items'=>$o['items'],'lines'=>$o['items'],'delivery'=>$o['delivery_label'],'status'=>$o['status'],'payment_status'=>$o['payment_status'],'payment_method'=>$c['payment']??'invoice','was_paid'=>!empty($t['paid_at'])||in_array($o['payment_status'],['paid','refunded'],true),'stage'=>$stage,'payment_ready'=>$ready,'title'=>($o['pim_contract_version']??null)!==null&&(int)$o['pim_contract_version']===3?(['paid'=>'Замовлення оплачено','cancelled'=>'Скасовано'][$stage]??(($o['pim_order_state']??'')==='WAITING_CONFIRMATION'?'Заявку отримано — очікуйте підтвердження':'Замовлення створено — очікує оплати')):($stage==='pending'&&!$ready?'Замовлення отримано — очікуйте підтвердження':['pending'=>'Наявність підтверджено — можна оплатити','paid'=>'Замовлення оформлено','cancelled'=>'Скасовано'][$stage]),
+ 'canonical'=>$canonical,'order_state'=>$canonical['order_status'],'payment_state'=>$canonical['payment_status'],'fulfillment_state'=>$canonical['fulfillment_status'],
  'payment_due'=>$ready?$due->format('c'):'','payment_due_label'=>$ready?$due->setTimezone(new DateTimeZone('Europe/Kyiv'))->format('d.m.Y H:i'):'','payment_url'=>'/shop/payment-return.php?order='.$id,'seller'=>$s,'brigade'=>shopDonationBrigade($c),'donation_amount'=>shopDonationAmount((float)$o['total']),'donation_text'=>$stage==='cancelled'?'Внесок за скасованим або поверненим замовленням не нараховується.':shopDonationText(shopDonationAmount((float)$o['total']),$stage==='paid',shopDonationBrigade($c)),'donation'=>shopDonationForOrder($db,$id),'donation_channel'=>$c['donation_channel']??'viber'];
 }
 function shopLifecycleTick(PDO $db,int $limit=30): void {
  $rows=$db->query("SELECT o.* FROM rubizh_customer_orders o LEFT JOIN rubizh_order_timing t ON t.order_id=o.id WHERE t.order_id IS NULL AND o.status IN ('new','confirmed','processing') ORDER BY o.id DESC LIMIT ".max(1,min(100,$limit)))->fetchAll(PDO::FETCH_ASSOC);foreach($rows as $o)shopEnsureTiming($db,$o);
- $rows=$db->query("SELECT o.id,t.payment_due,t.remind_at FROM rubizh_customer_orders o JOIN rubizh_order_timing t ON t.order_id=o.id WHERE o.status IN ('confirmed','processing') AND o.payment_status IN ('pending','failed') AND (t.remind_at<=UTC_TIMESTAMP() OR t.payment_due<=UTC_TIMESTAMP()) ORDER BY t.payment_due LIMIT ".max(1,min(100,$limit)))->fetchAll(PDO::FETCH_ASSOC);
+ $rows=$db->query("SELECT o.id,t.payment_due,t.remind_at FROM rubizh_customer_orders o JOIN rubizh_order_timing t ON t.order_id=o.id WHERE o.status IN ('new','confirmed','processing') AND o.payment_status IN ('pending','failed') AND (t.remind_at<=UTC_TIMESTAMP() OR t.payment_due<=UTC_TIMESTAMP()) ORDER BY t.payment_due LIMIT ".max(1,min(100,$limit)))->fetchAll(PDO::FETCH_ASSOC);
  foreach($rows as $r){$id=(int)$r['id'];try{if($r['payment_due']<=gmdate('Y-m-d H:i:s')){
- $q=$db->prepare("SELECT * FROM rubizh_mono_invoices WHERE order_id=? AND status IN ('created','processing','hold')");$q->execute([$id]);foreach($q->fetchAll(PDO::FETCH_ASSOC) as $i)monoRefresh($db,$i);
+ $q=$db->prepare("SELECT * FROM rubizh_mono_invoices WHERE order_id=? AND status IN ('creating','unknown','created','processing','hold')");$q->execute([$id]);foreach($q->fetchAll(PDO::FETCH_ASSOC) as $i)monoRefresh($db,$i);
  // Never cancel while a bank operation or a shipment remains unresolved.
- if(shopNoOpenCardInvoice($db,$id)){shopCancelOrder($db,$id);shopQueueBuyerMail($db,$id,'cancelled');}
+ if(shopNoOpenCardInvoice($db,$id)){shopCancelOrder($db,$id,true);shopQueueBuyerMail($db,$id,'cancelled');}
  }else shopQueueBuyerMail($db,$id,'reminder');}catch(Throwable $e){error_log('rubizh payment deadline: order '.$id.' needs reconciliation');}}
  $rows=$db->query("SELECT o.id FROM rubizh_customer_orders o LEFT JOIN rubizh_order_donations d ON d.order_id=o.id WHERE o.payment_status='paid' AND o.status NOT IN ('cancelled','returned') AND d.order_id IS NULL ORDER BY o.id DESC LIMIT ".max(1,min(100,$limit)))->fetchAll(PDO::FETCH_COLUMN);foreach($rows as $id)shopRecordPaid($db,(int)$id);
 }

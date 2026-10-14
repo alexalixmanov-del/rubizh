@@ -1,0 +1,6 @@
+/* ADDENDUM P-2/P-3: goods count with payment and delivery on cards; three separate statuses on the order page. */
+.order-card-meta {margin:6px 0 0;font-size:14px;line-height:1.45;color:var(--muted,#a9b3a6)}
+.order-states {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr));gap:10px;margin:12px 0}
+.order-states div {padding:10px 12px;border:1px solid var(--line,#2a322b);border-radius:6px}
+.order-states dt {font-size:13px;color:var(--muted,#a9b3a6)}
+.order-states dd {margin:2px 0 0;font-size:16px;font-weight:600}

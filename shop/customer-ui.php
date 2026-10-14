@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__.'/customer-states.php';
 function shopUiMigrate(PDO $db): void {if(function_exists('rubizhSchemaPrepared')&&rubizhSchemaPrepared($db))return;
  static $ready=false;if($ready)return;
  $db->exec("CREATE TABLE IF NOT EXISTS rubizh_customer_preferences(customer_id CHAR(32) PRIMARY KEY,theme VARCHAR(12) NOT NULL DEFAULT 'system',donation_channel VARCHAR(12) NOT NULL DEFAULT 'viber',donation_phone VARCHAR(20) NOT NULL DEFAULT '',updated_at DATETIME NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
@@ -23,7 +24,7 @@ function shopCustomerStatus(array $o): array {
  if(in_array($o['status'],['cancelled','returned','partially_returned'],true)||$o['payment_status']==='refunded')return ['label'=>$o['payment_status']==='refunded'||$o['status']!=='cancelled'?'Повернено':'Скасовано','tone'=>'danger'];
  if(in_array($o['status'],['delivered','completed'],true))return ['label'=>'Отримано','tone'=>'success'];
  if(in_array($o['status'],['shipped','partially_shipped'],true))return ['label'=>'Відправлено','tone'=>'info'];
- if(($o['status']??'')==='new'&&in_array($o['payment_status'],['pending','failed'],true))return ['label'=>'Очікує підтвердження','tone'=>'waiting'];
+ if(($o['status']??'')==='new'&&in_array($o['payment_status'],['pending','failed'],true))return ['label'=>'Очікує підтвердження менеджера','tone'=>'waiting'];
  if(in_array($o['payment_status'],['pending','failed'],true))return ['label'=>'Очікує оплати','tone'=>'waiting'];
  if(in_array($o['status'],['confirmed','processing'],true))return ['label'=>'Готуємо','tone'=>'neutral'];
  return ['label'=>$o['payment_status']==='paid'?'Оплачено':'Нове','tone'=>$o['payment_status']==='paid'?'success':'neutral'];

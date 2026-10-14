@@ -1,0 +1,8 @@
+<?php
+declare(strict_types=1);
+function crmPhonePlan(PDO $db): array {
+ $orders=crmQuery($db,'SELECT o.id,o.email,d.contact_json,ao.customer_id FROM rubizh_customer_orders o LEFT JOIN rubizh_order_details d ON d.order_id=o.id LEFT JOIN rubizh_account_orders ao ON ao.order_id=o.id');$identities=crmQuery($db,"SELECT customer_id,subject FROM rubizh_customer_identities WHERE provider='phone'");$phones=[];foreach($identities as $i){$p=crmPhone($i['subject']);if($p)$phones[$p][$i['customer_id']]=true;}$counts=['total_orders'=>count($orders),'unique_safe_match'=>0,'multiple_accounts'=>0,'different_emails'=>0,'invalid'=>0,'orders_without_account'=>0,'ambiguous'=>0];$emails=[];foreach($orders as $o){$c=json_decode($o['contact_json']??'{}',true)?:[];$p=crmPhone((string)($c['phone']??''));if($p&&$o['email']!=='')$emails[$p][$o['email']]=true;}$rows=[];
+ foreach($orders as $o){$c=json_decode($o['contact_json']??'{}',true)?:[];$p=crmPhone((string)($c['phone']??''));$flags=[];if(!$p){$counts['invalid']++;$flags[]='INVALID_PHONE';}if(!$o['customer_id']){$counts['orders_without_account']++;$flags[]='NO_OWNERSHIP_EVIDENCE';}if(count($phones[$p]??[])>1){$counts['multiple_accounts']++;$flags[]='MULTIPLE_ACCOUNTS';}if(count($emails[$p]??[])>1){$counts['different_emails']++;$flags[]='DIFFERENT_EMAILS';}
+ $safe=$p&&$o['customer_id']&&count($phones[$p]??[])===1&&isset($phones[$p][$o['customer_id']])&&!$flags;if($safe)$counts['unique_safe_match']++;elseif($p)$counts['ambiguous']++;$rows[]=['order_id'=>(int)$o['id'],'safe_existing_identity'=>$safe,'contact_normalization_safe'=>$p!==null,'flags'=>$flags];}
+ return ['mode'=>'PLAN','writes'=>0,'identity_merges'=>0,'counts'=>$counts,'records'=>$rows];
+}

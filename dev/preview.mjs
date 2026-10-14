@@ -45,7 +45,7 @@ export function startPreview(port=4173) {
         const html=result.stdout.replace('<body class="login-page">','<body class="login-page"><div class="rz-preview-notice" style="position:relative;z-index:5;background:#f0a144;color:#16190f;padding:8px 16px;text-align:center;font:600 11px/1.5 system-ui">ПЕРЕГЛЯД ДИЗАЙНУ · ВХІД ТА НАДСИЛАННЯ ЛИСТІВ ВИМКНЕНІ</div>');
         res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});return res.end(req.method==='HEAD'?undefined:html);
       }
-      const authAssets=new Set(['/auth/account.css','/auth/account-refresh.2026100606.css','/auth/empty-orders.2026100606.svg','/auth/login-refresh.css','/auth/account-ui.js','/auth/login.js','/auth/google-g.png']);
+      const authAssets=new Set(['/auth/account.css','/auth/account-refresh.2026100606.css','/auth/account-addendum.2026101102.css','/auth/empty-orders.2026100606.svg','/auth/login-refresh.css','/auth/account-ui.js','/auth/login.js','/auth/google-g.png']);
       if(authAssets.has(name)) {
         const file=path.join(root,name.slice(1));const data=await readFile(file);
         res.writeHead(200,{'Content-Type':types[path.extname(file)]||'image/svg+xml'});return res.end(req.method==='HEAD'?undefined:data);

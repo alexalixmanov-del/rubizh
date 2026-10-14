@@ -19,13 +19,30 @@ function shopCartReminderLock(PDO $db,string $kind,string $hash): string {
  if((int)$q->fetchColumn()!==1)throw new RuntimeException('Нагадування обробляється. Спробуйте трохи пізніше.');return $name;
 }
 function shopCartReminderUnlock(PDO $db,string $name): void {$db->prepare('SELECT RELEASE_LOCK(?)')->execute([$name]);}
+// Recovery stores a selection, not the kit/retail fragments charged by checkout. Both fragments retain input_index.
+function shopCartReminderSelections(array $input,array $resolved,bool $details=false): array {
+ $items=[];
+ foreach($resolved as $line){
+  $index=(int)$line['input_index'];$source=$input[$index];
+  if(!isset($items[$index])){
+   $selection=['product_id'=>$line['product_id'],'sku'=>$line['sku'],'qty'=>0,'kit_group'=>$line['kit_group']??'',
+    'price_mode'=>$source['price_mode']??(!empty($line['kit_group'])?'kit':'retail'),'kit_units'=>$line['kit_units']??1];
+   foreach(['color_id','option_id'] as $key)if(!empty($line[$key]))$selection[$key]=$line[$key];
+   if(!empty($line['option_id']))$selection['size']=$line['size'];
+   $items[$index]=$details?$selection+$line:$selection;
+  }
+  $items[$index]['qty']+=$line['qty'];
+  if($details)$items[$index]['qty_label']=$items[$index]['qty'].(($line['sale_unit']??'piece')==='m2'?' м²':' шт.');
+ }
+ return array_values($items);
+}
 function shopCartReminderSave(PDO $db,string $scope,?string $customer,array $input): array {
  if(($input['consent']??false)!==true)throw new RuntimeException('Підтвердьте, що хочете отримати нагадування.');
  if(!preg_match('/^[a-f0-9]{64}$/D',$scope))throw new RuntimeException('Оновіть оформлення.');
  $email=shopCartReminderEmail($input['email']??null);$hash=hash('sha256',$email);
  $raw=is_array($input['lines']??null)?$input['lines']:[];$resolved=shopResolvedLines($db,$raw);
- // Derive names, prices, quantities and sizes from the current catalogue; never trust browser prices.
- $items=[];foreach($resolved as $line)$items[]=['product_id'=>$line['product_id'],'sku'=>$line['sku'],'qty'=>$line['qty'],'kit_group'=>$line['kit_group']??''];
+ // Validate against the current catalogue, then preserve full selection quantities and pricing intent without prices.
+ $items=shopCartReminderSelections($raw,$resolved);
  $scopeLock=shopCartReminderLock($db,'scope',$scope);$emailLock=null;try{$emailLock=shopCartReminderLock($db,'email',$hash);
  $q=$db->prepare("SELECT 1 FROM rubizh_cart_reminders WHERE email_hash=? AND ((status IN ('pending','sending') AND scope_hash<>? AND expires_at>UTC_TIMESTAMP()) OR sent_at>UTC_TIMESTAMP()-INTERVAL 7 DAY) LIMIT 1");$q->execute([$hash,$scope]);
  if($q->fetchColumn())throw new RuntimeException('Для цього email нагадування вже заплановане або нещодавно надіслане.');
@@ -49,9 +66,16 @@ function shopCartReminderRow(PDO $db,string $code): ?array {
  $q=$db->prepare("SELECT * FROM rubizh_cart_reminders WHERE recovery_code=? AND expires_at>UTC_TIMESTAMP() AND status NOT IN ('cancelled','converted','expired')");$q->execute([$code]);return $q->fetch(PDO::FETCH_ASSOC)?:null;
 }
 function shopCartReminderCurrentItems(PDO $db,array $row): array {
- $raw=json_decode($row['items_json'],true,64,JSON_THROW_ON_ERROR);$items=[];
- foreach($raw as $line){try{foreach(shopResolvedLines($db,[$line]) as $resolved)$items[]=$resolved;}catch(RuntimeException $e){/* Removed variants are omitted, never restored as an order. */}}
- return $items;
+ $raw=json_decode($row['items_json'],true,64,JSON_THROW_ON_ERROR);$valid=[];
+ // Check variant availability independently; only then recalculate the complete surviving kit composition.
+ foreach($raw as $line){try{
+  $check=array_replace($line,['kit_group'=>'','price_mode'=>'retail','kit_units'=>1]);
+  $current=shopResolvedLines($db,[$check]);
+  $selection=shopCartReminderSelections([$check],$current)[0];
+  $selection['kit_group']=$line['kit_group']??'';$selection['price_mode']=$line['price_mode']??(!empty($selection['kit_group'])?'kit':'retail');
+  $selection['kit_units']=shopKitUnits($line);$valid[]=$selection;
+ }catch(RuntimeException $e){/* Removed variants are omitted, never restored as an order. */}}
+ return $valid?shopCartReminderSelections($valid,shopResolvedLines($db,$valid),true):[];
 }
 function shopSendCartReminders(PDO $db,int $limit=5,?callable $send=null): int {
  $send??=static function(string $email,array $content):void{require_once __DIR__.'/../auth/mailer.php';rubizhSendEmail($email,(string)(authConfig()['noreply_password']??''),$content);};

@@ -18,3 +18,22 @@
     window.addEventListener('pageshow', e => { if (e.persisted) window.location.reload(); });
   }
 })();
+// Q-6: when the server asks for the anti-automation check, solve it before sending the phone form.
+// No third-party service; the server verifies the answer and the limits independently.
+(() => {
+  const meta = document.querySelector('meta[name="rubizh-sms-check"]');
+  if (!meta || !window.crypto?.subtle) return;
+  const [nonce, rawBits] = meta.content.split(':'); const bits = Number(rawBits) || 16;
+  const zeros = bytes => { let z = 0; for (const b of bytes) { if (b === 0) { z += 8; continue; } z += Math.clz32(b) - 24; break; } return z; };
+  for (const form of document.querySelectorAll('form')) {
+    const button = form.querySelector('button[value="phone_request"],button[value="request"],button[value="link_email"]'); if (!button) continue;
+    form.addEventListener('submit', async event => {
+      if (form.dataset.checked === '1') return;
+      event.preventDefault(); button.disabled = true; const label = button.textContent; button.textContent = 'Перевіряємо…';
+      const encoder = new TextEncoder(); let n = 0;
+      while (zeros(new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(nonce + ':' + n)))) < bits) n++;
+      for (const [name, value] of [['sms_check', String(n)], ['action', button.value]]) { const input = document.createElement('input'); input.type = 'hidden'; input.name = name; input.value = value; form.append(input); }
+      form.dataset.checked = '1'; button.textContent = label; form.submit();
+    });
+  }
+})();
