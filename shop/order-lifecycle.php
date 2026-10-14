@@ -10,7 +10,9 @@ function shopDonationAmount(float $total): int {return (int)round($total*0.03,0,
 function shopPaymentReady(array $o): bool {return in_array($o['status']??'',['confirmed','processing','shipped','completed'],true)&&in_array($o['payment_status']??'',['pending','failed'],true);}
 function shopStartPaymentTiming(PDO $db,array $o): void {
  $now=gmdate('Y-m-d H:i:s');$due=shopWorkdayDeadline($now,2);$remind=(new DateTimeImmutable($now,new DateTimeZone('UTC')))->modify('+24 hours')->format('Y-m-d H:i:s');
- $db->prepare('INSERT INTO rubizh_order_timing(order_id,payment_due,remind_at) VALUES(?,?,?) ON DUPLICATE KEY UPDATE payment_due=VALUES(payment_due),remind_at=VALUES(remind_at)')->execute([$o['id'],$due,$remind]);
+ // Confirmation may be repeated; it must never reopen an elapsed payment window.
+ $db->prepare('INSERT INTO rubizh_order_timing(order_id,payment_due,remind_at) VALUES(?,?,?) ON DUPLICATE KEY UPDATE order_id=VALUES(order_id)')->execute([$o['id'],$due,$remind]);
+ $due=(string)shopEnsureTiming($db,$o)['payment_due'];
  $db->prepare('UPDATE rubizh_stock_reservations SET expires_at=? WHERE order_id=?')->execute([$due,$o['id']]);
  if(trim((string)($o['email']??''))!=='')shopQueueBuyerMail($db,(int)$o['id'],'confirmed');
 }
