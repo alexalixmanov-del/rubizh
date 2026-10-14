@@ -1,5 +1,7 @@
 # 16 — GO LIVE
 
+> **RC1 (этап 3):** действующая процедура выкладки — [`docs/release/GO_LIVE_CHECKLIST.md`](../release/GO_LIVE_CHECKLIST.md); блокеры запуска — [`docs/release/PRE_LAUNCH_BLOCKERS.md`](../release/PRE_LAUNCH_BLOCKERS.md). `dev/install-pim-v3.sh` и runbook 10.10 для RC1 не используются. Ниже — история.
+
 > Актуальный checkpoint этапа2-B приведён первым. Предыдущие результаты ниже сохранены как история; решения владельца меняются только в утверждённом R1–R11 scope.
 
 <!-- STAGE2B_FINAL_CHECKPOINT_BEGIN -->

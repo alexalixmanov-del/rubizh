@@ -273,3 +273,20 @@ QA-12 additional correction: `1fcca31` observes HTTP200/networkidle before exist
 | BLIND-PAY-02 | HIGH | FIXED (owner R5 follow-up) | 2 RED→2 GREEN; independent compatibility 10+2 | Reconfirmation preserves the original unpaid payment and reservation deadlines | bcb3c2f8a8d330dda47304e7925ff04210869f9b |
 
 QA-12 latest scheduling correction e9ce24d: doc-only2c06cde CI PHP8.3 failed bounded8-client capacity assertion with protective503 (PHP8.2 PASS). Workflow now selects all files with concurrency1;8/96 still requiresall200,32/160 still200/503, no assertions/skips/timeouts weakened. Isolated existing runtime test1/1PASS,16.36s; independent review repeated6/6actualCI guard controls. Failedrun38306094757 retained asFAIL; later exactcheckpointCI is separate evidence.
+
+## Глобальный этап 3 (RC1) — записи 2026-10-14
+
+Источник: проверки 4.4/4.5 этапа 3, независимые `ecc:code-reviewer` и `ecc:security-reviewer`, сверка контрактов `ecc:architect`. Влияние на запуск — `docs/release/KNOWN_ISSUES.md`; блокеры запуска — `docs/release/PRE_LAUNCH_BLOCKERS.md`. Неисправленные пункты — без технических подробностей эксплуатации.
+
+| ID | Severity | Status | Confidence | Суть | Regression / commit |
+|---|---|---|---|---|---|
+| RC3-01 | MEDIUM | FIXED | CONFIRMED (Apache 2.4 probe) | архив хостинга содержал `.github/`, `.gitignore`, `dev/*.mjs`; `contracts/`, `RELEASE-MANIFEST.json`, `cache/` (её `.htaccess` deploy-скрипт не разворачивает) и `*.tmp` были доступны по HTTP; частично закрывает SEC-09 | `tests/release-archive-safety.test.mjs` RED на `6311e40` → GREEN; `847d4c0`; ревью APPROVE |
+| RC3-02 | LOW | OPEN (процедура) | CONFIRMED | `dev/rollback-update.sh` восстанавливает конфиг до выкладки (старые ключи/флаги, права исходного файла) | `GO_LIVE_CHECKLIST.md` «Откат»: повтор PL-3, `chmod 600` |
+| RC3-03 | LOW | OPEN | CANDIDATE | `api/.htaccess`, `feeds/.htaccess` проверяют только `HTTPS` без `X-Forwarded-Proto` | smoke шага 13 вместе с PL-1 |
+| RC3-04 | LOW | OPEN | CANDIDATE | `rollback-update.sh` без проверок симлинков/прав каталога бэкапа; нет блокировки параллельных выкладок; `install -d` может менять права каталогов | — |
+| RC3-05 | LOW | OPEN | CONFIRMED | `deploy-update.sh` не удаляет файлы, отсутствующие в новом архиве | — |
+| RC3-06 | LOW | OPEN | CONFIRMED | `dev/database-private.sample.php` содержит путь аккаунта хостинга (уже опубликован в runbook) | — |
+| RC3-07 | LOW | OPEN | CONFIRMED | обработка служебного ключа воркером (часть SEC-10; детали приватно) | PL-3 |
+| R-C1 | MEDIUM | UNCONFIRMED → этап 4 | CANDIDATE | ручная сверка MonoPay из CRM, вероятно, отклоняется для попыток без банковского id (`docs/release/CONTRACTS.md` §5) | тест на этапе 4 |
+
+Проверка обновления поверх production-версии (4.4) дефектов данных не выявила: `tests/rc1-upgrade-rollback.test.mjs` (3 кандидата production) — 0 потерь, R4/R5 по правилам, повтор идемпотентен, откат точный.

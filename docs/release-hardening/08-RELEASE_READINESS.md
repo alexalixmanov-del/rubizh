@@ -1,5 +1,66 @@
 # 08 — RELEASE READINESS
 
+> Актуальный checkpoint — глобальный этап 3 (RC1), приведён первым. Блоки этапа 2-B и ранее ниже — история.
+
+<!-- STAGE3_RC1_CHECKPOINT_BEGIN -->
+
+## Глобальный этап 3 — стабильный RC1, checkpoint 2026-10-14
+
+Статус: **GO этапа 3** (production — **NO-GO** до закрытия `docs/release/PRE_LAUNCH_BLOCKERS.md`, PL-1…PL-4). Ветка `release/rc1` от `rubizh-stage-2-verified`; PR #2 `release/rc1 → main` открыт **без merge**. Теги `rubizh-stage-3-verified` и `rubizh-rc1` — на одном doc-only checkpoint-коммите после SUCCESS его CI (SHA/CI коммита-checkpoint фиксируются в аннотации тегов и итоговом отчёте — свой SHA коммит содержать не может).
+
+| Объект RC1 | SHA |
+|---|---|
+| SITE код приложения / пакет | `24e27c41fd42dea736515308ce0b31412c2be64b` (после него меняются только `tests/`, `docs/`, `downloads/`) |
+| SITE финальный код+тесты | `92c827e9d233b02f925bbeccfa48c16d04d583c3` |
+| PIM (read-only) | `fix/pimc-p1` = `5fd46cb6fcd32fe628e8ccd0c9ebe4f4c998b055` |
+| CRM frontend (read-only) | `b0e2f9359a05ec835a83d64bb9bcdc2c97487a50` |
+| Пакет | `downloads/Rubizh-rc1.zip`, SHA-256 `7a63d9eb8fd93c0d19c3b6b20dd5340a7549b1bd7b4c976cdae2fbe59abec516`, 430 файлов, воспроизводим байт-в-байт |
+
+Синхронизация: SITE `2a338da` → `6311e40` (fast-forward), `rubizh-stage-2-verified^{}` = `6311e40`, `rubizh-stage-1-verified^{}` = `51c83d8`; PIM `claude/amazing-meitner-e6572n@2119846` → `fix/pimc-p1@5fd46cb`. Базовая линия на `6311e40` (macOS): 497 тестов, 491 pass, 3 skip (Linux-only: scheduler/flock, 2 × deploy GNU), 3 fail — 2 среды (Homebrew PHP со встроенным curl: `audit-fixes` проходит с `RZ_DISABLE_CURL=1`, `SEC-01` — только Linux) и 1 таймаут под параллельной нагрузкой (`order-idempotency`, в изоляции PASS); на Linux CI этапа 2 — 497/497.
+
+Изменения кода этапа 3 (без новой функциональности): `847d4c0` RC3-01 (дефект 4.5: архив содержал `.github/`, `.gitignore`, `*.mjs`; `contracts/`, `cache/`, `RELEASE-MANIFEST.json`, `*.tmp` читались по HTTP) — regression-first (RED на `6311e40`), Apache 2.4-проба, независимое ревью `ecc:code-reviewer` APPROVE + `ecc:security-reviewer` без блокеров; `24e27c4`, `92c827e` — тест 4.4 (ревью APPROVE).
+
+| Пункт | Статус | Файл / коммит |
+|---|---|---|
+| 1 Синхронизация | DONE | выше |
+| 2 PRE_LAUNCH_BLOCKERS | DONE (PL-1…PL-4 OPEN — решения владельца) | `docs/release/PRE_LAUNCH_BLOCKERS.md` |
+| 4.1 Манифест | DONE | `docs/release/RC1_MANIFEST.md` |
+| 4.2 Контракты | DONE | `docs/release/CONTRACTS.md` |
+| 4.3 Конфигурация | DONE | `docs/release/CONFIG.md` |
+| 4.4 Обновление поверх production и откат | DONE; точная версия production — BLOCKED(owner) PL-4.6/4.7, отрепетированы все 3 кандидата | `tests/rc1-upgrade-rollback.test.mjs` |
+| 4.5 Пакет | DONE (дефект RC3-01 исправлен) | `847d4c0`, `downloads/Rubizh-rc1.zip` |
+| 4.6 Go-live | DONE | `docs/release/GO_LIVE_CHECKLIST.md` |
+| 4.7 Бэкапы | DONE (процедура); production-бэкап не передавался → PL-4.1 | чек-лист шаги 2–3 |
+| 4.8 Known issues | DONE | `docs/release/KNOWN_ISSUES.md` |
+| 4.9 Changelog | DONE | `docs/release/CHANGELOG_RC1.md` |
+| 4.10 Main | DONE: автодеплоя нет → PR #2 без merge | https://github.com/lieverifying/rubizh/pull/2 |
+| 4.11 Документы | DONE | `docs/README.md`, этот файл, `SESSION_HANDOFF.md`, `08-RELEASE_READINESS.md` |
+
+**Обновление и откат (4.4)** — для каждого кандидата production `b442eb7`, `b1662de`, `9788a9e` (архив установщика `0e7dafa` = дерево `9788a9e`, 337 файлов): 46 таблиц, 17 заказов во всех состояниях заказа/оплаты/отправки/резерва/счёта, 2 клиента + гость, менеджер из конфига; бэкап `mysqldump` (≈128 КБ); P0 из пакета → `deploy-update.sh` (430 файлов, хеши = манифест) → окно между заменой кода и миграциями (витрина/sitemap/кабинет 200, Staff API 503) → prepare-runtime, PIM v3, CRM, NP recovery, R4 reconcile (2 освобождены), backfill CRM (17 legacy: 13 safe, 3 ambiguous, 1 conflict — неоднозначные не применяются). Сверка: 45 таблиц — 0 потерянных/изменённых строк (единственное изменение типа — цены `int`→`DECIMAL(14,2)`, значения равны; `meta.schema` 3→4); добавлена 1 строка timeline при открытии legacy-заказа в кабинете; +26 таблиц, 6 триггеров. R4: 1007/1008/1009 RELEASED, оплаченные COMMITTED, открытые ACTIVE. R5: попытка без id → failure/failed, известный счёт → created/pending, `success` банка → awaiting_webhook (не paid). Кабинет: 3 своих старых заказа открываются, чужой — нет; CRM: 17/17 старых заказов. Повтор миграций: 71 таблица, 0 изменений. Откат: дерево кода = исходное (475 файлов байт-в-байт), старый код работает на мигрированной схеме, после пересоздания БД и восстановления дампа 46/46 таблиц равны исходным.
+
+| Quality Gate (финальный код) | Результат | Этап 2 для сравнения |
+|---|---|---|
+| CI на точном SHA | `92c827e`: push [38625368576](https://github.com/lieverifying/rubizh/actions/runs/38625368576) и PR [38625487655](https://github.com/lieverifying/rubizh/actions/runs/38625487655) SUCCESS, PHP 8.2/8.3, **501/501, fail 0, skip 0**; `24e27c4`: [38620244608](https://github.com/lieverifying/rubizh/actions/runs/38620244608) SUCCESS 501/501 | 497/497 |
+| Полный SITE локально (macOS, `24e27c4`) | 501: 496 pass, 3 skip (Linux-only), 2 среды (curl) — те же, что в базовой линии; тест 4.4 PASS на macOS с GNU coreutils | — |
+| PIM `5fd46cb` | 684/684 + dry-run 49/49; сборка `rubizh_pim.html` и wire-фикстура байт-в-байт; архив 10.9.3 пересобран идентично (`53e81757…`) | 684/684 |
+| Contract-тесты | в составе 501 (PIM v3 sync/foundation/checkout/enable, legacy R1, CRM, MonoPay, НП) — `docs/release/CONTRACTS.md` §4 | — |
+| Браузерная матрица (05) | Chromium/Firefox/WebKit × 360/390/430/768/1024/1280/1440: 315 загрузок, 0 JS-ошибок, 0 overflow, 0 битых изображений, 21 ожидаемых 404 (страница 404); покупка до MonoPay-заглушки 21/21; COD нигде (единственное совпадение — фраза «Післяплати немає» в оферте) | 336 загрузок / 21 покупок |
+| Кабинет / ADDENDUM | кабинет 12/12 (3 движка × 4 ширины; чужой заказ 404, утечки нет; Firefox 768/1280 сначала получили 428 — лимит R8 на одном адресе 127.0.0.1 в общем прогоне, повтор на свежем стенде 4/4; см. PL-1); ADDENDUM 211 проверок, 0 ошибок/overflow | 21/21, 210/210 |
+| axe | 30 проверок, **0 нарушений** WCAG 2.1 A/AA; 140 inventory-флагов и 29 «dead-click» кандидатов — информативно, не сертификация | 32 / 0 / 109 |
+| Lighthouse | Код приложения идентичен runtime-SHA этапа 2 `f2264c6` (отличаются только `.htaccess` и `dev/package-release.py`) → парные сжатые замеры этапа 2 действуют без изменений (mobile 54/51/57/51, LCP 5,75–7,42 с). Справочно локально (macOS, PHP dev-сервер **без сжатия**, не сравнимо с этапом 2): mobile perf 62–63, LCP 10,7–12,1 с; desktop 88–91, LCP 1,9–2,1 с; a11y 99–100, SEO 100 | PL-2 |
+| RBAC/IDOR/CSRF | в составе 501: `q5-manager-rbac`, `idor-orders`, `crm-security`, `crm-domain`, `stage2-r9-auth-csrf`, `stage2-r9-critical-gate`, `stage2-r8-limits` — PASS | R9 24 686/24 686 |
+| gitleaks | 2 коммита этапа 3: 0; рабочее дерево: 3 известные синтетические фикстуры тестов (как на этапе 2), реальных секретов 0 | 0 подтверждённых |
+| npm audit | SITE 0; PIM 1 moderate (ajv, без изменений); composer не используется | то же |
+| Обновление/откат | PASS ×3 кандидата (выше) | синтетическая репетиция |
+| Независимое ECC-ревью | `ecc:code-reviewer` APPROVE ×3 (пакет, тест 4.4, окно); `ecc:security-reviewer` — 0 CRITICAL/HIGH, MEDIUM RC3-01 исправлен, прочее → RC3-02…07; `ecc:architect` — сверка документов, исправления внесены | — |
+
+GO этапа 3 выполнен: синхронизация, PRE_LAUNCH_BLOCKERS, манифест/контракты/конфигурация/чек-лист, обновление и откат без потери данных, воспроизводимый пакет, Quality Gate зелёный, CI success. Открыты (допустимо): PL-1…PL-4. К этапу 4 без указания владельца не переходить.
+
+<!-- STAGE3_RC1_CHECKPOINT_END -->
+
+**Блокеры запуска (решения владельца перед публикацией):** [`docs/release/PRE_LAUNCH_BLOCKERS.md`](../release/PRE_LAUNCH_BLOCKERS.md) — PL-1 `trusted_proxies`, PL-2 мобильная производительность, PL-3 смена `pim_key`/`cron_key`, PL-4 бэкап, баннеры, живые провайдеры, CRM, импорт, версия production. Известные проблемы и их влияние на запуск — [`docs/release/KNOWN_ISSUES.md`](../release/KNOWN_ISSUES.md). Процедура выкладки — [`docs/release/GO_LIVE_CHECKLIST.md`](../release/GO_LIVE_CHECKLIST.md).
+
+
 > Актуальный checkpoint этапа2-B приведён первым. Предыдущие результаты ниже сохранены как история; решения владельца меняются только в утверждённом R1–R11 scope.
 
 <!-- STAGE2B_FINAL_CHECKPOINT_BEGIN -->

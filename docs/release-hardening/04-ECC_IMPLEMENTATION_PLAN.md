@@ -179,3 +179,26 @@ Production deploy, production migrations, включение v3, PIM-патчи,
 QA-20: historical raw privacy не обеспечивается current redaction в public repo. No force/history rewrite performed; separate owner decision required.
 
 Final endpoint Quality Gate:132inventory rows,1920HTTP requests;831/831explicit expectations,2697/2697overlapping semantic checks,975snapshots+2A↔B whole-domain comparisons;0final assertion failures. ANY232/232 and narrowaction36/36; all inventory endpoints requested, full state/role/token combinations remainPARTIAL. Details and limits:stage-2/endpoint-quality-gate.md. Fresh SECURITY source review COMPLETED(15checks+1probe), no newHIGH/CRITICAL; MEDIUM SEC-FRESH-01 unapplied CRM proposal. OverallNO-GO: exhaustive dynamic certification and historical privacy requirement unmet, noStage2verifiedtag/Stage3.
+
+## Глобальный этап 3 — стабильный RC1 (2026-10-14, EXTEND)
+
+Порядок владельца: синхронизация → PRE_LAUNCH_BLOCKERS → 4.1–4.11 → Quality Gate → checkpoint (`rubizh-stage-3-verified` + `rubizh-rc1` на одном SHA). Новой функциональности нет; изменения кода — только при дефекте, найденном проверкой этапа (regression-first + независимое ревью). Агенты ECC — по разрешению владельца на весь этап, по необходимости.
+
+| Пункт | Исполнитель / агент ECC | Результат |
+|---|---|---|
+| 1 Синхронизация | координатор | SITE `2a338da` → `6311e40` (ff), теги stage-1/2 сверены; PIM `fix/pimc-p1` = `5fd46cb`; CRM `b0e2f93` клонирован read-only |
+| 2 PRE_LAUNCH_BLOCKERS | координатор | `docs/release/PRE_LAUNCH_BLOCKERS.md` (PL-1…PL-4) |
+| 4.1 Манифест | координатор | `docs/release/RC1_MANIFEST.md` |
+| 4.2 Контракты | `ecc:architect` (черновик), координатор (сверка) | `docs/release/CONTRACTS.md` |
+| 4.3 Конфигурация | `ecc:doc-updater` (черновик), `ecc:security-reviewer` (проверка), координатор | `docs/release/CONFIG.md` |
+| 4.4 Обновление/откат | координатор; ревью `ecc:code-reviewer` | `tests/rc1-upgrade-rollback.test.mjs` (`24e27c4`), 3 production-кандидата |
+| 4.5 Пакет | координатор; ревью `ecc:code-reviewer`, `ecc:security-reviewer` | дефект RC3-01 → `847d4c0`; пакет `7a63d9eb…` воспроизводим; Apache-проба |
+| 4.6 Go-live | координатор | `docs/release/GO_LIVE_CHECKLIST.md` |
+| 4.7 Бэкапы | координатор | процедура в чек-листе; production-бэкап не передавался → PL-4.1 |
+| 4.8 Known issues | координатор | `docs/release/KNOWN_ISSUES.md` |
+| 4.9 Changelog | координатор | `docs/release/CHANGELOG_RC1.md` |
+| 4.10 Main | координатор | автодеплоя из `main` нет (workflow только CI, GitHub environments/deployments/hooks пусты) → PR `release/rc1 → main` без merge |
+| 4.11 Документы | координатор | `docs/README.md`, SESSION_HANDOFF, STAGE_CHECKPOINT, 08 |
+| Quality Gate | координатор; замеры `qa-matrix`/`qa-audit` | `STAGE_CHECKPOINT.md`, этап 3 |
+
+Не запускались (не потребовались): `ecc:php-reviewer`/`ecc:typescript-reviewer` (PHP/JS приложения не менялись), `ecc:silent-failure-hunter` (скрипты миграций и отката проверены реальным прогоном и security-ревью), `ecc:e2e-runner`, `ecc:a11y-architect`, `ecc:seo-specialist`, `ecc:performance-optimizer` (замеры выполнены штатными инструментами `tests/.staging/qa-*`).
