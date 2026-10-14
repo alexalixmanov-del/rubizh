@@ -1,12 +1,12 @@
 """Deterministic SITE release archive (rubizh/ prefix) for dev/deploy-update.sh. Tracked source only;
-private configs, tests, docs, previews and earlier archives are excluded."""
+private configs, tests, docs, previews, earlier archives, Git/CI dot-files and Node tooling are excluded."""
 import hashlib,json,subprocess,sys,zipfile
 from pathlib import Path
 root=Path(__file__).resolve().parents[1]
 out=Path(sys.argv[1]) if len(sys.argv)>1 else root/'downloads/Rubizh-pim-v3-20261009.zip'
-skip=('tests/','docs/','downloads/','preview/','dev/fixtures.mjs','dev/preview.mjs','package.json','package-lock.json')
+skip=('tests/','docs/','downloads/','preview/','.github/','.gitignore','package.json','package-lock.json')
 private={'api/config.php','auth/config.php','api/mono-private.php','api/np-private.php','api/site-settings.json'}
-files=[f for f in subprocess.run(['git','ls-files'],cwd=root,capture_output=True,text=True,check=True).stdout.split('\n') if f and not f.startswith(skip) and f not in private and not f.endswith('.md') and f!='PIM-V3-GAP-MATRIX.json']
+files=[f for f in subprocess.run(['git','ls-files'],cwd=root,capture_output=True,text=True,check=True).stdout.split('\n') if f and not f.startswith(skip) and f not in private and not f.endswith(('.md','.mjs')) and f!='PIM-V3-GAP-MATRIX.json']
 manifest={'release':'pim-v3-site-20261009','commit':subprocess.run(['git','rev-parse','HEAD'],cwd=root,capture_output=True,text=True,check=True).stdout.strip(),'files':{}}
 out.parent.mkdir(parents=True,exist_ok=True)
 with zipfile.ZipFile(out,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:

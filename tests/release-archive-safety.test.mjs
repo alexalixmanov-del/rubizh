@@ -21,3 +21,20 @@ test('the installer pins an archive by SHA256 and never installs staging configs
  const sh=readFileSync(join(root,'dev/install-pim-v3.sh'),'utf8');assert.match(sh,/^RUBIZH_SHA=[0-9a-f]{64}$/m);assert.match(sh,/sha256sum -c -/);assert.ok(!/\.staging|config\.staging/.test(sh));
  const deploy=readFileSync(join(root,'dev/deploy-update.sh'),'utf8');assert.ok(!/\.staging/.test(deploy));
 });
+// Stage 3 (RC1 4.5): the hosting archive carries only what the shop runs, and service files that must ship are not
+// readable over HTTP. Apache rules from the root .htaccess are emulated: forbidding RewriteRules and denied FilesMatch.
+test('RC1 archive: no dot-files except .htaccess, no Node dev tooling; contracts and the release manifest are not web-readable',()=>{
+ const zip=join(mkdtempSync(join(tmpdir(),'site-rel-')),'r.zip');execFileSync('python3',[join(root,'dev/package-release.py'),zip]);
+ const names=execFileSync('python3',['-c',"import sys,zipfile;print('\\n'.join(zipfile.ZipFile(sys.argv[1]).namelist()))",zip],{encoding:'utf8'}).trim().split('\n').map(n=>n.replace(/^rubizh\//,''));
+ assert.deepEqual(names.filter(n=>/(?:^|\/)\.(?!htaccess$)/.test(n)),[],'dot-files other than .htaccess');
+ assert.deepEqual(names.filter(n=>/\.(?:mjs|cjs|ts)$/.test(n)),[],'Node dev tooling does not run on the hosting');
+ const htaccess=readFileSync(join(root,'.htaccess'),'utf8');
+ const forbidden=[...htaccess.matchAll(/^RewriteRule\s+(\S+)\s+-\s+\[F/gm)].map(m=>new RegExp(m[1]));
+ const denied=[...htaccess.matchAll(/<FilesMatch\s+"([^"]+)">\s*\n\s*Require all denied/g)].map(m=>new RegExp(m[1].replace(/^\(\?i\)/,''),m[1].startsWith('(?i)')?'i':''));
+ const blocked=p=>forbidden.some(r=>r.test(p))||denied.some(r=>r.test(p.split('/').pop()));
+ for(const p of ['RELEASE-MANIFEST.json','contracts/pim-v3/1/manifest.json','contracts/pim-v3/2/wire.exact.json','dev/migrate-crm.php','.htaccess','sql/indexes.sql',
+  // cache/.htaccess is never deployed (deploy-update.sh keeps the host cache/), so the root rules must cover it;
+  // interrupted atomic installs leave *.deploy-<pid>.tmp copies of source next to the live file.
+  'cache/catalog-v1.json','shop/order.php.deploy-1234.tmp','media/x.webp.0a1b2c3d.tmp'])assert.ok(blocked(p),p+' must not be web-readable');
+ for(const p of ['index.html','storefront.php','assets/theme.js','robots.txt','sitemap.php'])assert.ok(!blocked(p),p+' stays public');
+});
