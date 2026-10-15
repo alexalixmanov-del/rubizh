@@ -25,4 +25,4 @@ try{
  try{$db->prepare('INSERT INTO rubizh_staff_users(id,email,name,password_hash,role,created_at,updated_at) VALUES(?,?,?,?,?,UTC_TIMESTAMP(),UTC_TIMESTAMP())')->execute([$id,$email,$name,crmPasswordHash($password),$role]);crmAudit($db,null,'staff',$id,'staff.provision',[],['email'=>$email,'role'=>$role],$reason,null,'SYSTEM');$db->commit();}
  catch(Throwable $e){$db->rollBack();throw $e;}
  unset($password);echo json_encode(['id'=>$id,'email'=>$email,'role'=>$role],JSON_THROW_ON_ERROR)."\n";
-}catch(Throwable $e){fwrite(STDERR,"Staff provisioning refused. Validate input, permissions and schema; password must be provided through stdin (12–72 characters, not a common password, not your e-mail).\n");exit(1);}
+}catch(Throwable $e){$why=$e instanceof CrmError?$e->reason.(isset($e->details['rule'])?':'.$e->details['rule']:''):($e instanceof RuntimeException&&!$e instanceof PDOException?$e->getMessage():get_class($e));fwrite(STDERR,"Staff provisioning refused ($why). Validate input, permissions and schema; password must be provided through stdin (12–72 characters, not a common password, not your e-mail).\n");exit(1);}

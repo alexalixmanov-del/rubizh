@@ -18,7 +18,8 @@ import {createServer} from 'node:net';
 import {root,runtime,phpArgs,phpEnv} from './helpers/site-fixture.mjs';
 
 const socket=process.env.RUBIZH_TEST_MYSQL_SOCKET;
-const baselines=(process.env.RUBIZH_PRODUCTION_BASELINES||'b442eb7bf96823843d2522a223cd8c6506f9e84a,b1662debc5f21a0d464019ee86dd945fcf899bcb,9788a9eddd607f1738832ce2b4f657de6f887b6c').split(',').filter(Boolean);
+// Three production-era candidates and RC1 itself (rubizh-stage-3-verified, stage 4 §12).
+const baselines=(process.env.RUBIZH_PRODUCTION_BASELINES||'6c0b15ce05eecae4feafe6b7c75f10a1cd655363,b442eb7bf96823843d2522a223cd8c6506f9e84a,b1662debc5f21a0d464019ee86dd945fcf899bcb,9788a9eddd607f1738832ce2b4f657de6f887b6c').split(',').filter(Boolean);
 const has=cmd=>spawnSync('bash',['-c',cmd],{stdio:'ignore'}).status===0;
 const dumpTool=['mariadb-dump','mysqldump'].find(t=>has('command -v '+t));
 const clientTool=['mariadb','mysql'].find(t=>has('command -v '+t));
@@ -191,12 +192,15 @@ for(const baseline of baselines)test(`RC1 upgrade over production-era SITE ${bas
   const first=migrate();step('migrations',first);
   const after=digest(db,dir);
   // No data loss: every production-era table keeps its rows and the values of its original columns.
-  const oldOnly=digest(db,dir,Object.fromEntries(Object.entries(oldColumns).filter(([t])=>!volatile.has(t))));
+  // R4 reservation transitions (status/committed_at/released_at, present from RC1 on) are asserted separately below.
+  const r4=new Set(['status','committed_at','released_at']);const keep=Object.fromEntries(Object.entries(oldColumns).filter(([t])=>!volatile.has(t)).map(([t,c])=>[t,t==='rubizh_stock_reservations'&&Array.isArray(c)?c.filter(x=>!r4.has(x)):c]));
+  const oldOnly=digest(db,dir,keep);
   // Live requests in the code-swap window may append rows (e.g. the cabinet records a legacy order's creation event),
   // so the check is: every production-era row survives with identical original columns (multiset); additions are reported.
   const lost=[],added={};for(const [t,v] of Object.entries(oldOnly.tables)){if(t==='meta')continue;if(!v||v==='MISSING_COLUMNS'){lost.push(t);continue;}
    const left=new Map();for(const r of oldOnly.rows[t]){const k=JSON.stringify(r);left.set(k,(left.get(k)||0)+1);}
-   let missing=0;for(const r of before.rows[t]){const k=JSON.stringify(r);if(left.get(k))left.set(k,left.get(k)-1);else missing++;}
+   const cols=before.columns[t],pick=Array.isArray(cols)&&Array.isArray(keep[t])?cols.map((c,i)=>keep[t].includes(c)?i:-1).filter(i=>i>=0):null;
+   let missing=0;for(const r0 of before.rows[t]){const r=pick&&Array.isArray(r0)?pick.map(i=>r0[i]):r0;const k=JSON.stringify(r);if(left.get(k))left.set(k,left.get(k)-1);else missing++;}
    if(missing)lost.push(t);if(v.count>before.tables[t].count)added[t]=v.count-before.tables[t].count;}
   // meta: every production-era key survives with its value; only schema-version markers may advance.
   const metaNow=Object.fromEntries(oldOnly.rows.meta),metaChanged=before.rows.meta.filter(([k,v])=>metaNow[k]!==v).map(([k,v])=>[k,v,metaNow[k]??null]);
@@ -216,13 +220,16 @@ for(const baseline of baselines)test(`RC1 upgrade over production-era SITE ${bas
   step('idempotent rerun',{tables:Object.keys(again.tables).length,changed:0});
 
   // 7. Old orders are readable in the cabinet and in CRM; the shop serves.
-  ok(cli(path.join(www,'dev/staff-user.php'),['--email=owner@fixture.test','--name=Owner Fixture','--role=OWNER','--reason=RC1 upgrade rehearsal initial owner'],'Fixture-owner-password-42\n'),'staff owner');
+  // CRM go-live steps C5/C7 (docs/crm/16): secret key and crm_enabled; TOTP enrolment is covered by the CRM auth tests.
+  {const f=path.join(www,'api/config.php'),c=readFileSync(f,'utf8'),i=Math.max(c.lastIndexOf('];'),c.lastIndexOf(');'));writeFileSync(f,c.slice(0,i).replace(/,?\s*$/,'')+",'crm_enabled'=>true,'crm_secret_key'=>'"+Buffer.alloc(32,9).toString('base64')+"','crm_totp_required'=>false"+c.slice(i));}
+  assert.match(readFileSync(path.join(www,'api/config.php'),'utf8'),/'crm_enabled'=>true/,'CRM enabled in the private config');assert.equal(spawnSync(runtime+'/bin/php8.4',['-l',path.join(www,'api/config.php')],{encoding:'utf8'}).status,0,readFileSync(path.join(www,'api/config.php'),'utf8').slice(-400));
+  ok(cli(path.join(www,'dev/staff-user.php'),['--email=owner@fixture.test','--name=Owner Fixture','--role=OWNER','--reason=RC1 upgrade rehearsal initial owner'],'Rehearsal-Kvitka-Sad-2026\n'),'staff owner');
   server=await serve(dir,www);
   for(const p of ['/','/shop/catalog.php','/sitemap.php'])assert.equal((await server.req(p)).status,200,'rc1 '+p+server.errors());
   for(const id of [1001,1002,1003]){const d=await server.req('/auth/?tab=orders&order='+id,{headers:signed(dir,A)});assert.equal(d.status,200);assert.ok(d.text.includes('RZ-OLD-'+id),'cabinet detail '+id);}
   const foreign=await server.req('/auth/?tab=orders&order=1004',{headers:signed(dir,A)});assert.ok([200,404].includes(foreign.status),'foreign order request answered '+foreign.status);assert.ok(!foreign.text.includes('RZ-OLD-1004'),'cabinet never shows another customer order');
-  const session=await server.req('/api/staff/auth/session');let cookie=session.headers.get('set-cookie').split(';')[0];
-  const login=await server.req('/api/staff/auth/login',{method:'POST',headers:{Cookie:cookie},body:{email:'owner@fixture.test',password:'Fixture-owner-password-42',csrf:session.data.meta.csrf}});
+  const session=await server.req('/api/staff/auth/session');assert.ok(session.headers.get('set-cookie'),'staff session '+session.status+' '+JSON.stringify(session.data));let cookie=session.headers.get('set-cookie').split(';')[0];
+  const login=await server.req('/api/staff/auth/login',{method:'POST',headers:{Cookie:cookie},body:{email:'owner@fixture.test',password:'Rehearsal-Kvitka-Sad-2026',csrf:session.data.meta.csrf}});
   assert.equal(login.status,200,JSON.stringify(login.data));cookie=login.headers.get('set-cookie').split(';')[0];
   for(const [id] of orders){const r=await server.req('/api/staff/orders/'+id,{headers:{Cookie:cookie}});assert.equal(r.status,200,id+' '+JSON.stringify(r.data));assert.ok(JSON.stringify(r.data).includes('RZ-OLD-'+id),'crm order number '+id);}
   assert.equal((await server.req('/api/staff/orders',{headers:{Cookie:cookie}})).status,200);
