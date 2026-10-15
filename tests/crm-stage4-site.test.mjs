@@ -150,3 +150,25 @@ test('A5: no cash-on-delivery wording or branches in storefront, receipt, cabine
  for(const f of files){const src=readFileSync(root+'/'+f,'utf8');assert.doesNotMatch(src,/Оплата при отриманні|'При отриманні'|Післяплата|накладен|післяопл/i,f);assert.doesNotMatch(src,/payment_method[!=]==['"]cod['"]|npCodEnabled/,f);}
  const out=php(`require '${root}/shop/customer-states.php';echo json_encode(shopCustomerStates(['status'=>'new','payment_status'=>'cod']),JSON_UNESCAPED_UNICODE);`).stdout;assert.match(out,/Уточнюється/);assert.doesNotMatch(out,/отриманні/);
 });
+
+// ---- D-61 (owner, block 4-SITE): the current category is the page itself (breadcrumbs, heading), not a removable filter ----
+test('D-61: a category page shows no removable chip for the current category; real filters stay removable',{skip,timeout:240000},async()=>{
+ const s=await startCrm();const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',args:['--no-sandbox']});
+ try{
+  const page=await browser.newPage({viewport:{width:1440,height:900}});
+  // Production .htaccess sends /catalog/* to storefront.php; the CRM fixture router does not, so the same shell is served here.
+  await page.route(/\/catalog(\/|$)/,async r=>{if(r.request().resourceType()!=='document')return r.continue();const res=await r.fetch({url:s.base+'/'});await r.fulfill({response:res});});
+  await page.goto(s.base+'/product/kurtka-fixture-softshell');await page.waitForLoadState('networkidle');
+  const hrefs=await page.locator('a[href^="/catalog/"]').evaluateAll(a=>a.map(x=>x.getAttribute('href')));
+  const deepest=hrefs.filter(h=>/^\/catalog\/[^?#]+$/.test(h)).sort((a,b)=>b.split('/').length-a.split('/').length)[0];assert.ok(deepest,'product links its category: '+hrefs.join(' '));
+  await page.goto(s.base+deepest);await page.locator('[data-cat-grid]').first().waitFor();await page.waitForLoadState('networkidle');
+  const heading=(await page.locator('h1').first().innerText()).trim();
+  const chips=await page.locator('[data-active-filters] [role="button"]').allInnerTexts();
+  assert.deepEqual(chips.filter(c=>c.replace('✕','').trim().toLowerCase()===heading.toLowerCase()),[],'current category «'+heading+'» is not a removable filter: '+JSON.stringify(chips));
+  assert.equal(await page.locator('[data-active-filters]').count(),0,'no filters chosen → no «Обрані фільтри» row');
+  // A real filter is still shown and removable.
+  await page.getByRole('checkbox',{name:/наявності/i}).first().check().catch(async()=>{await page.getByText('Лише в наявності',{exact:false}).first().click();});
+  await page.locator('[data-active-filters]').waitFor();
+  assert.ok((await page.locator('[data-active-filters] [role="button"]').allInnerTexts()).some(t=>/наявност/i.test(t)),'a chosen filter is shown as a removable chip');
+ }finally{await browser.close();s.stop();}
+});

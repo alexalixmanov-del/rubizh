@@ -4030,15 +4030,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                     catPg: 1,
                     catMore: !1
                 })
-            }), t.cpath.length && yt.push({
-                name: t.cpath[t.cpath.length - 1],
-                remove: () => this.setState(t => ({
-                    cpath: t.cpath.slice(0, -1),
-                    attrs: [],
-                    catPg: 1,
-                    catMore: !1
-                }))
-            }), (t.priceFrom || t.priceTo) && yt.push({
+            }), /* D-61: the current category is the page itself (breadcrumbs, heading), not a removable filter. */ (t.priceFrom || t.priceTo) && yt.push({
                 name: (t.priceFrom ? "від " + t.priceFrom : "") + (t.priceTo ? " до " + t.priceTo : "") + " ₴",
                 remove: () => this.setState({
                     priceFrom: "",
