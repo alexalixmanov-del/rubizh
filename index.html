@@ -605,10 +605,10 @@
                 <sc-if value="{{ p.hasReviews }}" hint-placeholder-val="{{ false }}"><div style="color:var(--legacy-c7cec3);font-size:12px">★ {{ p.rating }} · {{ p.reviewsCount }}</div></sc-if>
                 <div data-card-price="1" style="font-family:'UAH','Oswald',sans-serif;font-size:21px;line-height:1.1;margin-top:2px">{{ p.priceFmt }}</div>
                 <div data-card-availability="{{ p.cardAvailabilityTone }}" style="font-size:12px;line-height:1.4;color:var(--legacy-99a398)">{{ p.cardAvailability }}</div>
-                <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:auto;padding-top:6px">
+                <a data-card-sizes="1" href="{{ p.href }}" sc-camel-on-click="{{ p.open }}" tabindex="-1" style="display:flex;gap:4px;flex-wrap:wrap;align-content:center;margin-top:auto;padding-top:6px;color:inherit;text-decoration:none">
                   <sc-for list="{{ p.sizeRow }}" as="z" hint-placeholder-count="5"><span data-card-size="1" aria-label="{{ z.title }}" title="{{ z.title }}" style="{{ z.style }}">{{ z.z }}</span></sc-for>
                   <sc-if value="{{ p.moreSizes }}" hint-placeholder-val="{{ false }}"><span style="font-size:11.5px;padding:2px 4px;color:var(--legacy-8e968c)">{{ p.moreSizes }}</span></sc-if>
-                </div>
+                </a>
               <a data-card-cta="1" href="{{ p.href }}" sc-camel-on-click="{{ p.open }}">{{ p.cta }}</a></div>
             </div>
           </sc-for>
@@ -644,10 +644,10 @@
                 <sc-if value="{{ p.hasReviews }}" hint-placeholder-val="{{ false }}"><div style="color:var(--legacy-c7cec3);font-size:12px">★ {{ p.rating }} · {{ p.reviewsCount }}</div></sc-if>
                 <div data-card-price="1" style="font-family:'UAH','Oswald',sans-serif;font-size:21px;line-height:1.1;margin-top:2px">{{ p.priceFmt }}</div>
                 <div data-card-availability="{{ p.cardAvailabilityTone }}" style="font-size:12px;line-height:1.4;color:var(--legacy-99a398)">{{ p.cardAvailability }}</div>
-                <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:auto;padding-top:6px">
+                <a data-card-sizes="1" href="{{ p.href }}" sc-camel-on-click="{{ p.open }}" tabindex="-1" style="display:flex;gap:4px;flex-wrap:wrap;align-content:center;margin-top:auto;padding-top:6px;color:inherit;text-decoration:none">
                   <sc-for list="{{ p.sizeRow }}" as="z" hint-placeholder-count="5"><span data-card-size="1" aria-label="{{ z.title }}" title="{{ z.title }}" style="{{ z.style }}">{{ z.z }}</span></sc-for>
                   <sc-if value="{{ p.moreSizes }}" hint-placeholder-val="{{ false }}"><span style="font-size:11.5px;padding:2px 4px;color:var(--legacy-8e968c)">{{ p.moreSizes }}</span></sc-if>
-                </div>
+                </a>
               </div>
             </div>
           </sc-for>
@@ -705,7 +705,7 @@
           <div style="font-family:'UAH','Oswald',sans-serif;font-size:13.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--legacy-99a398);margin-bottom:10px">Схожі розділи</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <sc-for list="{{ similar }}" as="r" hint-placeholder-count="3">
-              <a href="{{ r.href }}" sc-camel-on-click="{{ r.open }}" style="display:flex;gap:8px;align-items:baseline;padding:9px 13px;border:1px solid var(--legacy-2a322b);background:var(--legacy-141815);color:var(--legacy-d3d9cf);font-size:13.5px;text-decoration:none" style-hover="border-color:var(--link);color:var(--link)">{{ r.name }}<span style="color:var(--legacy-8a9487);font-size:12px">{{ r.count }}</span></a>
+              <a href="{{ r.href }}" sc-camel-on-click="{{ r.open }}" style="display:flex;gap:8px;align-items:baseline;padding:9px 13px;border:1px solid var(--legacy-2a322b);background:var(--legacy-141815);color:var(--legacy-d3d9cf);font-size:14px;text-decoration:none" style-hover="border-color:var(--link);color:var(--link)">{{ r.name }}<span style="color:var(--legacy-8a9487);font-size:12px">{{ r.count }}</span></a>
             </sc-for>
           </div>
         </div>
@@ -1210,10 +1210,10 @@
                 <sc-if value="{{ p.hasReviews }}" hint-placeholder-val="{{ false }}"><div style="color:var(--legacy-c7cec3);font-size:12px">★ {{ p.rating }} · {{ p.reviewsCount }}</div></sc-if>
                 <div data-card-price="1" style="font-family:'UAH','Oswald',sans-serif;font-size:21px;line-height:1.1;margin-top:2px">{{ p.priceFmt }}</div>
                 <div data-card-availability="{{ p.cardAvailabilityTone }}" style="font-size:12px;line-height:1.4;color:var(--legacy-99a398)">{{ p.cardAvailability }}</div>
-                <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:auto;padding-top:6px">
+                <a data-card-sizes="1" href="{{ p.href }}" sc-camel-on-click="{{ p.open }}" tabindex="-1" style="display:flex;gap:4px;flex-wrap:wrap;align-content:center;margin-top:auto;padding-top:6px;color:inherit;text-decoration:none">
                   <sc-for list="{{ p.sizeRow }}" as="z" hint-placeholder-count="5"><span data-card-size="1" aria-label="{{ z.title }}" title="{{ z.title }}" style="{{ z.style }}">{{ z.z }}</span></sc-for>
                   <sc-if value="{{ p.moreSizes }}" hint-placeholder-val="{{ false }}"><span style="font-size:11.5px;padding:2px 4px;color:var(--legacy-8e968c)">{{ p.moreSizes }}</span></sc-if>
-                </div>
+                </a>
               </div>
             </div>
           </sc-for>
@@ -1255,10 +1255,10 @@
                 <sc-if value="{{ p.hasReviews }}" hint-placeholder-val="{{ false }}"><div style="color:var(--legacy-c7cec3);font-size:12px">★ {{ p.rating }} · {{ p.reviewsCount }}</div></sc-if>
                 <div data-card-price="1" style="font-family:'UAH','Oswald',sans-serif;font-size:21px;line-height:1.1;margin-top:2px">{{ p.priceFmt }}</div>
                 <div data-card-availability="{{ p.cardAvailabilityTone }}" style="font-size:12px;line-height:1.4;color:var(--legacy-99a398)">{{ p.cardAvailability }}</div>
-                <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:auto;padding-top:6px">
+                <a data-card-sizes="1" href="{{ p.href }}" sc-camel-on-click="{{ p.open }}" tabindex="-1" style="display:flex;gap:4px;flex-wrap:wrap;align-content:center;margin-top:auto;padding-top:6px;color:inherit;text-decoration:none">
                   <sc-for list="{{ p.sizeRow }}" as="z" hint-placeholder-count="5"><span data-card-size="1" aria-label="{{ z.title }}" title="{{ z.title }}" style="{{ z.style }}">{{ z.z }}</span></sc-for>
                   <sc-if value="{{ p.moreSizes }}" hint-placeholder-val="{{ false }}"><span style="font-size:11.5px;padding:2px 4px;color:var(--legacy-8e968c)">{{ p.moreSizes }}</span></sc-if>
-                </div>
+                </a>
               </div>
             </div>
           </sc-for>

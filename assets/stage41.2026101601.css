@@ -10,3 +10,28 @@
    light plate. The photos themselves are not changed. */
 html[data-theme="dark"]:root {--photo-bg:var(--card)}
 html[data-theme="dark"] body .rz-catalog [data-tile]>div:first-child {background:var(--card)!important}
+
+/* D-55: touch targets on phones — every interactive element ≥44 px on its smaller side, link text ≥14 px. The zone grows
+   by padding; the visible shape stays (e.g. the favourite circle keeps 32 px through background-clip). */
+@media (max-width:767px) {
+  html body [data-burger] {min-width:44px!important}
+  html body [role="button"][aria-label="Шукати"] {box-sizing:content-box!important;padding:10px!important;margin:-10px!important}
+  html body .rz-hero-scroll {font-size:14px!important}
+  html body .rz-text-link, html body .rz-sections-heading a {font-size:14px!important;min-height:44px!important;display:inline-flex!important;align-items:center!important}
+  html body .rz-messengers a {font-size:14px!important;min-width:44px!important;min-height:44px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important}
+  html body .rz-faq p a[href^="tel:"] {font-size:14px!important;display:inline-flex!important;align-items:center!important;min-height:44px!important}
+  html body label a[href="/privacy"], html body label a[href="/offer"] {font-size:14px!important}
+  html body [data-analytics-choose] {font-size:14px!important;min-height:44px!important;padding:0 4px!important}
+  html body .rz-breadcrumbs {align-items:center!important}
+  html body .rz-breadcrumbs a {font-size:14px!important;min-height:44px!important;display:inline-flex!important;align-items:center!important}
+  html body [data-fav], html body .rz-catalog [data-fav] {width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;padding:6px!important;background-clip:content-box!important;border-color:transparent!important;top:2px!important;right:2px!important}
+  html body [data-card-name], html body .rz-catalog [data-card-name] {min-height:44px!important}
+  html body [data-card-cta], html body .rz-catalog [data-card-cta] {font-size:14px!important;letter-spacing:.02em!important;min-height:44px!important;display:flex!important;align-items:center!important}
+  html body .rz-directory-expand {min-height:44px!important}
+}
+
+/* D-55: the size chips of a catalog card sit in one tap zone (≥44 px) that opens the product; no zone without sizes. */
+html body [data-card-sizes]:not(:has([data-card-size])) {display:none}
+@media (max-width:767px) {
+  html body [data-card-sizes] {min-height:44px}
+}

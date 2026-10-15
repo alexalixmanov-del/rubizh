@@ -137,3 +137,29 @@ test('D-62: over HTTP the old ?roots= addresses answer 301 and the clean categor
   const cats=await (await fetch(site.base+'/categories')).text();assert.match(cats,/<link rel="canonical" href="https:\/\/rubizh\.shop\/categories">/);
  }finally{site.stop();}
 });
+
+// D-55: touch targets on phones (360–430 px) — every visible interactive element is at least 44 px on its smaller side
+// (by padding, the visual stays as it was) and link text is at least 14 px. Exceptions, each with its reason:
+const TAP_EXCEPTIONS=[
+ // The footer logo link: its zone is 205×50; the small line inside is the logo's tagline, not link text.
+ {match:e=>e.cls.includes('rz-footer-brand'),why:'logo link, zone ≥44; tagline is part of the logo'},
+];
+const tapPages=['/','/catalog','/catalog/odiah-ta-forma','/product/demo-uniform','/kit','/categories'];
+for(const width of [360,390,430])test(`D-55: touch targets ≥44 px and link text ≥14 px at ${width} px`,()=>withPage(async page=>{
+ const found=[];
+ for(const path of tapPages){
+  await open(page,path);for(let y=0;y<14000;y+=700){await page.evaluate(y=>scrollTo(0,y),y);await page.waitForTimeout(30);}
+  const bad=await page.evaluate(()=>{const out=[];const sel='a[href],button,[role="button"],input:not([type="hidden"]),select,textarea,summary,[tabindex]:not([tabindex="-1"])';
+   for(const e of document.querySelectorAll(sel)){const st=getComputedStyle(e);if((e.offsetParent===null&&st.position!=='fixed')||st.visibility==='hidden')continue;
+    // A check box or radio is operated through its label: the label is the target.
+    const target=(e.matches('input[type="checkbox"],input[type="radio"]')&&e.closest('label'))||e;const r=target.getBoundingClientRect();if(r.width<1||r.height<1)continue;
+    const txt=(e.innerText||e.getAttribute('aria-label')||e.value||'').replace(/\s+/g,' ').trim().slice(0,40);const fs=parseFloat(st.fontSize);
+    const tooSmall=Math.min(r.width,r.height)<44,tinyText=e.tagName==='A'&&!!(e.innerText||'').trim()&&fs<14;
+    if(tooSmall||tinyText)out.push({tag:e.tagName.toLowerCase(),cls:String(e.className?.baseVal??e.className??''),txt,w:Math.round(r.width),h:Math.round(r.height),fs});}
+   return out;});
+  // Size chips of catalog cards (owner: ~22 px) are inside a tap zone of at least 44 px.
+  for(const z of await page.evaluate(()=>[...document.querySelectorAll('[data-card-size]')].filter(e=>e.offsetParent!==null).map(e=>{const t=e.closest('a[href],button,[role="button"]');const r=(t||e).getBoundingClientRect();return {in:!!t,h:Math.round(r.height),txt:e.textContent.trim()};})))if(!z.in||z.h<44)found.push(path+' size chip «'+z.txt+'» zone '+z.h+'px');
+  for(const b of bad)if(!TAP_EXCEPTIONS.some(x=>x.match(b)))found.push(path+' '+b.tag+(b.cls?'.'+b.cls.split(' ')[0]:'')+' «'+b.txt+'» '+b.w+'×'+b.h+' '+b.fs+'px');
+ }
+ assert.deepEqual([...new Set(found)],[],'targets below 44 px or link text below 14 px');
+},{width}));
