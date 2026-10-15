@@ -88,3 +88,23 @@ test('D-52: unknown stock quantity — ≤3 pcs per SKU pay now, more waits for 
   const known=await s.checkout([{...line(),qty:5}]);assert.equal(state(known.id).pim_order_state,'CONFIRMED','known quantity: reserve by number, unchanged');
  }finally{s.stop();}
 });
+
+// ---- D-53: one meaning everywhere — in stock: pay at once; on request / large quantity: manager confirms first ----
+test('D-53: storefront, FAQ, offer and e-mail texts match the payment process; product card shipment line follows PIM data',{skip,timeout:240000},async()=>{
+ const html=readFileSync(root+'/index.html','utf8')+readFileSync(root+'/shop/receipt-view.php','utf8'),bundle=readFileSync(root+'/assets/shop-client.2026101101.js','utf8'),offer=readFileSync(root+'/offer.html','utf8'),mail=readFileSync(root+'/auth/email-templates.php','utf8');
+ for(const [name,src] of [['index.html',html],['bundle',bundle],['offer',offer],['mail',mail]]){
+  assert.doesNotMatch(src,/Наявність (і розмір )?підтверджуємо перед оплатою/,name);assert.doesNotMatch(src,/Перевірка перед оплатою/,name);assert.doesNotMatch(src,/Уточнимо після підтвердження/,name);
+  assert.doesNotMatch(src,/Оплата після підтвердження наявності — 100%/,name);assert.doesNotMatch(src,/"Підтверджуємо перед оплатою"|"Відправка після підтвердження"|Наявність підтверджено менеджером\. Можна оплатити/,name);assert.doesNotMatch(src,/Наявність і комплектацію підтверджено менеджером/,name);
+ }
+ assert.equal((html.match(/Є в наявності — оплата одразу\. Під замовлення — менеджер підтвердить перед оплатою\./g)||[]).length,2,'header and first screen');
+ assert.match(html,/<h3>Наявність і оплата<\/h3><p>Товар у наявності оплачуєте одразу\. Під замовлення або великою кількістю — менеджер підтвердить наявність, розмір і строк перед оплатою\.<\/p>/);
+ assert.match(html,/<h3>Картка monobank або рахунок ФОП<\/h3>/);
+ assert.match(bundle,/"Як оплатити замовлення\?", "Карткою monobank або на рахунок ФОП\. Товар у наявності — одразу; під замовлення або великою кількістю — після підтвердження менеджера/);
+ assert.match(bundle,/Після оплати; ТТН з’явиться в кабінеті/);assert.match(bundle,/Строк підтвердить менеджер/);
+ const s=await startCrm();const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',args:['--no-sandbox']});
+ try{
+  const page=await browser.newPage();await page.goto(s.base+'/product/kurtka-fixture-softshell');await page.waitForLoadState('networkidle');
+  const sizes=page.getByRole('button',{name:/^M$/});if(await sizes.count())await sizes.first().click();
+  const text=await page.locator('body').innerText();assert.match(text,/Після оплати; ТТН з’явиться в кабінеті|Залежить від обраного розміру/,'in-stock product: no invented shipment date');assert.doesNotMatch(text,/Уточнимо після підтвердження/);
+ }finally{await browser.close();s.stop();}
+});
