@@ -58,6 +58,8 @@ try{
     }elseif(in_array($uri,['/categories','/categories/'],true)){$head='<title>Усі категорії — РУБІЖ</title><link rel="canonical" href="https://rubizh.shop/categories"><meta name="description" content="Усі категорії тактичного одягу та спорядження РУБІЖ: форма, взуття, бронезахист, медицина, рюкзаки та аксесуари.">';$fallback='<h1>Усі категорії</h1>';foreach($boot['categories'] as $c)$fallback.='<p><a href="/catalog/'.storefrontEsc($c['url_path']).'">'.storefrontEsc($c['path']).'</a></p>';
     }elseif($uri==='/catalog'||str_starts_with($uri,'/catalog/')){
         $category=trim(substr($uri,8),'/');$args=$_GET;$args['category']=$category;
+        // D-62: the former multi-root filter addresses moved to clean ones (group → /categories#section).
+        if($category===''&&isset($_GET['roots'])){$to=shopRootsRedirect($boot['categories'],(string)$_GET['roots']);header('Location: '.$to,true,301);exit;}
         foreach(['priceFrom'=>'price_from','priceTo'=>'price_to'] as $from=>$to)if(isset($_GET[$from]))$args[$to]=$_GET[$from];
         foreach(['brands','camo','sizes'] as $key){$selected=json_decode((string)($_GET[$key] ?? '[]'),true);if(is_array($selected))$args[$key]=implode('|',array_map(fn($v)=>$key==='sizes'?str_replace('|',':',(string)$v):(string)$v,$selected));}
         if(($_GET['inStock'] ?? '')==='1'||($_GET['quick'] ?? '')==='stock')$args['availability']='in';elseif(($_GET['withOrder'] ?? '')==='0')$args['availability']='available';if(($_GET['quick'] ?? '')==='new')$args['sort']='new';

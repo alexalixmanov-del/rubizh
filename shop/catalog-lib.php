@@ -233,3 +233,20 @@ function shopRelated(PDO $db,array $row,array $product): array {
     $ids=array_column($pick,'id');$photos=product_photos($db,$ids);$variants=shopVariantRows($db,$ids);
     return array_map(fn($r)=>shopProduct($db,$r,$photos,$variants[$r['id']]??[]),$pick);
 }
+
+/** The client's slug (shop-client `w`): lower case, Ukrainian transliteration, non [a-z0-9] runs → «-». */
+function shopClientSlug(string $s): string {
+    static $map=['а'=>'a','б'=>'b','в'=>'v','г'=>'h','ґ'=>'g','д'=>'d','е'=>'e','є'=>'ie','ж'=>'zh','з'=>'z','и'=>'y','і'=>'i','ї'=>'i','й'=>'i','к'=>'k','л'=>'l','м'=>'m','н'=>'n','о'=>'o','п'=>'p','р'=>'r','с'=>'s','т'=>'t','у'=>'u','ф'=>'f','х'=>'kh','ц'=>'ts','ч'=>'ch','ш'=>'sh','щ'=>'shch','ь'=>'','ю'=>'iu','я'=>'ia','’'=>'',"'"=>'','ʼ'=>''];
+    return trim((string)preg_replace('/[^a-z0-9]+/','-',strtr(mb_strtolower($s,'UTF-8'),$map)),'-');
+}
+/**
+ * D-62: where an old /catalog?roots=[…] address now lives. One known root → its clean category address; a group of
+ * several roots → its section on /categories (#ac-<slug of the first root>, the id the directory renders); anything else
+ * → /categories.
+ */
+function shopRootsRedirect(array $categories,string $rootsJson): string {
+    $roots=json_decode($rootsJson,true);
+    if(!is_array($roots)||!$roots||array_filter($roots,fn($r)=>!is_string($r)||$r===''))return '/categories';
+    if(count($roots)===1){foreach($categories as $c)if(($c['path']??'')===$roots[0]&&($c['url_path']??'')!=='')return '/catalog/'.$c['url_path'];return '/categories';}
+    $slug=shopClientSlug($roots[0]);return $slug===''?'/categories':'/categories#ac-'.$slug;
+}
