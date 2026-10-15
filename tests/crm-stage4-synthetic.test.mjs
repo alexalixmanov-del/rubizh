@@ -49,7 +49,9 @@ test('Staff API list performance on 50 000 orders: every list request ≤500 ms 
   const g=json(run(s,{orders:300,seed:11}));assert.deepEqual(g.errors,[]);
   const b=json(run(s,{orders:0,bulk:50000}));assert.ok(b.bulk?.orders>=50000,'50 000 orders: '+JSON.stringify(b.bulk));
   const owner=await s.login('OWNER'),manager=await s.login('MANAGER');const timings=[];
-  const paths=['/orders','/orders?view=new','/orders?view=processing','/orders?view=delivery','/orders?view=problem','/orders?attention=confirmation','/orders?view=cancelled','/orders?sort=total&direction=asc','/orders?page=200','/orders?q=Коваленко','/orders?q=0671000037','/orders/counters','/payments','/shipments','/customers','/dashboard?period=30d'];
+  const paths=['/orders','/orders?view=new','/orders?view=processing','/orders?view=delivery','/orders?view=problem','/orders?attention=confirmation','/orders?view=cancelled','/orders?sort=total&direction=asc','/orders?page=200','/orders?q=Коваленко','/orders?q=0671000037','/orders/counters','/payments','/shipments','/customers','/dashboard?period=30d',
+   // D-61 + review: customer search and segment; broad substrings that match almost every order (e-mail «@», one letter).
+   '/customers?q=Коваленко','/customers?segment=VIP','/customers?q=%40','/orders?q=%40','/orders?q=a','/customers?q=a'];
   for(const [who,c] of [['OWNER',owner],['MANAGER',manager]])for(const p of paths){
    await c.get(p);const runs=[];for(let i=0;i<3;i++){const t=performance.now();const r=await c.get(p);runs.push(performance.now()-t);assert.equal(r.status,200,who+' '+p+' '+JSON.stringify(r.data).slice(0,200));}
    runs.sort((a,b)=>a-b);timings.push({who,path:p,median_ms:Math.round(runs[1]),max_ms:Math.round(runs[2])});

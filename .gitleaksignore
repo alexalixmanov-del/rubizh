@@ -6,3 +6,6 @@ tests/helpers/site-fixture.mjs:generic-api-key:24
 tests/pricing-database.test.mjs:generic-api-key:12
 eaebd1dca76c7fc9e2a04bcd05e085ed439bf1ab:tests/helpers/site-fixture.mjs:generic-api-key:11
 eaebd1dca76c7fc9e2a04bcd05e085ed439bf1ab:tests/helpers/site-fixture.mjs:generic-api-key:20
+# Stage 4 review test: staff password of the local fixture stand (password-policy check), not a secret.
+ac4895b9eb26e7009a4dbde83e720876d7abaac0:tests/crm-stage4-review.test.mjs:generic-api-key:99
+tests/crm-stage4-review.test.mjs:generic-api-key:99
