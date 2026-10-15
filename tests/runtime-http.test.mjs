@@ -82,3 +82,20 @@ test('Real HTTP: nonce CSP, banner loading, bounded reads, duplicate checkout an
   if(process.env.RUBIZH_CAPACITY_REPORT)writeFileSync(process.env.RUBIZH_CAPACITY_REPORT,JSON.stringify(report,null,2));
  }finally{await browser?.close();if(server){try{process.kill(-server.pid,'SIGTERM');}catch{}}php(`${admin}$a->exec('DROP DATABASE IF EXISTS ${schema}');`);rmSync(d,{recursive:true,force:true});}
 });
+
+// D-50 (stage 4): every HTML page's CSP allows each same-origin script it references and never allows inline scripts.
+test('D-50: CSP of every HTML page allows its own scripts (no inline scripts)',{skip:!process.env.RUBIZH_TEST_MYSQL_SOCKET,timeout:180000},async()=>{
+ const {startCrm}=await import('./helpers/crm-fixture.mjs');const s=await startCrm();
+ try{
+  const pages=['/','/auth/','/auth/staff-login.php','/shop/payment-return.php?order=1','/shop/settings.php','/shop/np-manager.php','/shop/donations.php','/shop/cart-return.php','/shop/np-print.php'];
+  const bad=[];
+  for(const p of pages){
+   const r=await fetch(s.base+p,{redirect:'manual'});const type=r.headers.get('content-type')||'';if(!type.includes('text/html'))continue;
+   const html=await r.text();const csp=r.headers.get('content-security-policy')||'';const scripts=[...html.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)].map(m=>m[1]).filter(u=>u.startsWith('/')&&!u.startsWith('//'));
+   const scriptSrc=(csp.match(/script-src([^;]*)/)||csp.match(/default-src([^;]*)/)||[,''])[1];
+   if(scripts.length&&!/'self'/.test(scriptSrc))bad.push(`${p}: scripts ${scripts.join(',')} blocked by "${scriptSrc.trim()}"`);
+   if(/'unsafe-inline'/.test(scriptSrc))bad.push(`${p}: inline scripts allowed`);
+  }
+  assert.deepEqual(bad,[]);
+ }finally{s.stop();}
+});

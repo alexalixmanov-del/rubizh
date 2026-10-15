@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 require __DIR__.'/../auth/bootstrap.php';require_once __DIR__.'/settings-lib.php';require_once __DIR__.'/../api/seller.php';
-header("Content-Security-Policy: default-src 'none'; style-src 'self' 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");header('Cache-Control: no-store');
+header("Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");// D-50: own /assets scripts must runheader('Cache-Control: no-store');
 try{$db=shopStoreDatabase();$actor=npManagerId();shopRequirePermission($actor,'payment.manual_reconcile');}catch(Throwable $e){http_response_code(403);
  // Seller IBAN/bank details, supplier contacts and the donation share are money/delivery settings: OWNER with a fresh login (Q-5).
  echo '<p>'.esc($e instanceof ShopPermissionException&&str_contains($e->getMessage(),'вхід')?$e->getMessage():'Увійдіть із підтвердженим email менеджера.').'</p><a href="/auth/">Вхід</a>';exit;}

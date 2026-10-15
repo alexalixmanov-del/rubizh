@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 require __DIR__.'/../auth/bootstrap.php';
-header("Content-Security-Policy: default-src 'none'; style-src 'self' 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
+header("Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");// D-50: own /assets scripts must run
 try{$db=shopStoreDatabase();$actor=npManagerId();}catch(Throwable $e){http_response_code(403);echo '<!doctype html><html lang="uk"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Доступ менеджера</title><p>Доступ лише менеджеру з підтвердженим email, доданим у серверну конфігурацію.</p><a href="/auth/">Увійти →</a></html>';exit;}
 $notice='';$error='';$diagnostics=[];$orderId=max(0,(int)($_GET['order']??$_POST['order_id']??0));
 if(($_SERVER['REQUEST_METHOD']??'GET')==='POST'){
