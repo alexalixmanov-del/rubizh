@@ -1,0 +1,12 @@
+/* Stage 4.1 (owner block 4-SITE, D-55…D-64): storefront fixes. Loaded last in the head bundle. */
+
+/* D-59: «Свій комплект» — on phones the title and the note stack instead of squeezing the note. */
+@media (max-width:480px) {
+  .rz-discount {flex-direction:column;align-items:flex-start;gap:6px}
+  .rz-discount span {font-size:12px;line-height:1.6}
+}
+
+/* D-60: in the dark theme the plate under product photos follows the theme (card token); the light theme keeps its
+   light plate. The photos themselves are not changed. */
+html[data-theme="dark"]:root {--photo-bg:var(--card)}
+html[data-theme="dark"] body .rz-catalog [data-tile]>div:first-child {background:var(--card)!important}
