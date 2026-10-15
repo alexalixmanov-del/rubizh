@@ -162,7 +162,7 @@ Final endpoint Quality Gate:132inventory rows,1920HTTP requests;831/831explicit 
 
 ## 8. Глобальный этап 4 — CRM (2026-10-15)
 
-**Независимое ревью.** `ecc:code-reviewer` и `ecc:security-reviewer` без общего контекста с автором; затем повторный слепой проход security и payments на итоговых SHA. Находки и исправления — `03-DEFECT_REGISTER` (R4-01…R4-15), тесты `tests/crm-stage4-review.test.mjs`. Открытых CRITICAL/HIGH нет.
+**Независимое ревью.** `ecc:code-reviewer` и `ecc:security-reviewer` без общего контекста с автором; затем повторный слепой проход security и payments на итоговых SHA. Первый проход: code-reviewer — 0 CRITICAL/HIGH, 6 MEDIUM; security-reviewer — 2 HIGH, 6 MEDIUM → R4-01…R4-13. Слепой повтор: security — 3 HIGH, 3 MEDIUM → R4-16…R4-23; payments — 0 CRITICAL/HIGH, 3 LOW (исправлены). Поправка владельца по финансам ролей — R4-24 (таблица «Поля × роли», `tests/crm-stage4-fields.test.mjs`, 70 проверок). Находки и исправления — `03-DEFECT_REGISTER` (R4-01…R4-24), тесты `tests/crm-stage4-review.test.mjs`. Открытых CRITICAL/HIGH нет; R4-14, R4-15 — LOW, задокументированы (`KNOWN_ISSUES`).
 
 **Секреты и зависимости.** gitleaks (история SITE и CRM, рабочие деревья) — 0 находок (тестовые ключи стенда — в `.gitleaksignore` по отпечаткам с пояснением). `npm audit` SITE и CRM — 0 уязвимостей (CRM: react-router-dom 7.18.4, vite 7.3.6, точные версии).
 
