@@ -170,7 +170,7 @@ stty -echo; $PHP dev/staff-user.php --email=<email владельца> --name="<
 | C1 | Бэкап БД, `api/config.php`, `$SITE/crm/` | — |
 | C2 | Деплой SITE этапа 4 (шаги 5–7 выше) → `/api/staff/auth/session` отвечает 503 `CRM_DISABLED` | `dev/rollback-update.sh` |
 | C3 | Деплой `crm.rubizh/dist` (SHA из чекпоинта этапа 4) в `$SITE/crm/` | копия `$SITE/crm/` |
-| C4 | `dev/migrate-crm.php --plan` → `--apply` (схема v2, идемпотентно) | таблицы аддитивны; данные — бэкап |
+| C4 | `dev/migrate-crm.php --plan` → `--apply` (схема v3, идемпотентно; виртуальная колонка поиска без перезаписи данных) | таблицы аддитивны; данные — бэкап |
 | C5 | `RUBIZH_CRM_SECRET_KEY` (32 байта base64) и `crm_ip_salt` | только вместе с C7 |
 | C6 | OWNER: `dev/staff-user.php --role=OWNER` (пароль из stdin) | отключить пользователя |
 | C7 | `crm_enabled=true` → вход OWNER, подключение TOTP, резервные коды офлайн | копия конфига |

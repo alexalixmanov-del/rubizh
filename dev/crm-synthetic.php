@@ -196,12 +196,14 @@ function synBulk(PDO $db,int $target): array {
             foreach($tables as $t){
                 $tc=$cols($t);if(!$tc||!isset($tc['order_id']))continue;$u=array_diff($uniq($t),['order_id']);$skip=false;$sel=[];$names=[];
                 foreach($tc as $c=>$m){
-                    if($c==='id'&&str_contains((string)$m['e'],'auto_increment'))continue;$names[]="`$c`";
+                    if($c==='id'&&str_contains((string)$m['e'],'auto_increment')||str_contains((string)$m['e'],'GENERATED'))continue;$names[]="`$c`";
                     if($c==='order_id'){$sel[]="order_id+$offset";continue;}
                     if(in_array($c,$u,true)){if(!in_array($m['d'],['varchar','char'],true)){$skip=true;break;}$len=(int)$m['l'];$sel[]=$len<=40?"IF(`$c` IS NULL,NULL,LEFT(MD5(CONCAT(`$c`,'-c$rounds')),$len))":"IF(`$c` IS NULL,NULL,LEFT(CONCAT(`$c`,'-c$rounds'),$len))";continue;}
                     $sel[]="`$c`";
                 }
-                if(!$skip)$db->exec("INSERT INTO $t(".implode(',',$names).') SELECT '.implode(',',$sel)." FROM $t WHERE order_id BETWEEN $min AND ".min($max,$last-$offset));
+                // Only rows of the orders copied in this round (buyer orders): rows of other orders would point at ids that
+                // are not copies of their source order (account links of other buyers, dangling references).
+                if(!$skip)$db->exec("INSERT INTO $t(".implode(',',$names).') SELECT '.implode(',',$sel)." FROM $t WHERE order_id BETWEEN $min AND ".min($max,$last-$offset)." AND order_id IN (SELECT id FROM rubizh_customer_orders WHERE id BETWEEN $min AND $max AND email LIKE 'buyer%@".SYN_DOMAIN."')");
             }
             $db->commit();
         }catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}

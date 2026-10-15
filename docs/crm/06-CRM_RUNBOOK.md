@@ -10,7 +10,7 @@
 | Staff API | `/api/staff/*` → `api/staff/index.php` → `staff/router.php` | Контракт `contracts/crm/crm-api.json`; ответы `{"data":…}` / `{"error":{"code","message","request_id"}}` |
 | Бизнес-логика | `shop/*` (SITE) | CRM не дублирует правила сайта (A2) |
 | Фоновая обработка | `shop/automation-worker.sh` → `staff/worker.php` каждые 60 с | Сверка оплат, автозадачи, уведомления, письмо OWNER о критичных событиях |
-| Данные | БД SITE: `rubizh_crm_*`, `rubizh_staff_*`, `rubizh_wholesale_requests`, `rubizh_invoice_payments`, … | `meta.crm_schema = 2` |
+| Данные | БД SITE: `rubizh_crm_*`, `rubizh_staff_*`, `rubizh_wholesale_requests`, `rubizh_invoice_payments`, … | `meta.crm_schema = 3` |
 
 ## 2. Ежедневно
 

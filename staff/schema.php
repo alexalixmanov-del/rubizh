@@ -2,7 +2,7 @@
 declare(strict_types=1);
 // v1 = RC1 CRM; v2 = stage 4 (roles WAREHOUSE/SUPPORT/ACCOUNTANT, CRM-own tables, SITE line checks, invoice payments).
 // v1 step SQL must stay byte-identical: the journal hashes it to detect drift.
-const CRM_SCHEMA_VERSION=2;
+const CRM_SCHEMA_VERSION=3;
 function crmSchemaSteps(): array {
  $tables=[
  'rubizh_staff_roles'=>"role VARCHAR(16) PRIMARY KEY,label VARCHAR(80) NOT NULL",
@@ -53,10 +53,14 @@ function crmSchemaStepsV2(): array {
   'rubizh_staff_audit_context'=>"audit_id BIGINT UNSIGNED PRIMARY KEY,ip_hash CHAR(64) NOT NULL,agent VARCHAR(160) NOT NULL DEFAULT ''",
  ];$out=[];foreach($tables as $name=>$body)$out[]=['kind'=>'table','name'=>$name,'sql'=>"CREATE TABLE $name($body) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"];
  foreach(['UPDATE','DELETE'] as $v){$name='rubizh_staff_audit_context_no_'.strtolower($v);$out[]=['kind'=>'trigger','name'=>$name,'sql'=>"CREATE TRIGGER $name BEFORE $v ON rubizh_staff_audit_context FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='CRM history is append-only'"];}
+ // PERF-4.3: the searchable name text (buyer, recipient, city) as an indexed virtual column — a name search reads the
+ // short index instead of parsing every contact JSON. Invalid legacy JSON yields NULL instead of failing the migration.
+ $j=fn(string $k)=>"JSON_UNQUOTE(JSON_EXTRACT(contact_json,'$.$k'))";
+ $out[]=['kind'=>'column','table'=>'rubizh_order_details','name'=>'crm_search','sql'=>"ALTER TABLE rubizh_order_details ADD COLUMN crm_search VARCHAR(600) AS (IF(JSON_VALID(contact_json),LEFT(CONCAT_WS(' ',".$j('name').','.$j('recipient').','.$j('city')."),600),NULL)) VIRTUAL"];
  // Indexes for 50 000-order lists: assignment filter, timing, audit by order.
  foreach(['crm_order_updated'=>['rubizh_customer_orders','updated_at,id'],'crm_order_status_created'=>['rubizh_customer_orders','status,created_at,id'],'crm_np_audit_action'=>['rubizh_np_audit','action,id'],
   // Covering indexes for substring search (number, email, TTN): the scan reads the index, not the wide rows (PERF-4.2).
-  'crm_order_number_email'=>['rubizh_customer_orders','order_number,email'],'crm_shipment_tracking_order'=>['rubizh_order_shipments','tracking_number,order_id']] as $name=>[$table,$columns])$out[]=['kind'=>'index','name'=>$name,'table'=>$table,'sql'=>"CREATE INDEX $name ON $table($columns)"];
+  'crm_order_number_email'=>['rubizh_customer_orders','order_number,email'],'crm_shipment_tracking_order'=>['rubizh_order_shipments','tracking_number,order_id'],'crm_order_search'=>['rubizh_order_details','crm_search']] as $name=>[$table,$columns])$out[]=['kind'=>'index','name'=>$name,'table'=>$table,'sql'=>"CREATE INDEX $name ON $table($columns)"];
  return $out;
 }
 /** Ledger tables exist from v1 on: money paths (webhook, refunds) need them even in the window before v2 is applied. */
@@ -80,4 +84,4 @@ function crmMigrate(PDO $db): void {
 }
 
 function crmStepExists(PDO $db,array $s): bool {if($s['kind']!=='index')return shopP0StepExists($db,$s);$q=$db->prepare('SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND INDEX_NAME=?');$q->execute([$s['table'],$s['name']]);return (bool)$q->fetchColumn();}
-function crmObjectHash(PDO $db,array $s): string {if($s['kind']==='table'){$v=$db->query('SHOW CREATE TABLE `'.$s['name'].'`')->fetch(PDO::FETCH_NUM)[1];$v=preg_replace('/ AUTO_INCREMENT=\d+/','',$v);}elseif($s['kind']==='trigger'){$q=$db->prepare('SELECT EVENT_MANIPULATION,EVENT_OBJECT_TABLE,ACTION_STATEMENT,ACTION_TIMING FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA=DATABASE() AND TRIGGER_NAME=?');$q->execute([$s['name']]);$v=json_encode($q->fetch(PDO::FETCH_ASSOC),JSON_THROW_ON_ERROR);}else{$q=$db->prepare('SELECT NON_UNIQUE,SEQ_IN_INDEX,COLUMN_NAME,SUB_PART,INDEX_TYPE FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND INDEX_NAME=? ORDER BY SEQ_IN_INDEX');$q->execute([$s['table'],$s['name']]);$v=json_encode($q->fetchAll(PDO::FETCH_ASSOC),JSON_THROW_ON_ERROR);}return hash('sha256',$v);}
+function crmObjectHash(PDO $db,array $s): string {if($s['kind']==='table'){$v=$db->query('SHOW CREATE TABLE `'.$s['name'].'`')->fetch(PDO::FETCH_NUM)[1];$v=preg_replace('/ AUTO_INCREMENT=\d+/','',$v);}elseif($s['kind']==='column'){$q=$db->prepare('SELECT COLUMN_TYPE,IS_NULLABLE,EXTRA,GENERATION_EXPRESSION FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND COLUMN_NAME=?');$q->execute([$s['table'],$s['name']]);$v=json_encode($q->fetch(PDO::FETCH_ASSOC),JSON_THROW_ON_ERROR);}elseif($s['kind']==='trigger'){$q=$db->prepare('SELECT EVENT_MANIPULATION,EVENT_OBJECT_TABLE,ACTION_STATEMENT,ACTION_TIMING FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA=DATABASE() AND TRIGGER_NAME=?');$q->execute([$s['name']]);$v=json_encode($q->fetch(PDO::FETCH_ASSOC),JSON_THROW_ON_ERROR);}else{$q=$db->prepare('SELECT NON_UNIQUE,SEQ_IN_INDEX,COLUMN_NAME,SUB_PART,INDEX_TYPE FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND INDEX_NAME=? ORDER BY SEQ_IN_INDEX');$q->execute([$s['table'],$s['name']]);$v=json_encode($q->fetchAll(PDO::FETCH_ASSOC),JSON_THROW_ON_ERROR);}return hash('sha256',$v);}

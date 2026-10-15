@@ -24,9 +24,8 @@ function crmSearchOrderIds(PDO $db,string $q,bool $phones=true): ?array {
  }else{
   if(preg_match('/[":{}\\\\]/',$q))return [];
   if(preg_match('/[A-Za-z0-9]/',$q)){$sql[]="SELECT order_id FROM rubizh_order_fulfillment_lines WHERE sku LIKE ? ESCAPE '!'";$args[]=$like;$sql[]="SELECT id FROM rubizh_customer_orders WHERE email LIKE ? ESCAPE '!' OR order_number LIKE ? ESCAPE '!'";array_push($args,$like,$like);}
-  // The raw LIKE only pre-filters; a match counts when it is in the buyer's name, the recipient or the city (R4-16).
-  $f=fn(string $k)=>"JSON_UNQUOTE(JSON_EXTRACT(contact_json,'$.$k')) LIKE ? ESCAPE '!'";
-  $sql[]="SELECT order_id FROM rubizh_order_details WHERE contact_json LIKE ? ESCAPE '!' AND (".$f('name').' OR '.$f('recipient').' OR '.$f('city').')';array_push($args,$like,$like,$like,$like);
+  // Only the buyer's name, the recipient and the city match (R4-16), through the indexed crm_search column (PERF-4.3).
+  $sql[]="SELECT order_id FROM rubizh_order_details WHERE crm_search LIKE ? ESCAPE '!'";$args[]=$like;
  }
  $q2=$db->prepare(implode(' UNION ',$sql));$q2->execute($args);return array_map('intval',$q2->fetchAll(PDO::FETCH_COLUMN));
 }
@@ -182,7 +181,9 @@ function crmCustomers(PDO $db,array $q): array {
   $parts=[];if($found===null){$parts[]="o.order_number LIKE ?";$gargs[]=strtoupper($text).'%';}
   $ids2=array_values(array_unique([...($found??[]),...$byEmail]));$parts[]=$ids2?'o.id IN ('.implode(',',$ids2).')':'0=1';
   $gw[]='('.implode(' OR ',$parts).')';}
- if($segment!==''){$gw[]=$seg('1',$paidOrder,'o.created_at').'=?';$gargs[]=$segment;}
+ // PERF-4.4: with a segment the matching guests are few; walking the date index backwards with a row lookup per order
+ // (the plan chosen for ORDER BY … LIMIT) reads every order from disk on a cold server — scan and sort instead.
+ if($segment!==''){$gw[]=$seg('1',$paidOrder,'o.created_at').'=?';$gargs[]=$segment;$join.=' IGNORE INDEX FOR ORDER BY (crm_order_created)';}
  $guest="SELECT CONCAT('order:',o.id) id,o.created_at,'ORDER_CONTACT' source,".$seg('1',$paidOrder,'o.created_at')." segment FROM rubizh_customer_orders o$join LEFT JOIN rubizh_account_orders ao ON ao.order_id=o.id WHERE ".implode(' AND ',$gw);
  // Accounts are few: their statistics are computed once; guests are paged in SQL and merged in the same order
  // (created_at DESC, id) as one union would give.
@@ -198,7 +199,10 @@ function crmCustomers(PDO $db,array $q): array {
  $info=[];$stats=[];$verified=[];
  if($ids){$marks=implode(',',array_fill(0,count($ids),'?'));
   foreach(crmQuery($db,"SELECT a.id,CONCAT_WS(' ',a.first_name,a.last_name) name,a.email,a.phone phone_raw FROM rubizh_accounts a WHERE a.id IN ($marks)",$ids) as $r)$info[$r['id']]=$r;
-  $stats=array_column(crmQuery($db,"SELECT ao.customer_id,COUNT(*) orders,SUM($paidTotal) paid_total,MAX(o.created_at) last_order,SUM(o.status NOT IN ('cancelled','returned','completed','delivered')) active_orders FROM rubizh_account_orders ao JOIN rubizh_customer_orders o ON o.id=ao.order_id LEFT JOIN rubizh_np_order_confirmations c ON c.order_id=o.id WHERE ao.customer_id IN ($marks) GROUP BY ao.customer_id",$ids),null,'customer_id');
+  // Bank payments of these accounts' orders are summed once (not one correlated subquery per order): same meaning as $paid.
+  $pm="(SELECT mi.order_id,SUM(mi.amount)/100 paid FROM rubizh_account_orders ap JOIN rubizh_mono_invoices mi ON mi.order_id=ap.order_id WHERE ap.customer_id IN ($marks) AND EXISTS(SELECT 1 FROM rubizh_mono_events ev WHERE ev.invoice_id=mi.invoice_id AND ev.status='success') GROUP BY mi.order_id)";
+  $paidAcc="IF(COALESCE(pm.paid,0)>0,pm.paid,IF(COALESCE(c.payment_proof,'')<>'',o.total,0))";
+  $stats=array_column(crmQuery($db,"SELECT ao.customer_id,COUNT(*) orders,SUM($paidAcc) paid_total,MAX(o.created_at) last_order,SUM(o.status NOT IN ('cancelled','returned','completed','delivered')) active_orders FROM rubizh_account_orders ao JOIN rubizh_customer_orders o ON o.id=ao.order_id LEFT JOIN rubizh_np_order_confirmations c ON c.order_id=o.id LEFT JOIN $pm pm ON pm.order_id=o.id WHERE ao.customer_id IN ($marks) GROUP BY ao.customer_id",[...$ids,...$ids]),null,'customer_id');
   $verified=array_column(crmQuery($db,"SELECT customer_id,subject FROM rubizh_customer_identities WHERE provider='phone' AND customer_id IN ($marks)",$ids),'subject','customer_id');}
  if($guests){$marks=implode(',',array_fill(0,count($guests),'?'));
   foreach(crmQuery($db,"SELECT o.id,JSON_UNQUOTE(JSON_EXTRACT(d.contact_json,'$.name')) name,o.email,COALESCE(JSON_UNQUOTE(JSON_EXTRACT(d.contact_json,'$.phone_raw')),JSON_UNQUOTE(JSON_EXTRACT(d.contact_json,'$.phone'))) phone_raw,$paidTotal paid_total,o.created_at last_order,(o.status NOT IN ('cancelled','returned','completed','delivered')) active_orders FROM rubizh_customer_orders o JOIN rubizh_order_details d ON d.order_id=o.id LEFT JOIN rubizh_np_order_confirmations c ON c.order_id=o.id WHERE o.id IN ($marks)",$guests) as $r){$k='order:'.$r['id'];$info[$k]=['name'=>$r['name'],'email'=>$r['email'],'phone_raw'=>$r['phone_raw']];$stats[$k]=['orders'=>1,'paid_total'=>$r['paid_total'],'last_order'=>$r['last_order'],'active_orders'=>$r['active_orders']];}}
