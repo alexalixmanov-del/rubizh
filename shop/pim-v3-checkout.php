@@ -69,14 +69,25 @@ function pimV3ResolveLine(PDO $db,array $line,array $model,bool $lock,array &$to
 }
 
 /** Whole-order policy: any line needing confirmation → WAITING_CONFIRMATION, one payment later; no split. */
-function pimV3OrderDecision(array $lines,string $payment): array {
+/** D-52: pieces per SKU payable at once when PIM confirms stock only by status (no quantity); setting, else config, default 3. */
+function shopDirectPayMaxQty(?PDO $db=null): int {
+    $v=null;if($db){try{$q=$db->query("SELECT v FROM rubizh_crm_settings WHERE k='direct_pay_max_qty'");$v=$q?$q->fetchColumn():null;}catch(Throwable $e){$v=null;}}
+    if($v===null||$v===false)$v=function_exists('cfg')?cfg('direct_pay_max_qty'):null;
+    return max(1,min(100,(int)($v??3)));
+}
+function pimV3OrderDecision(array $lines,string $payment,?int $maxQty=null): array {
     $v3=(bool)array_filter($lines,fn($l)=>($l['contract_version']??null)===3);
     // Q-7: a legacy card order whose every line is in stock with a numeric (confirmed) quantity was already re-priced and
     // stock-checked by the server and is reserved at checkout, so it can be paid right away; anything else waits for the manager.
     if(!$v3){$now=$payment==='card'&&$lines&&!array_filter($lines,fn($l)=>($l['availability']??'')!=='in'||empty($l['stock_confirmed'])||($l['request_state']??'')!=='stock_check');
         return ['contract_version'=>null,'order_state'=>null,'legacy_status'=>$now?'confirmed':'new','payment_now'=>$now];}
     $confirm=(bool)array_filter($lines,fn($l)=>($l['contract_version']??null)!==3||empty($l['payment_allowed'])||!empty($l['requires_order_confirmation']))||$payment==='cod';
-    return ['contract_version'=>3,'order_state'=>$confirm?'WAITING_CONFIRMATION':'CONFIRMED','legacy_status'=>$confirm?'new':'confirmed','payment_now'=>!$confirm];
+    // D-52: a status-only stock (no quantity) is never a promise for any amount: above the limit per SKU (summed over
+    // all lines, kit units included) the manager confirms availability before payment.
+    $unknown=[];foreach($lines as $l)if(!empty($l['payment_allowed'])&&empty($l['stock_confirmed'])&&($l['sku']??'')!=='')$unknown[$l['sku']]=($unknown[$l['sku']]??0)+(float)$l['qty'];
+    $qtyReview=$unknown&&max($unknown)>($maxQty??shopDirectPayMaxQty());
+    $confirm=$confirm||$qtyReview;
+    return ['contract_version'=>3,'order_state'=>$confirm?'WAITING_CONFIRMATION':'CONFIRMED','legacy_status'=>$confirm?'new':'confirmed','payment_now'=>!$confirm,'confirmation_reason'=>$qtyReview?'QTY_UNCONFIRMED':null];
 }
 function pimV3RecordOrder(PDO $db,int $id,array $lines,array $decision,string $revision): void {
     if($decision['contract_version']!==3)return;

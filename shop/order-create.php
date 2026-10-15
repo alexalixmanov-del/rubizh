@@ -35,7 +35,7 @@ function shopCreateOrder(PDO $db,array $lines,array $c,array $delivery,string $p
         try{$expectedCents=shopMoney($opts['expected_total']??null);}catch(ShopPricingException $e){$expectedCents=null;}
         if($expectedCents!==shopMoney($total)||isset($opts['catalog_version'])&&$opts['catalog_version']!==$quote['catalog_version']){$db->rollBack();throw new ShopOrderConflict('PRICE_CHANGED',['quote'=>$quote],'Ціна або версія каталогу змінилася. Перевірте новий розрахунок та підтвердьте.');}
         if(isset($opts['before_insert']))($opts['before_insert'])();
-        $decision=pimV3OrderDecision($raw,$pay);
+        $decision=pimV3OrderDecision($raw,$pay,shopDirectPayMaxQty($db));
         $number='RB-'.gmdate('ymd').'-'.strtoupper(bin2hex(random_bytes(4)));$label=['branch'=>'Нова пошта · відділення','postomat'=>'Нова пошта · поштомат','courier'=>'Нова пошта · кур’єр'][$c['type']].' · '.$delivery['city'].' · '.$delivery['address'];
         $db->prepare("INSERT INTO rubizh_customer_orders(external_id,email,order_number,status,payment_status,total,currency,items_json,delivery_label,created_at,updated_at) VALUES(?,?,?,?,?,?,'UAH',?,?,UTC_TIMESTAMP(),UTC_TIMESTAMP())")->execute([$opts['external_id'],$c['email'],$number,$decision['legacy_status'],'pending',$total,json_encode($calc['lines'],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),$label]);
         $id=(int)$db->lastInsertId();pimV3RecordOrder($db,$id,$raw,$decision,(string)$quote['catalog_version']);

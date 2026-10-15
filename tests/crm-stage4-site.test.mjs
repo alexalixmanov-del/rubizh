@@ -68,3 +68,23 @@ test('D-51: accepting a FOP payment — in time, during reconciliation, after fi
 test('D-51: reservation conflict message is Ukrainian',()=>{
  const src=readFileSync(root+'/shop/reservations.php','utf8');assert.doesNotMatch(src,/Reservation differs; explicit inventory review required/);assert.match(src,/Резерв для цього замовлення/);
 });
+
+// ---- D-52: with a status-only stock (no quantity) only up to direct_pay_max_qty pieces per SKU are paid directly ----
+test('D-52: unknown stock quantity — ≤3 pcs per SKU pay now, more waits for the manager; known quantity unchanged; no API bypass',{skip,timeout:300000},async()=>{
+ const s=await startCrm({stock:50});
+ try{
+  const statusOnly=()=>s.sql("UPDATE variants SET pim_stock_quantity=NULL,pim_stock_status='CONFIRMED_BY_STATUS',pim_effective_availability='IN_STOCK',pim_payment_allowed=1,pim_order_submission_allowed=1 WHERE sku='RUB-F0001'");
+  statusOnly();
+  const state=id=>s.sql('SELECT status,pim_order_state FROM rubizh_customer_orders WHERE id='+id)[0];
+  const one=await s.checkout([{...line(),qty:1}]);assert.equal(state(one.id).pim_order_state,'CONFIRMED','1 pc pays now');
+  const three=await s.checkout([{...line(),qty:3}]);assert.equal(state(three.id).pim_order_state,'CONFIRMED','3 pcs pay now');
+  const four=await s.checkout([{...line(),qty:4}]);assert.equal(state(four.id).pim_order_state,'WAITING_CONFIRMATION','4 pcs wait for the manager');
+  assert.match(four.receipt.title,/Для такої кількості менеджер підтвердить наявність перед оплатою/);
+  const split=await s.checkout([{...line(),qty:2},{...line(),qty:2}]);assert.equal(state(split.id).pim_order_state,'WAITING_CONFIRMATION','same SKU in two lines is summed');
+  const unit=await s.checkout([{...line(),qty:4,kit_units:4}]);assert.equal(state(unit.id).pim_order_state,'WAITING_CONFIRMATION','«Для підрозділу» N counts all pieces');
+  const start=await s.post('/shop/payment-start.php',{csrf:four.csrf,order_id:four.id},{Cookie:four.cookie});assert.notEqual(start.status,200,'no MonoPay before the manager confirms');assert.equal(+s.sql('SELECT COUNT(*) n FROM rubizh_mono_invoices WHERE order_id='+four.id)[0].n,0);
+  const m=await s.login('MANAGER');const tab=(await m.get('/orders?view=confirmation')).data.data.rows.map(o=>o.id);assert.ok(tab.includes(four.id)&&tab.includes(split.id),'CRM lists them under «Очікують підтвердження»');
+  s.sql("UPDATE variants SET pim_stock_quantity=50 WHERE sku='RUB-F0001'");
+  const known=await s.checkout([{...line(),qty:5}]);assert.equal(state(known.id).pim_order_state,'CONFIRMED','known quantity: reserve by number, unchanged');
+ }finally{s.stop();}
+});
