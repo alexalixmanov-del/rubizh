@@ -5342,7 +5342,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                         color: t.bigPref === e ? "var(--link)" : "var(--legacy-edefea)"
                     }
                 })),
-                b2bTypes: [ "ФОП", "ТОВ" ].map(e => ({
+                b2bTypes: [ "Фізособа", "ФОП", "ТОВ", "Благодійний фонд", "Військова частина" ].map(e => ({
                     t: e,
                     pick: () => this.setState({
                         b2bType: e
@@ -7209,22 +7209,32 @@ this.setState(s=>{const cart=s.cart.map(l=>({...l}));for(const a of added){const
             t.doneMain=async()=>{if(stage==='cancelled'){this.go('catalog');return;}if(stage==='paid'){window.location.assign('/auth/?tab=orders&order='+receipt.id);return;}if(receipt.payment_method==='invoice'){this.setState(s=>({receiptRequisitesOpen:!s.receiptRequisitesOpen}));return;}if(receipt.payment_method==='cod'){window.location.assign(receipt.payment_url);return;}try{const result=await this.storeRequest('/shop/payment-start.php',{order_id:receipt.id});if(!/^https:\/\/(?:pay\.mbnk\.biz|pay\.monobank\.ua)\//.test(result.url))throw new Error('Рахунок потребує звірки.');window.location.assign(result.url);}catch(error){this.setState({receiptActionError:error.message});}};
             if(stage==='pending'&&receipt?.payment_ready!==true){t.donePending=false;t.doneRequisites=false;t.doneDeadline='';t.doneBadge='Очікує підтвердження';t.doneNote='Ми отримали замовлення. Менеджер перевірить наявність, комплектацію та строк відправлення. Оплата стане доступною після підтвердження.';t.doneAmountLabel='Сума замовлення';t.doneMainLabel='Переглянути замовлення →';t.doneNext='Очікуйте підтвердження менеджера та повідомлення з переходом до оплати.';t.doneMain=()=>window.location.assign(receipt.payment_url||'/auth/?tab=orders');}
             t.doneActionError=e.receiptActionError||'';
-            t.b2bEmail = e.b2bEmail || "", t.b2bQty = e.b2bQty || "", t.b2bText = e.b2bText || "",
-            t.notifyEmail = e.notifyEmail || "";
-            for (const e of [ "b2bEmail", "b2bQty", "b2bText", "notifyEmail" ]) t["on" + e[0].toUpperCase() + e.slice(1)] = t => this.setState({
+            t.b2bEmail = e.b2bEmail || "", t.b2bQty = e.b2bQty || "", t.b2bText = e.b2bText || "", t.b2bName = e.b2bName || "", t.b2bPhone = e.b2bPhone || "",
+            t.notifyEmail = e.notifyEmail || "", t.b2bConsent = !!e.b2bConsent, t.b2bBusy = !!e.b2bBusy;
+            for (const e of [ "b2bEmail", "b2bQty", "b2bText", "b2bName", "b2bPhone", "notifyEmail" ]) t["on" + e[0].toUpperCase() + e.slice(1)] = t => this.setState({
                 [e]: t.target.value,
                 b2bSent: !1
             });
+            t.onB2bConsent = t => this.setState({ b2bConsent: !!t.target.checked });
             const k = (t, e) => window.location.assign("mailto:info@rubizh.shop?subject=" + encodeURIComponent(t) + "&body=" + encodeURIComponent(e));
-            if (t.sendB2B = () => {
-                /^\d{8,10}$/.test(e.invoiceTax || "") && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.b2bEmail || "") && (e.b2bText || "").trim() ? (k("Оптовий запит РУБІЖ", [ (e.b2bType || "ФОП") + ": " + e.invoiceTax, "Email: " + e.b2bEmail, "Кількість комплектів: " + (e.b2bQty || "уточнити"), e.b2bText ].join("\n")),
-                this.setState({
-                    b2bSent: !0,
-                    storeError: ""
-                })) : this.setState({
-                    storeError: "Вкажіть ЄДРПОУ/ІПН, email і склад замовлення."
-                });
-            }, t.b2bSentText = "Підготували лист у вашій поштовій програмі. Натисніть у ній «Надіслати». За потреби прикріпіть файл до листа.",
+            // D-54: the wholesale request is saved on the server and handled in CRM (no mailto).
+            if (t.sendB2B = async () => {
+                if (e.b2bBusy) return;
+                const types = { "Фізособа": "PERSON", "ФОП": "FOP", "ТОВ": "LLC", "Благодійний фонд": "CHARITY", "Військова частина": "MILITARY" };
+                const phone = (e.b2bPhone || "").replace(/\D/g, "");
+                if ((e.b2bName || "").trim().length < 2 || !/^(?:380\d{9}|0\d{9})$/.test(phone)) return void this.setState({ storeError: "Вкажіть ім’я та телефон у форматі +380XXXXXXXXX." });
+                if (!(e.b2bText || "").trim()) return void this.setState({ storeError: "Опишіть склад замовлення: позиції та розміри." });
+                if (!e.b2bConsent) return void this.setState({ storeError: "Потрібна згода на обробку персональних даних." });
+                this._b2bRequestId = this._b2bRequestId || Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, "0")).join("");
+                this.setState({ b2bBusy: !0, storeError: "" });
+                try {
+                    const r = await this.storeRequest("/shop/wholesale-request.php", { request_id: this._b2bRequestId, name: e.b2bName || "", phone: e.b2bPhone || "", buyer_type: types[e.b2bType || "ФОП"] || "FOP", tax_id: e.invoiceTax || "", email: e.b2bEmail || "", kits: (e.b2bQty || "").trim() ? (e.b2bQty || "").trim() : null, composition: e.b2bText || "", priority: "donation" === e.bigPref ? "DONATION" : "PRICE", consent: !0 });
+                    this._b2bRequestId = null;
+                    this.setState({ b2bSent: !0, b2bBusy: !1, b2bMessage: r.message, b2bText: "", b2bQty: "" });
+                } catch (r) {
+                    this.setState({ b2bBusy: !1, storeError: r.message || "Заявку не збережено. Спробуйте ще раз." });
+                }
+            }, t.b2bSentText = e.b2bMessage || "Заявку прийнято. Менеджер зв’яжеться з вами протягом робочого дня.",
             t.sendNotify = () => {
                 /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.notifyEmail || "") ? (k("Наявність товару РУБІЖ", "Прошу уточнити надходження: " + s.name + "\n" + new URL("/product/" + s.slug, window.location.origin).href + "\nEmail: " + e.notifyEmail),
                 this.setState({

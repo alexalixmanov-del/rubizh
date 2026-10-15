@@ -1,6 +1,6 @@
 // Stage 4, block 4-SITE: storefront and payment fixes D-50…D-54 (regression-first).
 import {test} from 'node:test';import assert from 'node:assert/strict';import {chromium} from 'playwright';
-import {startCrm,line} from './helpers/crm-fixture.mjs';
+import {startCrm,line,password} from './helpers/crm-fixture.mjs';
 const skip=!process.env.RUBIZH_TEST_MYSQL_SOCKET;
 
 test('D-50: payment return, settings and NP manager pages allow their own scripts; receipt reloads after the bank status changes',{skip,timeout:240000},async()=>{
@@ -106,5 +106,41 @@ test('D-53: storefront, FAQ, offer and e-mail texts match the payment process; p
   const page=await browser.newPage();await page.goto(s.base+'/product/kurtka-fixture-softshell');await page.waitForLoadState('networkidle');
   const sizes=page.getByRole('button',{name:/^M$/});if(await sizes.count())await sizes.first().click();
   const text=await page.locator('body').innerText();assert.match(text,/Після оплати; ТТН з’явиться в кабінеті|Залежить від обраного розміру/,'in-stock product: no invented shipment date');assert.doesNotMatch(text,/Уточнимо після підтвердження/);
+ }finally{await browser.close();s.stop();}
+});
+
+test('D-54: wholesale request is stored on the server, validated, idempotent and visible in CRM; the homepage form sends it without mailto',{skip,timeout:240000},async()=>{
+ const s=await startCrm({frontend:true,extraConfig:",'staging_allow_loopback'=>true"});const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',args:['--no-sandbox']});
+ try{
+  const c=await s.get('/shop/customer.php'),cookie=c.headers.get('set-cookie').split(';')[0],csrf=c.data.csrf;const send=b=>s.post('/shop/wholesale-request.php',{csrf,...b},{Cookie:cookie});
+  const rid=()=>crypto.randomUUID().replaceAll('-','');
+  const ok={request_id:rid(),name:'Ігор',phone:'067 123 45 67',buyer_type:'MILITARY',tax_id:'',email:'',kits:'12',composition:'Куртка Softshell M ×6, L ×6',priority:'DONATION',consent:true};
+  assert.equal((await s.post('/shop/wholesale-request.php',{...ok},{Cookie:cookie})).status,403,'CSRF required');
+  for(const [patch,re] of [[{consent:false},/згода/],[{name:''},/ім’я/i],[{phone:'12345'},/\+380/],[{buyer_type:'ARMY'},/тип покупця/],[{tax_id:'12345670'},/контрольна цифра/],[{tax_id:'1234567890'},/контрольна цифра/],[{email:'x@'},/email/],[{composition:''},/склад/i],[{kits:'0'},/комплектів/]]){
+   const r=await send({...ok,request_id:rid(),...patch});assert.equal(r.status,400,JSON.stringify(patch));assert.match(r.data.error,re);
+  }
+  assert.equal(+s.sql('SELECT COUNT(*) n FROM rubizh_wholesale_requests')[0].n,0,'invalid requests are not stored');
+  const valid=await send({...ok,tax_id:'14360570'});assert.equal(valid.status,200,JSON.stringify(valid.data));assert.match(valid.data.number,/^WS-\d{6}-[0-9A-F]{6}$/);assert.match(valid.data.message,/^Заявку WS-.* прийнято/);
+  const again=await send({...ok,tax_id:'14360570'});assert.equal(again.data.number,valid.data.number,'same request_id → same request');assert.equal(again.data.repeated,true);
+  assert.equal((await send({...ok,tax_id:'14360570',composition:'інше'})).status,400,'same request_id with other data is rejected');
+  assert.equal((await send({...ok,request_id:rid(),tax_id:'3184710691',buyer_type:'FOP'})).status,200,'valid РНОКПП');
+  const row=s.sql("SELECT * FROM rubizh_wholesale_requests WHERE number='"+valid.data.number+"'")[0];
+  assert.equal(row.phone,'+380671234567');assert.equal(row.buyer_type,'MILITARY');assert.equal(row.priority,'DONATION');assert.equal(+row.kits,12);assert.equal(row.state,'NEW');assert.ok(row.consent_at);
+  assert.equal(+s.sql("SELECT COUNT(*) n FROM rubizh_crm_notifications WHERE kind='wholesale_request' AND entity_id='"+row.id+"'")[0].n,2,'MANAGER and OWNER are notified');
+  const manager=await s.login('MANAGER');const list=await manager.get('/wholesale');assert.equal(list.status,200);assert.equal(list.data.data.rows.length,2);assert.ok(!('request_id' in list.data.data.rows[0])&&!('payload_hash' in list.data.data.rows[0]));
+  const upd=await manager.send('/wholesale/'+row.id,{state:'IN_PROGRESS',note:'Подзвонив'});assert.equal(upd.status,200,JSON.stringify(upd.data));assert.equal(upd.data.data.state,'IN_PROGRESS');
+  assert.equal((await (await s.login('WAREHOUSE')).get('/wholesale')).status,403,'warehouse has no access');
+  const html=readFileSync(root+'/index.html','utf8'),bundle=readFileSync(root+'/assets/shop-client.2026101101.js','utf8');
+  assert.match(html,/placeholder="Вкажіть позиції та розміри, без прізвищ"/);assert.doesNotMatch(html,/Файл можна прикріпити до підготовленого листа/);assert.doesNotMatch(bundle,/Оптовий запит РУБІЖ/,'no mailto for the wholesale form');
+  const page=await browser.newPage({viewport:{width:390,height:844}});const nav=[];page.on('request',r=>{if(r.url().startsWith('mailto:'))nav.push(r.url());});
+  await page.goto(s.base+'/');await page.locator('#b2b-form').scrollIntoViewIfNeeded();
+  await page.getByRole('button',{name:'Військова частина'}).click();await page.getByLabel('Ім’я',{exact:true}).fill('Ігор');await page.getByLabel('Телефон',{exact:true}).fill('+380671234567');
+  await page.getByLabel('Склад замовлення').fill('Куртка Softshell M ×2');await page.getByLabel('Згода на обробку персональних даних').check();
+  await page.getByRole('button',{name:'Надіслати заявку'}).click();await page.getByText(/Заявку WS-\d{6}-[0-9A-F]{6} прийнято/).waitFor({timeout:15000});
+  assert.deepEqual(nav,[]);assert.equal(s.sql("SELECT buyer_type FROM rubizh_wholesale_requests ORDER BY id DESC LIMIT 1")[0].buyer_type,'MILITARY');
+  const crm=await browser.newPage({viewport:{width:1440,height:900}});await crm.goto(s.base+'/crm/');await crm.getByLabel('Email').fill('manager@fixture.test');await crm.getByLabel('Пароль',{exact:true}).fill(password);await crm.getByRole('button',{name:'Увійти'}).click();await crm.getByRole('navigation',{name:'Основне'}).waitFor();
+  await crm.goto(s.base+'/crm/customers?segment=WHOLESALE');await crm.getByRole('table').getByText(valid.data.number).waitFor();
+  const card=crm.getByRole('row').filter({hasText:valid.data.number});await card.getByRole('button',{name:'Змінити'}).click();await crm.getByLabel('Статус').selectOption('QUOTED');await crm.getByRole('dialog').getByRole('button').last().click();
+  await crm.getByRole('row').filter({hasText:valid.data.number}).getByText('Прорахунок надіслано').waitFor();assert.equal(s.sql("SELECT state FROM rubizh_wholesale_requests WHERE number='"+valid.data.number+"'")[0].state,'QUOTED');
  }finally{await browser.close();s.stop();}
 });

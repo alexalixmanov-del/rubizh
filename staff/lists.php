@@ -393,7 +393,7 @@ function crmExportCustomers(PDO $db,array $actor,array $q,bool $full,string $rea
 function crmWholesaleList(PDO $db,array $q): array {
  $p=crmPage($q);if(!crmApiTableExists($db,'rubizh_wholesale_requests'))return ['rows'=>[],'pagination'=>crmPagination($p,0)];
  $total=(int)crmOne($db,'SELECT COUNT(*) n FROM rubizh_wholesale_requests')['n'];
- $rows=crmQuery($db,"SELECT * FROM rubizh_wholesale_requests ORDER BY id DESC LIMIT {$p['limit']} OFFSET {$p['offset']}");foreach($rows as &$r){$r['id']=(int)$r['id'];$r['phone_masked']=crmMaskPhone($r['phone']??null);}unset($r);
+ $rows=crmQuery($db,"SELECT id,number,name,phone,buyer_type,tax_id,email,kits,composition,priority,state,manager_note,created_at,updated_at FROM rubizh_wholesale_requests ORDER BY id DESC LIMIT {$p['limit']} OFFSET {$p['offset']}");foreach($rows as &$r){$r['id']=(int)$r['id'];$r['phone_masked']=crmMaskPhone($r['phone']??null);}unset($r);
  return ['rows'=>$rows,'pagination'=>crmPagination($p,$total)];
 }
 function crmWholesaleUpdate(PDO $db,array $actor,int $id,array $b): array {
