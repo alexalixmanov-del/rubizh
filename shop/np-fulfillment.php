@@ -178,7 +178,7 @@ function npCreate(PDO $db,int $order,int $id,string $actor): array {
         $recipient=npRecipient($o['contact'],$delivery);$props=npSaveProperties($s,$origin,$sender,$delivery,$o['contact'],$recipient['ref'],$recipient['contact_ref'],$recipient['address_ref']);
         $db->prepare('UPDATE rubizh_order_shipments SET payload_json=? WHERE id=?')->execute([json_encode($props,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),$id]);
         // A5: cash on delivery never reaches the carrier, whatever the caller built.
-        if(array_intersect_key($props,array_flip(['BackwardDeliveryData','AfterpaymentOnGoodsCost','RedeliveryCalculate'])))throw new NpRejected('Післяплата заборонена.');
+        if(array_intersect_key($props,array_flip(['BackwardDeliveryData','AfterpaymentOnGoodsCost','RedeliveryCalculate'])))throw new NpRejected('Повернення грошей через НП заборонене: оплата лише карткою або на рахунок.');
         $rows=npApiCall('InternetDocument','save',$props);$r=$rows[0]??[];
         if(!npRef($r['Ref']??'')||!preg_match('/^[0-9]{14}$/D',(string)($r['IntDocNumber']??'')))throw new NpUnknownResult('НП не підтвердила номер ТТН.');
         $db->prepare("UPDATE rubizh_order_shipments SET status='created',np_document_ref=?,tracking_number=?,result_json=?,delivery_cost=?,error='',updated_at=UTC_TIMESTAMP() WHERE id=?")->execute([$r['Ref'],$r['IntDocNumber'],json_encode($r,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),is_numeric($r['CostOnSite']??null)?$r['CostOnSite']:null,$id]);

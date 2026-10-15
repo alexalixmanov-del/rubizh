@@ -2,7 +2,7 @@
 // staging configs/tests, private configs, DB dumps, supplier files, keys, tokens or developer/sandbox paths.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtempSync,readFileSync} from 'node:fs';
+import {mkdtempSync,readFileSync,readdirSync,existsSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {execFileSync} from 'node:child_process';
@@ -37,4 +37,17 @@ test('RC1 archive: no dot-files except .htaccess, no Node dev tooling; contracts
   // interrupted atomic installs leave *.deploy-<pid>.tmp copies of source next to the live file.
   'cache/catalog-v1.json','shop/order.php.deploy-1234.tmp','media/x.webp.0a1b2c3d.tmp'])assert.ok(blocked(p),p+' must not be web-readable');
  for(const p of ['index.html','storefront.php','assets/theme.js','robots.txt','sitemap.php'])assert.ok(!blocked(p),p+' stays public');
+});
+// Stage 4 Quality Gate (ТЗ §12, A5): the production build — the SITE release archive and the CRM bundle — carries no
+// cash-on-delivery wording and no demo/test markers. Superseded storefront bundles that nothing references are not shipped.
+test('production build: no «Післяплата»/«накладен»/«післяопл», no DEMO- or example.invalid in the SITE archive and the CRM dist',()=>{
+ const zip=join(mkdtempSync(join(tmpdir(),'site-rel-')),'r.zip');execFileSync('python3',[join(root,'dev/package-release.py'),zip]);
+ const files=JSON.parse(execFileSync('python3',['-c',"import sys,zipfile,json;z=zipfile.ZipFile(sys.argv[1]);print(json.dumps({n:z.read(n).decode('utf-8','replace') for n in z.namelist() if n.endswith(('.php','.js','.css','.html','.json','.txt','.htaccess','.xml','.svg'))}))",zip],{maxBuffer:1<<29}));
+ const crm=(process.env.RUBIZH_CRM_DIR||'/workspace/crm.rubizh')+'/dist';
+ const walk=d=>readdirSync(d,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(join(d,e.name)):[join(d,e.name)]);
+ if(existsSync(crm))for(const f of walk(crm))files['crm/'+f.slice(crm.length+1)]=readFileSync(f,'utf8');
+ const bad=[];for(const [name,text] of Object.entries(files))for(const re of [/Післяплата/u,/накладен/iu,/післяопл/iu,/DEMO-/u,/example\.invalid/iu])if(re.test(text))bad.push(name+' '+re);
+ assert.deepEqual(bad,[]);
+ assert.ok(files['rubizh/assets/shop-client.2026101101.js'],'the live storefront bundle ships');
+ for(const n of Object.keys(files).filter(n=>/^rubizh\/assets\/[^/]+\.(js|css)$/.test(n))){const base=n.split('/').pop();assert.ok(Object.entries(files).some(([k,t])=>k!==n&&t.includes(base)),base+' is referenced by a shipped file');}
 });
