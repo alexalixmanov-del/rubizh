@@ -168,6 +168,17 @@ function shopUseInvoice(PDO $db,int $id): void {
  npLocked($db,$id,function()use($db,$id){$o=npOrder($db,$id);if(!shopNoOpenCardInvoice($db,$id)||!in_array($o['payment_status'],['pending','failed'],true)||!in_array($o['status'],['new','confirmed','processing'],true))throw new RuntimeException('Спосіб оплати зараз змінити не можна.');
  $c=$o['contact'];$c['payment']='invoice';$db->beginTransaction();try{$db->prepare('UPDATE rubizh_order_details SET contact_json=? WHERE order_id=?')->execute([json_encode($c,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),$id]);$db->prepare("UPDATE rubizh_customer_orders SET payment_status='pending',updated_at=UTC_TIMESTAMP() WHERE id=?")->execute([$id]);npAudit($db,str_repeat('0',32),'customer_invoice',$id);$db->commit();}catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}});
 }
+/**
+ * Why an order cannot be cancelled now (null = it can). $ignoreOpenInvoice: a staff cancellation closes the open card
+ * invoice itself, after this check passed (R4-10: nothing is closed at the bank for a cancellation that will be refused).
+ */
+function shopCancelBlocker(PDO $db,int $id,bool $ignoreOpenInvoice=false,bool $throw=true): ?string {
+ $o=npOrder($db,$id);$why=null;
+ if(!in_array($o['status'],['new','confirmed','processing'],true)||in_array($o['payment_status'],['paid','refunded'],true)||(!$ignoreOpenInvoice&&!shopNoOpenCardInvoice($db,$id)))$why='Для цього замовлення потрібне скасування через менеджера.';
+ else foreach(npShipments($db,$id) as $s)if(!in_array($s['status'],['draft','error','cancelled'],true)){$why='Посилку вже передано на оформлення. Зверніться до менеджера.';break;}
+ if($why!==null&&$throw)throw new RuntimeException($why);
+ return $why;
+}
 /** $actor/$reason: a staff cancellation (CRM) is audited as such, never as the customer's (ARCH-12). */
 function shopCancelOrder(PDO $db,int $id,bool $expired=false,?string $actor=null,string $reason=''): void {
  npLocked($db,$id,function()use($db,$id,$expired,$actor,$reason){$o=npOrder($db,$id);if($o['status']==='cancelled'){$db->beginTransaction();try{shopReservationTransition($db,$id,$expired?'EXPIRED':'RELEASED','SYSTEM');$db->commit();}catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}return;}

@@ -94,6 +94,7 @@ function shopCompleteOrder(PDO $db,int $order,string $actor): void {
     shopOpsStaff($actor);
     npLocked($db,$order,fn()=>shopOpsTx($db,function()use($db,$order,$actor){
         $o=npOrder($db,$order);if($o['status']==='completed')return;
+        if(in_array($o['status'],['cancelled','returned','partially_returned'],true))throw new RuntimeException('Повернене або скасоване замовлення не завершують.');
         $ships=array_values(array_filter(npShipments($db,$order),fn($s)=>$s['status']!=='cancelled'));$left=npRemaining(npLines($db,$order),$ships);
         $covered=$ships&&!array_filter($left,fn($l)=>$l['qty']>0.00001);$delivered=$ships&&!array_filter($ships,fn($s)=>$s['status']!=='delivered');
         if(!$covered||!$delivered)throw new ShopOrderConflict('NOT_DELIVERED',[],'Завершити можна, коли всі посилки доставлено.');

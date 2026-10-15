@@ -22,6 +22,7 @@ const SYN_BUYERS=['a'=>['aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa01','+380670000001','По
 
 function synGuard(): void {
     if(PHP_SAPI!=='cli')throw new RuntimeException('CLI only.');
+    if(preg_match('~(^|//|\.)rubizh\.shop(/|$)~i',(string)cfg('public_base_url')))throw new RuntimeException('Synthetic data is refused for the production address.');
     if(cfg('environment')!=='staging'||!monoMockEnabled()||!npMockEnabled())throw new RuntimeException('Synthetic data needs the staging stand: environment=staging, mono_mock=true, np_mock=true.');
     foreach(['crm_refund_live','crm_np_ttn_live','crm_np_tracking_live','crm_sms_live','crm_email_live'] as $flag)if(cfg($flag)===true)throw new RuntimeException("Live flag $flag is on: synthetic data is refused.");
 }

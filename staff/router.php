@@ -15,7 +15,7 @@ function crmMessages(): array {
   'VERSION_REQUIRED'=>'Оновіть сторінку й повторіть дію.','NOT_FOUND'=>'Не знайдено.','METHOD_NOT_ALLOWED'=>'Дія недоступна.','CSRF_INVALID'=>'Сесію оновлено. Оновіть сторінку й повторіть дію.',
   'HTTPS_REQUIRED'=>'Потрібне захищене з’єднання.','PAYLOAD_TOO_LARGE'=>'Запит завеликий.','INVALID_JSON'=>'Перевірте введені дані.','STAFF_SCHEMA_REQUIRED'=>'CRM оновлюється. Спробуйте пізніше.','SERVICE_UNAVAILABLE'=>'Сервіс тимчасово недоступний. Дію не виконано.',
   'WEAK_PASSWORD'=>'Пароль занадто простий: щонайменше 12 символів, не з переліку поширених і не з вашого email.','TOKEN_INVALID'=>'Посилання недійсне або вже використане. Попросіть нове.','STAFF_EXISTS'=>'Співробітник з таким email уже є.',
-  'LAST_OWNER_REQUIRED'=>'Має залишитися щонайменше один активний власник.','CRM_SECRET_KEY_MISSING'=>'Двофакторна перевірка ще не налаштована на сервері.','TOTP_ALREADY_ENABLED'=>'Двофакторну перевірку вже ввімкнено.','TOTP_SETUP_REQUIRED'=>'Спочатку почніть підключення.',
+  'LAST_OWNER_REQUIRED'=>'Має залишитися щонайменше один активний власник.','CRM_SECRET_KEY_MISSING'=>'Двофакторна перевірка ще не налаштована на сервері.','TOTP_ALREADY_ENABLED'=>'Двофакторну перевірку вже ввімкнено.','TOTP_SETUP_REQUIRED'=>'Спочатку почніть підключення.','TOTP_ENROLL_GRANT_REQUIRED'=>'Підключення двофакторної перевірки доступне за посиланням від власника (запрошення або скидання пароля).',
   'REASON_REQUIRED'=>'Вкажіть причину (6–400 символів).','INVALID_ASSIGNEE'=>'Цьому співробітнику не можна призначити замовлення.','VERIFIED_PAYMENT_REQUIRED'=>'Немає підтвердженої банком оплати.',
   'REFUND_LIMIT_EXCEEDED'=>'Сума перевищує доступний до повернення залишок.','REFUND_RECONCILIATION_REQUIRED'=>'Попереднє повернення потребує звірки з банком.','PROVIDER_RESULT_UNKNOWN'=>'Банк або перевізник не підтвердив результат. Перевірте перед повтором.',
   'LINE_OUT_OF_STOCK'=>'Є позиція без наявності: замініть або приберіть її перед підтвердженням.','INVALID_STATE_TRANSITION'=>'Цей перехід недоступний.','PAID_ORDER_REQUIRED'=>'Дія доступна лише для оплаченого замовлення.',
@@ -84,13 +84,17 @@ function crmDispatch(): never {
   if($route['auth']==='staff')session_write_close();
   if($key!==null){
    $hash=hash('sha256',$actor['id'].'|'.$route['id'].'|'.$key);$bodyHash=hash('sha256',json_encode([$params,$clean],JSON_THROW_ON_ERROR));
+   // Concurrent repeats of one key wait for the first one (code review M5) instead of running the handler twice.
+   $GLOBALS['crm_idem_lock']='crm-idem-'.substr($hash,0,40);if((int)$db->query('SELECT GET_LOCK('.$db->quote($GLOBALS['crm_idem_lock']).',10)')->fetchColumn()!==1)throw new CrmError('SERVICE_UNAVAILABLE',503);
    $old=crmOne($db,'SELECT * FROM rubizh_crm_idempotency WHERE key_hash=?',[$hash]);
    if($old){if(!hash_equals($old['body_hash'],$bodyHash))throw new CrmError('IDEMPOTENCY_CONFLICT',409);header('Idempotent-Replay: true');crmOut(json_decode($old['response_json'],true),(int)$old['status']);}
    $GLOBALS['crm_idempotency_key']=$key;
   }
   $data=crmHandle($db,$actor,$route,$params,$clean,$query,$key);
   $status=!empty($route['created'])?201:200;
-  if($key!==null)$db->prepare('INSERT IGNORE INTO rubizh_crm_idempotency(key_hash,route,body_hash,status,response_json,created_at) VALUES(?,?,?,?,?,UTC_TIMESTAMP())')->execute([$hash,$route['id'],$bodyHash,$status,json_encode($data,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE)]);
+  // R4-06: one-time invite/reset links are never kept in the replay store; a replay says the link was already issued.
+  $stored=in_array($route['id'],['staff.invite','staff.reset'],true)&&is_array($data)?['url'=>null,'expires_at'=>$data['expires_at']??null,'delivery'=>$data['delivery']??null,'replayed'=>true]:$data;
+  if($key!==null){$db->prepare('INSERT IGNORE INTO rubizh_crm_idempotency(key_hash,route,body_hash,status,response_json,created_at) VALUES(?,?,?,?,?,UTC_TIMESTAMP())')->execute([$hash,$route['id'],$bodyHash,$status,json_encode($stored,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE)]);$db->query('SELECT RELEASE_LOCK('.$db->quote($GLOBALS['crm_idem_lock']).')');}
   crmOut($data,$status);
  }catch(Throwable $e){crmFail($e,$db??null);}
 }

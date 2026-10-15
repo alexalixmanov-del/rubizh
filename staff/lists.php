@@ -41,6 +41,7 @@ function crmHandleMore(PDO $db,array $actor,array $route,array $p,array $b,array
   'search'=>crmSearch($db,$actor,(string)($q['q']??'')),
   'wholesale.list'=>crmWholesaleList($db,$q),
   'wholesale.update'=>crmWholesaleUpdate($db,$actor,$id,$b),
+  'wholesale.phone'=>crmWholesalePhone($db,$actor,$id),
   default=>throw new CrmError('NOT_FOUND',404),
  };
 }
@@ -59,8 +60,10 @@ function crmPreferences(PDO $db,array $actor,array $b): array {
 }
 /** Own password change: the current password is required; other sessions end, this one stays. */
 function crmPasswordChange(PDO $db,array $actor,array $b): array {
- $u=crmOne($db,'SELECT password_hash FROM rubizh_staff_users WHERE id=?',[$actor['id']]);
- if(!$u||!password_verify($b['current'],$u['password_hash']))throw new CrmError('REAUTH_FAILED',401);
+ $u=crmOne($db,'SELECT password_hash FROM rubizh_staff_users WHERE id=?',[$actor['id']]);$k=hash('sha256','account|'.mb_strtolower((string)$actor['email']));
+ // R4-09: wrong current passwords count like failed logins of the account (8 per 15 minutes here).
+ if(!rubizhRateCheck('staff-password-change',$k,8,900))throw new CrmError('RATE_LIMITED',429,['retry_after'=>900]);
+ if(!$u||!password_verify($b['current'],$u['password_hash'])){rubizhRateAllow('staff-password-change',$k,PHP_INT_MAX,900);rubizhRateAllow('staff-login-account',$k,PHP_INT_MAX,900);throw new CrmError('REAUTH_FAILED',401);}
  crmPasswordPolicy($b['password'],$actor['email']);
  $db->prepare('UPDATE rubizh_staff_users SET password_hash=?,updated_at=UTC_TIMESTAMP() WHERE id=?')->execute([crmPasswordHash($b['password']),$actor['id']]);
  crmSessionsRevoke($db,$actor['id'],crmSessionKey());crmAudit($db,$actor,'security',$actor['id'],'password.change',[],['other_sessions_revoked'=>true]);
@@ -181,7 +184,7 @@ function crmSegment(array $c,array $s): string {
  return $orders>=1?'NEW':'NO_ORDERS';
 }
 function crmCustomers4(PDO $db,array $actor,array $q): array {
- $r=crmCustomers($db,$q);$s=crmSettingsValues($db);
+ $r=crmCustomers($db,['_phones'=>crmCan($actor,'customer.phone.full')]+$q);$s=crmSettingsValues($db);
  foreach($r['rows'] as &$c){$c['segment']=$c['segment']??crmSegment($c,$s);$c['phone_masked']=crmMaskPhone($c['phone']??null);$c['paid_total_minor']=(int)round((float)($c['paid_total']??0)*100);$c['orders']=(int)$c['orders'];unset($c['phone'],$c['phone_raw']);if(!crmCan($actor,'order.finance.view'))$c['paid_total_minor']=null;}unset($c);
  // D-60: the segment filter runs in SQL before pagination (crmCustomers).
  return $r;
@@ -193,8 +196,14 @@ function crmCustomer4(PDO $db,array $actor,string $id): array {
  return $r;
 }
 /** Full phone only for MANAGER/SUPPORT/OWNER, and every view is recorded (ТЗ 7.7). */
+/** R4-05: full phone numbers — 30 per hour per staff member; above that the OWNER is alerted. */
+function crmRevealQuota(PDO $db,array $actor): void {
+ if(rubizhRateAllow('staff-phone-reveal',$actor['id'],30,3600))return;
+ crmNotify($db,'role:OWNER','phone_reveal_limit','staff',$actor['id'],'Багато переглядів повних телефонів: '.$actor['name'],true,'reveal:'.$actor['id'].':'.gmdate('YmdH'));
+ header('Retry-After: 3600');throw new CrmError('RATE_LIMITED',429,['retry_after'=>3600]);
+}
 function crmCustomerPhone(PDO $db,array $actor,string $id): array {
- $phone=crmCustomerRawPhone($db,$id);
+ crmRevealQuota($db,$actor);$phone=crmCustomerRawPhone($db,$id);
  crmAudit($db,$actor,'customer',$id,'customer.phone_view',[],['viewed'=>true]);
  return ['phone'=>$phone];
 }
@@ -263,6 +272,7 @@ function crmTasks(PDO $db,array $actor,array $q): array {
 function crmTaskCreate(PDO $db,array $actor,array $b): array {
  if(isset($b['order_id']))crmOrder($db,$b['order_id'],$actor);
  if(isset($b['assignee_id'])&&!crmOne($db,'SELECT id FROM rubizh_staff_users WHERE id=? AND enabled=1',[$b['assignee_id']]))throw new CrmError('INVALID_ASSIGNEE',400);
+ if(isset($b['due_at'])){$d=DateTimeImmutable::createFromFormat(strlen($b['due_at'])===10?'!Y-m-d':'!Y-m-d H:i',$b['due_at'],new DateTimeZone('Europe/Kyiv'));$e=DateTimeImmutable::getLastErrors();if(!$d||($e&&($e['warning_count']||$e['error_count'])))throw new CrmError('INVALID_REQUEST',400,['fields'=>['$.due_at']]);}
  $due=isset($b['due_at'])?(new DateTimeImmutable($b['due_at'].(strlen($b['due_at'])===10?' 18:00':''),new DateTimeZone('Europe/Kyiv')))->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s'):null;
  $db->prepare("INSERT INTO rubizh_crm_tasks(title,body,order_id,assignee_id,state,due_at,created_by,created_at,updated_at) VALUES(?,?,?,?,'OPEN',?,?,UTC_TIMESTAMP(),UTC_TIMESTAMP())")->execute([trim($b['title']),trim((string)($b['body']??'')),$b['order_id']??null,$b['assignee_id']??$actor['id'],$due,$actor['id']]);
  $id=(int)$db->lastInsertId();crmAudit($db,$actor,'task',(string)$id,'task.create',[],['title'=>$b['title'],'order_id'=>$b['order_id']??null]);
@@ -271,6 +281,9 @@ function crmTaskCreate(PDO $db,array $actor,array $b): array {
 }
 function crmTaskUpdate(PDO $db,array $actor,int $id,array $b): array {
  $t=crmOne($db,'SELECT * FROM rubizh_crm_tasks WHERE id=?',[$id]);if(!$t)throw new CrmError('NOT_FOUND',404);
+ // R4-12: a task is changed by its assignee, its author or the OWNER; a new assignee must be an active staff member.
+ if($actor['role']!=='OWNER'&&!in_array($actor['id'],[$t['assignee_id'],$t['created_by']],true))throw new CrmError('PERMISSION_DENIED',403);
+ if(array_key_exists('assignee_id',$b)&&$b['assignee_id']!==null&&!crmOne($db,'SELECT id FROM rubizh_staff_users WHERE id=? AND enabled=1',[$b['assignee_id']]))throw new CrmError('INVALID_ASSIGNEE',400);
  if((int)$t['version']!==$b['version'])throw new CrmError('STALE_ORDER',409);
  $state=$b['state']??$t['state'];$assignee=array_key_exists('assignee_id',$b)?$b['assignee_id']:$t['assignee_id'];
  $q=$db->prepare('UPDATE rubizh_crm_tasks SET state=?,assignee_id=?,version=version+1,updated_at=UTC_TIMESTAMP() WHERE id=? AND version=?');$q->execute([$state,$assignee,$id,$b['version']]);if(!$q->rowCount())throw new CrmError('STALE_ORDER',409);
@@ -374,7 +387,7 @@ function crmCsvOut(string $name,array $head,array $rows): never {
 }
 function crmExportOrders(PDO $db,array $actor,array $q): never {
  $finance=crmCan($actor,'export.finance');$rows=[];$page=1;
- do{$r=crmOrders($db,['limit'=>100,'page'=>(string)$page]+$q,$actor);foreach($r['rows'] as $o)$rows[]=array_merge([$o['number'],crmKyiv($o['created_at']),$o['customer']['name'],crmMaskPhone($o['customer']['phone']??null),$o['display']['order']['label'],$o['display']['payment']['label'],$o['display']['delivery']['label'],$o['assigned_manager']['name']??'',$o['channel']??'web'],$finance?[number_format(($o['total_minor']??0)/100,2,'.','')]:[]);$page++;}while($page<=$r['pagination']['pages']&&$page<=200);
+ do{$r=crmOrders($db,['limit'=>100,'page'=>(string)$page]+$q,$actor);foreach($r['rows'] as $o)$rows[]=array_merge([$o['number'],crmKyiv($o['created_at']),$o['customer']['name'],(string)($o['customer']['phone_masked']??''),$o['display']['order']['label'],$o['display']['payment']['label'],$o['display']['delivery']['label'],$o['assigned_manager']['name']??'',$o['channel']??'web'],$finance?[number_format(($o['total_minor']??0)/100,2,'.','')]:[]);$page++;}while($page<=$r['pagination']['pages']&&$page<=200);
  crmAudit($db,$actor,'export','orders','export.orders',[],['rows'=>count($rows),'finance'=>$finance,'filters'=>$q]);
  crmCsvOut('orders',array_merge(['Номер','Створено (Київ)','Клієнт','Телефон','Замовлення','Оплата','Доставка','Менеджер','Канал'],$finance?['Сума, грн']:[]),$rows);
 }
@@ -393,8 +406,13 @@ function crmExportCustomers(PDO $db,array $actor,array $q,bool $full,string $rea
 function crmWholesaleList(PDO $db,array $q): array {
  $p=crmPage($q);if(!crmApiTableExists($db,'rubizh_wholesale_requests'))return ['rows'=>[],'pagination'=>crmPagination($p,0)];
  $total=(int)crmOne($db,'SELECT COUNT(*) n FROM rubizh_wholesale_requests')['n'];
- $rows=crmQuery($db,"SELECT id,number,name,phone,buyer_type,tax_id,email,kits,composition,priority,state,manager_note,created_at,updated_at FROM rubizh_wholesale_requests ORDER BY id DESC LIMIT {$p['limit']} OFFSET {$p['offset']}");foreach($rows as &$r){$r['id']=(int)$r['id'];$r['phone_masked']=crmMaskPhone($r['phone']??null);}unset($r);
+ $rows=crmQuery($db,"SELECT id,number,name,phone,buyer_type,tax_id,email,kits,composition,priority,state,manager_note,created_at,updated_at FROM rubizh_wholesale_requests ORDER BY id DESC LIMIT {$p['limit']} OFFSET {$p['offset']}");foreach($rows as &$r){$r['id']=(int)$r['id'];$r['phone_masked']=crmMaskPhone($r['phone']??null);unset($r['phone']);}unset($r); // R4-05: full number only via the audited reveal
  return ['rows'=>$rows,'pagination'=>crmPagination($p,$total)];
+}
+function crmWholesalePhone(PDO $db,array $actor,int $id): array {
+ if(!crmApiTableExists($db,'rubizh_wholesale_requests'))throw new CrmError('NOT_FOUND',404);
+ $r=crmOne($db,'SELECT phone FROM rubizh_wholesale_requests WHERE id=?',[$id]);if(!$r)throw new CrmError('NOT_FOUND',404);
+ crmRevealQuota($db,$actor);crmAudit($db,$actor,'wholesale',(string)$id,'wholesale.phone_view',[],['viewed'=>true]);return ['phone'=>$r['phone']];
 }
 function crmWholesaleUpdate(PDO $db,array $actor,int $id,array $b): array {
  if(!crmApiTableExists($db,'rubizh_wholesale_requests'))throw new CrmError('NOT_FOUND',404);

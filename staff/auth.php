@@ -3,6 +3,8 @@ declare(strict_types=1);
 require_once __DIR__.'/contract.php';require_once __DIR__.'/security.php';
 final class CrmError extends RuntimeException {public function __construct(public readonly string $reason,public readonly int $status=400,public readonly array $details=[]){parent::__construct($reason);}}
 
+// Same algorithm as real hashes, so an unknown e-mail costs the same time as a wrong password (R4-01).
+const CRM_DUMMY_HASH='$argon2id$v=19$m=65536,t=4,p=1$bnIzbjJUejhBV0Vvb3kzVA$6GoF5cM3t50srUV2j76F4/2zSC05LLJqJLMDR8Z9A0U';
 const CRM_ROLES=['OWNER','MANAGER','WAREHOUSE','SUPPORT','ACCOUNTANT'];
 function crmRoleLabels(): array {return ['OWNER'=>'Власник','MANAGER'=>'Менеджер','WAREHOUSE'=>'Склад','SUPPORT'=>'Підтримка','ACCOUNTANT'=>'Бухгалтер'];}
 /** OD-4.2: older staff role names in private config map onto the stage-4 roles. */
@@ -46,18 +48,23 @@ function crmCsrf(array $b): void {
  if(!is_string($token)||!hash_equals($_SESSION['staff_csrf']??'',$token))throw new CrmError('CSRF_INVALID',403);
  if(isset($_SERVER['HTTP_ORIGIN'])){$actual=parse_url((string)$_SERVER['HTTP_ORIGIN']);$host=$_SERVER['HTTP_HOST']??'';$expected=($actual['host']??'').(isset($actual['port'])?':'.$actual['port']:'');if($expected!==$host||($actual['scheme']??'')!==((($_SERVER['HTTPS']??'')==='on')?'https':'http'))throw new CrmError('CSRF_INVALID',403);}
 }
-/** R8: only failed attempts count, keyed by network identity + account; a proof-of-work challenge replaces lockout. */
+/**
+ * R8: only failed attempts count. Per network identity + account a proof-of-work challenge follows 8 failures (an office
+ * behind one IP is never locked out); independently each account has a hard limit of 20 failed passwords and 5 failed
+ * second factors per 15 minutes from any address (R4-01), which no proof can bypass. Nothing is locked permanently.
+ */
 function crmLogin(PDO $db,array $b): array {
  crmCsrf($b);$email=mb_strtolower(trim((string)($b['email']??'')));$password=$b['password']??'';if(!is_string($password)||strlen($password)>72||strlen($email)>254)throw new CrmError('LOGIN_FAILED',401);
- $ip=rubizhNetworkIdentity();$loginKey=hash('sha256',$ip.'|'.$email);$proofScope='staff-login:'.$loginKey;
+ $ip=rubizhNetworkIdentity();$loginKey=hash('sha256',$ip.'|'.$email);$proofScope='staff-login:'.$loginKey;$account=hash('sha256','account|'.$email);
+ if(!rubizhRateCheck('staff-login-account',$account,20,900)){header('Retry-After: 900');throw new CrmError('RATE_LIMITED',429,['retry_after'=>900]);}
  if(!rubizhRateCheck('staff-login-failed',$loginKey,8,900)&&!rubizhProofValid($proofScope,$b['rate_proof']??null)){
-  $proof=rubizhProofIssue($proofScope);header('Retry-After: 1');throw new CrmError('CHECK_REQUIRED',428,['challenge'=>['nonce'=>$proof['nonce'],'bits'=>$proof['bits'],'purpose'=>'staff-login'],'continue_url'=>'/auth/staff-login.php']);
+  $proof=rubizhProofIssue($proofScope,18);header('Retry-After: 1');throw new CrmError('CHECK_REQUIRED',428,['challenge'=>['nonce'=>$proof['nonce'],'bits'=>$proof['bits'],'purpose'=>'staff-login'],'continue_url'=>'/auth/staff-login.php']);
  }
- $a=crmOne($db,'SELECT * FROM rubizh_staff_users WHERE email=?',[$email]);$verified=password_verify($password,$a['password_hash']??'$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi');
- $fail=function(string $code='LOGIN_FAILED')use($db,$loginKey,$email,$ip){rubizhRateAllow('staff-login-failed',$loginKey,PHP_INT_MAX,900);crmAudit($db,null,'security',hash('sha256',$email),'login.failed',[],['ip_hash'=>hash('sha256',$ip),'reason'=>$code],'',null,'SYSTEM');throw new CrmError($code,401);};
+ $a=crmOne($db,'SELECT * FROM rubizh_staff_users WHERE email=?',[$email]);$verified=password_verify($password,$a['password_hash']??CRM_DUMMY_HASH);
+ $fail=function(string $code='LOGIN_FAILED')use($db,$loginKey,$email,$ip,$account){rubizhRateAllow('staff-login-failed',$loginKey,PHP_INT_MAX,900);rubizhRateAllow('staff-login-account',$account,PHP_INT_MAX,900);if($code==='TOTP_INVALID')rubizhRateAllow('staff-totp-account',$account,PHP_INT_MAX,900);crmAudit($db,null,'security',hash('sha256',$email),'login.failed',[],['ip_hash'=>hash('sha256',$ip),'reason'=>$code],'',null,'SYSTEM');throw new CrmError($code,401);};
  if(!$a||!$verified||!(int)$a['enabled'])$fail();
  $totpEnabled=crmTotpEnabled($db,$a['id']);
- if($totpEnabled){$code=$b['totp']??null;$backup=$b['backup_code']??null;if(($code===null||$code==='')&&($backup===null||$backup===''))throw new CrmError('TOTP_REQUIRED',401);if(!crmTotpVerify($db,$a['id'],is_string($code)?$code:null,is_string($backup)?$backup:null))$fail('TOTP_INVALID');}
+ if($totpEnabled){$code=$b['totp']??null;$backup=$b['backup_code']??null;if(($code===null||$code==='')&&($backup===null||$backup===''))throw new CrmError('TOTP_REQUIRED',401);if(!rubizhRateCheck('staff-totp-account',$account,5,900)){header('Retry-After: 900');throw new CrmError('RATE_LIMITED',429,['retry_after'=>900]);}if(!crmTotpVerify($db,$a['id'],is_string($code)?$code:null,is_string($backup)?$backup:null))$fail('TOTP_INVALID');}
  if(password_needs_rehash($a['password_hash'],defined('PASSWORD_ARGON2ID')?PASSWORD_ARGON2ID:PASSWORD_BCRYPT))$db->prepare('UPDATE rubizh_staff_users SET password_hash=? WHERE id=?')->execute([crmPasswordHash($password),$a['id']]);
  session_regenerate_id(true);
  $_SESSION=['staff_id'=>$a['id'],'staff_version'=>(int)$a['session_version'],'staff_login_at'=>time(),'staff_seen_at'=>time(),'staff_fresh_at'=>time(),'staff_totp_ok'=>$totpEnabled,'staff_csrf'=>bin2hex(random_bytes(32))];
@@ -69,10 +76,10 @@ function crmLogin(PDO $db,array $b): array {
 /** Step-up re-entry for sensitive actions (≤ 15 min): password, plus TOTP when enabled. */
 function crmReauth(PDO $db,array $actor,array $b): array {
  $u=crmOne($db,'SELECT password_hash FROM rubizh_staff_users WHERE id=?',[$actor['id']]);$key=hash('sha256',rubizhNetworkIdentity().'|'.$actor['email']);
- if(!rubizhRateCheck('staff-login-failed',$key,8,900))throw new CrmError('RATE_LIMITED',429,['retry_after'=>900]);
+ $account=hash('sha256','account|'.mb_strtolower((string)$actor['email']));if(!rubizhRateCheck('staff-login-failed',$key,8,900)||!rubizhRateCheck('staff-login-account',$account,20,900))throw new CrmError('RATE_LIMITED',429,['retry_after'=>900]);
  $ok=$u&&password_verify((string)($b['password']??''),$u['password_hash']);
  if($ok&&crmTotpEnabled($db,$actor['id']))$ok=crmTotpVerify($db,$actor['id'],is_string($b['totp']??null)?$b['totp']:null,null);
- if(!$ok){rubizhRateAllow('staff-login-failed',$key,PHP_INT_MAX,900);crmAudit($db,$actor,'security',$actor['id'],'reauth.failed',[],[]);throw new CrmError('REAUTH_FAILED',401);}
+ if(!$ok){rubizhRateAllow('staff-login-failed',$key,PHP_INT_MAX,900);rubizhRateAllow('staff-login-account',$account,PHP_INT_MAX,900);crmAudit($db,$actor,'security',$actor['id'],'reauth.failed',[],[]);throw new CrmError('REAUTH_FAILED',401);}
  $_SESSION['staff_fresh_at']=time();crmAudit($db,$actor,'security',$actor['id'],'reauth.success',[],[]);
  return ['authenticated'=>true,'user'=>crmActor($db)];
 }

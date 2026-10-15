@@ -115,6 +115,7 @@
 | `search` | GET | `/search` | `search` | query `SearchQuery` | `SearchResult` | ⌘K з урахуванням прав |
 | `wholesale.list` | GET | `/wholesale` | `wholesale.view` | query `ListQuery` | `WholesaleList` | D-54: оптові заявки |
 | `wholesale.update` | POST | `/wholesale/{id}` | `wholesale.manage` | `WholesaleUpdateRequest` | `Wholesale` | Статус оптової заявки |
+| `wholesale.phone` | POST | `/wholesale/{id}/phone` | `wholesale.view` | `Empty` | `PhoneReveal` | Показати повний телефон оптової заявки (запис в audit, ліміт) |
 
 ## Ошибки
 

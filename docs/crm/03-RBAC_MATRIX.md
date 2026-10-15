@@ -162,3 +162,4 @@
 | GET | `/search` | `search` |  |  |  | 200 | 200 | 200 | 200 | 200 |
 | GET | `/wholesale` | `wholesale.view` |  |  |  | 200 | 200 | 403 | 403 | 403 |
 | POST | `/wholesale/{id}` | `wholesale.manage` |  |  | ✓ | 200 | 200 | 403 | 403 | 403 |
+| POST | `/wholesale/{id}/phone` | `wholesale.view` |  |  |  | 200 | 200 | 403 | 403 | 403 |

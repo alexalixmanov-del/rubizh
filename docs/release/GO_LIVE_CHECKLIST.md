@@ -155,6 +155,25 @@ stty -echo; $PHP dev/staff-user.php --email=<email владельца> --name="<
 
 | Этап | Что | Предусловие |
 |---|---|---|
-| 4 — CRM | решения и исправления CRM-SEC-FRESH-01, CRM-PHP-01, CRM-FE-01, кандидат R-C1; доступ персонала к `/crm/` | решения владельца ([KNOWN_ISSUES](KNOWN_ISSUES.md)) |
+| 4 — CRM | CRM для персонала на `/crm/`: раздел «CRM» ниже ([docs/crm/16](../crm/16-CRM_GO_LIVE_CHECKLIST.md)) | этап 4 верифицирован (`rubizh-stage-4-verified`, `crm-stage-4-verified`) |
 | 5 — импорт поставщиков | PIM: релиз с PIMC-P1 (`pim.rubizh@5fd46cb`, `releases/pim-10.9.3/rubizh-pim-10.9.3-final-workflow.zip`, SHA-256 `53e8175711f5969f2724c10815a2b14bc9d39fabc1f3acc167dd8913343f96c0` — заменяет `0605054…` из runbook 10.10) через `tools/install-production.py`; сброс каталога SITE (`dev/pim-v3-catalog-reset.php`), включение приёма v3 (`dev/pim-v3-enable.php`), импорт пяти поставщиков, публикация | runbook `docs/CATALOG-RESET-20261010.md` шаги 11–33 с этим SHA; решения владельца |
 | 6 — живые проверки | MonoPay (sandbox → боевой), НП (тестовая ТТН), TurboSMS, почта, OAuth; затем флаги шага 12(c) по одному | доступы и тестовые контакты |
+
+---
+
+## CRM (этап 4)
+
+Полная версия с проверками — [docs/crm/16-CRM_GO_LIVE_CHECKLIST.md](../crm/16-CRM_GO_LIVE_CHECKLIST.md); эксплуатация — [06-CRM_RUNBOOK](../crm/06-CRM_RUNBOOK.md); ключи и флаги — [CONFIG §16](CONFIG.md).
+
+| № | Шаг | Откат |
+|---|---|---|
+| C1 | Бэкап БД, `api/config.php`, `$SITE/crm/` | — |
+| C2 | Деплой SITE этапа 4 (шаги 5–7 выше) → `/api/staff/auth/session` отвечает 503 `CRM_DISABLED` | `dev/rollback-update.sh` |
+| C3 | Деплой `crm.rubizh/dist` (SHA из чекпоинта этапа 4) в `$SITE/crm/` | копия `$SITE/crm/` |
+| C4 | `dev/migrate-crm.php --plan` → `--apply` (схема v2, идемпотентно) | таблицы аддитивны; данные — бэкап |
+| C5 | `RUBIZH_CRM_SECRET_KEY` (32 байта base64) и `crm_ip_salt` | только вместе с C7 |
+| C6 | OWNER: `dev/staff-user.php --role=OWNER` (пароль из stdin) | отключить пользователя |
+| C7 | `crm_enabled=true` → вход OWNER, подключение TOTP, резервные коды офлайн | копия конфига |
+| C8 | Smoke CRM 390/1440 px | — |
+| C9–C12 | **Этап 6, по одному:** `crm_np_tracking_live` → `crm_sms_live` → `crm_np_ttn_live` → `crm_refund_live`; smoke после каждого | копия конфига перед каждым флагом |
+| C14 | Приглашение сотрудников из CRM | «Співробітники → Змінити → Активний» |

@@ -27,6 +27,8 @@ function shopReserveLines(PDO $db,int $id,array $lines,string $expires): void {
     $totals=[];foreach($lines as $l)if(($l['availability']??'')==='in'&&!empty($l['stock_confirmed'])&&($l['sku']??'')!=='')$totals[$l['sku']]=($totals[$l['sku']]??0)+(float)$l['qty'];
     foreach($totals as $sku=>$qty){
         $q=$db->prepare('SELECT qty,status FROM rubizh_stock_reservations WHERE order_id=? AND sku=? FOR UPDATE');$q->execute([$id,$sku]);$r=$q->fetch(PDO::FETCH_ASSOC);
+        // R4-10: an open order's expired or released reserve (e.g. a FOP invoice in its grace period) is renewed, not a conflict.
+        if($r&&in_array($r['status'],['EXPIRED','RELEASED'],true)){$db->prepare("UPDATE rubizh_stock_reservations SET qty=?,expires_at=?,status='ACTIVE',released_at=NULL WHERE order_id=? AND sku=? AND status=?")->execute([$qty,$expires,$id,$sku,$r['status']]);shopOrderAudit($db,$id,str_repeat('0',32),'reservation.ACTIVE',$r,['sku'=>$sku,'qty'=>$qty,'status'=>'ACTIVE'],'Re-reservation','SYSTEM');continue;}
         if($r){if($r['status']!=='ACTIVE'||(float)$r['qty']!==$qty)throw new RuntimeException('Резерв для цього замовлення не збігається з поточною кількістю. Менеджер перевірить залишок перед підтвердженням.');continue;}
         $db->prepare("INSERT INTO rubizh_stock_reservations(order_id,sku,qty,expires_at,status) VALUES(?,?,?,?,'ACTIVE')")->execute([$id,$sku,$qty,$expires]);
         shopOrderAudit($db,$id,str_repeat('0',32),'reservation.ACTIVE',[],['sku'=>$sku,'qty'=>$qty,'status'=>'ACTIVE'],'Checkout/confirmation','SYSTEM');

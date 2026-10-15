@@ -31,7 +31,7 @@ function crmHandle(PDO $db,?array $actor,array $route,array $p,array $b,array $q
   'orders.line.remove'=>crmMutate($db,$actor,$id,$b,'order.line_remove',fn()=>shopRemoveLine($db,$id,$line,$actor['id'],$b['reason']),true,$b['reason']),
   'orders.line.supplier'=>crmMutate($db,$actor,$id,$b,'order.line_supplier',fn()=>shopAssignLineSupplier($db,$id,$line,$actor['id'],$b['supplier_code'],$b['reason']),true,$b['reason']),
   'orders.invoice'=>crmMutate($db,$actor,$id,$b,'order.invoice',function($old)use($db,$id,$actor){if($old['order_status']!=='CONFIRMED')throw new CrmError('CONFIRMATION_REQUIRED',409);return ['invoice'=>monoCreate($db,$id,$actor['id'])];}),
-  'orders.cancel'=>crmMutate($db,$actor,$id,$b,'order.cancel',function()use($db,$id,$actor,$b){monoCloseOpenInvoice($db,$id,$actor['id']);shopCancelOrder($db,$id,false,$actor['id'],$b['reason']);},true,$b['reason']), // D-57
+  'orders.cancel'=>crmMutate($db,$actor,$id,$b,'order.cancel',function()use($db,$id,$actor,$b){shopCancelBlocker($db,$id,true);monoCloseOpenInvoice($db,$id,$actor['id']);shopCancelOrder($db,$id,false,$actor['id'],$b['reason']);},true,$b['reason']), // D-57
   'orders.problem'=>crmMutate($db,$actor,$id,$b,'order.problem',fn()=>crmSetProblem($db,$actor,$id,$b['flag'],$b['reason']),false,$b['reason']),
   'orders.packing'=>crmMutate($db,$actor,$id,$b,'order.packing',fn()=>shopTransferToPacking($db,$id,$actor['id'])),
   'orders.complete'=>crmMutate($db,$actor,$id,$b,'order.complete',fn()=>shopCompleteOrder($db,$id,$actor['id'])),
@@ -107,7 +107,7 @@ function crmAssign4(PDO $db,array $actor,int $id,array $b): array {
  },false,(string)($b['reason']??''));
 }
 function crmBulkAssign(PDO $db,array $actor,array $b): array {
- $out=[];foreach($b['ids'] as $id){try{crmAssign4($db,$actor,$id,['staff_id'=>array_key_exists('staff_id',$b)?$b['staff_id']:$actor['id'],'expected_version'=>$b['versions'][(string)$id]??'','reason'=>$b['reason']??null]);$out[]=['id'=>$id,'ok'=>true];}catch(CrmError $e){$out[]=['id'=>$id,'ok'=>false,'code'=>$e->reason];}}
+ $out=[];foreach($b['ids'] as $id){try{crmAssign4($db,$actor,$id,['staff_id'=>array_key_exists('staff_id',$b)?$b['staff_id']:$actor['id'],'expected_version'=>$b['versions'][(string)$id]??'','reason'=>$b['reason']??null]);$out[]=['id'=>$id,'ok'=>true];}catch(CrmError $e){$out[]=['id'=>$id,'ok'=>false,'code'=>$e->reason];}catch(Throwable $e){error_log('CRM bulk assign '.get_class($e));$out[]=['id'=>$id,'ok'=>false,'code'=>$e instanceof RuntimeException&&preg_match('/\p{Cyrillic}/u',$e->getMessage())?'DOMAIN_CONFLICT':'SERVICE_UNAVAILABLE'];}}
  return ['results'=>$out];
 }
 /** Confirmation (and v3 pre-order): blocked by an OUT_OF_STOCK line; an explicit availability statement covers unchecked lines. */
@@ -213,7 +213,7 @@ function crmReviewResolve(PDO $db,array $actor,string $rid,string $reason): arra
 function crmRefund4(PDO $db,array $actor,int $id,array $b,string $key): array {
  crmFeatureRequire('refund');
  $row=crmOne($db,'SELECT * FROM rubizh_mono_invoices WHERE id=?',[$id]);if(!$row)throw new CrmError('NOT_FOUND',404);
- $existing=crmOne($db,'SELECT * FROM rubizh_refund_operations WHERE idempotency_key=?',[$key]);
+ $existing=crmOne($db,'SELECT * FROM rubizh_refund_operations WHERE idempotency_key=?',[$key]);if($existing&&(int)$existing['order_id']!==$id)throw new CrmError('IDEMPOTENCY_CONFLICT',409);
  if(!$existing)crmCheckVersion(crmOrder($db,(int)$row['order_id'],$actor),['version'=>$b['expected_version']]);
  return crmRefund($db,(int)$row['order_id'],$actor,(int)$b['amount'],$key,$b['reason'],$existing?null:$b['expected_version']);
 }
@@ -233,7 +233,9 @@ function crmShipmentDomain(PDO $db,array $actor,int $id,array $b,string $action,
 }
 function crmShipmentNotify(PDO $db,array $actor,int $id): array {
  $s=crmShipmentRow($db,$id);if(($s['tracking_number']??'')==='')throw new CrmError('TTN_REQUIRED',409);
- $o=crmOrder($db,(int)$s['order_id'],$actor);$phone=crmCustomerRawPhone($db,'order:'.$s['order_id']);if(!$phone)throw new CrmError('PHONE_REQUIRED',409);
+ $o=crmOrder($db,(int)$s['order_id'],$actor);crmScopeWrite($o,$actor);$phone=crmCustomerRawPhone($db,'order:'.$s['order_id']);if(!$phone)throw new CrmError('PHONE_REQUIRED',409);
+ // R4-12: one customer notice per TTN in 10 minutes (SMS cost and spam once the live flag is on).
+ if(!rubizhRateAllow('shipment-notify',(string)$id,1,600)){header('Retry-After: 600');throw new CrmError('RATE_LIMITED',429,['retry_after'=>600]);}
  $how=crmAdapterSend('sms',['to'=>$phone,'text'=>'RUBIZH: zamovlennia '.$o['number'].' vidpravleno, TTN '.$s['tracking_number']]);
  if($how==='shown')throw new CrmError('FEATURE_NOT_CONNECTED',409,['feature'=>'sms']);
  crmAudit($db,$actor,'order',(string)$s['order_id'],'shipment.notify',[],['shipment_id'=>$id,'delivery'=>$how]);
@@ -247,12 +249,18 @@ function crmShipmentsList(PDO $db,array $actor,array $q): array {
 }
 function crmReturnsList(PDO $db,array $actor,array $q): array {
  $r=crmList($db,'returns',$q);
- if(!crmCan($actor,'order.finance.view'))foreach($r['rows'] as &$row)$row['refund_expected_minor']=null;unset($row);
+ if(!crmCan($actor,'order.finance.view'))foreach($r['rows'] as &$row)$row=crmRedactReturn($row);unset($row);
  return $r;
+}
+/** R4-04: refund amounts of a return are finance data (per-line refund, allocations, expected total). */
+function crmRedactReturn(array $row): array {
+ $row['refund_expected_minor']=null;$row['refund_allocations_json']=null;
+ if(isset($row['lines_json'])){$l=json_decode((string)$row['lines_json'],true);if(is_array($l)){foreach($l as &$x)if(is_array($x))unset($x['refund_minor'],$x['amount_minor'],$x['unit_minor']);unset($x);$row['lines_json']=json_encode($l,JSON_UNESCAPED_UNICODE);}}
+ return $row;
 }
 function crmEntityView(PDO $db,array $actor,string $entity,int $id): array {
  $table=['shipments'=>'rubizh_order_shipments','returns'=>'rubizh_returns'][$entity];$row=crmOne($db,"SELECT * FROM $table WHERE id=?",[$id]);if(!$row)throw new CrmError('NOT_FOUND',404);
- unset($row['payload_json'],$row['result_json']);if(!crmCan($actor,'order.finance.view')){unset($row['declared_value'],$row['delivery_cost']);if($entity==='returns'){$row['refund_expected_minor']=null;$row['refund_allocations_json']=null;}}
+ unset($row['payload_json'],$row['result_json']);if(!crmCan($actor,'order.finance.view')){unset($row['declared_value'],$row['delivery_cost']);if($entity==='returns')$row=crmRedactReturn($row);}
  return ['record'=>$row,'order'=>crmOrder($db,(int)$row['order_id'],$actor),'notes'=>crmNotes($db,rtrim($entity,'s'),(string)$id)];
 }
 /** Return graph (ТЗ 7.5): review states need return.review; physical receipt needs return.receive. */

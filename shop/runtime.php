@@ -73,8 +73,8 @@ function rubizhDeviceIdentity(): string {
     }
     return $id;
 }
-function rubizhProofIssue(string $scope): array {
-    return $_SESSION['rate_proof']=['nonce'=>bin2hex(random_bytes(16)),'bits'=>16,'scope'=>hash('sha256',$scope),'expires'=>time()+300];
+function rubizhProofIssue(string $scope,int $bits=16): array {
+    return $_SESSION['rate_proof']=['nonce'=>bin2hex(random_bytes(16)),'bits'=>max(8,min(20,$bits)),'scope'=>hash('sha256',$scope),'expires'=>time()+300];
 }
 function rubizhProofValid(string $scope,mixed $answer): bool {
     $proof=$_SESSION['rate_proof']??null;

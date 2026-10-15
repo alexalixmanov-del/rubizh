@@ -202,3 +202,20 @@ Final endpoint Quality Gate:132inventory rows,1920HTTP requests;831/831explicit 
 | Quality Gate | координатор; замеры `qa-matrix`/`qa-audit` | `STAGE_CHECKPOINT.md`, этап 3 |
 
 Не запускались (не потребовались): `ecc:php-reviewer`/`ecc:typescript-reviewer` (PHP/JS приложения не менялись), `ecc:silent-failure-hunter` (скрипты миграций и отката проверены реальным прогоном и security-ревью), `ecc:e2e-runner`, `ecc:a11y-architect`, `ecc:seo-specialist`, `ecc:performance-optimizer` (замеры выполнены штатными инструментами `tests/.staging/qa-*`).
+
+## Глобальный этап 4 — CRM (2026-10-15, EXTEND)
+
+Поручение владельца: «Глобальный этап 4 — CRM РУБІЖ (готовый к подключению продукт)» + блок 4-SITE (D-50…D-54). Ветки `hardening/stage-4-crm` в SITE и `crm.rubizh`; PIM `fix/pimc-p1@5fd46cb` — только чтение.
+
+| Фаза | Результат | Документ / тест |
+|---|---|---|
+| 0 gap-анализ | разделы CRM, пробелы, решения OD-4.1…OD-4.7 | `docs/crm/00`, `01` |
+| 1 документы | архитектура, карта состояний, RBAC и API из контракта | `docs/crm/01–05`, `contracts/crm/crm-api.json` |
+| 2–4 SITE + Staff API | 5 ролей, сессии, TOTP, повторный вход, функции SITE для каждого действия CRM, адаптеры live/mock/off, cron | `crm-stage4-rbac` (616 проверок), `crm-stage4-api`, `crm-stage4-contract` |
+| 5 фронтенд | `crm.rubizh` на контракте и токенах макета, мобильные карточки, CSP без `unsafe-inline` | `crm-browser`, `crm-stage4-matrix` |
+| 4-SITE | D-50…D-54 + A5 | `crm-stage4-site` |
+| 6 тесты | 12 E2E, синтетика ≥500 заказов во всех состояниях, 50 000 заказов ≤0,5 с, матрица 3 движка × 7 ширин × 2 темы, axe 0, клавиатура, обновление поверх RC1 и трёх кандидатов | `crm-stage4-e2e`, `crm-stage4-synthetic`, `crm-stage4-matrix`, `rc1-upgrade-rollback` |
+| 7 независимое ревью | `ecc:code-reviewer` + `ecc:security-reviewer` без общего контекста; находки R4-01…R4-15 | `crm-stage4-review`, `03-DEFECT_REGISTER` |
+| 8 Quality Gate | полная регрессия, grep сборки (§12), gitleaks, npm audit, CI на точных SHA, чек-лист CRM | `08-RELEASE_READINESS`, `STAGE_CHECKPOINT` |
+
+Не входит (запрещено поручением): production, деплой, production-миграции, live-флаги, реальные платежи/ТТН/SMS/почта, изменения PIM, PL-1/PL-2.

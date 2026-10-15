@@ -10,14 +10,14 @@ function crmLike(string $q): string {return '%'.str_replace(['!','%','_'],['!!',
  * phone (≥7 digits, contact evidence; orders older than the evidence fall back to the stored contact), TTN / SKU /
  * number fragments, and names (letters: the stored contact — the only JSON scan, and only for such queries).
  */
-function crmSearchOrderIds(PDO $db,string $q): ?array {
+function crmSearchOrderIds(PDO $db,string $q,bool $phones=true): ?array {
  if(preg_match('/^RB-[0-9A-Z-]*$/iD',$q))return null;
  $like=crmLike($q);$digits=preg_replace('/\D/','',$q);$sql=[];$args=[];
  if(str_contains($q,'@')){$sql[]="SELECT id FROM rubizh_customer_orders WHERE email LIKE ? ESCAPE '!'";$args[]=$like;}
  elseif(preg_match('/^[\d\s()+-]+$/D',$q)){
   $sql[]="SELECT order_id FROM rubizh_order_shipments WHERE tracking_number LIKE ? ESCAPE '!'";$args[]=$like;
   $sql[]="SELECT id FROM rubizh_customer_orders WHERE order_number LIKE ? ESCAPE '!'";$args[]=$like;
-  if(strlen($digits)>=7){$tail='%'.substr($digits,-9);$expr="JSON_UNQUOTE(JSON_EXTRACT(d.contact_json,'$.phone'))";foreach(['+',' ','(',')','-'] as $c)$expr="REPLACE($expr,'$c','')";
+  if($phones&&strlen($digits)>=7){$tail='%'.substr($digits,-9);$expr="JSON_UNQUOTE(JSON_EXTRACT(d.contact_json,'$.phone'))";foreach(['+',' ','(',')','-'] as $c)$expr="REPLACE($expr,'$c','')";
    $sql[]="SELECT order_id FROM rubizh_order_contact_evidence WHERE normalized_phone LIKE ?";$args[]=$tail;
    $old=array_map('intval',$db->query('SELECT o.id FROM rubizh_customer_orders o LEFT JOIN rubizh_order_contact_evidence ce ON ce.order_id=o.id WHERE ce.order_id IS NULL')->fetchAll(PDO::FETCH_COLUMN));
    if($old){$sql[]="SELECT d.order_id FROM rubizh_order_details d WHERE d.order_id IN (".implode(',',$old).") AND $expr LIKE ?";$args[]=$tail;}}
@@ -31,7 +31,7 @@ function crmOrderWhere(array $q,array $actor,?PDO $db=null): array {
  $where=['1=1'];$args=[];$search=trim((string)($q['q']??''));if(mb_strlen($search)>120)throw new CrmError('SEARCH_TOO_LONG');
  // Search (ТЗ 7.16: number, phone, name, TTN, SKU). D-59: matching order ids are collected once from narrow sources
  // chosen by the kind of query, then the count and the page select by id (50 000 orders: one scan, not two).
- if($search!==''){$db??=database();$ids=crmSearchOrderIds($db,$search);if($ids===null){$where[]="o.order_number LIKE ? ESCAPE '!'";$args[]=str_replace(['!','%','_'],['!!','!%','!_'],strtoupper($search)).'%';}else $where[]=$ids?'o.id IN ('.implode(',',$ids).')':'0=1';}
+ if($search!==''){$db??=database();$ids=crmSearchOrderIds($db,$search,crmCan($actor,'customer.phone.full'));if($ids===null){$where[]="o.order_number LIKE ? ESCAPE '!'";$args[]=str_replace(['!','%','_'],['!!','!%','!_'],strtoupper($search)).'%';}else $where[]=$ids?'o.id IN ('.implode(',',$ids).')':'0=1';}
  foreach(['from'=>'>=','to'=>'<='] as $k=>$op)if(!empty($q[$k])){if(!preg_match('/^\d{4}-\d{2}-\d{2}$/D',$q[$k]))throw new CrmError('INVALID_DATE');$where[]="o.created_at $op ?";$args[]=$q[$k].($k==='to'?' 23:59:59':' 00:00:00');}
  if(!empty($q['customer'])){if(str_starts_with((string)$q['customer'],'order:')){$where[]='o.id=? AND ao.order_id IS NULL';$args[]=(int)substr($q['customer'],6);}else{$where[]='ao.customer_id=?';$args[]=$q['customer'];}}
  foreach(['manager'=>'a.staff_id','supplier'=>'supplier'] as $k=>$column)if(($q[$k]??'')!==''){if($k==='supplier'){$where[]='EXISTS(SELECT 1 FROM rubizh_order_fulfillment_lines f WHERE f.order_id=o.id AND f.supplier_code=?)';}else $where[]="$column=?";$args[]=$q[$k];}
@@ -106,6 +106,10 @@ function crmOrderStage4(array $dto,array $o,array $x,?array $actor): array {
  $dto['customer']['phone_masked']=crmMaskPhone($dto['customer']['phone']??null);$dto['customer']['phone']=null;$dto['customer']['phone_raw']=null;
  foreach(['phone','phone_raw','phone_normalized','donation_phone'] as $k)if(isset($dto['contact'][$k]))$dto['contact'][$k]=crmMaskPhone((string)$dto['contact'][$k]);
  if($actor){$dto['actions']=crmOrderActions($dto,$actor);$dto['primary_action']=crmPrimaryAction($dto['actions'],$display);$dto=crmRedactOrder($dto,$actor);}else{$dto['actions']=[];$dto['primary_action']=null;}
+ // R4-02: shipment rows leave the server through an allow-list only — no NP payloads (recipient/sender phones), no raw
+ // provider answers; declared value and delivery cost only with finance access.
+ $money=$actor&&crmCan($actor,'order.finance.view');
+ $dto['shipments']=array_map(fn($s)=>array_intersect_key($s,array_flip(['id','order_id','supplier_code','status','tracking_number','lines_json','error','created_at','updated_at',...($money?['declared_value','delivery_cost']:[])])),$dto['shipments']);
  return $dto;
 }
 /** WAREHOUSE never receives money: totals, prices, invoices and refunds are removed server-side (A6). */
@@ -133,7 +137,7 @@ function crmEntity(PDO $db,string $entity,string $id): void {$table=['order'=>['
  */
 function crmCustomers(PDO $db,array $q): array {
  $p=crmPage($q);$text=trim((string)($q['q']??''));if(mb_strlen($text)>120)throw new CrmError('SEARCH_TOO_LONG');
- $like=crmLike($text);$digits=preg_replace('/\D/','',$text);$numeric=$text!==''&&preg_match('/^[\d\s()+-]+$/D',$text);$isPhone=$numeric&&strlen($digits)>=7;$tail='%'.substr($digits,-9);
+ $like=crmLike($text);$digits=preg_replace('/\D/','',$text);$numeric=$text!==''&&preg_match('/^[\d\s()+-]+$/D',$text);$isPhone=$numeric&&strlen($digits)>=7&&($q['_phones']??true)===true;$tail='%'.substr($digits,-9);
  $s=function_exists('crmSettingsValues')?crmSettingsValues($db):['vip_paid_orders'=>3,'vip_paid_total_minor'=>2000000,'sleeping_days'=>180];
  $strip=fn(string $e)=>array_reduce(['+',' ','(',')','-'],fn($x,$c)=>"REPLACE($x,'$c','')",$e);
  $paidOrder="IF(o.payment_status='paid',ROUND(o.total*100),0)";
@@ -145,7 +149,7 @@ function crmCustomers(PDO $db,array $q): array {
  $gw=['ao.order_id IS NULL'];$gargs=[];$join='';
  if($text!==''){$parts=["o.email LIKE ? ESCAPE '!'"];$gargs[]=$like;
   // Same narrow-source id collection as the order search (D-59).
-  $found=crmSearchOrderIds($db,$text);if($found===null){$parts[]="o.order_number LIKE ?";$gargs[]=strtoupper($text).'%';}elseif($found)$parts[]='o.id IN ('.implode(',',$found).')';
+  $found=crmSearchOrderIds($db,$text,($q['_phones']??true)===true);if($found===null){$parts[]="o.order_number LIKE ?";$gargs[]=strtoupper($text).'%';}elseif($found)$parts[]='o.id IN ('.implode(',',$found).')';
   $gw[]='('.implode(' OR ',$parts).')';}
  $guest="SELECT CONCAT('order:',o.id) id,o.created_at,'ORDER_CONTACT' source,".$seg('1',$paidOrder,'o.created_at')." segment FROM rubizh_customer_orders o$join LEFT JOIN rubizh_account_orders ao ON ao.order_id=o.id WHERE ".implode(' AND ',$gw);
  $base="($acc) UNION ALL ($guest)";$args=[...$aargs,...$gargs];$where='';

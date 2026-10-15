@@ -164,7 +164,8 @@
     {"id": "settings.staff.update.legacy", "method": "PUT", "path": "/settings/staff/{sid}", "auth": "staff", "permission": "staff.manage", "step_up": true, "request": "LegacyStaffRequest", "response": "StaffUser", "deprecated": true, "summary": "Сумісність: змінити співробітника"},
     {"id": "search", "method": "GET", "path": "/search", "auth": "staff", "permission": "search", "query": "SearchQuery", "response": "SearchResult", "summary": "⌘K з урахуванням прав"},
     {"id": "wholesale.list", "method": "GET", "path": "/wholesale", "auth": "staff", "permission": "wholesale.view", "query": "ListQuery", "response": "WholesaleList", "summary": "D-54: оптові заявки"},
-    {"id": "wholesale.update", "method": "POST", "path": "/wholesale/{id}", "auth": "staff", "permission": "wholesale.manage", "idempotent": true, "request": "WholesaleUpdateRequest", "response": "Wholesale", "summary": "Статус оптової заявки"}
+    {"id": "wholesale.update", "method": "POST", "path": "/wholesale/{id}", "auth": "staff", "permission": "wholesale.manage", "idempotent": true, "request": "WholesaleUpdateRequest", "response": "Wholesale", "summary": "Статус оптової заявки"},
+    {"id": "wholesale.phone", "method": "POST", "path": "/wholesale/{id}/phone", "auth": "staff", "permission": "wholesale.view", "request": "Empty", "response": "PhoneReveal", "summary": "Показати повний телефон оптової заявки (запис в audit, ліміт)"}
   ],
   "params": {
     "id": "^[0-9]{1,12}$",

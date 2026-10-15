@@ -549,3 +549,48 @@
 | `auth/config.php` | `sms_daily_limit` | Нет | 100 | Готово |
 | `site-settings.json` | `ga4_id`, `meta_pixel_id`, `seller`, … | Через UI | Пусто до решений | Через админку после решения владельца |
 | env | `RUBIZH_NP_API_KEY`, `RUBIZH_MONO_TOKEN`, `RUBIZH_TURBOSMS_TOKEN`, `RUBIZH_GOOGLE_CLIENT_SECRET`, `RUBIZH_NOREPLY_PASSWORD` | Предпочтительно вместо файлов | Значения владельца и хостинга | **BLOCKED** |
+
+---
+
+## 16. CRM (этап 4): флаги, секреты, настройки
+
+CRM работает на `/crm/` того же домена; Staff API — `/api/staff/*` (`api/staff/index.php` → `staff/router.php`). Все live-флаги **по умолчанию выключены**. Без флага на production внешнее действие отвечает 409 `FEATURE_NOT_CONNECTED` «Функція ще не підключена»; на стенде (`environment=staging`) работает mock с тем же контрактом (`staff/adapters.php:3-20`). Порядок включения: `docs/crm/16-CRM_GO_LIVE_CHECKLIST.md`.
+
+### 16.1 Флаги `api/config.php`
+
+| Key | Тип | Default (в коде) | Prod (рекомендация) | Кто меняет | Риск при ошибке | Код |
+|---|---|---|---|---|---|---|
+| `crm_enabled` | bool | `false` → Staff API отвечает `CRM_DISABLED` | `true` после деплоя, миграции и учётки OWNER с TOTP | Owner | Включение до создания OWNER — пустой вход | `staff/adapters.php:9` |
+| `crm_np_tracking_live` | bool | `false` | `true` 1-м из live-флагов (только чтение статусов НП) | Owner (этап 6) | Нагрузка на API НП | `staff/adapters.php:9,18` |
+| `crm_sms_live` | bool | `false` | После проверки реальной SMS | Owner (этап 6) | Расход SMS, спам | `staff/adapters.php:9,26` |
+| `crm_email_live` | bool | `false` | После проверки SMTP | Owner (этап 6) | Письма сотрудникам/покупателям | `staff/adapters.php:9,26` |
+| `crm_np_ttn_live` | bool | `false` | После тестовой ТТН; вместе с `np_ttn_enabled` | Owner (этап 6) | Реальные ТТН | `staff/adapters.php:9,18` |
+| `crm_refund_live` | bool | `false` | Последним, после тестового возврата MonoPay | Owner (этап 6) | Реальные возвраты денег | `staff/adapters.php:9,17` |
+| `crm_totp_required` | bool | не задан = **true** для OWNER и ACCOUNTANT | Не задавать (оставить обязательным) | Owner | `false` отключает обязательный 2FA (только для тестов) | `staff/security.php:68` |
+| `crm_mock_outbox` | path | `''` | Не задавать | Dev (стенд) | Mock-письма в файл; только staging | `staff/adapters.php:29` |
+| `pim_url` | URL `https://…` | не задан → ссылка «Відкрити в PIM» скрыта | `https://pim.rubizh.shop` | Owner | Неверный адрес ссылки | `staff/lists.php:229` |
+| `np_mock` | bool | не задан | **Не задавать** | Dev (стенд) | Mock НП; на production-хосте не активируется | `shop/np-lib.php:7` |
+
+### 16.2 Секреты
+
+| Key / env | Тип | Default | Prod | Кто меняет | Риск | Код |
+|---|---|---|---|---|---|---|
+| `RUBIZH_CRM_SECRET_KEY` (env, приоритет) или `crm_secret_key` | base64 32 байта (libsodium secretbox), **секрет** | нет → TOTP недоступен, 503 `CRM_SECRET_KEY_MISSING` | Сгенерировать: `php -r 'echo base64_encode(random_bytes(32)),PHP_EOL;'`, хранить вне webroot (0600) | Hosting / Owner | Потеря ключа = все TOTP-секреты нечитаемы, сотрудники переподключают 2FA; утечка = секреты TOTP раскрыты | `staff/security.php:52-56` |
+| `crm_ip_salt` | string ≥32, **секрет** | `''` (хэш IP без соли) | Случайная строка | Hosting | Без соли хэши IP в журнале обратимы перебором | `staff/security.php:11` |
+
+### 16.3 Настройки, которые меняет OWNER в CRM («Налаштування → Системні»)
+
+Хранятся в `rubizh_crm_settings`; значение из БД побеждает `api/config.php`, тот — значение по умолчанию (`staff/lists.php:170-175`).
+
+| Ключ | Default | Смысл | Код |
+|---|---|---|---|
+| `invoice_grace_workdays` | 3 | D-51: сколько рабочих дней после `payment_due` заказ «на рахунок ФОП» ждёт звірки виписки до автоотмены | `shop/order-lifecycle.php:54-57` |
+| `direct_pay_max_qty` | 3 | D-52: при наличии без количества (`pim_stock_quantity = null`) сразу оплачивается не больше N шт. одного SKU в заказе; больше — «Очікує підтвердження менеджера» | `shop/pim-v3-checkout.php:73-76` |
+| `vip_paid_orders` / `vip_paid_total_minor` | 3 / 2 000 000 коп. | OD-4.7: сегмент VIP | `staff/lists.php:171` |
+| `sleeping_days` | 180 | Сегмент «сплячі» | `staff/lists.php:171` |
+| `auto_task_unconfirmed_minutes` / `auto_task_no_ttn_hours` | 30 / 24 | Автозадачи «не підтверджено» и «немає ТТН» | `staff/lists.php:171`, `staff/worker.php` |
+| `staff_stepup_seconds` (`api/config.php`) | 900 | Окно повторного входа для чувствительных действий (≤15 мин) | `shop/financial-permissions.php:43` |
+
+### 16.4 Стенд (не задавать на production)
+
+`environment=staging`, `mono_mock=true`, `np_mock=true`, `staging_allow_loopback`, `staging_origins` — только тестовый стенд. Синтетические данные: `php dev/crm-synthetic.php --orders=520 [--bulk=50000]` (отказывается работать без этих ключей и при любом включённом live-флаге CRM).

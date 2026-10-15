@@ -8,7 +8,8 @@ const CRM_SESSION_IDLE=1800;
 const CRM_SESSION_ABSOLUTE=43200; // OD-4.4: 12 h
 const CRM_STEP_UP_DEFAULT=900;
 
-function crmClientIpHash(): string {return hash('sha256',(string)cfg('crm_ip_salt').'|'.rubizhNetworkIdentity());}
+// Without crm_ip_salt the hash is keyed by the CRM secret key, never unsalted (R4-13).
+function crmClientIpHash(): string {$salt=(string)cfg('crm_ip_salt');if($salt===''){try{$salt=hash('sha256','ip|'.crmSecretKey());}catch(Throwable $e){$salt='';}}return hash('sha256',$salt.'|'.rubizhNetworkIdentity());}
 function crmAgent(): string {return mb_substr(preg_replace('/[\x00-\x1f\x7f]/u','',(string)($_SERVER['HTTP_USER_AGENT']??'')),0,160);}
 function crmSessionKey(): string {return hash('sha256',session_id());}
 
@@ -71,7 +72,8 @@ function crmTotpVerify(PDO $db,string $staff,?string $code,?string $backup): boo
  $r=crmTotpRow($db,$staff);if(!$r||$r['enabled_at']===null)return false;
  if(is_string($backup)&&$backup!==''){
   $codes=json_decode((string)$r['backup_json'],true)?:[];
-  foreach($codes as $i=>$hash)if(password_verify($backup,$hash)){unset($codes[$i]);$db->prepare('UPDATE rubizh_staff_totp SET backup_json=?,updated_at=UTC_TIMESTAMP() WHERE staff_id=?')->execute([json_encode(array_values($codes)),$staff]);return true;}
+  // The code is consumed only if nobody consumed one in between (compare-and-set): a code works exactly once.
+  foreach($codes as $i=>$hash)if(password_verify($backup,$hash)){unset($codes[$i]);$q=$db->prepare('UPDATE rubizh_staff_totp SET backup_json=?,updated_at=UTC_TIMESTAMP() WHERE staff_id=? AND backup_json=?');$q->execute([json_encode(array_values($codes)),$staff,(string)$r['backup_json']]);return $q->rowCount()===1;}
   return false;
  }
  if(!is_string($code)||!preg_match('/^\d{6}$/D',$code))return false;
@@ -79,8 +81,14 @@ function crmTotpVerify(PDO $db,string $staff,?string $code,?string $backup): boo
  foreach([0,-1,1] as $d){$step=$now+$d;if($step<=(int)$r['last_step'])continue;if(hash_equals(crmTotpCode($secret,$step),$code)){$q=$db->prepare('UPDATE rubizh_staff_totp SET last_step=?,updated_at=UTC_TIMESTAMP() WHERE staff_id=? AND last_step<?');$q->execute([$step,$staff,$step]);return $q->rowCount()===1;}}
  return false;
 }
+/** R4-07: attaching an authenticator needs a grant from provisioning, an invite/reset link or the server CLI — never the password alone. */
+function crmEnrollGrant(PDO $db,string $staff,string $by): void {
+ $db->prepare("INSERT INTO rubizh_staff_invites(token_hash,kind,staff_id,email,name,role,created_by,expires_at,created_at) SELECT ?,'enroll',id,email,name,role,?,UTC_TIMESTAMP()+INTERVAL 72 HOUR,UTC_TIMESTAMP() FROM rubizh_staff_users WHERE id=?")->execute([hash('sha256',random_bytes(32)),$by,$staff]);
+}
+function crmEnrollGrantOpen(PDO $db,string $staff): bool {return (bool)crmOne($db,"SELECT id FROM rubizh_staff_invites WHERE kind='enroll' AND staff_id=? AND used_at IS NULL AND expires_at>UTC_TIMESTAMP()",[$staff]);}
 function crmTotpSetup(PDO $db,array $actor): array {
  if(crmTotpEnabled($db,$actor['id']))throw new CrmError('TOTP_ALREADY_ENABLED',409);
+ if(!crmEnrollGrantOpen($db,$actor['id']))throw new CrmError('TOTP_ENROLL_GRANT_REQUIRED',403);
  $secret=crmBase32(random_bytes(20));
  $db->prepare('INSERT INTO rubizh_staff_totp(staff_id,secret_enc,updated_at) VALUES(?,?,UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE secret_enc=VALUES(secret_enc),enabled_at=NULL,last_step=0,backup_json=NULL,updated_at=VALUES(updated_at)')->execute([$actor['id'],crmSeal($secret)]);
  crmAudit($db,$actor,'security',$actor['id'],'totp.setup',[],['started'=>true]);
@@ -93,7 +101,7 @@ function crmTotpEnable(PDO $db,array $actor,string $code): array {
  if($ok===null)throw new CrmError('TOTP_INVALID',400);
  $codes=[];$hashes=[];for($i=0;$i<10;$i++){$c=substr(bin2hex(random_bytes(4)),0,4).'-'.substr(bin2hex(random_bytes(4)),0,4);$codes[]=$c;$hashes[]=password_hash($c,PASSWORD_BCRYPT,['cost'=>10]);}
  $db->prepare('UPDATE rubizh_staff_totp SET enabled_at=UTC_TIMESTAMP(),last_step=?,backup_json=?,updated_at=UTC_TIMESTAMP() WHERE staff_id=?')->execute([$ok,json_encode($hashes),$actor['id']]);
- crmAudit($db,$actor,'security',$actor['id'],'totp.enable',[],['enabled'=>true,'backup_codes'=>10]);
+ $db->prepare("UPDATE rubizh_staff_invites SET used_at=UTC_TIMESTAMP() WHERE kind='enroll' AND staff_id=? AND used_at IS NULL")->execute([$actor['id']]);crmAudit($db,$actor,'security',$actor['id'],'totp.enable',[],['enabled'=>true,'backup_codes'=>10]);
  $_SESSION['staff_totp_ok']=true;$_SESSION['staff_fresh_at']=time();
  return ['backup_codes'=>$codes];
 }
@@ -121,7 +129,7 @@ function crmTokenAccept(PDO $db,string $token,string $password): array {
    $id=$t['staff_id'];$u=crmOne($db,'SELECT id FROM rubizh_staff_users WHERE id=? FOR UPDATE',[$id]);if(!$u)throw new CrmError('TOKEN_INVALID',400);
    $db->prepare('UPDATE rubizh_staff_users SET password_hash=?,session_version=session_version+1,updated_at=UTC_TIMESTAMP() WHERE id=?')->execute([crmPasswordHash($password),$id]);crmSessionsRevoke($db,$id);
   }
-  $db->prepare('UPDATE rubizh_staff_invites SET used_at=UTC_TIMESTAMP() WHERE id=?')->execute([$t['id']]);
+  $db->prepare('UPDATE rubizh_staff_invites SET used_at=UTC_TIMESTAMP() WHERE id=?')->execute([$t['id']]);crmEnrollGrant($db,$id,str_repeat('0',32)); // the link proved the mailbox: enrolment allowed for 72 h
   crmAudit($db,['id'=>$id,'role'=>$t['role']],'staff',$id,'staff.token.'.$t['kind'],[],['email'=>$t['email'],'role'=>$t['role']],'Одноразове посилання використано');
   return ['done'=>true];
  });
