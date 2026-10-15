@@ -16,6 +16,7 @@ import path from 'node:path';
 import {createHash,randomBytes} from 'node:crypto';
 import {createServer} from 'node:net';
 import {root,runtime,phpArgs,phpEnv} from './helpers/site-fixture.mjs';
+import {password as staffPassword} from './helpers/crm-fixture.mjs';
 
 const socket=process.env.RUBIZH_TEST_MYSQL_SOCKET;
 // Three production-era candidates and RC1 itself (rubizh-stage-3-verified, stage 4 §12).
@@ -223,13 +224,13 @@ for(const baseline of baselines)test(`RC1 upgrade over production-era SITE ${bas
   // CRM go-live steps C5/C7 (docs/crm/16): secret key and crm_enabled; TOTP enrolment is covered by the CRM auth tests.
   {const f=path.join(www,'api/config.php'),c=readFileSync(f,'utf8'),i=Math.max(c.lastIndexOf('];'),c.lastIndexOf(');'));writeFileSync(f,c.slice(0,i).replace(/,?\s*$/,'')+",'crm_enabled'=>true,'crm_secret_key'=>'"+Buffer.alloc(32,9).toString('base64')+"','crm_totp_required'=>false"+c.slice(i));}
   assert.match(readFileSync(path.join(www,'api/config.php'),'utf8'),/'crm_enabled'=>true/,'CRM enabled in the private config');assert.equal(spawnSync(runtime+'/bin/php8.4',['-l',path.join(www,'api/config.php')],{encoding:'utf8'}).status,0,readFileSync(path.join(www,'api/config.php'),'utf8').slice(-400));
-  ok(cli(path.join(www,'dev/staff-user.php'),['--email=owner@fixture.test','--name=Owner Fixture','--role=OWNER','--reason=RC1 upgrade rehearsal initial owner'],'Rehearsal-Kvitka-Sad-2026\n'),'staff owner');
+  ok(cli(path.join(www,'dev/staff-user.php'),['--email=owner@fixture.test','--name=Owner Fixture','--role=OWNER','--reason=RC1 upgrade rehearsal initial owner'],staffPassword+'\n'),'staff owner');
   server=await serve(dir,www);
   for(const p of ['/','/shop/catalog.php','/sitemap.php'])assert.equal((await server.req(p)).status,200,'rc1 '+p+server.errors());
   for(const id of [1001,1002,1003]){const d=await server.req('/auth/?tab=orders&order='+id,{headers:signed(dir,A)});assert.equal(d.status,200);assert.ok(d.text.includes('RZ-OLD-'+id),'cabinet detail '+id);}
   const foreign=await server.req('/auth/?tab=orders&order=1004',{headers:signed(dir,A)});assert.ok([200,404].includes(foreign.status),'foreign order request answered '+foreign.status);assert.ok(!foreign.text.includes('RZ-OLD-1004'),'cabinet never shows another customer order');
   const session=await server.req('/api/staff/auth/session');assert.ok(session.headers.get('set-cookie'),'staff session '+session.status+' '+JSON.stringify(session.data));let cookie=session.headers.get('set-cookie').split(';')[0];
-  const login=await server.req('/api/staff/auth/login',{method:'POST',headers:{Cookie:cookie},body:{email:'owner@fixture.test',password:'Rehearsal-Kvitka-Sad-2026',csrf:session.data.meta.csrf}});
+  const login=await server.req('/api/staff/auth/login',{method:'POST',headers:{Cookie:cookie},body:{email:'owner@fixture.test',password:staffPassword,csrf:session.data.meta.csrf}});
   assert.equal(login.status,200,JSON.stringify(login.data));cookie=login.headers.get('set-cookie').split(';')[0];
   for(const [id] of orders){const r=await server.req('/api/staff/orders/'+id,{headers:{Cookie:cookie}});assert.equal(r.status,200,id+' '+JSON.stringify(r.data));assert.ok(JSON.stringify(r.data).includes('RZ-OLD-'+id),'crm order number '+id);}
   assert.equal((await server.req('/api/staff/orders',{headers:{Cookie:cookie}})).status,200);

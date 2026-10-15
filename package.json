@@ -12,6 +12,7 @@
     "node": ">=22"
   },
   "devDependencies": {
+    "axe-core": "4.10.2",
     "playwright": "1.62.1"
   }
 }

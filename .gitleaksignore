@@ -1,0 +1,8 @@
+# Test fixture password of the RC1 upgrade rehearsal (local throw-away database), not a secret; replaced by the shared fixture constant.
+b6dd99d2907b59fb17388bf849c39ff5cd61be7e:tests/rc1-upgrade-rollback.test.mjs:generic-api-key:232
+# Fixed fixture keys of the local test stand (tests/helpers, RC1 era), not secrets.
+tests/helpers/site-fixture.mjs:generic-api-key:15
+tests/helpers/site-fixture.mjs:generic-api-key:24
+tests/pricing-database.test.mjs:generic-api-key:12
+eaebd1dca76c7fc9e2a04bcd05e085ed439bf1ab:tests/helpers/site-fixture.mjs:generic-api-key:11
+eaebd1dca76c7fc9e2a04bcd05e085ed439bf1ab:tests/helpers/site-fixture.mjs:generic-api-key:20
