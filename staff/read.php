@@ -32,7 +32,7 @@ function crmSearchOrderIds(PDO $db,string $q,bool $phones=true): ?array {
 }
 function crmOrderWhere(array $q,array $actor,?PDO $db=null): array {
  $where=['1=1'];$args=[];$search=trim((string)($q['q']??''));if(mb_strlen($search)>120)throw new CrmError('SEARCH_TOO_LONG');
- // Search (ТЗ 7.16: number, phone, name, TTN, SKU). D-59: matching order ids are collected once from narrow sources
+ // Search (ТЗ 7.16: number, phone, name, TTN, SKU). PERF-4.2: matching order ids are collected once from narrow sources
  // chosen by the kind of query, then the count and the page select by id (50 000 orders: one scan, not two).
  if($search!==''){$db??=database();$ids=crmSearchOrderIds($db,$search,crmCan($actor,'customer.phone.full'));if($ids===null){$where[]="o.order_number LIKE ? ESCAPE '!'";$args[]=str_replace(['!','%','_'],['!!','!%','!_'],strtoupper($search)).'%';}else $where[]=$ids?'o.id IN ('.implode(',',$ids).')':'0=1';}
  foreach(['from'=>'>=','to'=>'<='] as $k=>$op)if(!empty($q[$k])){if(!preg_match('/^\d{4}-\d{2}-\d{2}$/D',$q[$k]))throw new CrmError('INVALID_DATE');$where[]="o.created_at $op ?";$args[]=$q[$k].($k==='to'?' 23:59:59':' 00:00:00');}
@@ -154,7 +154,7 @@ function crmNotes(PDO $db,string $entity,string $id): array {return crmQuery($db
 function crmCheckVersion(array $o,array $b): void {if(!is_string($b['version']??null)||!hash_equals($o['version'],$b['version']))throw new CrmError('STALE_ORDER',409,['current_version'=>$o['version']]);}
 function crmEntity(PDO $db,string $entity,string $id): void {$table=['order'=>['rubizh_customer_orders','id'],'shipment'=>['rubizh_order_shipments','id'],'return'=>['rubizh_returns','id'],'customer'=>['rubizh_accounts','id']][$entity]??null;if($entity==='customer'&&str_starts_with($id,'order:')){$table=['rubizh_customer_orders','id'];$id=substr($id,6);}if(!$table||!crmOne($db,"SELECT {$table[1]} FROM {$table[0]} WHERE {$table[1]}=?",[$id]))throw new CrmError('NOT_FOUND',404);}
 /**
- * Customers = accounts + guest checkouts (orders without an account). D-59/D-60: search, segment and pagination run in
+ * Customers = accounts + guest checkouts (orders without an account). PERF-4.2/S4-05: search, segment and pagination run in
  * SQL on narrow columns (the order JSON only for letter queries); names, phones and money are read for the page only.
  * Segment rules are crmSegment's: VIP (paid orders / paid total), SLEEPING, REPEAT, NEW, NO_ORDERS.
  */
@@ -174,10 +174,11 @@ function crmCustomers(PDO $db,array $q): array {
  // Guest checkouts: one order each.
  $gw=['ao.order_id IS NULL'];$gargs=[];$join='';
  if($text!==''){
-  // Same narrow-source id collection as the order search (D-59); e-mail matches come from the covering index, so the
+  // Same narrow-source id collection as the order search (PERF-4.2); e-mail matches come from the covering index, so the
   // guest query selects by id instead of scanning every order row.
   $found=crmSearchOrderIds($db,$text,($q['_phones']??true)===true);
-  $byEmail=array_map('intval',array_column(crmQuery($db,"SELECT id FROM rubizh_customer_orders WHERE email LIKE ? ESCAPE '!'",[$like]),'id'));
+  // Only guest orders (account orders are the account rows); with «@» the order search already matched e-mails.
+  $byEmail=str_contains($text,'@')?[]:array_map('intval',array_column(crmQuery($db,"SELECT o.id FROM rubizh_customer_orders o LEFT JOIN rubizh_account_orders ao ON ao.order_id=o.id WHERE ao.order_id IS NULL AND o.email LIKE ? ESCAPE '!'",[$like]),'id'));
   $parts=[];if($found===null){$parts[]="o.order_number LIKE ?";$gargs[]=strtoupper($text).'%';}
   $ids2=array_values(array_unique([...($found??[]),...$byEmail]));$parts[]=$ids2?'o.id IN ('.implode(',',$ids2).')':'0=1';
   $gw[]='('.implode(' OR ',$parts).')';}

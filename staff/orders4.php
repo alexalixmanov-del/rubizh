@@ -31,13 +31,13 @@ function crmHandle(PDO $db,?array $actor,array $route,array $p,array $b,array $q
   'orders.line.remove'=>crmMutate($db,$actor,$id,$b,'order.line_remove',fn()=>shopRemoveLine($db,$id,$line,$actor['id'],$b['reason']),true,$b['reason']),
   'orders.line.supplier'=>crmMutate($db,$actor,$id,$b,'order.line_supplier',fn()=>shopAssignLineSupplier($db,$id,$line,$actor['id'],$b['supplier_code'],$b['reason']),true,$b['reason']),
   'orders.invoice'=>crmMutate($db,$actor,$id,$b,'order.invoice',function($old)use($db,$id,$actor){if($old['order_status']!=='CONFIRMED')throw new CrmError('CONFIRMATION_REQUIRED',409);return ['invoice'=>monoCreate($db,$id,$actor['id'])];}),
-  'orders.cancel'=>crmMutate($db,$actor,$id,$b,'order.cancel',function()use($db,$id,$actor,$b){shopCancelBlocker($db,$id,true);monoCloseOpenInvoice($db,$id,$actor['id']);shopCancelOrder($db,$id,false,$actor['id'],$b['reason']);},true,$b['reason']), // D-57
+  'orders.cancel'=>crmMutate($db,$actor,$id,$b,'order.cancel',function()use($db,$id,$actor,$b){shopCancelBlocker($db,$id,true);monoCloseOpenInvoice($db,$id,$actor['id']);shopCancelOrder($db,$id,false,$actor['id'],$b['reason']);},true,$b['reason']), // S4-03
   'orders.problem'=>crmMutate($db,$actor,$id,$b,'order.problem',fn()=>crmSetProblem($db,$actor,$id,$b['flag'],$b['reason']),false,$b['reason']),
   'orders.packing'=>crmMutate($db,$actor,$id,$b,'order.packing',fn()=>shopTransferToPacking($db,$id,$actor['id'])),
   'orders.complete'=>crmMutate($db,$actor,$id,$b,'order.complete',fn()=>shopCompleteOrder($db,$id,$actor['id'])),
   'orders.delivery'=>crmMutate($db,$actor,$id,$b,'order.delivery_update',fn()=>shopUpdateDelivery($db,$id,$actor['id'],$b['delivery'],$b['recipient']??null,$b['phone']??null,$b['reason']),true,$b['reason']),
   'orders.note'=>crmNote($db,$actor,'order',(string)$id,$b+['request_id'=>$key]),
-  'orders.shipment.draft'=>crmOrderCardExtras($db,crmShipmentAction($db,$id,$actor,['version'=>$b['expected_version'],'request_id'=>$key]+$b,'draft'),$actor), // D-55: the full card
+  'orders.shipment.draft'=>crmOrderCardExtras($db,crmShipmentAction($db,$id,$actor,['version'=>$b['expected_version'],'request_id'=>$key]+$b,'draft'),$actor), // S4-01: the full card
   'orders.invoice.accept'=>crmMutate($db,$actor,$id,$b,'payment.invoice.accept',fn()=>shopAcceptInvoicePayment($db,$id,$actor['id'],$b['amount_minor'],$b['paid_on'],$b['document'],$b['reason']),false,$b['reason']),
   'orders.reconcile.not_created'=>crmMutate($db,$actor,$id,$b,'payment.reconcile_not_created',fn()=>monoReconcileNotCreated($db,$id,$actor['id'],$b['reason']),false,$b['reason']),
   'orders.reconcile.manual'=>crmMutate($db,$actor,$id,$b,'payment.manual_reconcile',fn()=>monoReconcile($db,$id,$b['invoice_id'],$actor['id'],$b['reason']),false,$b['reason']),
@@ -71,10 +71,11 @@ function crmScopeWrite(array $order,array $actor): void {
 function crmMutate(PDO $db,array $actor,int $id,array $b,string $action,callable $do,bool $scope=true,string $reason=''): array {
  crmOrder($db,$id,$actor);
  return npLocked($db,$id,function()use($db,$actor,$id,$b,$action,$do,$scope,$reason){
-  $old=crmOrder($db,$id,$actor);crmCheckVersion($old,['version'=>$b['expected_version']??null]);if($scope)crmScopeWrite($old,$actor);
+  // Business checks and the audit read the full order (S4-06): the role view (crmRedactOrder) is only for the response.
+  $old=crmOrder($db,$id,[]);crmCheckVersion($old,['version'=>$b['expected_version']??null]);if($scope)crmScopeWrite($old,$actor);
   $result=$do($old);
-  $new=crmOrder($db,$id,$actor);
-  crmAudit($db,$actor,'order',(string)$id,$action,['version'=>$old['version'],'display'=>$old['display']??null],['version'=>$new['version'],'display'=>$new['display']??null],$reason);
+  $after=crmOrder($db,$id,[]);$new=crmOrder($db,$id,$actor);
+  crmAudit($db,$actor,'order',(string)$id,$action,['version'=>$old['version'],'display'=>$old['display']??null],['version'=>$after['version'],'display'=>$after['display']??null],$reason);
   if(is_array($result)&&isset($result['invoice']))$new['invoice']=$result['invoice'];
   return crmOrderCardExtras($db,$new,$actor);
  });
