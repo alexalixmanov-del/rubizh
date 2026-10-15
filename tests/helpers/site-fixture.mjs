@@ -15,7 +15,7 @@ export const phpEnv=Object.fromEntries(Object.entries({...process.env,LD_LIBRARY
 export const PIM_KEY='pim-v3-fixture-key-at-least-24-characters';
 export const wire=JSON.parse(readFileSync(path.join(root,'contracts/pim-v3/2/wire.exact.json'),'utf8'));
 const port=()=>new Promise(r=>{const s=createServer().listen(0,'127.0.0.1',()=>{const p=s.address().port;s.close(()=>r(p));});});
-export function php(code,{allowFail=false}={}){const r=spawnSync(runtime+'/bin/php8.4',[...phpArgs,'-r',code],{env:phpEnv,encoding:'utf8',timeout:60000});if(!allowFail)assert.equal(r.status,0,r.stdout+'\n'+r.stderr);return r;}
+export function php(code,{allowFail=false,timeout=60000}={}){const r=spawnSync(runtime+'/bin/php8.4',[...phpArgs,'-r',code],{env:phpEnv,encoding:'utf8',timeout,maxBuffer:64*1024*1024});if(!allowFail)assert.equal(r.status,0,r.stdout+'\n'+r.stderr);return r;}
 function copyTree(from,to){mkdirSync(to,{recursive:true});for(const f of readdirSync(from)){const src=path.join(from,f),dst=path.join(to,f);if(statSync(src).isDirectory()){if(['downloads','preview','node_modules','.git','tests','docs'].includes(f))continue;copyTree(src,dst);}else if(!['config.php','np-private.php','mono-private.php','site-settings.json','site-settings.lock'].includes(f))copyFileSync(src,dst);}}
 export async function startSite({enableV3=true,legacySync=true,extraConfig=''}={}){
  const dir=mkdtempSync(path.join(tmpdir(),'rubizh-v3-')),site=path.join(dir,'www'),schema='fixture_pim_v3_'+[...crypto.getRandomValues(new Uint8Array(6))].map(b=>b.toString(16).padStart(2,'0')).join('');
