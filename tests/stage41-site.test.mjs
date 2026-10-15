@@ -76,3 +76,18 @@ test('D-63: no template expression in a value attribute of the source markup',as
  const {readFileSync}=await import('node:fs');const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
  assert.deepEqual(html.match(/<input[^>]*type="number"[^>]*\svalue="\{\{[^>]*>/g)||[],[]);
 });
+
+// D-64: the kit page promises what Q-8 K1/K3 actually do — no percentage «by the number of positions».
+test('D-64: «кількості позицій» appears nowhere in the storefront, templates, offer or e-mails; /kit says the Q-8 rule',async()=>{
+ const {readFileSync,readdirSync}=await import('node:fs');const root=new URL('../',import.meta.url);
+ const html=readFileSync(new URL('index.html',root),'utf8');
+ const live=[...html.matchAll(/(?:src|href)="\/(assets\/[^"?]+\.(?:js|css))/g)].map(m=>m[1]);
+ const files=['index.html','storefront.php','offer.html','privacy.html',...live,...readdirSync(new URL('auth/',root)).filter(f=>f.endsWith('.php')).map(f=>'auth/'+f),...readdirSync(new URL('shop/',root)).filter(f=>f.endsWith('.php')).map(f=>'shop/'+f)];
+ const hits=files.filter(f=>{try{return /кількост[іи] (?:окремих |різних )?позиці/i.test(readFileSync(new URL(f,root),'utf8'));}catch{return false;}});
+ assert.deepEqual(hits,[],'old «by the number of positions» wording');
+ const sf=readFileSync(new URL('storefront.php',root),'utf8');
+ const kit=sf.slice(sf.indexOf("['/kit','/kit/']"),sf.indexOf("['/kit','/kit/']")+900);
+ assert.match(kit,/<meta name="description" content="[^"]*Оберіть речі щонайменше з двох різних розділів — отримаєте ціну комплекту/);
+ assert.match(kit,/<p>[^<]*Оберіть речі щонайменше з двох різних розділів — отримаєте ціну комплекту/);
+});
+
