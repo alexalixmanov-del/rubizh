@@ -148,7 +148,7 @@ function monoInvalidateFailed(PDO $db,int $orderId): void {
  npAudit($db,str_repeat('0',32),'mono_invoice_removed',$orderId,0,$last['invoice_id']);
 }
 /**
- * D-57: a staff cancellation of an unpaid order closes its open card invoice at the bank first (invoice/remove works
+ * S4-03: a staff cancellation of an unpaid order closes its open card invoice at the bank first (invoice/remove works
  * only while nothing is paid). A bank refusal is resolved from the bank's own status: expired → closed; paid or still
  * processing → the cancellation is refused, so a payment can never land on a cancelled order unnoticed.
  */

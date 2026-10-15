@@ -55,7 +55,7 @@ function crmSchemaStepsV2(): array {
  foreach(['UPDATE','DELETE'] as $v){$name='rubizh_staff_audit_context_no_'.strtolower($v);$out[]=['kind'=>'trigger','name'=>$name,'sql'=>"CREATE TRIGGER $name BEFORE $v ON rubizh_staff_audit_context FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='CRM history is append-only'"];}
  // Indexes for 50 000-order lists: assignment filter, timing, audit by order.
  foreach(['crm_order_updated'=>['rubizh_customer_orders','updated_at,id'],'crm_order_status_created'=>['rubizh_customer_orders','status,created_at,id'],'crm_np_audit_action'=>['rubizh_np_audit','action,id'],
-  // Covering indexes for substring search (number, email, TTN): the scan reads the index, not the wide rows (D-59).
+  // Covering indexes for substring search (number, email, TTN): the scan reads the index, not the wide rows (PERF-4.2).
   'crm_order_number_email'=>['rubizh_customer_orders','order_number,email'],'crm_shipment_tracking_order'=>['rubizh_order_shipments','tracking_number,order_id']] as $name=>[$table,$columns])$out[]=['kind'=>'index','name'=>$name,'table'=>$table,'sql'=>"CREATE INDEX $name ON $table($columns)"];
  return $out;
 }

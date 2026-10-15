@@ -49,9 +49,9 @@ test('staging mocks answer with the live provider shapes the SITE code validates
   void staffEmail;void password;
  }finally{s.stop();}
 });
-// D-55: a mutation that returns the order card returns the whole card (history, tasks…), or the CRM card crashes
+// S4-01: a mutation that returns the order card returns the whole card (history, tasks…), or the CRM card crashes
 // after the action (seen in E2E: «Створити відправлення» left a blank screen).
-test('D-55: order mutations return the full card that the CRM renders (validated against the Order schema)',{skip,timeout:240000},async()=>{
+test('S4-01: order mutations return the full card that the CRM renders (validated against the Order schema)',{skip,timeout:240000},async()=>{
  const s=await startCrm();
  try{
   const o=await s.checkout([line()]);const owner=await s.login('OWNER');const v=async()=>(await owner.get('/orders/'+o.id)).data.data.version;

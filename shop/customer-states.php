@@ -6,7 +6,7 @@ function shopCustomerStates(array $o,?array $receipt=null): array {
  $status=(string)($o['status']??'');$payment=(string)($o['payment_status']??'');
  // A new order whose payment is not open yet waits for the manager; asking to pay would mislead.
  if($payment==='pending'&&$status==='new'&&is_array($receipt)&&($receipt['stage']??'')==='pending'&&empty($receipt['payment_ready']))$payment='after_confirmation';
- // D-56: the same refund ledger as the CRM — a partial bank refund of a paid order is shown as such, not as «Оплачено».
+ // S4-02: the same refund ledger as the CRM — a partial bank refund of a paid order is shown as such, not as «Оплачено».
  if($payment==='paid'&&isset($o['id'])){$refunded=$o['refunded_minor']??shopOrderRefundedMinor((int)$o['id']);if($refunded>0)$payment=$refunded>=(int)round((float)($o['total']??0)*100)?'refunded':'partially_refunded';}
  return ['order'=>['new'=>'Прийнято','confirmed'=>'Підтверджено','processing'=>'Готуємо','partially_shipped'=>'Частково відправлено','shipped'=>'Відправлено','delivered'=>'Доставлено','completed'=>'Виконано','cancelled'=>'Скасовано','returned'=>'Повернено','partially_returned'=>'Частково повернено'][$status]??'Уточнюється',
   'payment'=>['after_confirmation'=>'Оплата після підтвердження','pending'=>'Очікує оплати','paid'=>'Оплачено','partially_refunded'=>'Кошти повернено частково','refunded'=>'Кошти повернено','failed'=>'Оплата не пройшла'][$payment]??'Уточнюється',

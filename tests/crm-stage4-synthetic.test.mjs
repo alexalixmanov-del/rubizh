@@ -29,11 +29,11 @@ test('synthetic generator: ≥500 orders in every state via business functions; 
   for(let page=1;;page++){const l=(await owner.get('/orders?limit=100&page='+page)).data.data;for(const o of l.rows)for(const [k,v] of Object.entries(o.display||{}))codes.add(k+':'+v.code);if(page>=l.pagination.pages)break;}
   writeFileSync(reports+'/display-codes.json',JSON.stringify([...codes].sort(),null,1));
   assert.ok(codes.size>=12,'many distinct display states: '+[...codes].join(','));
-  // D-60: the customer segment filter is applied before pagination — totals and pages match the unfiltered list.
+  // S4-05: the customer segment filter is applied before pagination — totals and pages match the unfiltered list.
   const all=[];for(let page=1;;page++){const l=(await owner.get('/customers?limit=100&page='+page)).data.data;all.push(...l.rows);if(page>=l.pagination.pages)break;}
   for(const seg of ['VIP','REPEAT','NEW','SLEEPING']){const l=(await owner.get('/customers?limit=5&segment='+seg)).data.data;const want=all.filter(c=>c.segment===seg).length;
    assert.equal(l.pagination.total,want,seg+' total');assert.ok(l.rows.every(c=>c.segment===seg),seg+' rows');assert.equal(l.rows.length,Math.min(5,want));}
-  // D-59: search answers through the narrow tables — phone (any format, partial), name, SKU, TTN.
+  // PERF-4.2: search answers through the narrow tables — phone (any format, partial), name, SKU, TTN.
   const one=s.sql("SELECT o.id,o.order_number,e.normalized_phone p,JSON_UNQUOTE(JSON_EXTRACT(d.contact_json,'$.name')) n,(SELECT sku FROM rubizh_order_fulfillment_lines WHERE order_id=o.id LIMIT 1) sku FROM rubizh_customer_orders o JOIN rubizh_order_details d ON d.order_id=o.id JOIN rubizh_order_contact_evidence e ON e.order_id=o.id LEFT JOIN rubizh_account_orders ao ON ao.order_id=o.id WHERE ao.order_id IS NULL ORDER BY o.id DESC LIMIT 1")[0];
   const ttn=s.sql("SELECT order_id,tracking_number t FROM rubizh_order_shipments WHERE tracking_number<>'' LIMIT 1")[0];
   for(const [q,id] of [[one.p,one.id],['0'+one.p.slice(4),one.id],[one.p.slice(-7),one.id],[one.n,one.id],[one.order_number,one.id],[ttn.t,ttn.order_id]]){
@@ -50,7 +50,7 @@ test('Staff API list performance on 50 000 orders: every list request ≤500 ms 
   const b=json(run(s,{orders:0,bulk:50000}));assert.ok(b.bulk?.orders>=50000,'50 000 orders: '+JSON.stringify(b.bulk));
   const owner=await s.login('OWNER'),manager=await s.login('MANAGER');const timings=[];
   const paths=['/orders','/orders?view=new','/orders?view=processing','/orders?view=delivery','/orders?view=problem','/orders?attention=confirmation','/orders?view=cancelled','/orders?sort=total&direction=asc','/orders?page=200','/orders?q=Коваленко','/orders?q=0671000037','/orders/counters','/payments','/shipments','/customers','/dashboard?period=30d',
-   // D-61 + review: customer search and segment; broad substrings that match almost every order (e-mail «@», one letter).
+   // PERF-4.1 + review: customer search and segment; broad substrings that match almost every order (e-mail «@», one letter).
    '/customers?q=Коваленко','/customers?segment=VIP','/customers?q=%40','/orders?q=%40','/orders?q=a','/customers?q=a'];
   for(const [who,c] of [['OWNER',owner],['MANAGER',manager]])for(const p of paths){
    await c.get(p);const runs=[];for(let i=0;i<3;i++){const t=performance.now();const r=await c.get(p);runs.push(performance.now()-t);assert.equal(r.status,200,who+' '+p+' '+JSON.stringify(r.data).slice(0,200));}
