@@ -147,6 +147,24 @@ function monoInvalidateFailed(PDO $db,int $orderId): void {
   throw new RuntimeException('Попередній рахунок банк ще не закрив. Новий рахунок не створюємо, щоб не було подвійної оплати: менеджер перевірить його й зв’яжеться з вами.');}
  npAudit($db,str_repeat('0',32),'mono_invoice_removed',$orderId,0,$last['invoice_id']);
 }
+/**
+ * D-57: a staff cancellation of an unpaid order closes its open card invoice at the bank first (invoice/remove works
+ * only while nothing is paid). A bank refusal is resolved from the bank's own status: expired → closed; paid or still
+ * processing → the cancellation is refused, so a payment can never land on a cancelled order unnoticed.
+ */
+function monoCloseOpenInvoice(PDO $db,int $orderId,string $actor): void {
+ $q=$db->prepare("SELECT * FROM rubizh_mono_invoices WHERE order_id=? AND status IN ('creating','unknown','created','processing','hold','awaiting_webhook') ORDER BY id");$q->execute([$orderId]);
+ foreach($q->fetchAll(PDO::FETCH_ASSOC) as $i){
+  if(!$i['invoice_id']||in_array($i['status'],['creating','unknown','processing','hold','awaiting_webhook'],true))throw new RuntimeException('Банк ще обробляє оплату або рахунок потребує звірки. Спочатку звірте платіж, потім скасовуйте.');
+  try{monoApi('invoice/remove',['invoiceId'=>$i['invoice_id']]);$final='failure';$action='mono_invoice_removed';}
+  catch(Throwable $e){error_log('rubizh mono remove: '.get_class($e));$state='';
+   try{$r=monoApi('invoice/status?invoiceId='.rawurlencode($i['invoice_id']));if(($r['invoiceId']??null)===$i['invoice_id'])$state=(string)($r['status']??'');}catch(Throwable $read){error_log('rubizh mono status: '.get_class($read));}
+   if($state!=='expired')throw new RuntimeException('Банк не закрив рахунок (можливо, оплата вже йде). Скасування не виконано — перевірте платіж.');
+   $final='expired';$action='mono_invoice_final_not_removed';}
+  $db->prepare("UPDATE rubizh_mono_invoices SET status=?,updated_at=UTC_TIMESTAMP() WHERE id=? AND status='created'")->execute([$final,$i['id']]);
+  npAudit($db,$actor,$action,$orderId,0,$i['invoice_id']);
+ }
+}
 // Grace period for the signed webhook before a lost callback is resolved from the bank status read.
 const MONO_WEBHOOK_GRACE_SECONDS=900;
 // The merchant API used here exposes status by invoiceId, not a supported reference search.

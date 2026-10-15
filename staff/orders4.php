@@ -31,7 +31,7 @@ function crmHandle(PDO $db,?array $actor,array $route,array $p,array $b,array $q
   'orders.line.remove'=>crmMutate($db,$actor,$id,$b,'order.line_remove',fn()=>shopRemoveLine($db,$id,$line,$actor['id'],$b['reason']),true,$b['reason']),
   'orders.line.supplier'=>crmMutate($db,$actor,$id,$b,'order.line_supplier',fn()=>shopAssignLineSupplier($db,$id,$line,$actor['id'],$b['supplier_code'],$b['reason']),true,$b['reason']),
   'orders.invoice'=>crmMutate($db,$actor,$id,$b,'order.invoice',function($old)use($db,$id,$actor){if($old['order_status']!=='CONFIRMED')throw new CrmError('CONFIRMATION_REQUIRED',409);return ['invoice'=>monoCreate($db,$id,$actor['id'])];}),
-  'orders.cancel'=>crmMutate($db,$actor,$id,$b,'order.cancel',fn()=>shopCancelOrder($db,$id,false,$actor['id'],$b['reason']),true,$b['reason']),
+  'orders.cancel'=>crmMutate($db,$actor,$id,$b,'order.cancel',function()use($db,$id,$actor,$b){monoCloseOpenInvoice($db,$id,$actor['id']);shopCancelOrder($db,$id,false,$actor['id'],$b['reason']);},true,$b['reason']), // D-57
   'orders.problem'=>crmMutate($db,$actor,$id,$b,'order.problem',fn()=>crmSetProblem($db,$actor,$id,$b['flag'],$b['reason']),false,$b['reason']),
   'orders.packing'=>crmMutate($db,$actor,$id,$b,'order.packing',fn()=>shopTransferToPacking($db,$id,$actor['id'])),
   'orders.complete'=>crmMutate($db,$actor,$id,$b,'order.complete',fn()=>shopCompleteOrder($db,$id,$actor['id'])),
