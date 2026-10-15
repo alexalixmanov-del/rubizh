@@ -37,7 +37,7 @@ function crmHandle(PDO $db,?array $actor,array $route,array $p,array $b,array $q
   'orders.complete'=>crmMutate($db,$actor,$id,$b,'order.complete',fn()=>shopCompleteOrder($db,$id,$actor['id'])),
   'orders.delivery'=>crmMutate($db,$actor,$id,$b,'order.delivery_update',fn()=>shopUpdateDelivery($db,$id,$actor['id'],$b['delivery'],$b['recipient']??null,$b['phone']??null,$b['reason']),true,$b['reason']),
   'orders.note'=>crmNote($db,$actor,'order',(string)$id,$b+['request_id'=>$key]),
-  'orders.shipment.draft'=>crmShipmentAction($db,$id,$actor,['version'=>$b['expected_version'],'request_id'=>$key]+$b,'draft'),
+  'orders.shipment.draft'=>crmOrderCardExtras($db,crmShipmentAction($db,$id,$actor,['version'=>$b['expected_version'],'request_id'=>$key]+$b,'draft'),$actor), // D-55: the full card
   'orders.invoice.accept'=>crmMutate($db,$actor,$id,$b,'payment.invoice.accept',fn()=>shopAcceptInvoicePayment($db,$id,$actor['id'],$b['amount_minor'],$b['paid_on'],$b['document'],$b['reason']),false,$b['reason']),
   'orders.reconcile.not_created'=>crmMutate($db,$actor,$id,$b,'payment.reconcile_not_created',fn()=>monoReconcileNotCreated($db,$id,$actor['id'],$b['reason']),false,$b['reason']),
   'orders.reconcile.manual'=>crmMutate($db,$actor,$id,$b,'payment.manual_reconcile',fn()=>monoReconcile($db,$id,$b['invoice_id'],$actor['id'],$b['reason']),false,$b['reason']),

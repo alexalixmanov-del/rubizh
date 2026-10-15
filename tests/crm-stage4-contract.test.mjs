@@ -49,3 +49,25 @@ test('staging mocks answer with the live provider shapes the SITE code validates
   void staffEmail;void password;
  }finally{s.stop();}
 });
+// D-55: a mutation that returns the order card returns the whole card (history, tasks…), or the CRM card crashes
+// after the action (seen in E2E: «Створити відправлення» left a blank screen).
+test('D-55: order mutations return the full card that the CRM renders (validated against the Order schema)',{skip,timeout:240000},async()=>{
+ const s=await startCrm();
+ try{
+  const o=await s.checkout([line()]);const owner=await s.login('OWNER');const v=async()=>(await owner.get('/orders/'+o.id)).data.data.version;
+  const check=(r,id)=>{assert.ok(r.status<300,id+' '+JSON.stringify(r.data).slice(0,300));const e=errors(r.data.data,'Order');assert.deepEqual(e,[],id+': '+e.join(', '));return r.data.data;};
+  check(await owner.send('/orders/'+o.id+'/assign',{expected_version:await v()}),'orders.assign');
+  check(await owner.send('/orders/'+o.id+'/invoice',{expected_version:await v()}),'orders.invoice');
+  assert.equal((await s.webhook(s.sql('SELECT * FROM rubizh_mono_invoices WHERE invoice_id IS NOT NULL')[0])).status,200);
+  check(await owner.send('/orders/'+o.id+'/packing',{expected_version:await v()}),'orders.packing');
+  const profile=(await owner.get('/settings')).data.data.sender_profiles.find(p=>p.code==='m_vin');
+  assert.equal((await owner.send('/settings/senders/m_vin',{...profile,name:'Склад',city:'Київ',region:'Київська',branch:'1',city_ref:s.ref(10),warehouse_ref:s.ref(20),sender_ref:s.ref(1),contact_ref:s.ref(2),phone:'+380671234567',confirmed:true,reason:'Реквізити НП для перевірки контракту'},'PUT')).status,200);
+  const card=(await owner.get('/orders/'+o.id)).data.data;const supplier=card.fulfillment_lines[0].supplier_code;
+  const draft=check(await owner.send('/orders/'+o.id+'/shipments',{expected_version:card.version,request_id:crypto.randomUUID().replaceAll('-',''),supplier_code:supplier,availability_confirmed:true,lines:[{line_no:0,qty:1}],package:{places:[{weight:1,length:30,width:20,height:10}]}}),'orders.shipment.draft');
+  const sid=draft.parcels[0].id;
+  check(await owner.send('/shipments/'+sid+'/create',{expected_version:await v()}),'shipments.create');
+  check(await owner.send('/shipments/'+sid+'/refresh',{expected_version:await v()}),'shipments.refresh');
+  check(await owner.send('/orders/'+o.id+'/complete',{expected_version:await v()}),'orders.complete');
+  check(await owner.send('/orders/'+o.id+'/problem',{expected_version:await v(),flag:true,reason:'Перевірка повної картки'}),'orders.problem');
+ }finally{s.stop();}
+});
