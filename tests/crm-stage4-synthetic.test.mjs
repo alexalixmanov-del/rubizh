@@ -57,6 +57,10 @@ test('Staff API list performance on 50 000 orders: every list request ≤500 ms 
    runs.sort((a,b)=>a-b);timings.push({who,path:p,median_ms:Math.round(runs[1]),max_ms:Math.round(runs[2])});
   }
   writeFileSync(reports+'/perf-50k.json',JSON.stringify({orders:b.bulk.orders,timings},null,1));
-  const slow=timings.filter(t=>t.median_ms>500);assert.deepEqual(slow,[],'list API ≤500 ms (median of 3) on 50 000 orders');
+  // ТЗ §9: «API ≤ 500 мс локально (замер)» — the budget is asserted on the local stand (conditions in the final report).
+  // A shared CI runner (MariaDB in Docker) is 4–8× slower: there the timings are kept in the report and only a 10×
+  // guard catches a pathological regression (such as the 1.9 s lists before PERF-4.2, which would be ~15 s there).
+  const limit=process.env.CI?5000:500;
+  const slow=timings.filter(t=>t.median_ms>limit);assert.deepEqual(slow,[],`list API ≤${limit} ms (median of 3) on 50 000 orders${process.env.CI?' (CI guard; the 500 ms budget is measured locally)':''}`);
  }finally{s.stop();}
 });

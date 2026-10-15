@@ -7,6 +7,8 @@ out=Path(sys.argv[1]) if len(sys.argv)>1 else root/'downloads/Rubizh-pim-v3-2026
 skip=('tests/','docs/','downloads/','preview/','.github/','.gitignore','package.json','package-lock.json')
 private={'api/config.php','auth/config.php','api/mono-private.php','api/np-private.php','api/site-settings.json'}
 files=[f for f in subprocess.run(['git','ls-files'],cwd=root,capture_output=True,text=True,check=True).stdout.split('\n') if f and not f.startswith(skip) and f not in private and not f.endswith(('.md','.mjs')) and f!='PIM-V3-GAP-MATRIX.json']
+# Dot-files are repository tooling (CI, scanners, editors); the hosting needs only .htaccess files (S4-07).
+files=[f for f in files if not any(part.startswith('.') and part!='.htaccess' for part in f.split('/'))]
 # The design-preview renderer (fictitious display data) is developer tooling, not part of the shop.
 files=[f for f in files if f!='dev/render-account.php']
 # Superseded storefront bundles stay in Git but are not shipped: an asset goes into the archive only when a shipped

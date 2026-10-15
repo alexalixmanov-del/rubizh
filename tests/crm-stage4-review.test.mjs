@@ -169,3 +169,26 @@ test('R4-16…R4-23 (second blind pass): no phone through free-text search; lega
   assert.equal(php(`define('RUBIZH_AUTH_NO_SESSION',true);require '${s.site}/staff/bootstrap.php';echo crmCsvCell(' =1+1'),crmCsvCell("\n@x");`).stdout,`"' =1+1""'\n@x"`);
  }finally{s.stop();}
 });
+
+// S4-08 (review of S4-06): the «create return» answer is the same role view as the returns list — MANAGER and SUPPORT
+// (return.create, no refund.view, §8) get no refund money, neither on the first answer nor on an idempotent replay.
+test('S4-08: creating a return answers MANAGER/SUPPORT without refund amounts (first answer and replay)',{skip,timeout:300000},async()=>{
+ const s=await startCrm();
+ try{
+  const owner=await s.login('OWNER');const o=await s.checkout([{...line(),qty:2}]);const v=async()=>(await owner.get('/orders/'+o.id)).data.data.version;
+  assert.equal((await owner.send('/orders/'+o.id+'/invoice',{version:await v()})).status,200);
+  const inv=s.sql('SELECT * FROM rubizh_mono_invoices WHERE order_id='+o.id+' AND invoice_id IS NOT NULL')[0];assert.equal((await s.webhook(inv)).status,200);
+  const card=(await owner.get('/orders/'+o.id)).data.data;const profile=(await owner.get('/settings')).data.data.sender_profiles.find(p=>p.code===card.fulfillment_lines[0].supplier_code);
+  assert.equal((await owner.send('/settings/senders/'+profile.code,{...profile,name:'Склад',city:'Київ',region:'Київська',branch:'1',city_ref:s.ref(10),warehouse_ref:s.ref(20),sender_ref:s.ref(1),contact_ref:s.ref(2),phone:'+380671234567',confirmed:true,reason:'Реквізити НП для перевірки'},'PUT')).status,200);
+  assert.equal((await owner.send('/orders/'+o.id+'/shipments',{version:await v(),request_id:key(),availability_confirmed:true,supplier_code:profile.code,lines:[{line_no:0,qty:2}],package:{places:[{weight:1,length:30,width:20,height:10}]}})).status,201);
+  s.sql("UPDATE rubizh_order_shipments SET status='delivered' WHERE order_id="+o.id);
+  const money=/refund_expected_minor":\d|refund_minor|refund_allocations_json":"[^n]/;
+  for(const [role,qty] of [['MANAGER',1],['SUPPORT',1]]){ // one unit each: the order has two
+   const a=await s.login(role);const body={order_id:o.id,lines:[{line_no:0,qty}],reason:'Не підійшов розмір',version:await v(),request_id:key()};
+   const first=await a.send('/returns',body);assert.ok(first.status<300,role+' '+JSON.stringify(first.data).slice(0,300));
+   assert.doesNotMatch(JSON.stringify(first.data),money,role+' first answer without refund money');
+   const again=await a.send('/returns',body);assert.ok(again.status<300,role+' replay '+again.status);
+   assert.doesNotMatch(JSON.stringify(again.data),money,role+' replay without refund money');
+  }
+ }finally{s.stop();}
+});

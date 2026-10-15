@@ -56,7 +56,8 @@ function crmHandle(PDO $db,?array $actor,array $route,array $p,array $b,array $q
   'shipments.notify'=>crmShipmentNotify($db,$actor,$id),
   'shipments.note'=>crmNote($db,$actor,'shipment',(string)$id,$b+['request_id'=>$key]),
   'returns.list'=>crmReturnsList($db,$actor,$q),
-  'returns.create'=>crmReturnCreate($db,$actor,['version'=>$b['expected_version'],'request_id'=>$key]+$b),
+  // S4-08: the answer is the same role view as the returns list (no refund money without refund.view).
+  'returns.create'=>(fn($r)=>crmCan($actor,'refund.view')?$r:crmRedactReturn($r))(crmReturnCreate($db,$actor,['version'=>$b['expected_version'],'request_id'=>$key]+$b)),
   'returns.view'=>crmEntityView($db,$actor,'returns',$id),
   'returns.transition'=>crmReturnTransition4($db,$actor,$id,$b),
   'returns.note'=>crmNote($db,$actor,'return',(string)$id,$b+['request_id'=>$key]),

@@ -17,13 +17,17 @@ async function seeded(){
  assert.deepEqual(r.errors,[]);s.orderId=+s.sql('SELECT MAX(id) id FROM rubizh_customer_orders')[0].id;return s;
 }
 async function signIn(page,base,role='OWNER'){await page.goto(base+'/crm/');await page.getByLabel('Email').fill(staffEmail(role));await page.getByLabel('Пароль',{exact:true}).fill(password);await page.getByRole('button',{name:'Увійти'}).click();await page.getByRole('navigation',{name:'Основне'}).first().waitFor({state:'attached'});}
-async function visit(page,url){await page.goto(url);await page.getByRole('heading',{level:1}).first().waitFor({timeout:20000});await page.waitForLoadState('networkidle');}
+// A navigation started while a background poll (45–60 s) is in flight makes WebKit report the cancelled request as a page
+// error; a person never navigates in the same millisecond. Wait for the Staff API to be idle, then navigate.
+function trackApi(page){page.__api=0;const dec=r=>{if(r.url().includes('/api/staff/'))page.__api=Math.max(0,page.__api-1);};page.on('request',r=>{if(r.url().includes('/api/staff/'))page.__api++;});page.on('requestfinished',dec);page.on('requestfailed',dec);}
+async function apiIdle(page){for(let i=0;i<200&&page.__api>0;i++)await page.waitForTimeout(50);}
+async function visit(page,url){if(page.__api!==undefined)await apiIdle(page);await page.goto(url);await page.getByRole('heading',{level:1}).first().waitFor({timeout:20000});await page.waitForLoadState('networkidle');}
 
 for(const engine of Object.keys(ENGINES))test(`CRM matrix ${engine}: 7 widths × light/dark × every section: no overflow, no JS/CSP/server errors`,{skip,timeout:3600000},async()=>{
  const s=await seeded();const browser=await ENGINES[engine]();const report=[];
  try{
   for(const width of WIDTHS)for(const theme of ['light','dark']){
-   const ctx=await browser.newContext({viewport:{width,height:width<768?844:900}});const page=await ctx.newPage();const errors=[];
+   const ctx=await browser.newContext({viewport:{width,height:width<768?844:900}});const page=await ctx.newPage();const errors=[];trackApi(page);
    page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.url().includes('/api/staff/')&&r.status()>=500)errors.push(r.status()+' '+r.url());});
    await page.addInitScript(t=>{try{localStorage.setItem('crm.theme',t);}catch{}document.addEventListener('securitypolicyviolation',e=>{(window.__csp=window.__csp||[]).push(e.violatedDirective+' '+e.blockedURI);});},theme);
    await signIn(page,s.base);
