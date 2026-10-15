@@ -87,6 +87,8 @@ function crmOrderCardExtras(PDO $db,array $o,array $actor): array {
  foreach($o['timeline']??[] as $t)$hist[]=['at'=>$t['occurred_at'],'source'=>'timeline','action'=>$t['event'],'actor'=>null,'reason'=>'','detail'=>json_decode((string)$t['detail_json'],true)?:[]];
  foreach(crmQuery($db,'SELECT a.action,a.reason,a.actor_role,a.created_at,u.name FROM rubizh_order_audit a LEFT JOIN rubizh_staff_users u ON u.id=a.actor_id WHERE a.order_id=? ORDER BY a.id DESC LIMIT 100',[$id]) as $r)$hist[]=['at'=>$r['created_at'],'source'=>'site','action'=>$r['action'],'actor'=>$r['name']??($r['actor_role']==='SYSTEM'?'Система':null),'reason'=>crmCan($actor,'order.finance.view')||!str_starts_with($r['action'],'payment.')?$r['reason']:'','detail'=>[]];
  foreach(crmQuery($db,"SELECT s.action,s.reason,s.created_at,u.name FROM rubizh_staff_audit s LEFT JOIN rubizh_staff_users u ON u.id=s.actor_id WHERE s.entity='order' AND s.entity_id=? ORDER BY s.id DESC LIMIT 100",[(string)$id]) as $r)$hist[]=['at'=>$r['created_at'],'source'=>'crm','action'=>$r['action'],'actor'=>$r['name'],'reason'=>$r['reason'],'detail'=>[]];
+ // History by role: MonoPay, invoice and refund events only with finance access; payment status events also need the amount view.
+ if(!crmCan($actor,'order.finance.view')){$hide=crmCan($actor,'order.amount.view')?'/refund|invoice|mono|reconcil/i':'/pa(id|y)|refund|invoice|mono|reconcil/i';$hist=array_values(array_map(fn($h)=>['detail'=>[]]+$h,array_filter($hist,fn($h)=>!preg_match($hide,(string)$h['action']))));}
  usort($hist,fn($a,$b)=>strcmp($b['at'],$a['at']));$o['history']=array_slice($hist,0,150);
  $o['tasks']=crmQuery($db,'SELECT t.*,u.name assignee_name FROM rubizh_crm_tasks t LEFT JOIN rubizh_staff_users u ON u.id=t.assignee_id WHERE t.order_id=? ORDER BY t.state=\'DONE\',t.due_at IS NULL,t.due_at,t.id LIMIT 50',[$id]);
  foreach($o['tasks'] as &$t){$t['id']=(int)$t['id'];$t['order_id']=$t['order_id']===null?null:(int)$t['order_id'];$t['version']=(int)$t['version'];}unset($t);
@@ -181,7 +183,7 @@ function crmPaymentView(PDO $db,array $actor,int $id): array {
  if($actor['role']==='MANAGER'&&($order['assigned_manager']['id']??null)!==$actor['id'])throw new CrmError('ORDER_NOT_ASSIGNED',403);
  $events=$row['invoice_id']?crmQuery($db,'SELECT event_hash,status,created_at FROM rubizh_mono_events WHERE invoice_id=? ORDER BY created_at',[$row['invoice_id']]):[];
  $audit=crmQuery($db,"SELECT action,note,created_at FROM rubizh_np_audit WHERE order_id=? AND action LIKE 'mono\\_%' ORDER BY id",[(int)$row['order_id']]);
- return ['record'=>$row,'order'=>$order,'events'=>$events,'bank_log'=>$audit,'refunds'=>crmRefundRows($db,(int)$row['order_id'])];
+ return ['record'=>$row,'order'=>$order,'events'=>$events,'bank_log'=>$audit,'refunds'=>crmCan($actor,'refund.view')?crmRefundRows($db,(int)$row['order_id']):[]];
 }
 /** CRM-4.1: signed MonoPay events that failed validation are parked; OWNER reviews them with a fresh bank read. */
 function crmSyncReviews(PDO $db): void {
@@ -213,7 +215,7 @@ function crmReviewResolve(PDO $db,array $actor,string $rid,string $reason): arra
 function crmRefund4(PDO $db,array $actor,int $id,array $b,string $key): array {
  crmFeatureRequire('refund');
  $row=crmOne($db,'SELECT * FROM rubizh_mono_invoices WHERE id=?',[$id]);if(!$row)throw new CrmError('NOT_FOUND',404);
- $existing=crmOne($db,'SELECT * FROM rubizh_refund_operations WHERE idempotency_key=?',[$key]);if($existing&&(int)$existing['order_id']!==$id)throw new CrmError('IDEMPOTENCY_CONFLICT',409);
+ $existing=crmOne($db,'SELECT * FROM rubizh_refund_operations WHERE idempotency_key=?',[$key]);if($existing&&(int)$existing['order_id']!==(int)$row['order_id'])throw new CrmError('IDEMPOTENCY_CONFLICT',409);
  if(!$existing)crmCheckVersion(crmOrder($db,(int)$row['order_id'],$actor),['version'=>$b['expected_version']]);
  return crmRefund($db,(int)$row['order_id'],$actor,(int)$b['amount'],$key,$b['reason'],$existing?null:$b['expected_version']);
 }
@@ -224,12 +226,12 @@ function crmShipment4(PDO $db,array $actor,int $id,array $b,string $action): arr
  $s=crmShipmentRow($db,$id);
  if($action==='create')crmFeatureRequire('np_ttn');
  if(in_array($action,['refresh','reconcile'],true))crmFeatureRequire('np_tracking');
- if($action==='cancel'&&$s['status']==='created'){crmFeatureRequire('np_ttn');return crmShipmentDomain($db,$actor,$id,$b,'shipment.delete_ttn',fn($s)=>npDeleteTtn($db,(int)$s['order_id'],$id,$actor['id']));}
+ if($action==='cancel'&&$s['status']==='created'){crmFeatureRequire('np_ttn');return crmShipmentDomain($db,$actor,$id,$b,'shipment.delete_ttn',fn($s)=>npDeleteTtn($db,(int)$s['order_id'],$id,$actor['id']),true);}
  return crmOrderCardExtras($db,crmShipmentAction($db,(int)$s['order_id'],$actor,['version'=>$b['expected_version']]+$b,$action,$id),$actor);
 }
-function crmShipmentDomain(PDO $db,array $actor,int $id,array $b,string $action,callable $do): array {
+function crmShipmentDomain(PDO $db,array $actor,int $id,array $b,string $action,callable $do,bool $scope=false): array {
  $s=crmShipmentRow($db,$id);
- return crmMutate($db,$actor,(int)$s['order_id'],$b,$action,fn()=>$do($s),false,(string)($b['reason']??''));
+ return crmMutate($db,$actor,(int)$s['order_id'],$b,$action,fn()=>$do($s),$scope,(string)($b['reason']??''));
 }
 function crmShipmentNotify(PDO $db,array $actor,int $id): array {
  $s=crmShipmentRow($db,$id);if(($s['tracking_number']??'')==='')throw new CrmError('TTN_REQUIRED',409);
@@ -249,7 +251,7 @@ function crmShipmentsList(PDO $db,array $actor,array $q): array {
 }
 function crmReturnsList(PDO $db,array $actor,array $q): array {
  $r=crmList($db,'returns',$q);
- if(!crmCan($actor,'order.finance.view'))foreach($r['rows'] as &$row)$row=crmRedactReturn($row);unset($row);
+ if(!crmCan($actor,'refund.view'))foreach($r['rows'] as &$row)$row=crmRedactReturn($row);unset($row);
  return $r;
 }
 /** R4-04: refund amounts of a return are finance data (per-line refund, allocations, expected total). */
@@ -260,7 +262,9 @@ function crmRedactReturn(array $row): array {
 }
 function crmEntityView(PDO $db,array $actor,string $entity,int $id): array {
  $table=['shipments'=>'rubizh_order_shipments','returns'=>'rubizh_returns'][$entity];$row=crmOne($db,"SELECT * FROM $table WHERE id=?",[$id]);if(!$row)throw new CrmError('NOT_FOUND',404);
- unset($row['payload_json'],$row['result_json']);if(!crmCan($actor,'order.finance.view')){unset($row['declared_value'],$row['delivery_cost']);if($entity==='returns')$row=crmRedactReturn($row);}
+ $money=crmCan($actor,'order.finance.view');
+ if($entity==='shipments')$row=array_intersect_key($row,array_flip(['id','order_id','supplier_code','status','tracking_number','lines_json','error','created_at','updated_at',...($money?['declared_value','delivery_cost']:[])]));
+ elseif(!crmCan($actor,'refund.view'))$row=crmRedactReturn($row);
  return ['record'=>$row,'order'=>crmOrder($db,(int)$row['order_id'],$actor),'notes'=>crmNotes($db,rtrim($entity,'s'),(string)$id)];
 }
 /** Return graph (ТЗ 7.5): review states need return.review; physical receipt needs return.receive. */

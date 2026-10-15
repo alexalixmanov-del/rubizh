@@ -132,3 +132,40 @@ test('R4-10: stale reserve rows do not break re-reservation; cancel refused befo
   const bad=await owner.post('/tasks',{title:'Передзвонити',due_at:'2026-13-45'});assert.equal(bad.status,400,JSON.stringify(bad));
  }finally{s.stop();}
 });
+
+test('R4-16…R4-23 (second blind pass): no phone through free-text search; legacy profile masked; WAREHOUSE card without return money; MANAGER scope on TTN deletion; shipment view allow-list; network-wide login proof; promotion grants enrolment; CSV formulas after spaces',{skip,timeout:300000},async()=>{
+ const s=await startCrm();
+ try{
+  const owner=await session(s,staffEmail('OWNER'));const o=await paidOrder(s,owner);
+  // Free text that looks like the stored contact JSON never matches phones; names still do.
+  const acc=await session(s,staffEmail('ACCOUNTANT'));
+  for(const q of ['phone":"+38067','"+380671234567','+380671234567x','380671234567"'])assert.equal(ok(await acc.get('/orders?q='+encodeURIComponent(q))).pagination.total,0,'no phone oracle: '+q);
+  assert.ok(ok(await acc.get('/orders?q='+encodeURIComponent('Олена'))).pagination.total>0,'name search works');
+  // Legacy profile of an account: no full phone or address.
+  s.sql("INSERT INTO rubizh_accounts(id,email,first_name,last_name,phone,created_at,updated_at) VALUES('"+'c'.repeat(32)+"','legacy@fixture.test','Олена','','+380671234567',UTC_TIMESTAMP(),UTC_TIMESTAMP())");
+  s.sql("INSERT INTO rubizh_customers(email,phone,city,delivery_address,created_at,updated_at) VALUES('legacy@fixture.test','+380679998877','Київ','вул. Тестова, 1',UTC_TIMESTAMP(),UTC_TIMESTAMP())");
+  const cust=JSON.stringify(ok(await acc.get('/customers/'+'c'.repeat(32))));assert.ok(!cust.includes('9998877')&&!cust.includes('Тестова'),'legacy profile masked: '+cust.slice(0,300));
+  // WAREHOUSE: return money absent from the order card.
+  const sid=await shipped(s,owner,o);s.sql("UPDATE rubizh_order_shipments SET status='delivered' WHERE id="+sid);
+  ok(await owner.post('/returns',{order_id:o.id,lines:[{line_no:0,qty:1}],reason:'Не підійшов розмір',expected_version:await version(owner,o.id)}));
+  const wh=await session(s,staffEmail('WAREHOUSE'));const card=JSON.stringify(ok(await wh.get('/orders/'+o.id)));
+  assert.ok(!/refund_minor|refund_expected_minor":\d|refund_allocations_json":"|donation_amount":\d/.test(card),'WAREHOUSE card without money: '+card.match(/refund[^,]{0,40}/g));
+  // Shipment view: no sender snapshot or NP payloads for SUPPORT.
+  const sup=await session(s,staffEmail('SUPPORT'));const sv=JSON.stringify(ok(await sup.get('/shipments/'+sid)));assert.ok(!/origin_json|payload_json|result_json|declared_value|delivery_cost/.test(sv),'shipment view: SUPPORT gets no NP payloads and no money: '+(sv.match(/(origin|payload|result)_json|declared_value|delivery_cost/g)||[]));
+  // MANAGER B cannot delete the TTN on manager A's order.
+  s.sql("INSERT INTO rubizh_staff_users(id,email,name,password_hash,role,created_at,updated_at) SELECT 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb','manager.b@fixture.test','Менеджер Б',password_hash,'MANAGER',UTC_TIMESTAMP(),UTC_TIMESTAMP() FROM rubizh_staff_users WHERE email='"+staffEmail('MANAGER')+"'");
+  const o2=await paidOrder(s,owner);const a=await session(s,staffEmail('MANAGER'));ok(await a.post('/orders/'+o2.id+'/assign',{expected_version:await version(a,o2.id)}));const sid2=await shipped(s,owner,o2);
+  const b=await session(s,'manager.b@fixture.test');const del=await b.post('/shipments/'+sid2+'/cancel',{expected_version:await version(b,o2.id)});assert.equal(del.status,403,JSON.stringify(del));
+  // Promotion to ACCOUNTANT grants enrolment.
+  const sup2=s.sql("SELECT id,session_version FROM rubizh_staff_users WHERE email='"+staffEmail('SUPPORT')+"'")[0];
+  ok(await owner.post('/staff/'+sup2.id,{role:'ACCOUNTANT',session_version:+sup2.session_version,reason:'Переведено до бухгалтерії'}));
+  assert.ok(+s.sql("SELECT COUNT(*) n FROM rubizh_staff_invites WHERE kind='enroll' AND staff_id='"+sup2.id+"' AND used_at IS NULL AND created_at>=UTC_TIMESTAMP()-INTERVAL 1 MINUTE")[0].n>=1,'grant after promotion');
+  // Login: failures spread over many e-mails from one network make every login from it prove work first.
+  const r0=await fetch(s.base+'/api/staff/auth/session');const cookie=r0.headers.get('set-cookie').split(';')[0];let csrf=(await r0.json()).meta.csrf;
+  let gated=false;for(let i=0;i<40&&!gated;i++){const r=await fetch(s.base+'/api/staff/auth/login',{method:'POST',headers:{'Content-Type':'application/json',Cookie:cookie,'X-CSRF-Token':csrf},body:JSON.stringify({email:'spray'+i+'@fixture.test',password:'wrong-password-x'})});const j=await r.json();if(j.meta?.csrf)csrf=j.meta.csrf;gated=r.status===428;}
+  assert.ok(gated,'network-wide proof after spraying');
+  // CSV: a formula after leading spaces or a newline is neutralised.
+  const {php}=await import('./helpers/site-fixture.mjs');
+  assert.equal(php(`define('RUBIZH_AUTH_NO_SESSION',true);require '${s.site}/staff/bootstrap.php';echo crmCsvCell(' =1+1'),crmCsvCell("\n@x");`).stdout,`"' =1+1""'\n@x"`);
+ }finally{s.stop();}
+});

@@ -56,12 +56,13 @@ function crmCsrf(array $b): void {
 function crmLogin(PDO $db,array $b): array {
  crmCsrf($b);$email=mb_strtolower(trim((string)($b['email']??'')));$password=$b['password']??'';if(!is_string($password)||strlen($password)>72||strlen($email)>254)throw new CrmError('LOGIN_FAILED',401);
  $ip=rubizhNetworkIdentity();$loginKey=hash('sha256',$ip.'|'.$email);$proofScope='staff-login:'.$loginKey;$account=hash('sha256','account|'.$email);
- if(!rubizhRateCheck('staff-login-account',$account,20,900)){header('Retry-After: 900');throw new CrmError('RATE_LIMITED',429,['retry_after'=>900]);}
- if(!rubizhRateCheck('staff-login-failed',$loginKey,8,900)&&!rubizhProofValid($proofScope,$b['rate_proof']??null)){
+ if(!rubizhRateCheck('staff-login-account',$account,20,900)){if(function_exists('crmNotify'))crmNotify($db,'role:OWNER','login_locked','security',$account,'Багато невдалих входів до одного облікового запису (тимчасове обмеження 15 хв)',true,'locked:'.$account.':'.gmdate('YmdH'));header('Retry-After: 900');throw new CrmError('RATE_LIMITED',429,['retry_after'=>900]);}
+ $network=hash('sha256','network|'.$ip);
+ if((!rubizhRateCheck('staff-login-failed',$loginKey,8,900)||!rubizhRateCheck('staff-login-network',$network,30,900))&&!rubizhProofValid($proofScope,$b['rate_proof']??null)){
   $proof=rubizhProofIssue($proofScope,18);header('Retry-After: 1');throw new CrmError('CHECK_REQUIRED',428,['challenge'=>['nonce'=>$proof['nonce'],'bits'=>$proof['bits'],'purpose'=>'staff-login'],'continue_url'=>'/auth/staff-login.php']);
  }
  $a=crmOne($db,'SELECT * FROM rubizh_staff_users WHERE email=?',[$email]);$verified=password_verify($password,$a['password_hash']??CRM_DUMMY_HASH);
- $fail=function(string $code='LOGIN_FAILED')use($db,$loginKey,$email,$ip,$account){rubizhRateAllow('staff-login-failed',$loginKey,PHP_INT_MAX,900);rubizhRateAllow('staff-login-account',$account,PHP_INT_MAX,900);if($code==='TOTP_INVALID')rubizhRateAllow('staff-totp-account',$account,PHP_INT_MAX,900);crmAudit($db,null,'security',hash('sha256',$email),'login.failed',[],['ip_hash'=>hash('sha256',$ip),'reason'=>$code],'',null,'SYSTEM');throw new CrmError($code,401);};
+ $fail=function(string $code='LOGIN_FAILED')use($db,$loginKey,$email,$ip,$account,$network){rubizhRateAllow('staff-login-failed',$loginKey,PHP_INT_MAX,900);rubizhRateAllow('staff-login-network',$network,PHP_INT_MAX,900);rubizhRateAllow('staff-login-account',$account,PHP_INT_MAX,900);if($code==='TOTP_INVALID')rubizhRateAllow('staff-totp-account',$account,PHP_INT_MAX,900);crmAudit($db,null,'security',hash('sha256',$email),'login.failed',[],['ip_hash'=>hash('sha256',$ip),'reason'=>$code],'',null,'SYSTEM');throw new CrmError($code,401);};
  if(!$a||!$verified||!(int)$a['enabled'])$fail();
  $totpEnabled=crmTotpEnabled($db,$a['id']);
  if($totpEnabled){$code=$b['totp']??null;$backup=$b['backup_code']??null;if(($code===null||$code==='')&&($backup===null||$backup===''))throw new CrmError('TOTP_REQUIRED',401);if(!rubizhRateCheck('staff-totp-account',$account,5,900)){header('Retry-After: 900');throw new CrmError('RATE_LIMITED',429,['retry_after'=>900]);}if(!crmTotpVerify($db,$a['id'],is_string($code)?$code:null,is_string($backup)?$backup:null))$fail('TOTP_INVALID');}

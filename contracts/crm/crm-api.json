@@ -13,6 +13,22 @@
     "order_scope": "write: MANAGER may change only orders assigned to self or unassigned (403 ORDER_NOT_ASSIGNED); payments/refunds are visible to MANAGER only for own orders"
   },
   "roles": ["OWNER", "MANAGER", "WAREHOUSE", "SUPPORT", "ACCOUNTANT"],
+  "field_visibility": {
+    "order.total": {"permission": "order.amount.view", "label": "Сума замовлення («Разом»)"},
+    "order.payment_status": {"permission": "order.amount.view", "label": "Статус оплати (оплачено / очікує / неуспішно / прострочено)"},
+    "order.line_prices": {"permission": "order.finance.view", "label": "Ціни й суми рядків, знижка, вартість товарів"},
+    "order.invoices": {"permission": "order.finance.view", "label": "Рахунки MonoPay, посилання на оплату, суми оплат"},
+    "order.donation": {"permission": "order.finance.view", "label": "Сума донату із замовлення"},
+    "order.refunds": {"permission": "refund.view", "label": "Повернення коштів і їх суми в картці замовлення"},
+    "return.refund_amounts": {"permission": "refund.view", "label": "Суми в заявках на повернення"},
+    "shipment.declared_value": {"permission": "order.finance.view", "label": "Оголошена вартість і вартість доставки (поза формою ТТН)"},
+    "customer.paid_total": {"permission": "order.finance.view", "label": "Сума оплат клієнта"},
+    "dashboard.revenue": {"permission": "order.finance.view", "label": "Виручка й середній чек на «Огляді»"},
+    "dashboard.gross_profit": {"permission": "dashboard.finance", "label": "Валовий прибуток, маржа, собівартість"},
+    "payments.section": {"permission": "payment.view", "label": "Розділ «Платежі», події MonoPay"},
+    "analytics": {"permission": "report.view", "label": "Аналітика"},
+    "settings.system": {"permission": "settings.system", "label": "Реквізити й системні налаштування"}
+  },
   "permissions": {
     "dashboard.view": ["OWNER", "MANAGER", "WAREHOUSE", "SUPPORT", "ACCOUNTANT"],
     "dashboard.finance": ["OWNER", "ACCOUNTANT"],
@@ -28,7 +44,9 @@
     "order.complete": ["OWNER", "MANAGER"],
     "order.delivery.edit": ["OWNER", "MANAGER"],
     "order.line.supplier": ["OWNER", "MANAGER", "WAREHOUSE"],
-    "order.finance.view": ["OWNER", "MANAGER", "SUPPORT", "ACCOUNTANT"],
+    "order.amount.view": ["OWNER", "MANAGER", "SUPPORT", "ACCOUNTANT"],
+    "order.finance.view": ["OWNER", "MANAGER", "ACCOUNTANT"],
+    "refund.view": ["OWNER", "ACCOUNTANT"],
     "note.create": ["OWNER", "MANAGER", "WAREHOUSE", "SUPPORT"],
     "customer.view": ["OWNER", "MANAGER", "SUPPORT", "ACCOUNTANT"],
     "customer.phone.full": ["OWNER", "MANAGER", "SUPPORT"],

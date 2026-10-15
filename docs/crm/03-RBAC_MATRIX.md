@@ -22,7 +22,9 @@
 | `order.complete` | ✓ | ✓ | — | — | — |
 | `order.delivery.edit` | ✓ | ✓ | — | — | — |
 | `order.line.supplier` | ✓ | ✓ | ✓ | — | — |
-| `order.finance.view` | ✓ | ✓ | — | ✓ | ✓ |
+| `order.amount.view` | ✓ | ✓ | — | ✓ | ✓ |
+| `order.finance.view` | ✓ | ✓ | — | — | ✓ |
+| `refund.view` | ✓ | — | — | — | ✓ |
 | `note.create` | ✓ | ✓ | ✓ | ✓ | — |
 | `customer.view` | ✓ | ✓ | — | ✓ | ✓ |
 | `customer.phone.full` | ✓ | ✓ | — | ✓ | — |
@@ -61,6 +63,27 @@
 | `wholesale.view` | ✓ | ✓ | — | — | — |
 | `wholesale.manage` | ✓ | ✓ | — | — | — |
 | `inventory.return` | ✓ | — | — | — | — |
+
+## Поля × роли (видит / не видит)
+
+Проверка: `tests/crm-stage4-fields.test.mjs` — каждое поле × каждая роль по живому ответу Staff API. WAREHOUSE видит объявленную стоимость только как поле формы ТТН (в данных не отдаётся).
+
+| Поле | Право | Власник | Менеджер | Склад | Підтримка | Бухгалтер |
+|---|---|:-:|:-:|:-:|:-:|:-:|
+| Сума замовлення («Разом») (`order.total`) | `order.amount.view` | видит | видит | — | видит | видит |
+| Статус оплати (оплачено / очікує / неуспішно / прострочено) (`order.payment_status`) | `order.amount.view` | видит | видит | — | видит | видит |
+| Ціни й суми рядків, знижка, вартість товарів (`order.line_prices`) | `order.finance.view` | видит | видит | — | — | видит |
+| Рахунки MonoPay, посилання на оплату, суми оплат (`order.invoices`) | `order.finance.view` | видит | видит | — | — | видит |
+| Сума донату із замовлення (`order.donation`) | `order.finance.view` | видит | видит | — | — | видит |
+| Повернення коштів і їх суми в картці замовлення (`order.refunds`) | `refund.view` | видит | — | — | — | видит |
+| Суми в заявках на повернення (`return.refund_amounts`) | `refund.view` | видит | — | — | — | видит |
+| Оголошена вартість і вартість доставки (поза формою ТТН) (`shipment.declared_value`) | `order.finance.view` | видит | видит | — | — | видит |
+| Сума оплат клієнта (`customer.paid_total`) | `order.finance.view` | видит | видит | — | — | видит |
+| Виручка й середній чек на «Огляді» (`dashboard.revenue`) | `order.finance.view` | видит | видит | — | — | видит |
+| Валовий прибуток, маржа, собівартість (`dashboard.gross_profit`) | `dashboard.finance` | видит | — | — | — | видит |
+| Розділ «Платежі», події MonoPay (`payments.section`) | `payment.view` | видит | видит | — | — | видит |
+| Аналітика (`analytics`) | `report.view` | видит | — | — | — | видит |
+| Реквізити й системні налаштування (`settings.system`) | `settings.system` | видит | — | — | — | — |
 
 ## Эндпоинты × роли
 

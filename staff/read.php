@@ -22,8 +22,11 @@ function crmSearchOrderIds(PDO $db,string $q,bool $phones=true): ?array {
    $old=array_map('intval',$db->query('SELECT o.id FROM rubizh_customer_orders o LEFT JOIN rubizh_order_contact_evidence ce ON ce.order_id=o.id WHERE ce.order_id IS NULL')->fetchAll(PDO::FETCH_COLUMN));
    if($old){$sql[]="SELECT d.order_id FROM rubizh_order_details d WHERE d.order_id IN (".implode(',',$old).") AND $expr LIKE ?";$args[]=$tail;}}
  }else{
+  if(preg_match('/[":{}\\\\]/',$q))return [];
   if(preg_match('/[A-Za-z0-9]/',$q)){$sql[]="SELECT order_id FROM rubizh_order_fulfillment_lines WHERE sku LIKE ? ESCAPE '!'";$args[]=$like;$sql[]="SELECT id FROM rubizh_customer_orders WHERE email LIKE ? ESCAPE '!' OR order_number LIKE ? ESCAPE '!'";array_push($args,$like,$like);}
-  $sql[]="SELECT order_id FROM rubizh_order_details WHERE contact_json LIKE ? ESCAPE '!'";$args[]=$like;
+  // The raw LIKE only pre-filters; a match counts when it is in the buyer's name, the recipient or the city (R4-16).
+  $f=fn(string $k)=>"JSON_UNQUOTE(JSON_EXTRACT(contact_json,'$.$k')) LIKE ? ESCAPE '!'";
+  $sql[]="SELECT order_id FROM rubizh_order_details WHERE contact_json LIKE ? ESCAPE '!' AND (".$f('name').' OR '.$f('recipient').' OR '.$f('city').')';array_push($args,$like,$like,$like,$like);
  }
  $q2=$db->prepare(implode(' UNION ',$sql));$q2->execute($args);return array_map('intval',$q2->fetchAll(PDO::FETCH_COLUMN));
 }
@@ -35,7 +38,10 @@ function crmOrderWhere(array $q,array $actor,?PDO $db=null): array {
  foreach(['from'=>'>=','to'=>'<='] as $k=>$op)if(!empty($q[$k])){if(!preg_match('/^\d{4}-\d{2}-\d{2}$/D',$q[$k]))throw new CrmError('INVALID_DATE');$where[]="o.created_at $op ?";$args[]=$q[$k].($k==='to'?' 23:59:59':' 00:00:00');}
  if(!empty($q['customer'])){if(str_starts_with((string)$q['customer'],'order:')){$where[]='o.id=? AND ao.order_id IS NULL';$args[]=(int)substr($q['customer'],6);}else{$where[]='ao.customer_id=?';$args[]=$q['customer'];}}
  foreach(['manager'=>'a.staff_id','supplier'=>'supplier'] as $k=>$column)if(($q[$k]??'')!==''){if($k==='supplier'){$where[]='EXISTS(SELECT 1 FROM rubizh_order_fulfillment_lines f WHERE f.order_id=o.id AND f.supplier_code=?)';}else $where[]="$column=?";$args[]=$q[$k];}
- $view=$q['view']??'all';if($view==='mine'){$where[]='a.staff_id=?';$args[]=$actor['id'];}
+ $view=$q['view']??'all';
+ if(!crmCan($actor,'order.amount.view')&&($view==='payment'||($q['payment_status']??'')!==''))throw new CrmError('PERMISSION_DENIED',403,['permission'=>'order.amount.view']);
+ if(!crmCan($actor,'order.finance.view')&&($q['attention']??'')==='payment_review')throw new CrmError('PERMISSION_DENIED',403,['permission'=>'order.finance.view']);
+ if($view==='mine'){$where[]='a.staff_id=?';$args[]=$actor['id'];}
  // Stage 4 tabs (ТЗ 7.1); legacy view names below stay for compatibility.
  $problem="(EXISTS(SELECT 1 FROM rubizh_crm_order_flags fl WHERE fl.order_id=o.id AND fl.problem=1) OR EXISTS(SELECT 1 FROM rubizh_order_shipments s WHERE s.order_id=o.id AND s.status IN ('unknown','error','manual','returned')) OR EXISTS(SELECT 1 FROM rubizh_mono_invoices mi WHERE mi.order_id=o.id AND (mi.status='unknown' OR mi.refund_status='unknown')) OR EXISTS(SELECT 1 FROM rubizh_crm_payment_reviews pr WHERE pr.order_id=o.id AND pr.state='OPEN') OR o.status IN ('returned','partially_returned') OR o.status='cancelled' AND o.payment_status='paid')";
  if($view==='new')$where[]="a.staff_id IS NULL AND o.status IN ('new','confirmed') AND o.payment_status<>'paid'";
@@ -68,7 +74,7 @@ function crmOrderWhere(array $q,array $actor,?PDO $db=null): array {
 function crmOrders(PDO $db,array $q,array $actor): array {
  $p=crmPage($q);[$where,$args]=crmOrderWhere($q,$actor);$joins=' FROM rubizh_customer_orders o LEFT JOIN rubizh_order_details d ON d.order_id=o.id LEFT JOIN rubizh_order_assignments a ON a.order_id=o.id LEFT JOIN rubizh_staff_users u ON u.id=a.staff_id LEFT JOIN rubizh_account_orders ao ON ao.order_id=o.id';
  $total=(int)crmOne($db,'SELECT COUNT(*) total'.$joins.' WHERE '.$where,$args)['total'];
- $sort=['date'=>'o.created_at','number'=>'o.order_number','total'=>'o.total','updated'=>'o.updated_at'][$q['sort']??'date']??'o.created_at';$dir=($q['direction']??'desc')==='asc'?'ASC':'DESC';
+ $sort=['date'=>'o.created_at','number'=>'o.order_number','total'=>crmCan($actor,'order.finance.view')?'o.total':'o.created_at','updated'=>'o.updated_at'][$q['sort']??'date']??'o.created_at';$dir=($q['direction']??'desc')==='asc'?'ASC':'DESC';
  $orders=crmQuery($db,'SELECT o.*,d.contact_json,d.subtotal,d.discount_amount,d.shipping_amount,a.staff_id AS assigned_id,u.name AS assigned_name,ao.customer_id'.$joins.' WHERE '.$where." ORDER BY $sort $dir,o.id $dir LIMIT {$p['limit']} OFFSET {$p['offset']}",$args);
  return ['rows'=>crmOrderDtos($db,$orders,$actor),'pagination'=>['page'=>$p['page'],'limit'=>$p['limit'],'total'=>$total,'pages'=>(int)ceil($total/$p['limit'])]];
 }
@@ -114,18 +120,35 @@ function crmOrderStage4(array $dto,array $o,array $x,?array $actor): array {
 }
 /** WAREHOUSE never receives money: totals, prices, invoices and refunds are removed server-side (A6). */
 function crmRedactOrder(array $dto,array $actor): array {
- if(crmCan($actor,'order.finance.view'))return $dto;
+ if(crmCan($actor,'order.finance.view')){
+  // §8: MANAGER works with order amounts and payment links, but refund money is for OWNER and ACCOUNTANT only.
+  if(!crmCan($actor,'refund.view')){$dto['refunds']=array_map(fn($r)=>array_intersect_key($r,array_flip(['id','status','created_at','updated_at'])),$dto['refunds']??[]);if(is_array($dto['finance']??null)){$dto['finance']['refunded_minor']=null;$dto['finance']['refundable_minor']=null;}if(isset($dto['returns']))$dto['returns']=array_map('crmRedactReturn',$dto['returns']);}
+  return $dto;
+ }
+ $keep=['total'=>$dto['total']??null,'total_minor'=>$dto['total_minor']??null,'display'=>$dto['display']['payment']??null,'status'=>$dto['payment_status']??null,'note'=>$dto['finance']['shipping_note']??null];
  foreach(['total','subtotal','discount','shipping','total_minor','payments','refunds','finance'] as $k)$dto[$k]=in_array($k,['payments','refunds'],true)?[]:null;
  foreach($dto['items'] as &$i){unset($i['price'],$i['amount'],$i['unit_price'],$i['kit_price']);}unset($i);
  foreach($dto['lines'] as &$l){$l['unit_minor']=null;$l['amount_minor']=null;}unset($l);
  foreach($dto['fulfillment_lines'] as &$f)$f['line_amount']=null;unset($f);
  foreach($dto['remaining'] as &$r)$r['amount']=null;unset($r);
+ if(isset($dto['returns']))$dto['returns']=array_map('crmRedactReturn',$dto['returns']);
+ foreach(['donation_amount','donation_percent','payment','promo_code'] as $k)unset($dto['contact'][$k]);
+ // §8 (owner 2026-10-15): SUPPORT and WAREHOUSE get no payment status either.
+ $dto['display']['payment']=['code'=>'HIDDEN','label'=>'—'];$dto['payment_status']=null;
+ $dto['attention']=array_values(array_diff($dto['attention']??[],['PAYMENT_REVIEW']));
+ if(isset($dto['timeline']))foreach($dto['timeline'] as &$e)$e['detail_json']=null;unset($e);
+ // Owner 2026-10-15: SUPPORT answers buyers — the order total («Разом») and the payment status, nothing else of finance
+ // (no lines' prices, MonoPay invoices or links, refunds, donation sums). WAREHOUSE gets neither.
+ if(crmCan($actor,'order.amount.view')){
+  $dto['total']=$keep['total'];$dto['total_minor']=$keep['total_minor'];$dto['payment_status']=$keep['status'];if($keep['display'])$dto['display']['payment']=$keep['display'];
+  $dto['finance']=['goods_minor'=>null,'discount_minor'=>null,'discount_type'=>null,'promo_code'=>null,'shipping_minor'=>null,'shipping_note'=>$keep['note'],'total_minor'=>$keep['total_minor'],'paid_minor'=>null,'refunded_minor'=>null,'refundable_minor'=>null,'payment_method'=>'','payment_due'=>null,'paid_at'=>null,'invoice_payment'=>null,'invoices'=>[]];
+ }
  return $dto;
 }
 function crmOrder(PDO $db,int $id,?array $actor=null): array {
  $actor??=$GLOBALS['crm_staff_actor']??null;
  $o=crmOne($db,'SELECT o.*,d.contact_json,d.subtotal,d.discount_amount,d.shipping_amount,a.staff_id AS assigned_id,u.name AS assigned_name,ao.customer_id FROM rubizh_customer_orders o LEFT JOIN rubizh_order_details d ON d.order_id=o.id LEFT JOIN rubizh_order_assignments a ON a.order_id=o.id LEFT JOIN rubizh_staff_users u ON u.id=a.staff_id LEFT JOIN rubizh_account_orders ao ON ao.order_id=o.id WHERE o.id=?',[$id]);if(!$o)throw new CrmError('NOT_FOUND',404);
- $r=crmOrderDtos($db,[$o],$actor)[0];$r['notes']=crmNotes($db,'order',(string)$id);$r['timeline']=crmQuery($db,'SELECT * FROM rubizh_order_timeline WHERE order_id=? ORDER BY occurred_at DESC LIMIT 100',[$id]);$r['sku_candidates']=crmSkuCandidates($db,$id);return $r;
+ $r=crmOrderDtos($db,[$o],$actor)[0];$r['notes']=crmNotes($db,'order',(string)$id);$r['timeline']=crmQuery($db,'SELECT * FROM rubizh_order_timeline WHERE order_id=? ORDER BY occurred_at DESC LIMIT 100',[$id]);if($actor&&!crmCan($actor,'order.finance.view'))foreach($r['timeline'] as &$e)$e['detail_json']=null;unset($e);$r['sku_candidates']=crmSkuCandidates($db,$id);return $r;
 }
 function crmNotes(PDO $db,string $entity,string $id): array {return crmQuery($db,'SELECT n.*,u.name AS author FROM rubizh_internal_notes n LEFT JOIN rubizh_staff_users u ON u.id=n.author_id WHERE entity=? AND entity_id=? ORDER BY n.id DESC LIMIT 100',[$entity,$id]);}
 function crmCheckVersion(array $o,array $b): void {if(!is_string($b['version']??null)||!hash_equals($o['version'],$b['version']))throw new CrmError('STALE_ORDER',409,['current_version'=>$o['version']]);}

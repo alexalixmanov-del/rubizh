@@ -159,3 +159,21 @@ Server/SPA теперь сохраняют полный Product с image, brand,
 **Ограничение приватности:** GitHub repository visibility проверено как public. Унаследованный commit2a338da содержит исходные HIGH raw; обычный push сохранил эти версии в истории. Текущие документы редактированы, новые полные доказательства остаются local/private, но обещать приватность исторических raw нельзя. История не переписывалась: force-push запрещён владельцем. QA-20 MEDIUM / OWNER DECISION фиксирует процессный дефект; cleanup требует отдельного решения и не отменяет уже случившуюся публикацию. Технические подробности неразрешённых HIGH здесь не повторяются.
 
 Final endpoint Quality Gate:132inventory rows,1920HTTP requests;831/831explicit expectations,2697/2697overlapping semantic checks,975snapshots+2A↔B whole-domain comparisons;0final assertion failures. ANY232/232 and narrowaction36/36; all inventory endpoints requested, full state/role/token combinations remainPARTIAL. Details and limits:stage-2/endpoint-quality-gate.md. Fresh SECURITY source review COMPLETED(15checks+1probe), no newHIGH/CRITICAL; MEDIUM SEC-FRESH-01 unapplied CRM proposal. OverallNO-GO: exhaustive dynamic certification and historical privacy requirement unmet, noStage2verifiedtag/Stage3.
+
+## 8. Глобальный этап 4 — CRM (2026-10-15)
+
+**Независимое ревью.** `ecc:code-reviewer` и `ecc:security-reviewer` без общего контекста с автором; затем повторный слепой проход security и payments на итоговых SHA. Находки и исправления — `03-DEFECT_REGISTER` (R4-01…R4-15), тесты `tests/crm-stage4-review.test.mjs`. Открытых CRITICAL/HIGH нет.
+
+**Секреты и зависимости.** gitleaks (история SITE и CRM, рабочие деревья) — 0 находок (тестовые ключи стенда — в `.gitleaksignore` по отпечаткам с пояснением). `npm audit` SITE и CRM — 0 уязвимостей (CRM: react-router-dom 7.18.4, vite 7.3.6, точные версии).
+
+**Производительность Staff API на 50 000 заказах** (`tests/crm-stage4-synthetic.test.mjs`, медиана из 3, macOS, MariaDB 11): список заказов 50 мс; вкладки 19–90 мс; страница 200 — 65 мс; поиск по имени ~280 мс, по телефону ~280 мс, по номеру ~110 мс; счётчики ~200 мс; клиенты ~220 мс, поиск клиентов ~440 мс; «Огляд» ~300 мс — все ≤ 500 мс (D-59: было до 1,9 с).
+
+**Lighthouse 12.6.1, CRM** (стенд + сжатие как `mod_deflate` production):
+
+| Страница | Desktop perf / a11y / BP | Mobile perf / a11y / BP | Mobile LCP | CLS |
+|---|---|---|---|---|
+| Вход | 100 / 100 / 100 | 98 / 100 / 100 | 2,26 с | 0 |
+| Огляд | 100 / 100 / 100 | 97 / 100 / 100 | 2,36 с | 0 |
+| Замовлення | 100 / 100 / 100 | 97 / 100 / 100 | 2,34 с | 0 |
+
+Mobile — эмуляция Lighthouse «slow 4G» (первый экран ≤ 3 с выполнено). Без сжатия (встроенный сервер PHP) mobile LCP 3,2–5,1 с — production отдаёт JS/CSS/JSON сжатыми (`.htaccess`, `mod_deflate`). Сдвиг макета 0,29 на «Огляді» устранён (резерв высоты первого экрана).

@@ -146,3 +146,18 @@ Permanent CI proposal: отдельный browser job с pinned Playwright1.62.1
 Финальный axe повтор:30/30 route/width checks,0violations WCAG2.1 A/AA;111inventory flags, не все подтверждённые defects. Исторические138 flags относятся к первому inventory. Dead-click heuristic не перепроверялась и не объявлена PASS. Парный compressed Lighthouse32/32 runs: численные baseline/current medians и mixed deltas вstage-2/FINAL_REPORT; performance threshold не объявлен PASS.
 
 Final endpoint Quality Gate:132inventory rows,1920HTTP requests;831/831explicit expectations,2697/2697overlapping semantic checks,975snapshots+2A↔B whole-domain comparisons;0final assertion failures. ANY232/232 and narrowaction36/36; all inventory endpoints requested, full state/role/token combinations remainPARTIAL. Details and limits:stage-2/endpoint-quality-gate.md. Fresh SECURITY source review COMPLETED(15checks+1probe), no newHIGH/CRITICAL; MEDIUM SEC-FRESH-01 unapplied CRM proposal. OverallNO-GO: exhaustive dynamic certification and historical privacy requirement unmet, noStage2verifiedtag/Stage3.
+
+## Глобальный этап 4 — CRM и изменённые страницы SITE (2026-10-15)
+
+Тест `tests/crm-stage4-matrix.test.mjs` (Playwright 1.62.1, стенд с синтетическими данными `dev/crm-synthetic.php`):
+
+| Проверка | Объём | Результат |
+|---|---|---|
+| CRM: Chromium / Firefox / WebKit × 360, 390, 430, 768, 1024, 1280, 1440 × светлая/тёмная | 17 разделов + карточка заказа = 18 экранов; 3 × 7 × 2 × 18 = 756 загрузок | горизонтальной прокрутки 0, ошибок JS 0, CSP-нарушений 0, ответов 5xx 0 |
+| SITE (страницы, изменённые на этапе 4: главная с формой «Запит на прорахунок», карточка товара, кабинет, оферта, политика) × 3 движка × 7 ширин | 105 загрузок | прокрутки 0, ошибок JS 0, CSP 0 |
+| axe-core 4.10.2, WCAG 2.1 A/AA | вход + 18 экранов × 390/1440 × светлая/тёмная = 76 проверок | **0 нарушений** |
+| Клавиатура | вход, skip-link, меню на мобильном, список → карточка, диалог действия, Escape, возврат фокуса | PASS |
+| Роли | `tests/crm-browser.test.mjs`: 5 ролей × 1440/390 × светлая/тёмная, меню по правам | PASS |
+| E2E | `tests/crm-stage4-e2e.test.mjs`: 12 сценариев §10 | 12/12 |
+
+Визуальное сравнение с макетом — [docs/crm/08-CRM_VISUAL_COMPARISON.md](../crm/08-CRM_VISUAL_COMPARISON.md).

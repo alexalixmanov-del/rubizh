@@ -115,7 +115,7 @@ function crmDashboard4(PDO $db,array $actor,array $q): array {
  $created=fn($f,$t)=>(int)crmOne($db,'SELECT COUNT(*) n FROM rubizh_customer_orders WHERE created_at>=? AND created_at<?',[$f,$t])['n'];
  $kpi=['orders'=>['value'=>$created($per['from'],$per['to']),'previous'=>$created($per['prev_from'],$per['prev_to'])]];
  $queue=crmOne($db,"SELECT SUM(o.status='new' OR o.pim_order_state IN ('WAITING_CONFIRMATION','NEW')) confirmation,SUM(o.status IN ('confirmed','processing') AND o.payment_status IN ('pending','failed')) payment,SUM(o.payment_status='paid' AND o.status IN ('confirmed','processing')) shipping FROM rubizh_customer_orders o");
- $kpi['awaiting_processing']=['value'=>(int)$queue['confirmation']+(int)$queue['shipping'],'detail'=>array_map('intval',$queue)];
+ $kpi['awaiting_processing']=['value'=>(int)$queue['confirmation']+(int)$queue['shipping'],'detail'=>array_map('intval',crmCan($actor,'order.amount.view')?$queue:array_diff_key($queue,['payment'=>1]))];
  $chart=[];$money=null;
  if(crmCan($actor,'order.finance.view')){
   $now=crmMoneyFacts($db,$per['from'],$per['to']);$prev=crmMoneyFacts($db,$per['prev_from'],$per['prev_to']);
@@ -138,13 +138,15 @@ function crmDashboard4(PDO $db,array $actor,array $q): array {
  $managers=crmCan($actor,'dashboard.managers')?crmQuery($db,"SELECT u.id,u.name,COUNT(a.order_id) assigned,SUM(o.status NOT IN ('new','cancelled')) confirmed,SUM(o.status='completed') completed FROM rubizh_staff_users u LEFT JOIN rubizh_order_assignments a ON a.staff_id=u.id LEFT JOIN rubizh_customer_orders o ON o.id=a.order_id AND o.created_at>=? AND o.created_at<? WHERE u.enabled=1 AND u.role IN ('OWNER','MANAGER') GROUP BY u.id,u.name ORDER BY u.name",[$per['from'],$per['to']]):null;
  if($managers)foreach($managers as &$m){$m['assigned']=(int)$m['assigned'];$m['confirmed']=(int)$m['confirmed'];$m['completed']=(int)$m['completed'];}unset($m);
  $activity=crmCan($actor,'audit.view')?crmAuditRows($db,['limit'=>10],$actor)['rows']:[];
+ if(!crmCan($actor,'order.amount.view'))$statuses=array_filter($statuses,fn($k)=>!preg_match('/pa(id|y)|refund/',$k),ARRAY_FILTER_USE_KEY);
  return ['period'=>$per,'kpi'=>$kpi,'chart'=>$chart,'statuses'=>array_map('intval',$statuses),'recent'=>$recent,'attention'=>array_values(array_slice(array_column(array_reverse($attention),null,'id'),0,10)),'popular'=>$popular,'managers'=>$managers,'activity'=>$activity];
 }
 function crmKyivOffset(): string {return (new DateTimeImmutable('now',new DateTimeZone('Europe/Kyiv')))->format('P');}
 
 /** Tab counters (ТЗ 7.1) in one indexed pass per tab. */
 function crmCounters(PDO $db,array $actor): array {
- $out=[];foreach(['all','new','confirmation','payment','processing','delivery','completed','cancelled','problem','mine'] as $v){[$where,$args]=crmOrderWhere(['view'=>$v],$actor);$out[$v]=(int)crmOne($db,'SELECT COUNT(*) n FROM rubizh_customer_orders o LEFT JOIN rubizh_order_details d ON d.order_id=o.id LEFT JOIN rubizh_order_assignments a ON a.order_id=o.id WHERE '.$where,$args)['n'];}
+ $views=['all','new','confirmation','payment','processing','delivery','completed','cancelled','problem','mine'];if(!crmCan($actor,'order.amount.view'))$views=array_values(array_diff($views,['payment']));
+ $out=[];foreach($views as $v){[$where,$args]=crmOrderWhere(['view'=>$v],$actor);$out[$v]=(int)crmOne($db,'SELECT COUNT(*) n FROM rubizh_customer_orders o LEFT JOIN rubizh_order_details d ON d.order_id=o.id LEFT JOIN rubizh_order_assignments a ON a.order_id=o.id WHERE '.$where,$args)['n'];}
  return ['tabs'=>$out];
 }
 
@@ -190,7 +192,7 @@ function crmCustomers4(PDO $db,array $actor,array $q): array {
  return $r;
 }
 function crmCustomer4(PDO $db,array $actor,string $id): array {
- $r=crmCustomer($db,$id,$actor);$c=&$r['customer'];$c['phone_masked']=crmMaskPhone($c['phone']??null);unset($c['phone'],$c['phone_raw']);
+ $r=crmCustomer($db,$id,$actor);if(is_array($r['legacy_profile']??null)){$l=$r['legacy_profile'];$r['legacy_profile']=array_intersect_key($l,array_flip(['first_name','last_name','city','delivery_type','created_at','updated_at']))+['phone_masked'=>crmMaskPhone($l['phone']??null)];}$c=&$r['customer'];$c['phone_masked']=crmMaskPhone($c['phone']??null);unset($c['phone'],$c['phone_raw']);
  foreach($r['identities'] as &$i)if($i['provider']==='phone')$i['subject']=crmMaskPhone($i['subject']);unset($i);
  foreach($r['orders'] as &$o){$o['customer']['phone']=null;$o['customer']['phone_raw']=null;$o['contact']=array_diff_key($o['contact'],array_flip(['phone','phone_raw','phone_normalized','donation_phone']));}unset($o);
  return $r;
@@ -341,6 +343,7 @@ function crmStaffUpdate(PDO $db,array $actor,string $id,array $b): array {
   if($u['role']==='OWNER'&&($role!=='OWNER'||!$enabled)&&count(crmQuery($db,"SELECT id FROM rubizh_staff_users WHERE role='OWNER' AND enabled=1 FOR UPDATE"))<=1)throw new CrmError('LAST_OWNER_REQUIRED',409);
   // Deactivation and role change end every session of that person immediately.
   $db->prepare('UPDATE rubizh_staff_users SET name=?,role=?,enabled=?,session_version=session_version+1,updated_at=UTC_TIMESTAMP() WHERE id=?')->execute([$name,$role,(int)$enabled,$id]);crmSessionsRevoke($db,$id);
+  if($role!==$u['role']&&crmTotpRequired(crmRoleAlias($role))&&!crmTotpEnabled($db,$id))crmEnrollGrant($db,$id,$actor['id']);
   if(!$enabled)$db->prepare('UPDATE rubizh_order_assignments SET staff_id=NULL,assigned_by=?,updated_at=UTC_TIMESTAMP() WHERE staff_id=?')->execute([$actor['id'],$id]);
   crmAudit($db,$actor,'staff',$id,'staff.update',['role'=>$u['role'],'enabled'=>(bool)$u['enabled'],'name'=>$u['name']],['role'=>$role,'enabled'=>$enabled,'name'=>$name],$b['reason']);
   return crmStaffTarget($db,$id)+['permissions'=>crmRolePermissions($role)];
@@ -380,7 +383,7 @@ function crmSearch(PDO $db,array $actor,string $q): array {
 }
 
 // ---- CSV export (ТЗ 7.17): UTF-8 BOM, role masks, audit, formula-injection safe ----------------------------------------
-function crmCsvCell(mixed $v): string {$s=(string)($v??'');if($s!==''&&in_array($s[0],['=','+','-','@',"\t","\r"],true))$s="'".$s;return '"'.str_replace('"','""',$s).'"';}
+function crmCsvCell(mixed $v): string {$s=(string)($v??'');if(preg_match('/^[\s]*[=+\-@]/u',$s)||($s!==''&&in_array($s[0],["\t","\r","\n"],true)))$s="'".$s;return '"'.str_replace('"','""',$s).'"';}
 function crmCsvOut(string $name,array $head,array $rows): never {
  header('Content-Type: text/csv; charset=UTF-8');header('Content-Disposition: attachment; filename="'.$name.'-'.gmdate('Ymd-His').'.csv"');http_response_code(200);
  echo "\xEF\xBB\xBF".implode(';',array_map('crmCsvCell',$head))."\r\n";foreach($rows as $r)echo implode(';',array_map('crmCsvCell',$r))."\r\n";exit;
