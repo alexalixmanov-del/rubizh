@@ -144,6 +144,14 @@ function customerOwnOrders(string $id): void {
         SELECT o.id,i.customer_id FROM rubizh_customer_orders o
         JOIN rubizh_customer_identities i ON i.provider='email' AND i.subject=o.email WHERE i.customer_id=?");
     $q->execute([$id]);
+    // OD-4.5: a CRM phone order joins the account only after its buyer proved the same phone by SMS.
+    static $claims=null;if($claims===null){$t=identityDatabase()->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='rubizh_phone_order_claims'");$claims=(bool)$t->fetchColumn();}
+    if($claims){
+        $q=identityDatabase()->prepare("INSERT IGNORE INTO rubizh_account_orders(order_id,customer_id) SELECT c.order_id,i.customer_id FROM rubizh_phone_order_claims c
+            JOIN rubizh_customer_identities i ON i.provider='phone' AND CONCAT('+',i.subject)=c.phone OR i.provider='phone' AND i.subject=c.phone WHERE i.customer_id=? AND c.claimed_at IS NULL");
+        $q->execute([$id]);
+        identityDatabase()->prepare("UPDATE rubizh_phone_order_claims c JOIN rubizh_account_orders ao ON ao.order_id=c.order_id SET c.claimed_by=ao.customer_id,c.claimed_at=UTC_TIMESTAMP() WHERE ao.customer_id=? AND c.claimed_at IS NULL")->execute([$id]);
+    }
 }
 function identityMerge(PDO $db, string $source, string $target): void {
     if ($source === $target) { return; }

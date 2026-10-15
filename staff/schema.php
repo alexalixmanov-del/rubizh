@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
-const CRM_SCHEMA_VERSION=1;
+// v1 = RC1 CRM; v2 = stage 4 (roles WAREHOUSE/SUPPORT/ACCOUNTANT, CRM-own tables, SITE line checks, invoice payments).
+// v1 step SQL must stay byte-identical: the journal hashes it to detect drift.
+const CRM_SCHEMA_VERSION=2;
 function crmSchemaSteps(): array {
  $tables=[
  'rubizh_staff_roles'=>"role VARCHAR(16) PRIMARY KEY,label VARCHAR(80) NOT NULL",
@@ -17,9 +19,46 @@ function crmSchemaSteps(): array {
  ];$out=[];foreach($tables as $name=>$body)$out[]=['kind'=>'table','name'=>$name,'sql'=>"CREATE TABLE $name($body) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"];
  foreach(['rubizh_staff_audit','rubizh_internal_notes'] as $t)foreach(['UPDATE','DELETE'] as $v){$name=$t.'_no_'.strtolower($v);$out[]=['kind'=>'trigger','name'=>$name,'sql'=>"CREATE TRIGGER $name BEFORE $v ON $t FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='CRM history is append-only'"];}
  foreach(['crm_order_created'=>['rubizh_customer_orders','created_at,id'],'crm_order_payment_queue'=>['rubizh_customer_orders','payment_status,status,created_at,id'],'crm_order_confirmation_queue'=>['rubizh_customer_orders','pim_order_state,created_at,id'],'crm_shipment_status'=>['rubizh_order_shipments','status,updated_at,id'],'crm_mono_event_paid'=>['rubizh_mono_events','status,invoice_id,created_at']] as $name=>[$table,$columns])$out[]=['kind'=>'index','name'=>$name,'table'=>$table,'sql'=>"CREATE INDEX $name ON $table($columns)"];
+ return array_merge($out,crmSchemaStepsV2());
+}
+/** Stage 4 additive steps. CRM-own data (A1) plus the SITE-domain tables the new SITE functions write. */
+function crmSchemaStepsV2(): array {
+ $tables=[
+  // CRM-own: staff sessions registry (list / revoke), TOTP, one-time invite/reset links, preferences, idempotency, settings.
+  'rubizh_staff_sessions'=>"id CHAR(64) PRIMARY KEY,staff_id CHAR(32) NOT NULL,created_at DATETIME NOT NULL,seen_at DATETIME NOT NULL,ip_hash CHAR(64) NOT NULL,agent VARCHAR(160) NOT NULL DEFAULT '',revoked_at DATETIME NULL,INDEX(staff_id,revoked_at)",
+  'rubizh_staff_totp'=>"staff_id CHAR(32) PRIMARY KEY,secret_enc VARCHAR(255) NOT NULL,enabled_at DATETIME NULL,last_step BIGINT NOT NULL DEFAULT 0,backup_json JSON NULL,updated_at DATETIME NOT NULL",
+  'rubizh_staff_invites'=>"id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,token_hash CHAR(64) NOT NULL UNIQUE,kind VARCHAR(8) NOT NULL,staff_id CHAR(32) NULL,email VARCHAR(254) NOT NULL,name VARCHAR(120) NOT NULL,role VARCHAR(16) NOT NULL,created_by CHAR(32) NOT NULL,expires_at DATETIME NOT NULL,used_at DATETIME NULL,created_at DATETIME NOT NULL,INDEX(email,used_at)",
+  'rubizh_staff_prefs'=>"staff_id CHAR(32) PRIMARY KEY,theme VARCHAR(8) NOT NULL DEFAULT 'light',updated_at DATETIME NOT NULL",
+  'rubizh_crm_idempotency'=>"key_hash CHAR(64) PRIMARY KEY,route VARCHAR(64) NOT NULL,body_hash CHAR(64) NOT NULL,status SMALLINT NOT NULL,response_json MEDIUMTEXT NOT NULL,created_at DATETIME NOT NULL,INDEX(created_at)",
+  'rubizh_crm_settings'=>"k VARCHAR(64) PRIMARY KEY,v VARCHAR(400) NOT NULL,updated_by CHAR(32) NOT NULL,updated_at DATETIME NOT NULL",
+  // CRM-own work items.
+  'rubizh_crm_tasks'=>"id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,title VARCHAR(200) NOT NULL,body TEXT NOT NULL,order_id BIGINT UNSIGNED NULL,assignee_id CHAR(32) NULL,state VARCHAR(12) NOT NULL,due_at DATETIME NULL,auto_key VARCHAR(80) NULL UNIQUE,created_by CHAR(32) NOT NULL,version INT UNSIGNED NOT NULL DEFAULT 1,created_at DATETIME NOT NULL,updated_at DATETIME NOT NULL,INDEX(assignee_id,state,due_at),INDEX(order_id,id),INDEX(state,due_at)",
+  'rubizh_crm_notifications'=>"id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,audience VARCHAR(40) NOT NULL,kind VARCHAR(40) NOT NULL,entity VARCHAR(24) NOT NULL,entity_id VARCHAR(64) NOT NULL,title VARCHAR(240) NOT NULL,critical TINYINT NOT NULL DEFAULT 0,dedupe_key VARCHAR(160) NOT NULL UNIQUE,mailed_at DATETIME NULL,created_at DATETIME NOT NULL,INDEX(audience,id),INDEX(critical,mailed_at)",
+  'rubizh_crm_notification_reads'=>"notification_id BIGINT UNSIGNED NOT NULL,staff_id CHAR(32) NOT NULL,read_at DATETIME NOT NULL,PRIMARY KEY(staff_id,notification_id)",
+  'rubizh_crm_saved_views'=>"id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,staff_id CHAR(32) NOT NULL,scope VARCHAR(16) NOT NULL,name VARCHAR(60) NOT NULL,query VARCHAR(1000) NOT NULL,created_at DATETIME NOT NULL,INDEX(staff_id,scope,id)",
+  'rubizh_crm_payment_reviews'=>"id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,source_id BIGINT UNSIGNED NOT NULL UNIQUE,order_id BIGINT UNSIGNED NOT NULL,state VARCHAR(12) NOT NULL DEFAULT 'OPEN',bank_result VARCHAR(400) NULL,checked_at DATETIME NULL,resolved_by CHAR(32) NULL,resolved_reason VARCHAR(400) NULL,resolved_at DATETIME NULL,created_at DATETIME NOT NULL,INDEX(state,id),INDEX(order_id)",
+  'rubizh_crm_order_flags'=>"order_id BIGINT UNSIGNED PRIMARY KEY,problem TINYINT NOT NULL DEFAULT 0,reason VARCHAR(400) NOT NULL DEFAULT '',updated_by CHAR(32) NOT NULL,updated_at DATETIME NOT NULL,INDEX(problem)",
+  'rubizh_crm_cron_runs'=>"job VARCHAR(40) PRIMARY KEY,last_ok_at DATETIME NULL,last_error_at DATETIME NULL,failures INT UNSIGNED NOT NULL DEFAULT 0,alerted_at DATETIME NULL",
+  // OD-4.1: private supplier cost per SKU, filled only by a future PIM contract field; empty means "no cost data".
+  'rubizh_crm_sku_costs'=>"sku VARCHAR(64) PRIMARY KEY,cost_minor BIGINT UNSIGNED NOT NULL,source VARCHAR(24) NOT NULL,observed_at DATETIME NOT NULL",
+  // SITE domain: per-line supplier stock check (M-12), invoice (FOP) payment acceptance (D-51), phone-order ownership claims.
+  'rubizh_order_line_checks'=>"order_id BIGINT UNSIGNED NOT NULL,line_no SMALLINT UNSIGNED NOT NULL,status VARCHAR(16) NOT NULL,note VARCHAR(400) NOT NULL DEFAULT '',checked_by CHAR(32) NOT NULL,checked_at DATETIME NOT NULL,PRIMARY KEY(order_id,line_no)",
+  'rubizh_invoice_payments'=>"order_id BIGINT UNSIGNED PRIMARY KEY,amount_minor BIGINT UNSIGNED NOT NULL,paid_on DATE NOT NULL,document VARCHAR(64) NOT NULL,reason VARCHAR(400) NOT NULL,accepted_by CHAR(32) NOT NULL,accepted_at DATETIME NOT NULL",
+  'rubizh_phone_order_claims'=>"order_id BIGINT UNSIGNED PRIMARY KEY,phone VARCHAR(20) NOT NULL,created_by CHAR(32) NOT NULL,claimed_by CHAR(32) NULL,claimed_at DATETIME NULL,created_at DATETIME NOT NULL,INDEX(phone,claimed_at)",
+  // 7.9: supplier contact person and preparation time (CRM-own; dispatch data stays in rubizh_sender_profiles).
+  'rubizh_crm_supplier_info'=>"code VARCHAR(32) PRIMARY KEY,contact_person VARCHAR(120) NOT NULL DEFAULT '',prep_days SMALLINT UNSIGNED NULL,updated_by CHAR(32) NOT NULL,updated_at DATETIME NOT NULL",
+  // A7: request context of each staff audit row (v1 audit tables are journaled and cannot be altered).
+  'rubizh_staff_audit_context'=>"audit_id BIGINT UNSIGNED PRIMARY KEY,ip_hash CHAR(64) NOT NULL,agent VARCHAR(160) NOT NULL DEFAULT ''",
+ ];$out=[];foreach($tables as $name=>$body)$out[]=['kind'=>'table','name'=>$name,'sql'=>"CREATE TABLE $name($body) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"];
+ foreach(['UPDATE','DELETE'] as $v){$name='rubizh_staff_audit_context_no_'.strtolower($v);$out[]=['kind'=>'trigger','name'=>$name,'sql'=>"CREATE TRIGGER $name BEFORE $v ON rubizh_staff_audit_context FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='CRM history is append-only'"];}
+ // Indexes for 50 000-order lists: assignment filter, timing, audit by order.
+ foreach(['crm_order_updated'=>['rubizh_customer_orders','updated_at,id'],'crm_order_status_created'=>['rubizh_customer_orders','status,created_at,id'],'crm_np_audit_action'=>['rubizh_np_audit','action,id']] as $name=>[$table,$columns])$out[]=['kind'=>'index','name'=>$name,'table'=>$table,'sql'=>"CREATE INDEX $name ON $table($columns)"];
  return $out;
 }
-function crmSchemaReady(PDO $db): bool {return (int)$db->query("SELECT v FROM meta WHERE k='crm_schema'")->fetchColumn()===CRM_SCHEMA_VERSION;}
+/** Ledger tables exist from v1 on: money paths (webhook, refunds) need them even in the window before v2 is applied. */
+function crmSchemaReady(PDO $db): bool {return (int)$db->query("SELECT v FROM meta WHERE k='crm_schema'")->fetchColumn()>=1;}
+/** The Staff API requires the exact current schema. */
+function crmApiSchemaReady(PDO $db): bool {return (int)$db->query("SELECT v FROM meta WHERE k='crm_schema'")->fetchColumn()===CRM_SCHEMA_VERSION;}
 function crmMigrate(PDO $db): void {
  if(PHP_SAPI!=='cli'||$db->inTransaction())throw new RuntimeException('CLI migration only');
  if(crmStepExists($db,['kind'=>'table','name'=>'rubizh_crm_migrations']))foreach(crmSchemaSteps() as $s){$q=$db->prepare("SELECT CONCAT(sql_hash,':',object_hash) FROM rubizh_crm_migrations WHERE step=?");$q->execute([$s['name']]);$old=$q->fetchColumn();if($old!==false&&(!hash_equals(explode(':',$old)[0],hash('sha256',$s['sql']))||crmStepExists($db,$s)&&!hash_equals(explode(':',$old)[1],crmObjectHash($db,$s))||!crmStepExists($db,$s)))throw new RuntimeException('CRM migration drift');}
@@ -27,9 +66,13 @@ function crmMigrate(PDO $db): void {
  $steps=crmSchemaSteps();foreach($steps as $s)if($s['name']==='rubizh_crm_migrations'&&!$journal)$db->exec($s['sql']);
  foreach($steps as $s){$hash=hash('sha256',$s['sql']);$q=$db->prepare('SELECT sql_hash,object_hash FROM rubizh_crm_migrations WHERE step=?');$q->execute([$s['name']]);$old=$q->fetch(PDO::FETCH_ASSOC);if($old){if(!hash_equals($old['sql_hash'],$hash)||!crmStepExists($db,$s)||!hash_equals($old['object_hash'],crmObjectHash($db,$s)))throw new RuntimeException('CRM migration drift');continue;}if(crmStepExists($db,$s)&&$s['name']!=='rubizh_crm_migrations')throw new RuntimeException('Unjournaled CRM object');if(!crmStepExists($db,$s))$db->exec($s['sql']);$db->prepare('INSERT INTO rubizh_crm_migrations(step,sql_hash,object_hash,applied_at) VALUES(?,?,?,UTC_TIMESTAMP())')->execute([$s['name'],$hash,crmObjectHash($db,$s)]);}
  $db->beginTransaction();try{
- foreach(['OWNER'=>'Власник','MANAGER'=>'Менеджер','LOGISTICS'=>'Логістика','READ_ONLY'=>'Перегляд'] as $role=>$label){$db->prepare('INSERT IGNORE INTO rubizh_staff_roles(role,label) VALUES(?,?)')->execute([$role,$label]);foreach(crmRolePermissions($role) as $permission)$db->prepare('INSERT IGNORE INTO rubizh_staff_permissions(role,permission) VALUES(?,?)')->execute([$role,$permission]);}
+ // OD-4.2: LOGISTICS→WAREHOUSE, READ_ONLY→SUPPORT; ACCOUNTANT is new. The permission rows mirror the contract so that a
+ // rolled-back older release still reads a consistent table (unknown roles fail closed there).
+ $db->exec("UPDATE rubizh_staff_users SET role='WAREHOUSE',session_version=session_version+1 WHERE role='LOGISTICS'");$db->exec("UPDATE rubizh_staff_users SET role='SUPPORT',session_version=session_version+1 WHERE role='READ_ONLY'");
+ $db->exec("DELETE FROM rubizh_staff_permissions WHERE role IN ('LOGISTICS','READ_ONLY')");$db->exec("DELETE FROM rubizh_staff_roles WHERE role IN ('LOGISTICS','READ_ONLY')");
+ foreach(crmRoleLabels() as $role=>$label){$db->prepare('INSERT INTO rubizh_staff_roles(role,label) VALUES(?,?) ON DUPLICATE KEY UPDATE label=VALUES(label)')->execute([$role,$label]);$db->prepare('DELETE FROM rubizh_staff_permissions WHERE role=?')->execute([$role]);foreach(crmRolePermissions($role) as $permission)$db->prepare('INSERT IGNORE INTO rubizh_staff_permissions(role,permission) VALUES(?,?)')->execute([$role,$permission]);}
  foreach(npOrigins() as $code=>$o){$s=cfg('np_sender')??[];$db->prepare('INSERT IGNORE INTO rubizh_sender_profiles(code,name,city,region,branch,cargo_branch,city_ref,warehouse_ref,cargo_warehouse_ref,sender_ref,contact_ref,phone,confirmed,updated_by,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,UTC_TIMESTAMP())')->execute([$code,$o['name'],$o['city'],$o['region'],$o['branch'],$o['cargo_branch']??'',$o['city_ref']??'',$o['warehouse_ref']??'',$o['cargo_warehouse_ref']??'',$s['ref']??'',$s['contact_ref']??'',$s['phone']??'',!empty($o['confirmed'])&&!empty($s['confirmed'])?1:0,str_repeat('0',32)]);}
- $db->exec("INSERT INTO meta(k,v) VALUES('crm_schema','1') ON DUPLICATE KEY UPDATE v=VALUES(v)");$db->commit();}catch(Throwable $e){$db->rollBack();throw $e;}
+ $db->exec("INSERT INTO meta(k,v) VALUES('crm_schema','".CRM_SCHEMA_VERSION."') ON DUPLICATE KEY UPDATE v=VALUES(v)");$db->commit();}catch(Throwable $e){$db->rollBack();throw $e;}
 }
 
 function crmStepExists(PDO $db,array $s): bool {if($s['kind']!=='index')return shopP0StepExists($db,$s);$q=$db->prepare('SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND INDEX_NAME=?');$q->execute([$s['table'],$s['name']]);return (bool)$q->fetchColumn();}

@@ -15,6 +15,8 @@ function monoMockApi(string $path,?array $body): array {
         return ['status'=>'created'];
     }
     if($path==='invoice/remove')return [];
+    // Refund (cancel) of a paid invoice: the staging bank confirms the exact amount and reference (CRM_REFUND_LIVE off).
+    if($path==='invoice/cancel'){if(!is_array($body)||!is_int($body['amount']??null)||$body['amount']<=0||!is_string($body['extRef']??null))throw new RuntimeException('Mock bank: invalid cancel');return ['status'=>'success','amount'=>$body['amount'],'extRef'=>$body['extRef'],'createdDate'=>gmdate('c'),'modifiedDate'=>gmdate('c')];}
     if($path==='pubkey')throw new RuntimeException('Mock bank: staging key must be preloaded');
     throw new RuntimeException('Mock bank: unsupported call');
 }

@@ -11,7 +11,8 @@ function crmRefund(PDO $db,int $order,array $actor,int $amount,string $key,strin
  crmPermit($actor,'payment.refund.execute');shopRequirePermission($actor['id'],'payment.refund.request');shopRequirePermission($actor['id'],'payment.refund.execute');$key=crmRequestId($key);$reason=shopFinancialReason($reason);if($amount<=0)throw new CrmError('INVALID_REFUND_AMOUNT');
  return npLocked($db,$order,function()use($db,$order,$actor,$amount,$key,$reason,$version){
  $existing=crmOne($db,'SELECT * FROM rubizh_refund_operations WHERE idempotency_key=?',[$key]);if($existing){if((int)$existing['order_id']!==$order||(int)$existing['amount']!==$amount||$existing['actor_id']!==$actor['id']||$existing['reason']!==$reason)throw new CrmError('IDEMPOTENCY_CONFLICT',409);return $existing;}
- if($version!==null)crmCheckVersion(crmOrder($db,$order),['version'=>$version]);
+ // CRM-4.2: a new refund always names the order version it was prepared on (a replay of a stored key returned above).
+ if($version===null&&PHP_SAPI!=='cli')throw new CrmError('VERSION_REQUIRED',400);if($version!==null)crmCheckVersion(crmOrder($db,$order),['version'=>$version]);
  $db->beginTransaction();try{$i=crmOne($db,"SELECT * FROM rubizh_mono_invoices WHERE order_id=? AND status IN ('success','reversed') ORDER BY id DESC LIMIT 1 FOR UPDATE",[$order]);if(!$i)throw new CrmError('VERIFIED_PAYMENT_REQUIRED',409);
  $ops=crmQuery($db,"SELECT * FROM rubizh_refund_operations WHERE invoice_id=? FOR UPDATE",[$i['id']]);$held=0;foreach($ops as $op){if(in_array($op['status'],['processing','unknown'],true))throw new CrmError('REFUND_RECONCILIATION_REQUIRED',409);if($op['status']==='success')$held+=(int)$op['amount'];}
  if(!$ops&&$i['refund_status']==='success'||!$ops&&$i['status']==='reversed')throw new CrmError('REFUND_LIMIT_EXCEEDED',409);

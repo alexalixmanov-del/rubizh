@@ -38,8 +38,9 @@ rubizh_job notifications 60 shop/notification-worker.php & RUBIZH_MAIL_PID=$!
 rubizh_job payments 180 shop/mono-worker.php & RUBIZH_MONO_PID=$!
 rubizh_job delivery 900 shop/np-worker.php & RUBIZH_NP_PID=$!
 rubizh_job photos 60 shop/photo-worker.php & RUBIZH_PHOTO_PID=$!
+rubizh_job crm 60 staff/worker.php & RUBIZH_CRM_PID=$!
 RUBIZH_RESULT=0
-for RUBIZH_JOB_PID in "$RUBIZH_CACHE_PID" "$RUBIZH_MAIL_PID" "$RUBIZH_MONO_PID" "$RUBIZH_NP_PID" "$RUBIZH_PHOTO_PID"; do
+for RUBIZH_JOB_PID in "$RUBIZH_CACHE_PID" "$RUBIZH_MAIL_PID" "$RUBIZH_MONO_PID" "$RUBIZH_NP_PID" "$RUBIZH_PHOTO_PID" "$RUBIZH_CRM_PID"; do
  wait "$RUBIZH_JOB_PID" || RUBIZH_RESULT=1
 done
 exit "$RUBIZH_RESULT"

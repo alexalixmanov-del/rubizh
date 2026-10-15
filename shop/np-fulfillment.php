@@ -170,11 +170,15 @@ function npCreate(PDO $db,int $order,int $id,string $actor): array {
       $o=npOrder($db,$order);$q=$db->prepare('SELECT * FROM rubizh_np_order_confirmations WHERE order_id=?');$q->execute([$order]);$confirmation=$q->fetch(PDO::FETCH_ASSOC)?:[];
       npAssertReady($o,$confirmation,npLines($db,$order),npShipments($db,$order),$s);
       // All read-only checks run before recording an attempted remote mutation.
-      $delivery=npValidateDelivery($db,['np_delivery'=>$o['contact']['np_delivery']],$o['contact']['delivery_type']);$package=npPackage(json_decode((string)$s['package_json'],true)?:[]);$origin=npVerifiedOrigin($db,$s['supplier_code'],$package['weight']);$sender=npVerifiedSender($db);
+      $delivery=npValidateDelivery($db,['np_delivery'=>$o['contact']['np_delivery']],$o['contact']['delivery_type']);$package=npPackage(json_decode((string)$s['package_json'],true)?:[]);
+      // LOG-04: the supplier's sender profile (single source) decides origin and sender for every channel.
+      $profiled=npUseSenderProfile($db,$s['supplier_code']);try{$origin=npVerifiedOrigin($db,$s['supplier_code'],$package['weight']);$sender=npVerifiedSender($db);}finally{if($profiled)unset($GLOBALS['crm_domain_config']);}
       $db->prepare("UPDATE rubizh_order_shipments SET status='creating',attempted_at=UTC_TIMESTAMP(),origin_json=?,origin_label=?,error='',updated_at=UTC_TIMESTAMP() WHERE id=? AND status='draft'")->execute([json_encode($origin,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),mb_substr($origin['label'],0,200),$id]);npAudit($db,$actor,'shipment_create_attempt',$order,$id);
       try{
         $recipient=npRecipient($o['contact'],$delivery);$props=npSaveProperties($s,$origin,$sender,$delivery,$o['contact'],$recipient['ref'],$recipient['contact_ref'],$recipient['address_ref']);
         $db->prepare('UPDATE rubizh_order_shipments SET payload_json=? WHERE id=?')->execute([json_encode($props,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),$id]);
+        // A5: cash on delivery never reaches the carrier, whatever the caller built.
+        if(array_intersect_key($props,array_flip(['BackwardDeliveryData','AfterpaymentOnGoodsCost','RedeliveryCalculate'])))throw new NpRejected('Післяплата заборонена.');
         $rows=npApiCall('InternetDocument','save',$props);$r=$rows[0]??[];
         if(!npRef($r['Ref']??'')||!preg_match('/^[0-9]{14}$/D',(string)($r['IntDocNumber']??'')))throw new NpUnknownResult('НП не підтвердила номер ТТН.');
         $db->prepare("UPDATE rubizh_order_shipments SET status='created',np_document_ref=?,tracking_number=?,result_json=?,delivery_cost=?,error='',updated_at=UTC_TIMESTAMP() WHERE id=?")->execute([$r['Ref'],$r['IntDocNumber'],json_encode($r,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),is_numeric($r['CostOnSite']??null)?$r['CostOnSite']:null,$id]);

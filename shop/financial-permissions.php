@@ -3,21 +3,23 @@ declare(strict_types=1);
 
 class ShopPermissionException extends RuntimeException {}
 function shopRolePermissions(string $role): array {
-    $financial=['payment.view','payment.invoice.create','payment.invoice.resend','payment.refund.request','payment.refund.execute','payment.manual_reconcile','order.price_override','order.total_override','financial.audit.view'];
-    return match($role){
+    $financial=['payment.view','payment.invoice.create','payment.invoice.resend','payment.invoice.accept','payment.refund.request','payment.refund.execute','payment.manual_reconcile','order.price_override','order.total_override','financial.audit.view'];
+    // Stage 4 roles (OD-4.2); LOGISTICS and READ_ONLY are accepted as aliases of WAREHOUSE and SUPPORT.
+    return match(['LOGISTICS'=>'WAREHOUSE','READ_ONLY'=>'SUPPORT'][$role]??$role){
         'OWNER'=>[...$financial,'order.confirm','shipment.manage'],
-        'MANAGER'=>['payment.view','payment.invoice.create','payment.invoice.resend','order.confirm'],
-        'LOGISTICS'=>['payment.view','shipment.manage'],
-        'READ_ONLY'=>['payment.view'],
+        'MANAGER'=>['payment.view','payment.invoice.create','payment.invoice.resend','order.confirm','shipment.manage'],
+        'WAREHOUSE'=>['shipment.manage'],
+        'ACCOUNTANT'=>['payment.view','payment.invoice.accept','financial.audit.view'],
+        'SUPPORT'=>[],
         default=>[],
     };
 }
 function shopStaffRole(string $actor): string {
     if(!preg_match('/^[a-f0-9]{32}$/D',$actor))return '';
     $verified=function_exists('staffVerifiedRole')?staffVerifiedRole($actor):null;
-    if(in_array($verified,['OWNER','MANAGER','LOGISTICS','READ_ONLY'],true))return $verified;
-    $roles=cfg('staff_roles');$role=is_array($roles)?($roles[$actor]??''):'';
-    if(in_array($role,['OWNER','MANAGER','LOGISTICS','READ_ONLY'],true))return $role;
+    if(in_array($verified,['OWNER','MANAGER','WAREHOUSE','SUPPORT','ACCOUNTANT'],true))return $verified;
+    $roles=cfg('staff_roles');$role=is_array($roles)?($roles[$actor]??''):'';$role=['LOGISTICS'=>'WAREHOUSE','READ_ONLY'=>'SUPPORT'][$role]??$role;
+    if(in_array($role,['OWNER','MANAGER','WAREHOUSE','SUPPORT','ACCOUNTANT'],true))return $role;
     // Preserve existing verified-email managers, without granting financial corrections/refunds.
     $allowed=cfg('np_manager_emails');if(!is_array($allowed))return '';
     $allowed=array_map(fn($v)=>strtolower(trim((string)$v)),$allowed);
@@ -35,9 +37,9 @@ function shopRequirePermission(string $actor,string $permission): void {
     if(in_array($permission,['payment.manual_reconcile','order.price_override','order.total_override'],true)&&$role!=='OWNER')throw new ShopPermissionException('Потрібні права власника.');
     // Q-5 step-up: high-risk money actions need the same person's login within the last 15 minutes (existing login system;
     // re-login refreshes it). Workers and CLI tools act as the system and are exempt.
-    if(in_array($permission,['payment.refund.execute','payment.manual_reconcile','order.price_override','order.total_override'],true)&&PHP_SAPI!=='cli'){
+    if(in_array($permission,['payment.refund.execute','payment.manual_reconcile','payment.invoice.accept','order.price_override','order.total_override'],true)&&PHP_SAPI!=='cli'){
         // The acting session's own login time: CRM staff (password login, rubizh_staff) or a site manager session.
-        $loginAt=($GLOBALS['crm_staff_actor']['id']??null)===$actor?(int)($_SESSION['staff_login_at']??0):(($_SESSION['customer_id']??null)===$actor?(int)($_SESSION['login_time']??0):0);
+        $loginAt=($GLOBALS['crm_staff_actor']['id']??null)===$actor?(int)($_SESSION['staff_fresh_at']??$_SESSION['staff_login_at']??0):(($_SESSION['customer_id']??null)===$actor?(int)($_SESSION['login_time']??0):0);
         $fresh=time()-$loginAt<=max(60,(int)(cfg('staff_stepup_seconds')??900));
         if(!$fresh)throw new ShopPermissionException('Для цієї дії підтвердьте вхід: вийдіть і увійдіть ще раз.');
     }

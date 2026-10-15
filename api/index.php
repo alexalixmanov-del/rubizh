@@ -4,7 +4,8 @@
 //   Сайт (открыто):  GET /api/categories · GET /api/catalog · GET /api/product/{slug} · GET /api/health
 //   Планировщик:     GET /api/cron/photos?key=...
 declare(strict_types=1);
-if(preg_match('~^/api/staff(?:/|$)~',parse_url($_SERVER['REQUEST_URI']??'/',PHP_URL_PATH)?:'/')){require __DIR__.'/staff/index.php';exit;}
+// strtok, not parse_url: a staff path may contain ':' (customer ids like order:12), which parse_url rejects.
+if(preg_match('~^/api/staff(?:/|$)~',(string)strtok((string)($_SERVER['REQUEST_URI']??'/'),'?'))){require __DIR__.'/staff/index.php';exit;}
 require __DIR__ . '/lib.php';
 ini_set('display_errors', '0');
 set_exception_handler(function (Throwable $e) { error_log('rubizh api: '.get_class($e).' code '.(string)$e->getCode());header('Cache-Control: no-store');if($e instanceof PimLegacySyncRejected)out(['ok'=>false,'error'=>$e->reason,'error_code'=>$e->reason],409);if($e instanceof RubizhHttpException){if($e->retryAfter)header('Retry-After: '.$e->retryAfter);fail($e->status,$e->getMessage());}fail(500,'Ошибка сервера. Попробуйте позже.'); });

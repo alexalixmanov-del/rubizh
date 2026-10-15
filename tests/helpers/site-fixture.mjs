@@ -29,7 +29,7 @@ export async function startSite({enableV3=true,legacySync=true,extraConfig=''}={
  // Same operator CLI as staging/production, in its isolated mode.
  const mig=spawnSync(runtime+'/bin/php8.4',[...phpArgs,path.join(site,'dev/migrate-pim-v3.php'),'--isolated','--database='+schema,'--socket='+process.env.RUBIZH_TEST_MYSQL_SOCKET,'--apply'],{env:phpEnv,encoding:'utf8'});
  assert.equal(mig.status,0,mig.stdout+mig.stderr);
- writeFileSync(path.join(site,'router.php'),"<?php $p=parse_url($_SERVER['REQUEST_URI'],PHP_URL_PATH);if(str_starts_with($p,'/api/')){require __DIR__.'/api/index.php';return;}if(preg_match('~^/product/~',$p)||$p==='/'){require __DIR__.'/storefront.php';return;}return false;");
+ writeFileSync(path.join(site,'router.php'),"<?php $p=(string)strtok($_SERVER['REQUEST_URI'],'?');if(str_starts_with($p,'/api/')){require __DIR__.'/api/index.php';return;}if(preg_match('~^/product/~',$p)||$p==='/'){require __DIR__.'/storefront.php';return;}return false;");
  const base='http://127.0.0.1:'+await port();
  const server=spawn(runtime+'/bin/php8.4',[...phpArgs,'-d','session.save_path='+dir,'-S',base.slice(7),'-t',site,path.join(site,'router.php')],{env:phpEnv,detached:true,stdio:['ignore','ignore','pipe']});
  let errors='';server.stderr.on('data',x=>errors+=x);
@@ -38,7 +38,7 @@ export async function startSite({enableV3=true,legacySync=true,extraConfig=''}={
  const sql=(query)=>{const r=php(`$db=new PDO('mysql:unix_socket='.getenv('RUBIZH_TEST_MYSQL_SOCKET').';dbname=${schema};charset=utf8mb4','root','',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);echo json_encode($db->query(${JSON.stringify(query).replace(/\$/g,'\\$')})->fetchAll(PDO::FETCH_ASSOC),JSON_UNESCAPED_UNICODE);`);return JSON.parse(r.stdout);};
  async function post(route,body,headers={}){const r=await fetch(base+route,{method:'POST',headers:{'Content-Type':'application/json',...headers},body:typeof body==='string'?body:JSON.stringify(body)});const text=await r.text();let data;try{data=JSON.parse(text);}catch{data={raw:text};}return {status:r.status,data,headers:r.headers};}
  async function get(route,headers={}){const r=await fetch(base+route,{headers});const text=await r.text();let data;try{data=JSON.parse(text);}catch{data={raw:text};}return {status:r.status,data,text,headers:r.headers};}
- return {dir,site,schema,base,auth,sql,post,get,errors:()=>errors,stop:()=>{try{process.kill(-server.pid,'SIGTERM')}catch{server.kill()}}};
+ return {dir,site,schema,base,auth,sql,post,get,errors:()=>errors,stop:()=>{if(process.env.RUBIZH_PRINT_SERVER_ERRORS&&errors)process.stderr.write('\n--- PHP server log ---\n'+errors.split('\n').filter(l=>!/Accepted|Closing|\[2\d\d\]|\[3\d\d\]|\[4\d\d\]/.test(l)).join('\n')+'\n');try{process.kill(-server.pid,'SIGTERM')}catch{server.kill()}}};
 }
 // Same chunk composition as PIM finalPublish(): header versions, batch id, categories in chunk 0, hide_ids in the last chunk.
 export function chunksFor(w,{size=2,hide=[],batch}={}){

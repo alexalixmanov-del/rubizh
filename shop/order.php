@@ -1,23 +1,13 @@
 <?php
 declare(strict_types=1);
-require __DIR__.'/../auth/bootstrap.php';require_once __DIR__.'/store-lib.php';
+require __DIR__.'/../auth/bootstrap.php';require_once __DIR__.'/store-lib.php';require_once __DIR__.'/order-create.php';
 try{
     if(($_SERVER['REQUEST_METHOD'] ?? '')!=='POST')shopJson(['ok'=>false,'error'=>'Тільки POST.'],405);
     $input=shopBody();shopCsrf($input);$work=rubizhWorkAcquire('checkout',8);
     register_shutdown_function(fn()=>rubizhWorkRelease($work));$db=shopStoreDatabase();
     $key=customerField($input,'request_id',32);if(!preg_match('/^[a-f0-9]{32}$/D',$key))throw new RuntimeException('Оновіть сторінку оформлення.');
     $scope=hash('sha256',(string)($_SESSION['checkout_scope'] ?? ''));if(empty($_SESSION['checkout_scope']))throw new RuntimeException('Оновіть сторінку оформлення.');
-    $contact=is_array($input['contact'] ?? null)?$input['contact']:[];
-    $name=customerField($contact,'name',160);$phone=customerField($contact,'phone',30);$email=strtolower(customerField($contact,'email',254));
-    $phone=preg_replace('/[^0-9]/','',$phone);if(preg_match('/^0\d{9}$/D',$phone))$phone='38'.$phone;
-    if($name==='' || !preg_match('/^380\d{9}$/D',$phone))throw new RuntimeException('Вкажіть ім’я та український телефон.');
-    // Email необов’язковий: якщо вказаний — має бути коректним.
-    if($email!=='' && !filter_var($email,FILTER_VALIDATE_EMAIL))throw new RuntimeException('Перевірте email або залиште поле порожнім.');
-    $city=customerField($contact,'city',120);$address=customerField($contact,'address',240);$type=customerField($contact,'delivery_type',12);$comment=shopComment($contact);$recipient=customerField($contact,'recipient',160);
-    if($city==='' || $address==='' || !in_array($type,['branch','postomat','courier'],true))throw new RuntimeException('Вкажіть місто та місце отримання.');
-    if(count(preg_split('/\s+/u',trim($recipient?:$name)))<2)throw new RuntimeException('Вкажіть ім’я та прізвище одержувача.');
-    $brigade=shopDonationTarget($contact['brigade']??'');
-    $donationChannel=customerField($contact,'donation_channel',12)?:'viber';if(!in_array($donationChannel,['viber','telegram'],true))throw new RuntimeException('Оберіть Viber або Telegram.');$donationPhone=preg_replace('/\D/','',customerField($contact,'donation_phone',30))?:$phone;if(preg_match('/^0\d{9}$/D',$donationPhone))$donationPhone='38'.$donationPhone;if(!preg_match('/^380\d{9}$/D',$donationPhone))throw new RuntimeException('Перевірте номер для скріна донату.');
+    $contact=is_array($input['contact'] ?? null)?$input['contact']:[];$c=shopOrderContact($contact);
     // Cash on delivery is permanently forbidden: only online card payment or a FOP invoice for new orders.
     $pay=customerField($input,'payment',24);if(!in_array($pay,['card','invoice'],true))throw new RuntimeException('Оберіть спосіб оплати: карткою онлайн або на рахунок ФОП.');
     if($pay==='card'&&!monoConfigured())throw new RuntimeException('Оплату карткою ще не підключено.');
@@ -33,30 +23,13 @@ try{
     $q=$db->prepare('SELECT r.*,o.order_number,o.total,o.items_json,o.delivery_label,o.payment_status FROM rubizh_checkout_requests r JOIN rubizh_customer_orders o ON o.id=r.order_id WHERE r.request_id=?');$q->execute([$key]);$existing=$q->fetch(PDO::FETCH_ASSOC);
     if($existing){if(!hash_equals($existing['scope_hash'],$scope) || !hash_equals($existing['payload_hash'],$hash))shopJson(['ok'=>false,'error'=>'Запит уже використаний. Оновіть оформлення.'],409);$payment=null;shopJson(['ok'=>true,'payment'=>$payment,'order'=>shopOrderReceipt($db,(int)$existing['order_id']),'email_status'=>shopOrderMailStatus($db,(int)$existing['order_id']),'repeated'=>true]);}
     try{shopCheckoutLimit($db,$rateKeys,false,$rateProof);}catch(RubizhHttpException $e){if($e->status!==428)throw $e;session_start();$proof=rubizhProofIssue('checkout:'.$scope);session_write_close();header('Retry-After: 1');shopJson(['ok'=>false,'error_code'=>'CHECK_REQUIRED','error'=>$e->getMessage(),'challenge'=>['nonce'=>$proof['nonce'],'bits'=>$proof['bits'],'purpose'=>'checkout']],428);}
-    $delivery=npValidateDelivery($db,$contact,$type);$city=$delivery['city'];$address=$delivery['address'];
-    for($transactionAttempt=0;;$transactionAttempt++){
-    $db->beginTransaction();
+    $delivery=npValidateDelivery($db,$contact,$c['type']);
     try{
-        $validated=shopValidateOrder($db,is_array($input['lines'] ?? null)?$input['lines']:[],'checkout',null,[],customerField($input,'promo',40));$raw=$validated['raw'];$quote=$validated['quote'];
-        $calc=['lines'=>$quote['lines'],'subtotal'=>$quote['subtotal']];$discount=$quote['discount'];$shipping=0;$total=$quote['total'];$lineAmounts=array_column($quote['lines'],'amount');
-        $expected=$input['expected_total']??null;
-        try{$expectedCents=shopMoney($expected);}catch(ShopPricingException $e){$expectedCents=null;}
-        if($expectedCents!==shopMoney($total)||isset($input['catalog_version'])&&$input['catalog_version']!==$quote['catalog_version']){$db->rollBack();$kitNote=shopKitExplanation($quote['lines']);shopJson(['ok'=>false,'error_code'=>'PRICE_CHANGED','error'=>($kitNote!==''?$kitNote.' ':'').'Ціна або версія каталогу змінилася. Перевірте новий розрахунок та підтвердьте.','quote'=>$quote],409);}
-        shopCheckoutLimit($db,$rateKeys,true,$rateProof);
-        $decision=pimV3OrderDecision($raw,$pay);
-        $number='RB-'.gmdate('ymd').'-'.strtoupper(bin2hex(random_bytes(4)));$label=['branch'=>'Нова пошта · відділення','postomat'=>'Нова пошта · поштомат','courier'=>'Нова пошта · кур’єр'][$type].' · '.$city.' · '.$address;
-        $db->prepare("INSERT INTO rubizh_customer_orders(external_id,email,order_number,status,payment_status,total,currency,items_json,delivery_label,created_at,updated_at) VALUES(?,?,?,?,?,?,'UAH',?,?,UTC_TIMESTAMP(),UTC_TIMESTAMP())")->execute(['web:'.$key,$email,$number,$decision['legacy_status'],$pay==='cod'?'cod':'pending',$total,json_encode($calc['lines'],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),$label]);
-        $id=(int)$db->lastInsertId();pimV3RecordOrder($db,$id,$raw,$decision,(string)$quote['catalog_version']);
-        $fulfillment=$db->prepare('INSERT INTO rubizh_order_fulfillment_lines(order_id,line_no,product_id,sku,qty,supplier_code,line_amount,sale_unit,created_at) VALUES(?,?,?,?,?,?,?,?,UTC_TIMESTAMP())');
-        foreach($raw as $lineNo=>$line)$fulfillment->execute([$id,$lineNo,$line['product_id'],$line['sku'],$line['qty'],$line['fulfillment_supplier'],$lineAmounts[$lineNo],$line['sale_unit']]);
-        if($owner!==null)$db->prepare('INSERT INTO rubizh_account_orders(order_id,customer_id) VALUES(?,?)')->execute([$id,$owner]);
-        $db->prepare('INSERT INTO rubizh_checkout_requests(request_id,scope_hash,payload_hash,order_id,created_at) VALUES(?,?,?,?,UTC_TIMESTAMP())')->execute([$key,$scope,$hash,$id]);
-        $db->prepare('INSERT INTO rubizh_order_details(order_id,contact_json,subtotal,discount_amount,shipping_amount) VALUES(?,?,?,?,?)')->execute([$id,json_encode(['name'=>$name,'phone_raw'=>customerField($contact,'phone',30),'phone_normalized'=>'+'.$phone,'phone'=>'+'.$phone,'email'=>$email,'recipient'=>$recipient,'city'=>$city,'address'=>$address,'delivery_type'=>$type,'comment'=>$comment,'payment'=>$pay,'promo_code'=>customerField($input,'promo',40),'catalog_version'=>$quote['catalog_version'],'request_state'=>count(array_filter($raw,fn($l)=>$l['request_state']==='order_on_request'))?'order_on_request':'stock_check','np_delivery'=>$delivery,'shipping_estimate'=>false,'shipping_paid_to_carrier'=>true,'brigade'=>$brigade,'supplier_articles'=>catalog_order_articles($db,$calc['lines']),'donation_channel'=>$donationChannel,'donation_phone'=>'+'.$donationPhone,'donation_percent'=>3,'donation_amount'=>shopDonationAmount($total),'offer_version'=>'2026-10-07','accepted_at'=>gmdate('c')],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),$calc['subtotal'],$discount,$shipping]);
-        if(crmSchemaReady($db))$db->prepare('INSERT INTO rubizh_order_contact_evidence(order_id,raw_phone,normalized_phone,evidence,updated_at) VALUES(?,?,?,\'ORDER_CONTACT\',UTC_TIMESTAMP())')->execute([$id,customerField($contact,'phone',30),'+'.$phone]);
-        if($email!=='')$db->prepare('INSERT INTO rubizh_order_mail(order_id,recipient,next_at,updated_at) VALUES(?,?,UTC_TIMESTAMP(),UTC_TIMESTAMP())')->execute([$id,$email]);shopQueueEvent($db,$id,'new_order');$timing=shopEnsureTiming($db,['id'=>$id,'created_at'=>gmdate('Y-m-d H:i:s')]);shopReserveLines($db,$id,$raw,$timing['payment_due']);if($decision['payment_now'])shopStartPaymentTiming($db,['id'=>$id,'email'=>$email]);shopCartRemindersConverted($db,$scope,$email,$owner);shopAssertCatalogVersion($db,(string)$quote['catalog_version']);$db->commit();
-    }catch(Throwable $e){if($db->inTransaction())$db->rollBack();if($transactionAttempt===0&&shopRetryableTransactionError($e))continue;throw $e;}
-    break;
-    }
+        $created=shopCreateOrder($db,is_array($input['lines'] ?? null)?$input['lines']:[],$c,$delivery,$pay,['external_id'=>'web:'.$key,'owner'=>$owner,'promo'=>customerField($input,'promo',40),'expected_total'=>$input['expected_total']??null,'catalog_version'=>$input['catalog_version']??null,
+            'before_insert'=>fn()=>shopCheckoutLimit($db,$rateKeys,true,$rateProof),
+            'after_insert'=>function(int $id)use($db,$key,$scope,$hash,$c,$owner){$db->prepare('INSERT INTO rubizh_checkout_requests(request_id,scope_hash,payload_hash,order_id,created_at) VALUES(?,?,?,?,UTC_TIMESTAMP())')->execute([$key,$scope,$hash,$id]);shopCartRemindersConverted($db,$scope,$c['email'],$owner);}]);
+    }catch(ShopOrderConflict $e){if($e->reason!=='PRICE_CHANGED')throw $e;$quote=$e->details['quote'];$kitNote=shopKitExplanation($quote['lines']);shopJson(['ok'=>false,'error_code'=>'PRICE_CHANGED','error'=>($kitNote!==''?$kitNote.' ':'').'Ціна або версія каталогу змінилася. Перевірте новий розрахунок та підтвердьте.','quote'=>$quote],409);}
+    $id=$created['id'];$email=$c['email'];
     $payment=null; // Legacy and request orders: manager confirms first. A fully payable v3 order is CONFIRMED and may start payment now.
     $response=['ok'=>true,'order'=>shopOrderReceipt($db,$id),'email_status'=>$email!==''?'pending':'none','payment'=>$payment??null];
     // On PHP-FPM the shopper receives the saved order before an SMTP connection.

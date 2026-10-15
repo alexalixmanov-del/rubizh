@@ -4,7 +4,8 @@ declare(strict_types=1);
 class NpUnknownResult extends RuntimeException {}
 class NpRejected extends RuntimeException {}
 class NpRateLimited extends NpRejected {}
-function npConfigured(): bool {return trim((string)(getenv('RUBIZH_NP_API_KEY')?:cfg('nova_poshta_api_key')))!=='';}
+function npMockEnabled(): bool {return cfg('np_mock')===true&&cfg('environment')==='staging'&&!in_array(strtolower((string)($_SERVER['HTTP_HOST']??'')),['rubizh.shop','www.rubizh.shop'],true);}
+function npConfigured(): bool {return npMockEnabled()||trim((string)(getenv('RUBIZH_NP_API_KEY')?:cfg('nova_poshta_api_key')))!=='';}
 function npOrigins(): array {
     $origins=[
       'm_vin'=>['name'=>'М Він','city'=>'Ксаверівка','region'=>'Вінницька','branch'=>'1','address'=>'Хмельницьке шосе, 40 б'],
@@ -22,6 +23,24 @@ function npOrigins(): array {
       $o['cargo_confirmed']=($r['cargo_confirmed']??false)===true;
       if(is_string($r['expected_area']??null)&&trim($r['expected_area'])!=='')$o['region']=trim($r['expected_area']);
     }unset($o);return $origins;
+}
+/** LOG-04: after the CRM migration the sender profiles table is the single source of dispatch points and sender. */
+function npSenderProfile(PDO $db,string $code): ?array {
+    static $exists=null;if($exists===null){$exists=(bool)$db->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='rubizh_sender_profiles'")->fetchColumn();}
+    if(!$exists)return null;$q=$db->prepare('SELECT * FROM rubizh_sender_profiles WHERE code=?');$q->execute([$code]);$p=$q->fetch(PDO::FETCH_ASSOC);return $p?:[];
+}
+function npSenderProfileComplete(array $p): bool {
+    foreach(['city_ref','warehouse_ref','sender_ref','contact_ref'] as $k)if(!npRef($p[$k]??''))return false;
+    $phone=preg_replace('/\D/','',(string)($p['phone']??''));if(preg_match('/^0\d{9}$/D',$phone))$phone='38'.$phone;
+    return trim((string)($p['region']??''))!==''&&!empty($p['confirmed'])&&preg_match('/^380\d{9}$/D',$phone)===1;
+}
+/** Applies the supplier's profile to the NP calls of this request; null when the profiles table does not exist yet. */
+function npUseSenderProfile(PDO $db,string $code): bool {
+    $p=npSenderProfile($db,$code);if($p===null)return false;
+    if(!$p||!npSenderProfileComplete($p))throw new ShopOrderConflict('SENDER_PROFILE_INCOMPLETE',['supplier'=>$code],'Профіль відправника потребує підтверджених даних НП.');
+    $refs=[];$refs[$code]=['city_ref'=>$p['city_ref'],'warehouse_ref'=>$p['warehouse_ref'],'cargo_warehouse_ref'=>$p['cargo_warehouse_ref'],'confirmed'=>true,'cargo_confirmed'=>npRef($p['cargo_warehouse_ref']),'expected_area'=>$p['region']];
+    $GLOBALS['crm_domain_config']=['np_staff_origin'=>[$code=>array_intersect_key($p,array_flip(['name','city','region','branch','cargo_branch']))],'np_origin_refs'=>$refs,'np_sender'=>['ref'=>$p['sender_ref'],'contact_ref'=>$p['contact_ref'],'phone'=>$p['phone'],'confirmed'=>true]];
+    return true;
 }
 function npRef(mixed $v): bool {return is_string($v)&&preg_match('/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/Di',$v)===1;}
 function npNormalize(string $s): string {return mb_strtolower(trim(preg_replace('/\s+/u',' ',$s)),'UTF-8');}
@@ -75,6 +94,8 @@ function npApiCallOnce(string $model,string $method,array $properties=[]): array
     if(!preg_match('/^[A-Za-z]+$/D',$model.$method))throw new InvalidArgumentException('Невірний метод НП.');
     // Only a PHP test process can supply a fixture transport; never a query parameter.
     if(defined('RUBIZH_NP_TESTS') && isset($GLOBALS['np_test_transport']))return ($GLOBALS['np_test_transport'])($model,$method,$properties);
+    // Staging stand only (A9): deterministic NP with the live response shapes; never on the production host.
+    if(npMockEnabled()){require_once __DIR__.'/np-mock.php';return npMockApi($model,$method,$properties);}
     $key=(string)(getenv('RUBIZH_NP_API_KEY')?:cfg('nova_poshta_api_key'));
     if(trim($key)==='')throw new RuntimeException('Додайте ключ НП у конфігурацію сервера.');
     if(!function_exists('curl_init'))throw new RuntimeException('Потрібне розширення PHP curl.');

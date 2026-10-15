@@ -2,6 +2,26 @@
 
 > Актуальный checkpoint — глобальный этап 3 (RC1), приведён первым. Блоки этапа 2-B и ранее ниже — история.
 
+<!-- STAGE4_PROGRESS_BEGIN -->
+
+## Глобальный этап 4 (CRM) — ход работы (обновляется по фазам)
+
+Ветки: SITE `hardening/stage-4-crm` (от `rubizh-stage-3-verified` = `6c0b15c`), CRM `~/Projects/crm.rubizh` `hardening/stage-4-crm` (от `b0e2f93`, push в remote `ci` = alexalixmanov-del/crm.rubizh). PIM `5fd46cb` — только чтение. Память: `~/.claude/projects/-Users-l-Projects-rubizh/memory/rubizh-stage4-scope.md`.
+
+| Фаза | Статус | Где |
+|---|---|---|
+| 0 Gap-анализ | DONE | `docs/crm/00-CRM_GAP_ANALYSIS.md` |
+| 1 Документы | 01, 02 DONE; 03/04 генерируются из контракта | `docs/crm/01-…`, `02-…`, `contracts/crm/crm-api.json` |
+| 2–3 SITE + серверная часть CRM | В РАБОТЕ: роли (5), схема v2, контракт-роутер, TOTP/step-up/сессии/приглашения, операции SITE (`shop/order-ops.php`, `shop/order-create.php`), адаптеры/NP-mock, worker | `staff/*.php`, `api/staff/index.php` |
+| 4 Адаптеры/cron/флаги | код есть (`staff/adapters.php`, `shop/np-mock.php`, `staff/worker.php`) | — |
+| 5 Фронтенд | НЕ НАЧАТ | crm.rubizh |
+| 6 Тесты | RBAC-матрица 88 маршрутов × 5 ролей PASS; `tests/crm-stage4-api.test.mjs` написан | `tests/crm-stage4-*.test.mjs` |
+| 4-SITE (D-50…D-54) | НЕ НАЧАТ (D-54 получен обрезанным → OD-4.6) | — |
+
+Локальный стенд: `source $SCRATCH/env.sh` (MariaDB `/tmp/rzdb/mysqld.sock`, PHP-шим старой сессии, `RUBIZH_CRM_DIR=~/Projects/crm.rubizh`). Отладка: `RUBIZH_CRM_DEBUG=1 RUBIZH_PRINT_SERVER_ERRORS=1`.
+
+<!-- STAGE4_PROGRESS_END -->
+
 <!-- STAGE3_RC1_CHECKPOINT_BEGIN -->
 
 ## Глобальный этап 3 — стабильный RC1, checkpoint 2026-10-14
