@@ -64,3 +64,15 @@ for(const path of ['/catalog','/catalog/odiah-ta-forma','/product/demo-uniform',
 test('D-60: the light theme keeps the light plate under catalog photos',()=>withPage(async page=>{
  await open(page,'/catalog');assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),'light');assert.ok(await plates(page)>0);
 },{theme:'light'}));
+
+// D-63: no console warnings on the storefront pages of the matrix (template expressions such as {{ areaQty }} are not
+// left in the value attribute of the source markup, where a number field cannot parse them).
+for(const path of ['/','/catalog','/catalog/odiah-ta-forma','/product/demo-uniform','/kit'])test(`D-63: ${path} logs no console warnings or errors`,()=>withPage(async page=>{
+ const logs=[];page.on('console',m=>{if(['warning','error'].includes(m.type()))logs.push(m.type()+': '+m.text().slice(0,160));});
+ await open(page,path);await page.waitForTimeout(500);
+ assert.deepEqual(logs,[]);
+}));
+test('D-63: no template expression in a value attribute of the source markup',async()=>{
+ const {readFileSync}=await import('node:fs');const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+ assert.deepEqual(html.match(/<input[^>]*type="number"[^>]*\svalue="\{\{[^>]*>/g)||[],[]);
+});
