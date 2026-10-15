@@ -165,7 +165,9 @@ test('storefront code offers no COD option, no COD default and no COD wording fo
  assert.doesNotMatch(js,/k:\s*["']cod["']/,'no COD payment option in any checkout variant');
  assert.doesNotMatch(js,/npCodEnabled|np_cod_enabled/,'no COD feature switch on the storefront');
  for(const file of ['shop/order.php','shop/customer.php','shop/np-fulfillment.php','shop/pim-v3-checkout.php','api/config.sample.php'])
-  assert.doesNotMatch(readFileSync(path.join(root,file),'utf8'),/np_cod_|AfterpaymentOnGoodsCost|BackwardDeliveryData/,file+' has no COD integration');
+  // Stage 4 (A5): the only allowed mention is the guard that rejects COD fields before the NP call.
+  assert.doesNotMatch(readFileSync(path.join(root,file),'utf8').replace(/if\(array_intersect_key\(\$props,array_flip\(\['BackwardDeliveryData','AfterpaymentOnGoodsCost','RedeliveryCalculate'\]\)\)\)throw new NpRejected\(/,''),/np_cod_|AfterpaymentOnGoodsCost|BackwardDeliveryData/,file+' has no COD integration');
+ assert.match(readFileSync(path.join(root,'shop/np-fulfillment.php'),'utf8'),/array_flip\(\['BackwardDeliveryData','AfterpaymentOnGoodsCost','RedeliveryCalculate'\]\)\)\)throw new NpRejected/,'COD fields are rejected before Nova Poshta is called');
 });
 
 // D-20: a signed callback that can never become valid (amount/currency/status) is acknowledged once and parked for
