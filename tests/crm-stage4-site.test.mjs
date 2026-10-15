@@ -144,3 +144,9 @@ test('D-54: wholesale request is stored on the server, validated, idempotent and
   await crm.getByRole('row').filter({hasText:valid.data.number}).getByText('Прорахунок надіслано').waitFor();assert.equal(s.sql("SELECT state FROM rubizh_wholesale_requests WHERE number='"+valid.data.number+"'")[0].state,'QUOTED');
  }finally{await browser.close();s.stop();}
 });
+
+test('A5: no cash-on-delivery wording or branches in storefront, receipt, cabinet and e-mail (legacy rows show a neutral status)',()=>{
+ const files=['assets/shop-client.2026101101.js','index.html','shop/customer-states.php','auth/account.php','auth/email-templates.php','auth/order-detail.php','shop/receipt-view.php','offer.html'];
+ for(const f of files){const src=readFileSync(root+'/'+f,'utf8');assert.doesNotMatch(src,/Оплата при отриманні|'При отриманні'|Післяплата|накладен|післяопл/i,f);assert.doesNotMatch(src,/payment_method[!=]==['"]cod['"]|npCodEnabled/,f);}
+ const out=php(`require '${root}/shop/customer-states.php';echo json_encode(shopCustomerStates(['status'=>'new','payment_status'=>'cod']),JSON_UNESCAPED_UNICODE);`).stdout;assert.match(out,/Уточнюється/);assert.doesNotMatch(out,/отриманні/);
+});

@@ -3,9 +3,10 @@ import assert from 'node:assert/strict';
 import {php,root} from './helpers/site-fixture.mjs';
 const result=code=>JSON.parse(php(code).stdout);
 const permissions=['payment.view','payment.invoice.create','payment.invoice.resend','payment.refund.request','payment.refund.execute','payment.manual_reconcile','order.price_override','order.total_override','financial.audit.view'];
-for(const role of ['OWNER','MANAGER','LOGISTICS','READ_ONLY','UNKNOWN'])test(`financial permission preset: ${role}`,()=>{
+// Stage 4 (OD-4.2): WAREHOUSE (alias LOGISTICS) and SUPPORT (alias READ_ONLY) see no finance; ACCOUNTANT views payments and the financial audit.
+for(const role of ['OWNER','MANAGER','WAREHOUSE','LOGISTICS','SUPPORT','READ_ONLY','ACCOUNTANT','UNKNOWN'])test(`financial permission preset: ${role}`,()=>{
  const actual=result(`require '${root}/shop/financial-permissions.php';echo json_encode(shopRolePermissions('${role}'));`);
- const wanted=role==='OWNER'?permissions:role==='MANAGER'?permissions.slice(0,3):['LOGISTICS','READ_ONLY'].includes(role)?['payment.view']:[];
+ const wanted=role==='OWNER'?permissions:role==='MANAGER'?permissions.slice(0,3):role==='ACCOUNTANT'?['payment.view','financial.audit.view']:[];
  assert.deepEqual(actual.filter(p=>permissions.includes(p)),wanted);
 });
 const canonical=o=>result(`require '${root}/shop/order-state.php';$o=json_decode('${JSON.stringify(o)}',true);echo json_encode(shopCanonicalOrder($o));`);

@@ -107,7 +107,7 @@ function customerStatus(string $status): string {
     return ['new'=>'Нове','confirmed'=>'Підтверджено','processing'=>'Готуємо до відправлення','partially_returned'=>'Часткове повернення','partially_shipped'=>'Частково відправлено','shipped'=>'Відправлено','delivered'=>'Отримано','completed'=>'Завершено','cancelled'=>'Скасовано','returned'=>'Повернено'][$status] ?? 'Уточнюється';
 }
 function customerPayment(string $status): string {
-    return ['pending'=>'Очікує оплати','paid'=>'Оплачено','cod'=>'Оплата при отриманні','refunded'=>'Кошти повернено','failed'=>'Оплата не пройшла'][$status] ?? 'Уточнюється';
+    return ['pending'=>'Очікує оплати','paid'=>'Оплачено','refunded'=>'Кошти повернено','failed'=>'Оплата не пройшла'][$status] ?? 'Уточнюється';
 }
 function customerMoney(mixed $amount, string $currency = 'UAH'): string {
     return number_format((float)$amount, 2, ',', ' ').' '.($currency === 'UAH' ? '₴' : $currency);

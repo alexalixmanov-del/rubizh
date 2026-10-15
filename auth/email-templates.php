@@ -70,7 +70,7 @@ function rubizhOrderEmail(array $order): array {
     $total=rubizhEmailMoney($order['total'] ?? null,$currency);
     $lines=json_decode((string)($order['items_json'] ?? ''),true,512,JSON_THROW_ON_ERROR);
     if (!is_array($lines) || !$lines) { throw new InvalidArgumentException('Замовлення не містить товарів.'); }
-    $payment=['pending'=>'Очікує оплати','paid'=>'Оплачено','cod'=>'Оплата при отриманні','refunded'=>'Кошти повернено','failed'=>'Оплата не пройшла'][(string)($order['payment_status'] ?? '')] ?? 'Уточнюється';
+    $payment=['pending'=>'Очікує оплати','paid'=>'Оплачено','refunded'=>'Кошти повернено','failed'=>'Оплата не пройшла'][(string)($order['payment_status'] ?? '')] ?? 'Уточнюється';
     $delivery=(string)($order['delivery_label'] ?? '');
     $stage=in_array($order['status']??'',['cancelled','returned'],true)||($order['payment_status']??'')==='refunded'?'cancelled':(($order['payment_status']??'')==='paid'?'paid':'pending');
     $ready=in_array($order['status']??'',['confirmed','processing','shipped','completed'],true);if($stage==='pending'&&!$ready)$payment='Очікує підтвердження наявності';
