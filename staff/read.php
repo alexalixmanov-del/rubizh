@@ -165,20 +165,31 @@ function crmCustomers(PDO $db,array $q): array {
  $strip=fn(string $e)=>array_reduce(['+',' ','(',')','-'],fn($x,$c)=>"REPLACE($x,'$c','')",$e);
  $paidOrder="IF(o.payment_status='paid',ROUND(o.total*100),0)";
  $seg=fn(string $orders,string $paid,string $last)=>"CASE WHEN $orders>=".(int)$s['vip_paid_orders']." OR $paid>=".(int)$s['vip_paid_total_minor']." THEN 'VIP' WHEN $last IS NOT NULL AND $last<UTC_TIMESTAMP()-INTERVAL ".(int)$s['sleeping_days']." DAY THEN 'SLEEPING' WHEN $orders>=2 THEN 'REPEAT' WHEN $orders>=1 THEN 'NEW' ELSE 'NO_ORDERS' END";
+ // The segment filter is evaluated inside each branch (no 50 000-row union to materialise and filter).
+ $segment=(string)($q['segment']??'');if($segment!==''&&!in_array($segment,['VIP','REPEAT','NEW','SLEEPING','NO_ORDERS'],true))throw new CrmError('INVALID_QUERY',400);
  // Accounts with their order statistics (few rows).
  $aw=[];$aargs=[];if($text!==''){$aw[]="(CONCAT_WS(' ',a.first_name,a.last_name) LIKE ? ESCAPE '!' OR a.email LIKE ? ESCAPE '!'".($isPhone?' OR '.$strip('a.phone').' LIKE ?':'').')';array_push($aargs,$like,$like);if($isPhone)$aargs[]=$tail;}
+ if($segment!==''){$aw[]=$seg('COALESCE(st.orders,0)','COALESCE(st.paid,0)','st.last_order').'=?';$aargs[]=$segment;}
  $acc="SELECT a.id,a.created_at,'ACCOUNT' source,".$seg('COALESCE(st.orders,0)','COALESCE(st.paid,0)','st.last_order')." segment FROM rubizh_accounts a LEFT JOIN (SELECT ao.customer_id,COUNT(*) orders,SUM($paidOrder) paid,MAX(o.created_at) last_order FROM rubizh_account_orders ao JOIN rubizh_customer_orders o ON o.id=ao.order_id GROUP BY ao.customer_id) st ON st.customer_id=a.id".($aw?' WHERE '.implode(' AND ',$aw):'');
  // Guest checkouts: one order each.
  $gw=['ao.order_id IS NULL'];$gargs=[];$join='';
- if($text!==''){$parts=["o.email LIKE ? ESCAPE '!'"];$gargs[]=$like;
-  // Same narrow-source id collection as the order search (D-59).
-  $found=crmSearchOrderIds($db,$text,($q['_phones']??true)===true);if($found===null){$parts[]="o.order_number LIKE ?";$gargs[]=strtoupper($text).'%';}elseif($found)$parts[]='o.id IN ('.implode(',',$found).')';
+ if($text!==''){
+  // Same narrow-source id collection as the order search (D-59); e-mail matches come from the covering index, so the
+  // guest query selects by id instead of scanning every order row.
+  $found=crmSearchOrderIds($db,$text,($q['_phones']??true)===true);
+  $byEmail=array_map('intval',array_column(crmQuery($db,"SELECT id FROM rubizh_customer_orders WHERE email LIKE ? ESCAPE '!'",[$like]),'id'));
+  $parts=[];if($found===null){$parts[]="o.order_number LIKE ?";$gargs[]=strtoupper($text).'%';}
+  $ids2=array_values(array_unique([...($found??[]),...$byEmail]));$parts[]=$ids2?'o.id IN ('.implode(',',$ids2).')':'0=1';
   $gw[]='('.implode(' OR ',$parts).')';}
+ if($segment!==''){$gw[]=$seg('1',$paidOrder,'o.created_at').'=?';$gargs[]=$segment;}
  $guest="SELECT CONCAT('order:',o.id) id,o.created_at,'ORDER_CONTACT' source,".$seg('1',$paidOrder,'o.created_at')." segment FROM rubizh_customer_orders o$join LEFT JOIN rubizh_account_orders ao ON ao.order_id=o.id WHERE ".implode(' AND ',$gw);
- $base="($acc) UNION ALL ($guest)";$args=[...$aargs,...$gargs];$where='';
- if(($q['segment']??'')!==''){if(!in_array($q['segment'],['VIP','REPEAT','NEW','SLEEPING','NO_ORDERS'],true))throw new CrmError('INVALID_QUERY',400);$where=' WHERE c.segment=?';$args[]=$q['segment'];}
- $total=(int)crmOne($db,"SELECT COUNT(*) total FROM ($base) c$where",$args)['total'];
- $keys=crmQuery($db,"SELECT c.* FROM ($base) c$where ORDER BY c.created_at DESC,c.id LIMIT {$p['limit']} OFFSET {$p['offset']}",$args);
+ // Accounts are few: their statistics are computed once; guests are paged in SQL and merged in the same order
+ // (created_at DESC, id) as one union would give.
+ $accRows=crmQuery($db,$acc,$aargs);
+ $total=count($accRows)+(int)crmOne($db,"SELECT COUNT(*) total FROM rubizh_customer_orders o$join LEFT JOIN rubizh_account_orders ao ON ao.order_id=o.id WHERE ".implode(' AND ',$gw),$gargs)['total'];
+ $guestTop=crmQuery($db,"SELECT c.* FROM ($guest) c ORDER BY c.created_at DESC,c.id LIMIT ".($p['offset']+$p['limit']),$gargs);
+ $keys=array_merge($accRows,$guestTop);usort($keys,fn($x,$y)=>strcmp((string)$y['created_at'],(string)$x['created_at'])?:strcmp((string)$x['id'],(string)$y['id']));
+ $keys=array_slice($keys,$p['offset'],$p['limit']);
  // Page details.
  $ids=array_column(array_filter($keys,fn($r)=>$r['source']==='ACCOUNT'),'id');$guests=array_map(fn($r)=>(int)substr($r['id'],6),array_values(array_filter($keys,fn($r)=>$r['source']==='ORDER_CONTACT')));
  $paid="(SELECT COALESCE(SUM(mi.amount),0)/100 FROM rubizh_mono_invoices mi WHERE mi.order_id=o.id AND EXISTS(SELECT 1 FROM rubizh_mono_events ev WHERE ev.invoice_id=mi.invoice_id AND ev.status='success'))";
