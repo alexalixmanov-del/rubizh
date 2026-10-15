@@ -182,8 +182,8 @@ function crmSegment(array $c,array $s): string {
 }
 function crmCustomers4(PDO $db,array $actor,array $q): array {
  $r=crmCustomers($db,$q);$s=crmSettingsValues($db);
- foreach($r['rows'] as &$c){$c['segment']=crmSegment($c,$s);$c['phone_masked']=crmMaskPhone($c['phone']??null);$c['paid_total_minor']=(int)round((float)($c['paid_total']??0)*100);$c['orders']=(int)$c['orders'];unset($c['phone'],$c['phone_raw']);if(!crmCan($actor,'order.finance.view'))$c['paid_total_minor']=null;}unset($c);
- if(($q['segment']??'')!=='')$r['rows']=array_values(array_filter($r['rows'],fn($c)=>$c['segment']===$q['segment']));
+ foreach($r['rows'] as &$c){$c['segment']=$c['segment']??crmSegment($c,$s);$c['phone_masked']=crmMaskPhone($c['phone']??null);$c['paid_total_minor']=(int)round((float)($c['paid_total']??0)*100);$c['orders']=(int)$c['orders'];unset($c['phone'],$c['phone_raw']);if(!crmCan($actor,'order.finance.view'))$c['paid_total_minor']=null;}unset($c);
+ // D-60: the segment filter runs in SQL before pagination (crmCustomers).
  return $r;
 }
 function crmCustomer4(PDO $db,array $actor,string $id): array {
