@@ -50,10 +50,18 @@ function shopOrderReceipt(PDO $db,int $id): array {
  'canonical'=>$canonical,'order_state'=>$canonical['order_status'],'payment_state'=>$canonical['payment_status'],'fulfillment_state'=>$canonical['fulfillment_status'],
  'payment_due'=>$ready?$due->format('c'):'','payment_due_label'=>$ready?$due->setTimezone(new DateTimeZone('Europe/Kyiv'))->format('d.m.Y H:i'):'','payment_url'=>'/shop/payment-return.php?order='.$id,'seller'=>$s,'brigade'=>shopDonationBrigade($c),'donation_amount'=>shopDonationAmount((float)$o['total']),'donation_text'=>$stage==='cancelled'?'Внесок за скасованим або поверненим замовленням не нараховується.':shopDonationText(shopDonationAmount((float)$o['total']),$stage==='paid',shopDonationBrigade($c)),'donation'=>shopDonationForOrder($db,$id),'donation_channel'=>$c['donation_channel']??'viber'];
 }
+/** D-51: working days after payment_due before an unpaid FOP-invoice order is cancelled (CRM setting, else config, default 3). */
+function shopInvoiceGraceWorkdays(PDO $db): int {
+ $v=null;try{$q=$db->query("SELECT v FROM rubizh_crm_settings WHERE k='invoice_grace_workdays'");$v=$q?$q->fetchColumn():null;}catch(Throwable $e){$v=null;}
+ if($v===null||$v===false)$v=function_exists('cfg')?cfg('invoice_grace_workdays'):null;
+ return max(0,min(30,(int)($v??3)));
+}
 function shopLifecycleTick(PDO $db,int $limit=30): void {
  $rows=$db->query("SELECT o.* FROM rubizh_customer_orders o LEFT JOIN rubizh_order_timing t ON t.order_id=o.id WHERE t.order_id IS NULL AND o.status IN ('new','confirmed','processing') ORDER BY o.id DESC LIMIT ".max(1,min(100,$limit)))->fetchAll(PDO::FETCH_ASSOC);foreach($rows as $o)shopEnsureTiming($db,$o);
- $rows=$db->query("SELECT o.id,t.payment_due,t.remind_at FROM rubizh_customer_orders o JOIN rubizh_order_timing t ON t.order_id=o.id WHERE o.status IN ('new','confirmed','processing') AND o.payment_status IN ('pending','failed') AND (t.remind_at<=UTC_TIMESTAMP() OR t.payment_due<=UTC_TIMESTAMP()) ORDER BY t.payment_due LIMIT ".max(1,min(100,$limit)))->fetchAll(PDO::FETCH_ASSOC);
+ $rows=$db->query("SELECT o.id,t.payment_due,t.remind_at,JSON_UNQUOTE(JSON_EXTRACT(d.contact_json,'$.payment')) method FROM rubizh_customer_orders o JOIN rubizh_order_timing t ON t.order_id=o.id LEFT JOIN rubizh_order_details d ON d.order_id=o.id WHERE o.status IN ('new','confirmed','processing') AND o.payment_status IN ('pending','failed') AND (t.remind_at<=UTC_TIMESTAMP() OR t.payment_due<=UTC_TIMESTAMP()) ORDER BY t.payment_due LIMIT ".max(1,min(100,$limit)))->fetchAll(PDO::FETCH_ASSOC);
  foreach($rows as $r){$id=(int)$r['id'];try{if($r['payment_due']<=gmdate('Y-m-d H:i:s')){
+ // D-51: a bank transfer for a FOP invoice may arrive after the deadline; the order waits N working days for the statement.
+ if($r['method']==='invoice'&&shopWorkdayDeadline((string)$r['payment_due'],shopInvoiceGraceWorkdays($db))>gmdate('Y-m-d H:i:s'))continue;
  $q=$db->prepare("SELECT * FROM rubizh_mono_invoices WHERE order_id=? AND status IN ('creating','unknown','created','processing','hold')");$q->execute([$id]);foreach($q->fetchAll(PDO::FETCH_ASSOC) as $i)monoRefresh($db,$i);
  // Never cancel while a bank operation or a shipment remains unresolved.
  if(shopNoOpenCardInvoice($db,$id)){shopCancelOrder($db,$id,true);shopQueueBuyerMail($db,$id,'cancelled');}

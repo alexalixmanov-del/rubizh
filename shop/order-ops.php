@@ -172,7 +172,8 @@ function shopAcceptInvoicePayment(PDO $db,int $order,string $actor,int $amountMi
         $q=$db->prepare("SELECT COUNT(*) FROM rubizh_stock_reservations WHERE order_id=? AND (status='ACTIVE' AND expires_at>UTC_TIMESTAMP() OR status='COMMITTED')");$q->execute([$order]);$held=(int)$q->fetchColumn()>0;
         if(!$held){
             // Reservation lapsed during the reconciliation period: current stock decides.
-            try{$v=shopValidateOrder($db,$o['items'],'invoice',$o);}catch(ShopOrderConflict $e){throw new ShopOrderConflict('STOCK_UNAVAILABLE',['suggest'=>'REFUND','cause'=>$e->reason],'Товару вже немає в наявності. Оплату не прийнято: оформіть повернення коштів клієнту.');}
+            // 'confirmation' re-checks SKU, availability and stock without the payment-deadline rule (the money already arrived).
+            try{$v=shopValidateOrder($db,$o['items'],'confirmation',$o);}catch(ShopOrderConflict $e){throw new ShopOrderConflict('STOCK_UNAVAILABLE',['suggest'=>'REFUND','cause'=>$e->reason],'Товару вже немає в наявності. Оплату не прийнято: оформіть повернення коштів клієнту.');}
             $db->prepare("DELETE FROM rubizh_stock_reservations WHERE order_id=? AND status IN ('ACTIVE','EXPIRED','RELEASED')")->execute([$order]);
             shopReserveLines($db,$order,$v['raw'],gmdate('Y-m-d H:i:s',time()+3600));
         }

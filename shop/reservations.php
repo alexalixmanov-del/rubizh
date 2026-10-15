@@ -27,7 +27,7 @@ function shopReserveLines(PDO $db,int $id,array $lines,string $expires): void {
     $totals=[];foreach($lines as $l)if(($l['availability']??'')==='in'&&!empty($l['stock_confirmed'])&&($l['sku']??'')!=='')$totals[$l['sku']]=($totals[$l['sku']]??0)+(float)$l['qty'];
     foreach($totals as $sku=>$qty){
         $q=$db->prepare('SELECT qty,status FROM rubizh_stock_reservations WHERE order_id=? AND sku=? FOR UPDATE');$q->execute([$id,$sku]);$r=$q->fetch(PDO::FETCH_ASSOC);
-        if($r){if($r['status']!=='ACTIVE'||(float)$r['qty']!==$qty)throw new RuntimeException('Reservation differs; explicit inventory review required');continue;}
+        if($r){if($r['status']!=='ACTIVE'||(float)$r['qty']!==$qty)throw new RuntimeException('Резерв для цього замовлення не збігається з поточною кількістю. Менеджер перевірить залишок перед підтвердженням.');continue;}
         $db->prepare("INSERT INTO rubizh_stock_reservations(order_id,sku,qty,expires_at,status) VALUES(?,?,?,?,'ACTIVE')")->execute([$id,$sku,$qty,$expires]);
         shopOrderAudit($db,$id,str_repeat('0',32),'reservation.ACTIVE',[],['sku'=>$sku,'qty'=>$qty,'status'=>'ACTIVE'],'Checkout/confirmation','SYSTEM');
     }
