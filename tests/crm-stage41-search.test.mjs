@@ -26,6 +26,7 @@ test('role × search: each role finds an order exactly by the kinds the owner al
     const g=await a.get('/search?q='+encodeURIComponent(kinds.email));assert.equal(g.status,200);assert.deepEqual((g.data.data.orders||[]).filter(x=>x.id===o.id),[],'global search: no e-mail match for WAREHOUSE');
     const sh=await a.get('/shipments?q='+encodeURIComponent(kinds.email));assert.equal(sh.status,200);assert.deepEqual(sh.data.data.rows.filter(x=>x.order_id===o.id),[],'shipments: no e-mail match for WAREHOUSE');
     const shT=await a.get('/shipments?q=20450000999911');assert.ok(shT.data.data.rows.some(x=>x.order_id===o.id),'shipments: TTN match for WAREHOUSE');
+    assert.ok(shT.data.data.rows.every(x=>!('email' in x)),'no buyer e-mail in WAREHOUSE shipment rows');
    }
   }
   assert.deepEqual(table.filter(x=>x.expected!==x.found),[],'role × search mismatches');

@@ -451,9 +451,12 @@ function crmWholesaleOrder(PDO $db,array $actor,int $id,array $b,string $key): a
  if((int)$db->query("SELECT GET_LOCK(".$db->quote($lock).",10)")->fetchColumn()!==1)throw new CrmError('BUSY',409);
  try{
   $r=crmWholesaleNeed($db,$id);
-  if($r['order_id']){$o=crmOne($db,'SELECT id,external_id FROM rubizh_customer_orders WHERE id=?',[$r['order_id']]);if($o&&$o['external_id']==='crm:'.$key)return crmOrderCard($db,(int)$o['id'],$actor);throw new CrmError('ALREADY_ORDERED',409,['order_id'=>(int)$r['order_id']]);}
+  // The order's external key belongs to the request, not to the attempt: an order half-linked by a failed attempt is
+  // found again by any retry, and a key used elsewhere can never attach a foreign order (review of stage 4.1).
+  $orderKey=substr(hash('sha256','wholesale-order|'.$id),0,32);
+  if($r['order_id']){if(crmOne($db,"SELECT 1 FROM rubizh_staff_audit WHERE entity='wholesale' AND entity_id=? AND action='wholesale.order' AND request_id=?",[(string)$id,$key]))return crmOrderCard($db,(int)$r['order_id'],$actor);throw new CrmError('ALREADY_ORDERED',409,['order_id'=>(int)$r['order_id']]);}
   $comment=trim('Оптова заявка '.$r['number'].'. '.(string)($b['comment']??''));
-  $card=crmPhoneOrder($db,$actor,['customer'=>['name'=>$r['name'],'phone'=>$r['phone'],'email'=>$r['email'],'recipient'=>(string)($b['recipient']??'')],'lines'=>$b['lines'],'delivery'=>$b['delivery'],'payment'=>$b['payment']??'invoice','channel'=>'other','comment'=>mb_substr($comment,0,1000)]+(isset($b['expected_total_minor'])?['expected_total_minor'=>$b['expected_total_minor']]:[]),$key);
+  $card=crmPhoneOrder($db,$actor,['customer'=>['name'=>$r['name'],'phone'=>$r['phone'],'email'=>$r['email'],'recipient'=>(string)($b['recipient']??'')],'lines'=>$b['lines'],'delivery'=>$b['delivery'],'payment'=>$b['payment']??'invoice','channel'=>'other','comment'=>mb_substr($comment,0,1000)]+(isset($b['expected_total_minor'])?['expected_total_minor'=>$b['expected_total_minor']]:[]),$orderKey);
   $db->prepare("UPDATE rubizh_wholesale_requests SET order_id=?,state=IF(state='NEW','IN_PROGRESS',state),assigned_to=COALESCE(assigned_to,?),updated_at=UTC_TIMESTAMP() WHERE id=?")->execute([$card['id'],in_array($actor['role'],['OWNER','MANAGER'],true)?$actor['id']:null,$id]);
   crmAudit($db,$actor,'wholesale',(string)$id,'wholesale.order',['state'=>$r['state']],['order_id'=>(int)$card['id']],'',$key);
   return $card;

@@ -249,11 +249,13 @@ function crmShipmentsList(PDO $db,array $actor,array $q): array {
  $r=crmList($db,'shipments',['_contact'=>crmCan($actor,'order.search.contact')]+$q);
  if(!crmCan($actor,'order.finance.view'))foreach($r['rows'] as &$row)unset($row['declared_value'],$row['delivery_cost'],$row['payload_json'],$row['result_json']);unset($row);
  foreach($r['rows'] as &$row){$row['supplier_name']=npOrigins()[$row['supplier_code']]['name']??$row['supplier_code'];unset($row['payload_json'],$row['result_json'],$row['origin_json']);}unset($row);
+ if(!crmCan($actor,'order.search.contact'))foreach($r['rows'] as &$row)unset($row['email']);unset($row); // stage 4.1: no buyer e-mail for WAREHOUSE
  return $r;
 }
 function crmReturnsList(PDO $db,array $actor,array $q): array {
  $r=crmList($db,'returns',['_contact'=>crmCan($actor,'order.search.contact')]+$q);
  if(!crmCan($actor,'refund.view'))foreach($r['rows'] as &$row)$row=crmRedactReturn($row);unset($row);
+ if(!crmCan($actor,'order.search.contact'))foreach($r['rows'] as &$row)unset($row['email']);unset($row); // stage 4.1: no buyer e-mail for WAREHOUSE
  return $r;
 }
 /** R4-04: refund amounts of a return are finance data (per-line refund, allocations, expected total). */

@@ -11,9 +11,9 @@ test('OD-4.6 storefront: honeypot, thank-you message with the number, per-addres
  const s=await startCrm();
  try{
   const c=await s.get('/shop/customer.php'),cookie=c.headers.get('set-cookie').split(';')[0],csrf=c.data.csrf;const send=b=>s.post('/shop/wholesale-request.php',{csrf,...b},{Cookie:cookie});
-  const trap=await send({...valid,request_id:rid(),website:'http://spam.example'});assert.equal(trap.status,400,'a filled honeypot is refused');
+  const trap=await send({...valid,request_id:rid(),rz_check:'http://spam.example'});assert.equal(trap.status,400,'a filled honeypot is refused');
   assert.equal(+s.sql('SELECT COUNT(*) n FROM rubizh_wholesale_requests')[0].n,0,'nothing stored from the honeypot');
-  const ok=await send({...valid,request_id:rid(),website:''});assert.equal(ok.status,200,JSON.stringify(ok.data));
+  const ok=await send({...valid,request_id:rid(),rz_check:''});assert.equal(ok.status,200,JSON.stringify(ok.data));
   assert.match(ok.data.message,/^Дякуємо, заявка № WS-\d{6}-[0-9A-F]{6} прийнята\. Менеджер зв’яжеться з вами протягом робочого дня\.$/);
   let limited=0;for(let i=0;i<12&&!limited;i++){const r=await send({...valid,request_id:rid()});if(r.status===429)limited=i;}
   assert.ok(limited>0,'the per-address limit answers 429');
@@ -58,6 +58,14 @@ test('OD-4.6 CRM: four statuses, assignment, comments, audit; order from the req
   assert.equal((await manager.send('/wholesale/'+ws.id+'/order',{lines:[line()],delivery,payment:'invoice'})).status,400,'an order needs the per-attempt key');
   const audit=s.sql("SELECT action FROM rubizh_staff_audit WHERE entity='wholesale' AND entity_id='"+ws.id+"' ORDER BY id").map(x=>x.action);
   for(const a of ['wholesale.update','note.append','wholesale.order'])assert.ok(audit.includes(a),'audit '+a+': '+audit.join(','));
+  // Review of stage 4.1: an order created but not linked (a failed attempt) is found again by a retry with another key.
+  s.sql('UPDATE rubizh_wholesale_requests SET order_id=NULL WHERE id='+ws.id);
+  const relinked=await manager.send('/wholesale/'+ws.id+'/order',{...body,expected_total_minor:Math.round(quote.data.error.details.quote.total*100),request_id:rid()});
+  assert.equal(relinked.data.data?.id,orderId,'no second order: '+JSON.stringify(relinked.data).slice(0,200));assert.equal(+s.sql('SELECT order_id FROM rubizh_wholesale_requests WHERE id='+ws.id)[0].order_id,orderId);
+  // Old states from schema v2/v3 move to the four statuses on migration.
+  s.sql("UPDATE rubizh_wholesale_requests SET state='WON' WHERE id="+ws.id);
+  const {php}=await import('./helpers/site-fixture.mjs');php(`define('RUBIZH_AUTH_NO_SESSION',true);require '${s.site}/auth/bootstrap.php';require_once '${s.site}/staff/auth.php';crmMigrate(shopStoreDatabase());`);
+  assert.equal(s.sql('SELECT state FROM rubizh_wholesale_requests WHERE id='+ws.id)[0].state,'CLOSED','WON → CLOSED');
   r=await owner.send('/wholesale/'+ws.id,{state:'CLOSED'});assert.equal(r.status,200);assert.equal(r.data.data.state,'CLOSED');
   for(const role of ['WAREHOUSE','SUPPORT','ACCOUNTANT']){const a=await s.login(role);assert.equal((await a.get('/wholesale/'+ws.id)).status,403,role);assert.equal((await a.send('/wholesale/'+ws.id+'/note',{body:'x',request_id:rid()})).status,403,role);}
  }finally{s.stop();}
@@ -70,11 +78,15 @@ test('OD-4.6 storefront form: a real form with a submit button «Надісла�
   const page=await browser.newPage({viewport:{width:390,height:844}});await page.goto(s.base+'/');await page.locator('#b2b-form').scrollIntoViewIfNeeded();
   assert.equal(await page.locator('#b2b-form').evaluate(e=>e.tagName),'FORM');
   const submit=page.locator('#b2b-form button[type="submit"]');assert.equal(await submit.count(),1);assert.equal((await submit.innerText()).trim().toLowerCase(),'надіслати запит');
-  const hp=page.locator('#b2b-form input[name="website"]');assert.equal(await hp.count(),1);assert.equal(await hp.getAttribute('tabindex'),'-1');const box=await hp.boundingBox();assert.ok(!box||box.x+box.width<=0,'honeypot is off screen for people: '+JSON.stringify(box));assert.equal(await hp.evaluate(e=>e.closest('[aria-hidden="true"]')!==null),true,'hidden from screen readers');
+  const hp=page.locator('#b2b-form input[name="rz_check"]');assert.equal(await hp.count(),1);assert.equal(await hp.getAttribute('tabindex'),'-1');const box=await hp.boundingBox();assert.ok(!box||box.x+box.width<=0,'honeypot is off screen for people: '+JSON.stringify(box));assert.equal(await hp.evaluate(e=>e.closest('[aria-hidden="true"]')),null,'not focusable inside aria-hidden');assert.match(await hp.evaluate(e=>e.closest('label').textContent),/Залиште це поле порожнім/,'a person who reaches it is told to leave it empty');
+  // An error is shown at the form and focused (not only in the page-level alert).
+  await submit.click();const err=page.locator('#b2b-form [data-b2b-error]');await err.waitFor();assert.match(await err.innerText(),/ім’я/i);
+  await page.waitForFunction(()=>document.activeElement?.matches('[data-b2b-error]'));
   await page.getByRole('button',{name:'Військова частина'}).click();await page.getByLabel('Ім’я',{exact:true}).fill('Ігор');await page.getByLabel('Телефон',{exact:true}).fill('+380671234567');
   await page.getByLabel('Склад замовлення').fill('Куртка Softshell M ×2');await page.getByLabel('Згода на обробку персональних даних').check();
   await submit.click();
   const thanks=page.getByRole('status').filter({hasText:/Дякуємо, заявка № WS-\d{6}-[0-9A-F]{6} прийнята/});await thanks.waitFor({timeout:15000});
+  await page.waitForFunction(()=>document.activeElement?.matches('[data-b2b-thanks]'),null,{timeout:5000});
   assert.equal(await page.getByLabel('Ім’я',{exact:true}).count(),0,'the form is replaced by the thank-you screen');
   assert.equal(s.sql('SELECT buyer_type FROM rubizh_wholesale_requests ORDER BY id DESC LIMIT 1')[0].buyer_type,'MILITARY');
  }finally{await browser.close();s.stop();}

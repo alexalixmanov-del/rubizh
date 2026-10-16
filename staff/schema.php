@@ -78,6 +78,8 @@ function crmMigrate(PDO $db): void {
  $db->beginTransaction();try{
  // OD-4.2: LOGISTICS→WAREHOUSE, READ_ONLY→SUPPORT; ACCOUNTANT is new. The permission rows mirror the contract so that a
  // rolled-back older release still reads a consistent table (unknown roles fail closed there).
+ // OD-4.6 (v4): wholesale states are нова / в роботі / КП надіслано / закрита.
+ $db->exec("UPDATE rubizh_wholesale_requests SET state=CASE state WHEN 'QUOTED' THEN 'QUOTE_SENT' WHEN 'WON' THEN 'CLOSED' WHEN 'LOST' THEN 'CLOSED' ELSE state END WHERE state IN ('QUOTED','WON','LOST')");
  $db->exec("UPDATE rubizh_staff_users SET role='WAREHOUSE',session_version=session_version+1 WHERE role='LOGISTICS'");$db->exec("UPDATE rubizh_staff_users SET role='SUPPORT',session_version=session_version+1 WHERE role='READ_ONLY'");
  $db->exec("DELETE FROM rubizh_staff_permissions WHERE role IN ('LOGISTICS','READ_ONLY')");$db->exec("DELETE FROM rubizh_staff_roles WHERE role IN ('LOGISTICS','READ_ONLY')");
  foreach(crmRoleLabels() as $role=>$label){$db->prepare('INSERT INTO rubizh_staff_roles(role,label) VALUES(?,?) ON DUPLICATE KEY UPDATE label=VALUES(label)')->execute([$role,$label]);$db->prepare('DELETE FROM rubizh_staff_permissions WHERE role=?')->execute([$role]);foreach(crmRolePermissions($role) as $permission)$db->prepare('INSERT IGNORE INTO rubizh_staff_permissions(role,permission) VALUES(?,?)')->execute([$role,$permission]);}
