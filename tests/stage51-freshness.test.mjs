@@ -64,7 +64,7 @@ test('9 days: SKU not orderable; a model with no fresh SKU is hidden (not delete
   const slug=s.sql("SELECT slug FROM products WHERE id='m-jacket'")[0].slug;
   // One SKU too old, the others fresh: the model stays, that SKU cannot be ordered.
   assert.equal((await aged(s,{'RUB-F0001':9*D,'RUB-F0002':H,'RUB-F0003':H,'RUB-F0004':H})).status,200);
-  let p=await product(s);assert.equal(sku(p,'RUB-F0001').order_submission_allowed,false);assert.equal(sku(p,'RUB-F0001').stock_freshness,'HIDDEN');assert.equal(sku(p,'RUB-F0002').payment_allowed,true);
+  let p=await product(s);assert.equal(sku(p,'RUB-F0001').order_submission_allowed,false);assert.equal(sku(p,'RUB-F0001').stock_freshness,null,'the age band of a hidden SKU is not published');assert.equal(sku(p,'RUB-F0002').payment_allowed,true);
   let q=await quote(s,[line()]);assert.equal(q.status,409);assert.equal(q.data.error_code,'SKU_UNAVAILABLE');assert.match(q.data.error,/застаріли/);
   // 7 days 23 h → still sold after confirmation; 9 days on every SKU → the model is hidden.
   assert.equal((await aged(s,{'RUB-F0001':8*D-H})).status,200);assert.equal(sku(await product(s),'RUB-F0001').stock_freshness,'CONFIRM');
@@ -138,7 +138,7 @@ test('freshness policy from PIM: applied by SITE, shown in /pim/status, invalid 
   assert.equal((await aged(s,{'RUB-F0001':30*H},{policy:{version:1,pay_fresh_hours:24,sell_max_days:3}})).status,200);
   st=(await s.get('/api/pim/status',s.auth)).data;assert.deepEqual(st.freshness_policy,{version:1,pay_fresh_hours:24,sell_max_days:3});
   assert.equal(sku(await product(s),'RUB-F0001').stock_freshness,'CONFIRM','30 h > 24 h');
-  assert.equal((await aged(s,{'RUB-F0001':4*D})).status,200);assert.equal(sku(await product(s),'RUB-F0001').stock_freshness,'HIDDEN','4 d > 3 d');
+  assert.equal((await aged(s,{'RUB-F0001':4*D})).status,200);assert.equal(sku(await product(s),'RUB-F0001').order_submission_allowed,false,'4 d > 3 d');
   for(const bad of [{version:1,pay_fresh_hours:72,sell_max_days:3},{version:1,pay_fresh_hours:0,sell_max_days:8},{version:1,pay_fresh_hours:72.5,sell_max_days:8},
    {version:1,pay_fresh_hours:'72',sell_max_days:8},{version:2,pay_fresh_hours:72,sell_max_days:8},{version:1,pay_fresh_hours:72,sell_max_days:61},{version:1,pay_fresh_hours:72,sell_max_days:8,extra:1},[72,8]]){
    const r=await aged(s,{'RUB-F0001':H},{policy:bad});assert.equal(r.status,400,JSON.stringify(bad));assert.match(JSON.stringify(r.data),/FRESHNESS_POLICY/);
@@ -167,4 +167,24 @@ test('storefront bundle: a new versioned file shows «Менеджер підт�
  // Q-9: the previous bundle file is not edited in place.
  const crypto=await import('node:crypto');
  assert.equal(crypto.createHash('sha256').update(readFileSync(path.join(root,'assets/shop-client.2026101601.js'))).digest('hex'),'dcd617364eefaaa1501544c13c655a68dd560888dd1c0b0501669fb52ecfc4d5','2026101601 as tagged rubizh-stage-5-verified');
+});
+
+test('fail closed: no data time or a time in the future is never «fresh»; a model hidden by PIM is never shown by the age rule',{skip,timeout:300000},async()=>{
+ const s=await startCrm();
+ try{
+  // No supplier time and no import time.
+  let w=structuredClone(s.wire);for(const m of w.products)for(const v of m.variants)if(v.sku==='RUB-F0001'){v.stock_observed_at=null;delete v.stock_imported_at;}
+  let r;for(const body of chunksFor(w)){r=await s.post('/api/pim/sync',body,s.auth);assert.equal(r.status,200);}
+  assert.equal(sku(await product(s),'RUB-F0001').stock_freshness,'CONFIRM');assert.equal((await quote(s,[line()])).data.quote.order_mode,'REQUEST');
+  // Two days ahead.
+  assert.equal((await aged(s,{'RUB-F0001':-2*D})).status,200);assert.equal(sku(await product(s),'RUB-F0001').stock_freshness,'CONFIRM');
+  // Fresh again → direct payment.
+  assert.equal((await aged(s,{'RUB-F0001':H})).status,200);assert.equal(sku(await product(s),'RUB-F0001').payment_allowed,true);
+  // A PIM hide (any reason other than stale data) stays: the read-time sweep never shows it.
+  s.sql("UPDATE products SET visible=0,pim_publication_state='HIDDEN',pim_publication_reason='PIM_EXPLICIT_HIDE' WHERE id='m-pouch'");
+  s.sql("UPDATE meta SET v='0' WHERE k='pim_freshness_swept_at'");
+  await s.get('/shop/catalog.php?limit=100');await s.get('/shop/catalog.php?limit=100');
+  assert.deepEqual(s.sql("SELECT visible,pim_publication_reason FROM products WHERE id='m-pouch'")[0],{visible:0,pim_publication_reason:'PIM_EXPLICIT_HIDE'});
+  assert.notEqual(s.sql("SELECT v FROM meta WHERE k='pim_freshness_swept_at'")[0].v,'0','the read-time sweep ran');
+ }finally{s.stop();}
 });

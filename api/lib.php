@@ -46,8 +46,8 @@ function db(): PDO {
   }
   migrate($pdo);
   pimV3DetectColumns($pdo);
-  // Stage 5.1: supplier data age → payment/visibility (at most once a minute; never breaks a read).
-  try{shopFreshnessSweep($pdo);}catch(Throwable $e){error_log('rubizh freshness sweep: '.get_class($e));}
+  // Stage 5.1: supplier data age → stored payment/visibility state (at most once a minute, after the response; never breaks a read).
+  shopFreshnessSweepOnRead($pdo);
   return $pdo;
 }
 

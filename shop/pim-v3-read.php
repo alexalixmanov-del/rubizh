@@ -31,7 +31,7 @@ function pimV3VariantPublic(array $v,?array $policy): array {
         'order_submission_allowed'=>(int)$v['pim_order_submission_allowed']===1,'payment_allowed'=>(int)$v['pim_payment_allowed']===1,'requires_order_confirmation'=>(int)$v['pim_requires_order_confirmation']===1,
         'delivery_lead_time_days'=>$v['pim_delivery_lead_time_days']===null?null:(int)$v['pim_delivery_lead_time_days'],'ready_to_dispatch'=>(int)$v['pim_ready_to_dispatch']===1,
         'lead_time'=>$v['pim_delivery_lead_time_days']===null?'':'Орієнтовно '.(int)$v['pim_delivery_lead_time_days'].' дн.',
-        'stock_freshness'=>$v['stock_freshness']??'FRESH','availability_note'=>($v['stock_freshness']??'')==='CONFIRM'&&(int)$v['pim_order_submission_allowed']===1?SHOP_FRESHNESS_CONFIRM_NOTE:null,
+        'stock_freshness'=>($v['stock_freshness']??'FRESH')==='HIDDEN'?null:($v['stock_freshness']??'FRESH'),'availability_note'=>($v['stock_freshness']??'')==='CONFIRM'&&(int)$v['pim_order_submission_allowed']===1?SHOP_FRESHNESS_CONFIRM_NOTE:null,
         'size_unconfirmed'=>false,'stock'=>null,'pricing_policy_version'=>$policy!==null?1:null,
         'price'=>$pricing['price']??null,'kit_price'=>$pricing['kit_price']??null,'kit_discount_pct'=>$pricing['kit_discount_pct']??0,'wholesale'=>$pricing['wholesale']??[]];
 }

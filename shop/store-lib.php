@@ -19,7 +19,7 @@ require_once __DIR__.'/order-state.php';
 require_once __DIR__.'/crm-bridge.php';
 
 function shopStoreDatabase(): PDO {
-    $db=database();if(!$db->inTransaction())$db->exec('SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED');migrate($db);pimV3DetectColumns($db);try{shopFreshnessSweep($db);}catch(Throwable $e){error_log('rubizh freshness sweep: '.get_class($e));}if(rubizhSchemaPrepared($db))return $db;
+    $db=database();if(!$db->inTransaction())$db->exec('SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED');migrate($db);pimV3DetectColumns($db);shopFreshnessSweepOnRead($db);if(rubizhSchemaPrepared($db))return $db;
     customerDatabase();$db=identityDatabase();shopNotificationMigrate($db);monoMigrate($db);shopLifecycleMigrate($db);shopUiMigrate($db);shopCartReminderMigrate($db);static $ready=false;
     if(!$ready){migrate($db);npMigrate($db);supplierMigrate($db);
         if((int)$db->query("SELECT v FROM meta WHERE k='rubizh_shop_schema'")->fetchColumn()>=1){$ready=true;return $db;}
