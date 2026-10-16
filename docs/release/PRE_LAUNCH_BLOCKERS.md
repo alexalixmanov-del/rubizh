@@ -86,5 +86,6 @@
 | PL-4.7 | Фактическая версия PIM на хостинге (в отчётах: 10.9.0 по публичному HTML 09.10 и подготовленный релиз 10.9.3) | [RC1_MANIFEST.md](RC1_MANIFEST.md) | подтвердить версию PIM на хостинге |
 | PL-4.8 | Версии PHP и MariaDB/MySQL хостинга, права на DDL и `CREATE TRIGGER` для миграций (R-1) | [RC1_MANIFEST.md](RC1_MANIFEST.md) | `php -v`, `SELECT VERSION()`, подтверждение прав |
 | PL-4.9 | Значения приватной конфигурации, помеченные BLOCKED в [CONFIG.md](CONFIG.md) §15 (реквизиты продавца, отправитель НП, ключи провайдеров, donation_*) | [CONFIG.md](CONFIG.md) | заполнить на хостинге |
+| PL-4.10 | Повторная отправка каталога из PIM после выкладки этапа 5.1 (иначе ранее выгруженные SKU без отметки поставщика продаются только через менеджера) | [GO_LIVE_CHECKLIST.md](GO_LIVE_CHECKLIST.md) S51-1, [CONFIG.md](CONFIG.md) §17, [KNOWN_ISSUES.md](KNOWN_ISSUES.md) S51-04 | после выкладки нажать публикацию в PIM и проверить `/api/pim/status` |
 
 Ссылки на этот файл: `docs/release-hardening/08-RELEASE_READINESS.md`, [KNOWN_ISSUES.md](KNOWN_ISSUES.md), [GO_LIVE_CHECKLIST.md](GO_LIVE_CHECKLIST.md).
