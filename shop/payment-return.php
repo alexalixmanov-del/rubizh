@@ -16,11 +16,15 @@ try{
  }
  $order=npOrder($db,$id);$q=$db->prepare('SELECT * FROM rubizh_mono_invoices WHERE order_id=? ORDER BY id DESC LIMIT 1');$q->execute([$id]);$invoice=$q->fetch(PDO::FETCH_ASSOC);
  if($invoice&&monoConfigured()&&in_array($invoice['status'],['creating','unknown','created','processing','hold','awaiting_webhook'],true)){
-  try{monoRefresh($db,$invoice);$order=npOrder($db,$id);$q->execute([$id]);$invoice=$q->fetch(PDO::FETCH_ASSOC);}catch(Throwable $e){$notice='Очікуємо підтвердження банку. Повернення на сайт саме по собі не підтверджує оплату.';}
+  // 5-7: the bank is asked at most 6 times a minute per order and 30 times an hour per visitor; otherwise the page shows
+  // the stored state (the signed webhook still confirms the payment).
+  if(!shopLimitAllow($db,'payment-return-order',6,60,'order:'.$id)||!shopLimitAllow($db,'payment-return',30,3600))$notice='Очікуємо підтвердження банку. Повернення на сайт саме по собі не підтверджує оплату.';
+  else try{monoRefresh($db,$invoice);$order=npOrder($db,$id);$q->execute([$id]);$invoice=$q->fetch(PDO::FETCH_ASSOC);}catch(Throwable $e){$notice='Очікуємо підтвердження банку. Повернення на сайт саме по собі не підтверджує оплату.';}
  }
  $receipt=shopOrderReceipt($db,$id);
 }catch(Throwable $e){$error=$e instanceof PDOException?'Замовлення тимчасово недоступне. Спробуйте пізніше.':$e->getMessage();}
 ?><!doctype html><html lang="uk"><head><script src="/assets/theme.js?v=3"></script><link rel="stylesheet" href="/assets/theme.css?v=2"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>РУБІЖ · замовлення</title><script defer src="/assets/receipt.js"></script><link rel="stylesheet" href="/shop/np-manager.css"><link rel="stylesheet" href="/assets/theme.css?v=2"></head><body><header><a href="/">РУБІЖ</a><a href="/auth/?tab=orders">Мої замовлення</a></header><main class="receipt-shell">
 <?php if($error): ?><div class="error" role="alert"><?=esc($error)?></div><?php endif; ?>
 <?php if(isset($receipt)){require __DIR__.'/receipt-view.php';} ?>
-<p><a href="tel:+380976867892">Зателефонувати менеджеру</a> · <a href="/catalog">До каталогу</a></p></main></body></html>
+<?php require_once __DIR__.'/../api/seller.php';$managerPhone=preg_replace('/[^0-9+]/','',(string)rubizhSeller()['phone']); ?>
+<p><a href="tel:<?=esc($managerPhone)?>">Зателефонувати менеджеру</a> · <a href="/catalog">До каталогу</a></p></main></body></html>

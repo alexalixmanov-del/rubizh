@@ -70,12 +70,17 @@ function shopCsrf(array $input): void {
     if(!shopRequestOriginAllowed(shopAllowedOrigins()))shopJson(['ok'=>false,'error'=>'Недозволений запит.'],403);
 }
 function shopLimit(PDO $db,string $kind,int $max,int $window=3600,?string $identity=null): void {
+    if(!shopLimitAllow($db,$kind,$max,$window,$identity)){header('Retry-After: '.max(1,(int)(floor(time()/$window)*$window)+$window-time()));shopJson(['ok'=>false,'error'=>'Забагато запитів. Зачекайте або зверніться до менеджера.'],429);}
+}
+/** Counts one hit of $kind for the visitor (or $identity) in the current window; false once more than $max hits. */
+function shopLimitAllow(PDO $db,string $kind,int $max,int $window=3600,?string $identity=null): bool {
     $scope=(string)($_SESSION['checkout_scope']??session_id());
     $identity??=$scope!==''?'session:'.$scope.'|device:'.rubizhDeviceIdentity():'network:'.rubizhNetworkIdentity();
     $key=hash('sha256',$kind.'|'.$identity);$start=(int)(floor(time()/$window)*$window);
     $db->prepare('INSERT INTO rubizh_shop_limits(bucket,window_start,hits) VALUES(?,?,1) ON DUPLICATE KEY UPDATE hits=IF(window_start=VALUES(window_start),hits+1,1),window_start=VALUES(window_start)')->execute([$key,$start]);
-    $q=$db->prepare('SELECT hits FROM rubizh_shop_limits WHERE bucket=?');$q->execute([$key]);if((int)$q->fetchColumn()>$max){header('Retry-After: '.max(1,$start+$window-time()));shopJson(['ok'=>false,'error'=>'Забагато запитів. Зачекайте або зверніться до менеджера.'],429);}
+    $q=$db->prepare('SELECT hits FROM rubizh_shop_limits WHERE bucket=?');$q->execute([$key]);$allowed=(int)$q->fetchColumn()<=$max;
     if(random_int(1,64)===1)$db->prepare('DELETE FROM rubizh_shop_limits WHERE window_start<? LIMIT 500')->execute([time()-172800]);
+    return $allowed;
 }
 function shopFavoriteIds(PDO $db,string $id): array {
     $q=$db->prepare('SELECT product_id FROM rubizh_favorites WHERE customer_id=? ORDER BY created_at DESC');$q->execute([$id]);return $q->fetchAll(PDO::FETCH_COLUMN);
