@@ -291,7 +291,8 @@ function pimV3HandleSync(PDO $db,string $raw): array {
         $hidden=pimV3Hide($db,$hide,$batch);
         if($freshness!==null)shopFreshnessPolicyStore($db,$freshness);
         // Stage 5.1 (review L2): the models just written get their data-age state in the same transaction.
-        shopFreshnessSweep($db,true,array_column($out,'id'));
+        // A failure here never aborts the catalog write: the forced sweep after the commit applies the rule anyway.
+        foreach(array_chunk(array_column($out,'id'),500) as $ids)try{shopFreshnessSweep($db,true,$ids);}catch(PDOException $e){error_log('rubizh freshness sweep (sync): '.$e->getCode());}
         $changed=count(array_filter($out,fn($r)=>$r['status']!=='unchanged'))+count($hidden);
         $db->exec("INSERT INTO meta(k,v) VALUES('catalog_updated','".now().'-pim3-'.substr(hash('sha256',$batch),0,8)."') ON DUPLICATE KEY UPDATE v=VALUES(v)");
         if($changed)$db->prepare("INSERT INTO meta(k,v) VALUES('pricing_catalog_version',?) ON DUPLICATE KEY UPDATE v=VALUES(v)")->execute([bin2hex(random_bytes(16))]);

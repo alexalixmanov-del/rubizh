@@ -90,7 +90,7 @@ function shopFreshnessApplyRow(PDO $db,array $v,?int $nowMs=null): array {
  *   at most 2 s of work per run, lock waits ≤ 2 s; what is not finished continues on the next run;
  * - sync: $productIds = the models just written, inside the sync transaction (no window where a stale model is listed).
  * No locking scan: rows are read with only the needed JSON fields and each change is a conditional UPDATE that applies
- * only if the row is still the same PIM revision. Returns the number of changed rows.
+ * only if the row still holds the same PIM data (revision, observation time, data hash). Returns the number of changed rows.
  */
 function shopFreshnessSweep(PDO $db,bool $force=false,?array $productIds=null): int {
     if(empty($GLOBALS['rubizh_pim_v3_columns']))return 0;
@@ -107,10 +107,11 @@ function shopFreshnessSweep(PDO $db,bool $force=false,?array $productIds=null): 
     try{
         $in=$scoped?' AND v.product_id IN ('.implode(',',array_fill(0,count($productIds),'?')).')':'';
         $q=$db->prepare("SELECT v.product_id,v.sku,v.pim_revision,v.pim_stock_observed_at,v.pim_availability_source,v.pim_order_submission_allowed,v.pim_payment_allowed,v.pim_requires_order_confirmation,v.availability,
-            JSON_EXTRACT(v.data,'$.order_submission_allowed') j_submit,JSON_EXTRACT(v.data,'$.payment_allowed') j_pay,JSON_EXTRACT(v.data,'$.requires_order_confirmation') j_confirm,JSON_EXTRACT(v.data,'$.stock_imported_at') j_imported
+            MD5(COALESCE(v.data,'')) data_md5,CASE WHEN JSON_VALID(v.data) THEN JSON_EXTRACT(v.data,'$.order_submission_allowed') END j_submit,CASE WHEN JSON_VALID(v.data) THEN JSON_EXTRACT(v.data,'$.payment_allowed') END j_pay,
+            CASE WHEN JSON_VALID(v.data) THEN JSON_EXTRACT(v.data,'$.requires_order_confirmation') END j_confirm,CASE WHEN JSON_VALID(v.data) THEN JSON_EXTRACT(v.data,'$.stock_imported_at') END j_imported
             FROM variants v JOIN products p ON p.id=v.product_id WHERE p.pim_contract_version=3 AND v.pim_active=1$in ORDER BY v.product_id,v.sku");
         $q->execute($scoped?$productIds:[]);
-        $set=$db->prepare('UPDATE variants SET pim_order_submission_allowed=?,pim_payment_allowed=?,pim_requires_order_confirmation=?,availability=? WHERE product_id=? AND sku=? AND pim_active=1 AND pim_revision<=>?');
+        $set=$db->prepare('UPDATE variants SET pim_order_submission_allowed=?,pim_payment_allowed=?,pim_requires_order_confirmation=?,availability=? WHERE product_id=? AND sku=? AND pim_active=1 AND pim_revision<=>? AND pim_stock_observed_at<=>? AND MD5(COALESCE(data,\'\'))=?');
         $models=[];$current=null;$model=null;$complete=true;
         while($v=$q->fetch(PDO::FETCH_ASSOC)){
             if($v['product_id']!==$current){if($current!==null)$models[$current]=$model;$current=$v['product_id'];$model=['open'=>false,'best'=>'out'];
@@ -119,7 +120,7 @@ function shopFreshnessSweep(PDO $db,bool $force=false,?array $productIds=null): 
             if($tier!=='HIDDEN')$model['open']=true;
             $model['best']=$f['availability']==='in'||$model['best']==='in'?'in':($f['availability']==='order'||$model['best']==='order'?'order':'out');
             if((int)$v['pim_order_submission_allowed']!==$f['pim_order_submission_allowed']||(int)$v['pim_payment_allowed']!==$f['pim_payment_allowed']||(int)$v['pim_requires_order_confirmation']!==$f['pim_requires_order_confirmation']||$v['availability']!==$f['availability']){
-                $set->execute([$f['pim_order_submission_allowed'],$f['pim_payment_allowed'],$f['pim_requires_order_confirmation'],$f['availability'],$v['product_id'],$v['sku'],$v['pim_revision']]);$changed+=$set->rowCount();
+                $set->execute([$f['pim_order_submission_allowed'],$f['pim_payment_allowed'],$f['pim_requires_order_confirmation'],$f['availability'],$v['product_id'],$v['sku'],$v['pim_revision'],$v['pim_stock_observed_at'],$v['data_md5']]);$changed+=$set->rowCount();
             }
         }
         if($current!==null)$models[$current]=$model;
