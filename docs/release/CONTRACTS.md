@@ -13,13 +13,17 @@
 | Метод / путь | Назначение | Ссылка | Вызывает PIM |
 |---|---|---|---|
 | `POST /api/pim/sync` | приём каталога; есть ключ `contract_version` → v3, иначе legacy | `api/index.php:27-75`, ветвление `:32-36` | да, `app/lib/final-workflow.inc.js:235` |
+| `POST /api/pim/costs` (приватный контракт, stage 5) | себестоимость (выплата поставщика) по SKU → `rubizh_crm_sku_costs`; не публичен | `api/index.php:79-85`, `api/pim-private.php` | да, после COMMITTED-публикации (PIM `pimSitePrivateCosts()`) |
+| `POST /api/pim/backup` (stage 5) | приём gzip-копии данных PIM в приватную папку вне webroot | `api/index.php:86`, `api/pim-private.php:73-105` | да, PIM «Копії на сайті» |
+| `GET /api/pim/backups` (stage 5) | список копий (`id`, `at`, `size`, `sha256`, `label`) | `api/index.php:87`, `api/pim-private.php:113-116` | да, PIM «Копії на сайті» |
+| `GET /api/pim/backups/{id}` (stage 5) | точная выдача одной копии (`application/gzip`, `no-store`) | `api/index.php:88`, `api/pim-private.php:119-124` | да, PIM «Копії на сайті» |
 | `GET /api/pim/status` | счётчики, `api_version`, `capabilities` | `api/index.php:83-94` | да, `final-workflow.inc.js:221` |
 | `POST /api/pim/photos` `{limit}` (1..80) | обработка очереди фото | `api/index.php:77-81` | да (legacy), `app/rubizh_pim.html:8746` |
 | `GET /api/pim/categories` | таксономия SITE | `api/index.php:25` | в `app/lib` не найдено |
 | `/api/pim/cache-clear` | очистка кеша | `api/index.php:26` | в `app/lib` не найдено |
 | прочие | `404 «Нет такого метода PIM»` | `api/index.php:95` | — |
 
-**Авторизация.** `Authorization: Bearer <pim_key>`, сравнение `hash_equals`; несовпадение → 401; ключ короче 24 символов или плейсхолдер → 500 (`api/lib.php:143-149`). CORS только для `pim_origins` (`api/lib.php:130-137`). PIM шлёт тот же заголовок (`final-workflow.inc.js:211`). Лимита на подбор ключа нет (SEC-10, LOW OPEN). Смена ключа перед production — PL-3 ([PRE_LAUNCH_BLOCKERS](PRE_LAUNCH_BLOCKERS.md#pl-3)).
+**Авторизация.** `Authorization: Bearer <pim_key>`, сравнение `hash_equals`; несовпадение → 401; ключ короче 24 символов или плейсхолдер → 500 (`api/lib.php:143-149`). CORS только для `pim_origins` (`api/lib.php:130-137`). PIM шлёт тот же заголовок (`final-workflow.inc.js:211`). Неудачные попытки считаются по сети: 30 за 600 с, затем 429 (этап 5, `api/lib.php:159`). Во время ротации принимается и `pim_key_next` (этап 5; слабый или равный `pim_key` игнорируется и логируется, `api/lib.php:148-152`); процедура — [CONFIG §3.1](CONFIG.md#31-pim_key). Смена ключа перед production — PL-3 ([PRE_LAUNCH_BLOCKERS](PRE_LAUNCH_BLOCKERS.md#pl-3)).
 
 **Размеры.** Тело > 16 МБ → 413 без `error_code` (`api/index.php:30-31`); чанк v3 > 8 МБ → 413 `BYTE_LIMIT` (`shop/pim-v3-sync.php:35`).
 
@@ -116,6 +120,69 @@ SITE: строка без `pim_order_submission_allowed=1` → `UNAVAILABLE` («
 | без | ≠`true` | любое | 409 `LEGACY_SYNC_DISABLED` (`api/index.php:37`) |
 | без | `true` | вкл | 409 `CONTRACT_V3_REQUIRED…` без `error_code` (`api/index.php:38`) |
 | без | `true` | выкл | legacy; запись в модель v3 → 409 `CONTRACT_V3_REQUIRED`, откат (`api/lib.php:245-251`) |
+
+---
+
+### 1.7 Приватный контракт `rubizh-pim-private-costs/1`: себестоимость для CRM (stage 5, OD-4.1)
+
+Решение владельца OD-4.1 (2026-10-16): себестоимость для CRM «Валовий прибуток» берётся из PIM. Контракт **приватный**: отдельный от публичного каталога (`contracts/pim-v3/2`, `products[]`), публичные ответы его не содержат (`catalog_public_data` срезает cost/payout-ключи). Описание — `contracts/pim-private-costs/1/README.md`; схема — `schema.json`; фикстура `fixture.json` — точный вывод экспортёра PIM на синтетическом каталоге (копия PIM `app/contracts/fixtures/pim-site-private-costs-v1.exact.json`).
+
+**Запрос.** `POST /api/pim/costs`, `Authorization: Bearer <pim_key | pim_key_next>`, `Content-Type: application/json`. Тело ≤ 2 МБ, строк ≤ 20 000.
+
+| Поле | Тип / правило |
+|---|---|
+| `private_contract` | `"rubizh-pim-private-costs"` (const) |
+| `version` | `1` (const) |
+| `currency` | `"UAH"` (const) |
+| `generated_at` | `YYYY-MM-DDTHH:MM:SS(.mmm)Z`, UTC |
+| `revision` | hex, 8–64 символов |
+| `costs[]` | уникальные строки `{sku, supplier_payout_minor}`; лишние ключи запрещены |
+| `costs[].sku` | `^[A-Za-z0-9._-]{1,64}$`, без дубликатов |
+| `costs[].supplier_payout_minor` | целое 0…10 000 000 000 (копейки) |
+
+**Ответы.**
+
+| Код | `error_code` | Условие |
+|---|---|---|
+| 200 | — | `{ok:true, private_contract, version:1, stored:N}`; запись upsert в `rubizh_crm_sku_costs(sku, cost_minor, source='pim', observed_at)` одной транзакцией |
+| 401 | — | неверный ключ (счёт по сети, см. 1.1) |
+| 409 | `STALE_BATCH` | пришла пакетная выгрузка старее уже принятой (`generated_at` сравнивается с `meta.pim_costs_generated_at`); ничего не пишется. Повтор той же или более новой выгрузки — штатно |
+| 409 | `CRM_SCHEMA_MISSING` | нет таблицы `rubizh_crm_sku_costs` (миграция CRM не применена) |
+| 413 | `TOO_LARGE` или без кода | тело больше 2 МБ |
+| 422 | прочие причины | нарушена схема (неизвестный ключ, дубликат SKU, отрицательное или нецелое значение, лишние строки); ничего не пишется |
+
+Правила: строки батча **не удаляются** (заказы сохраняют свою себестоимость); тело запроса не логируется; ответ с ошибкой — `Cache-Control: no-store`.
+
+**Кто видит.** Только CRM, `dashboard.finance`: OWNER и ACCOUNTANT (`contracts/crm/crm-api.json`). Формула валовой прибыли не меняется: при отсутствии себестоимости хотя бы у одного проданного SKU показатель не считается («Немає даних собівартості від PIM», [05-CRM_ANALYTICS_FORMULAS](../crm/05-CRM_ANALYTICS_FORMULAS.md)).
+
+**Тесты.** SITE `tests/stage5-pim-costs.test.mjs` (контракт на точной фикстуре, роли × поля, каждый публичный endpoint без себестоимости, STALE_BATCH); PIM `app/tests/stage5-private-costs.test.cjs` (вывод экспортёра = фикстура, wire не изменён).
+
+### 1.8 Резервные копии PIM на сайте: `/api/pim/backup`, `/api/pim/backups` (stage 5, 5-4)
+
+PIM отправляет свою копию данных сайту, чтобы она не существовала только в IndexedDB браузера оператора. Копии хранятся в приватной папке `pim_backup_dir` вне публичного корня (по умолчанию `../../private/pim-backups`; папка внутри webroot отклоняется с 500; в папку пишется `.htaccess` с `Require all denied`). Хранятся 14 новейших копий (`pim_backup_keep`), лишние удаляются; копии, брошенные незавершённой загрузкой, удаляются при очистке.
+
+**`POST /api/pim/backup`** (ключ PIM, `Authorization: Bearer`):
+
+| Заголовок / тело | Правило |
+|---|---|
+| `X-Backup-SHA256` | обязателен, 64 hex (SHA-256 тела); иначе 422 `INVALID_SHA256` |
+| `X-Backup-Label` | необязательный, URL-кодирован, ≤ 80 символов, без управляющих символов; иначе 422 `INVALID_LABEL` |
+| тело | gzip (магия `1f 8b`) с JSON-копией; ≤ `pim_backup_max_bytes` (64 МБ по умолчанию), распакованный размер ≤ 4× лимита |
+
+Ответ 200: `{ok:true, id, size, sha256}`, `id` вида `pim-YYYYMMDDTHHMMSSmmmZ-xxxxxxxxxxxx`.
+
+| Код | `error_code` | Условие |
+|---|---|---|
+| 413 | `TOO_LARGE` | тело или распакованные данные больше лимита |
+| 422 | `NOT_GZIP`, `SHA256_MISMATCH` | тело не gzip или не совпадает с `X-Backup-SHA256` |
+| 422 | `SECRET_IN_BACKUP` | в копии найден ключ PIM (`pim_key`, `pim_key_next`) или `cron_key`; копия не сохраняется |
+| 429 | `TOO_MANY_BACKUPS` | больше 30 загрузок за час (общий счётчик `pim-backup`) |
+
+**`GET /api/pim/backups`** (ключ PIM): `{ok:true, keep, backups:[{id, at, size, sha256, label}]}`, новейшие первыми, `Cache-Control: no-store`.
+
+**`GET /api/pim/backups/{id}`** (ключ PIM): точный файл `application/gzip`, `Cache-Control: no-store`, `X-Content-Type-Options: nosniff`. Неверный `id` или отсутствующая копия — 404 «Копію не знайдено». Копия не попадает в публичные маршруты, CORS разрешает заголовки `X-Backup-Sha256` и `X-Backup-Label` только для `pim_origins`.
+
+**Тесты.** SITE `tests/stage5-pim-backup.test.mjs` (checksum, gzip, ключ внутри копии, лимит размера, точная выдача, папка внутри webroot отклоняется).
 
 ---
 
