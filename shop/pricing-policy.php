@@ -74,9 +74,24 @@ function shopPricingUnit(array $line): int {
 /** Buyer-facing reason when kit prices were not applied as the cart expected (Q-8, K6). */
 function shopKitExplanation(array $lines): string {
     $s=array_column($lines,'kit_status');
-    if(in_array('needs_sections',$s,true))return 'Ціну комплекту не застосовано: додайте річ ще з одного розділу, щоб отримати ціну комплекту.';
-    if(in_array('extra_units',$s,true))return 'Ціна комплекту діє на одну одиницю кожної речі (або на кількість комплектів для підрозділу); решта — за звичайною ціною.';
-    return '';
+    $out=[];
+    if(in_array('needs_sections',$s,true))$out[]='Ціну комплекту не застосовано: додайте річ ще з одного розділу, щоб отримати ціну комплекту.';
+    elseif(in_array('extra_units',$s,true))$out[]='Ціна комплекту діє на одну одиницю кожної речі (або на кількість комплектів для підрозділу); решта — за звичайною ціною.';
+    if(in_array('fixed_price',$s,true))$out[]=SHOP_KIT_FIXED_PRICE_NOTE;
+    return implode(' ',$out);
+}
+// D-65 (owner decision 2026-10-16): «Бронезахист» (the armor builder section, the category and its subcategories) is
+// sold at a fixed price — never the kit price — but still counts as a main section of K1.
+const SHOP_KIT_FIXED_PRICE_NOTE='Бронезахист продається за фіксованою ціною, ціна комплекту на нього не застосовується.';
+function shopKitFixedPrice(array $l): bool {
+    $category=(string)($l['kit_category']??'');
+    return ($l['kit_slot']??'')==='armor'||$category==='Бронезахист'||str_starts_with($category,'Бронезахист / ');
+}
+/** D-65: an armor line of a kit is charged retail, unless it belongs to an order placed before D-65 (kit_armor_legacy). */
+function shopKitFixRetail(array &$l): bool {
+    $legacy=!empty($l['kit_armor_legacy']);unset($l['kit_armor_legacy']);
+    if($legacy||!shopKitFixedPrice($l))return false;
+    $l['price_mode']='retail';$l['kit_status']='fixed_price';return true;
 }
 // Q-8 (owner decision 2026-10-11, K1–K6): main builder sections; «Дрібниці» (small) never qualify a kit.
 const SHOP_KIT_MAIN_SLOTS=['head','body','legs','boots','armor','gear','med'];
@@ -105,7 +120,8 @@ function shopPricingKitComposition(array $lines,array $definitions=[]): array {
             $qualifies=count($sections)>=2;$left=[];
             foreach($idx as $i){$l=$lines[$i];
                 $priced=($l['price_mode']??'retail')==='kit'&&isset($l['_pricing']['kit_cents'],$l['_pricing']['minimum_cents']);
-                if(!$qualifies||!$priced){if(($l['price_mode']??'')==='kit')$lines[$i]['price_mode']='retail';$lines[$i]['kit_status']=$qualifies?'no_kit_price':'needs_sections';continue;}
+                if(!$qualifies||!$priced){unset($lines[$i]['kit_armor_legacy']);if(($l['price_mode']??'')==='kit')$lines[$i]['price_mode']='retail';$lines[$i]['kit_status']=$qualifies?'no_kit_price':'needs_sections';continue;}
+                if(shopKitFixRetail($lines[$i]))continue;$l=$lines[$i];
                 $left[$l['product_id']]??=$units[0];$room=$left[$l['product_id']];
                 // Area goods (m²) count as one kit unit per line.
                 $kitQty=is_int($l['qty'])?min($l['qty'],$room):($room>=1?$l['qty']:0);
@@ -125,6 +141,7 @@ function shopPricingKitComposition(array $lines,array $definitions=[]): array {
             $spec=$definitions[$id]['items'];$expected=[];foreach($spec as $it){if(is_string($it))$it=['product_id'=>$it];$expected[$it['product_id']]=$it;}
             if(array_diff_key($expected,$byProduct)||array_diff_key($byProduct,$expected))throw new ShopPricingException('INVALID_KIT','Склад готового комплекту змінився або неповний.');
             foreach($members as $l){$it=$expected[$l['product_id']];if(isset($it['sku'])&&$it['sku']!==$l['sku']||!empty($it['color'])&&shopColor($it['color'])!==$l['color']||$byProduct[$l['product_id']]!=($it['qty']??1))throw new ShopPricingException('INVALID_KIT','Перевірте SKU, колір та кількість у готовому комплекті.');}
+            foreach($idx as $i)if(($lines[$i]['price_mode']??'')==='kit')shopKitFixRetail($lines[$i]);else unset($lines[$i]['kit_armor_legacy']);
         }
     }
     $out=[];foreach($lines as $i=>$l){$out[]=$l;if(isset($remainders[$i]))$out[]=$remainders[$i];}

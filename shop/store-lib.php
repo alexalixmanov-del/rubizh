@@ -127,6 +127,8 @@ function shopResolveCatalogLines(PDO $db,array $input,bool $lock=false,int $excl
     foreach($resolved as $i=>&$r)$r['input_index']=$i;unset($r);
     // Placed orders are never re-priced by newer kit rules: kit lines stored before Q-8 carry no kit_status.
     if($excludeOrder>0)foreach($resolved as $i=>&$r)if(($r['kit_group']??'')!==''&&!array_key_exists('kit_status',is_array($input[$i]??null)?$input[$i]:[]))$r['kit_legacy']=true;unset($r);
+    // D-65: an armor line stored with the kit price before the fixed armor price keeps it on re-validation.
+    if($excludeOrder>0)foreach($resolved as $i=>&$r)if(($r['kit_group']??'')!==''&&(is_array($input[$i]??null)?$input[$i]['kit_status']??null:null)==='kit')$r['kit_armor_legacy']=true;unset($r);
     return shopPricingKitComposition(shopKitLineSlots($db,$resolved),array_column($definitions,null,'id'));
 }
 // «Для підрозділу»: number of kits (1–99) sent with every line of the kit; anything else is refused by the composition.
@@ -134,8 +136,9 @@ function shopKitUnits(array $line): int {$n=$line['kit_units']??1;return is_int(
 // Q-8: each kit line's builder section, computed exactly like the kit builder's catalog filter (shopKitSlotSql).
 function shopKitLineSlots(PDO $db,array $lines): array {
     $ids=array_values(array_unique(array_map(fn($l)=>(string)$l['product_id'],array_filter($lines,fn($l)=>($l['kit_group']??'')!==''))));if(!$ids)return $lines;
-    $q=$db->prepare('SELECT p.id,'.shopKitSlotSql().' AS slot FROM products p WHERE p.id IN ('.implode(',',array_fill(0,count($ids),'?')).')');$q->execute($ids);$slots=$q->fetchAll(PDO::FETCH_KEY_PAIR);
-    foreach($lines as &$l)if(($l['kit_group']??'')!=='')$l['kit_slot']=(string)($slots[$l['product_id']]??'small');unset($l);return $lines;
+    $q=$db->prepare('SELECT p.id,'.shopKitSlotSql().' AS slot,p.category_path FROM products p WHERE p.id IN ('.implode(',',array_fill(0,count($ids),'?')).')');$q->execute($ids);$slots=[];foreach($q->fetchAll(PDO::FETCH_ASSOC) as $row)$slots[$row['id']]=$row;
+    // D-65: the category travels with the slot — every Бронезахист line is fixed-price (shopKitFixedPrice).
+    foreach($lines as &$l)if(($l['kit_group']??'')!==''){$row=$slots[$l['product_id']]??null;$l['kit_slot']=(string)($row['slot']??'small');$l['kit_category']=(string)($row['category_path']??'');}unset($l);return $lines;
 }
 function shopSendOrderMail(PDO $db,int $orderId): string {
     $claim=$db->prepare("UPDATE rubizh_order_mail SET status='sending',attempts=attempts+1,locked_at=UTC_TIMESTAMP(),updated_at=UTC_TIMESTAMP() WHERE order_id=? AND attempts<5 AND ((status='pending' AND next_at<=UTC_TIMESTAMP()) OR (status='sending' AND locked_at<UTC_TIMESTAMP()-INTERVAL 5 MINUTE))");$claim->execute([$orderId]);
