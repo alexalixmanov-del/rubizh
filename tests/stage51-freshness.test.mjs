@@ -15,7 +15,7 @@ async function aged(s,ages,{policy,imported=false}={}){
  for(const m of w.products)for(const v of m.variants)if(ages[v.sku]!==undefined){
   if(imported){v.stock_observed_at=null;v.stock_imported_at=now-ages[v.sku];}else v.stock_observed_at=now-ages[v.sku];
  }
- const chunks=chunksFor(w);if(policy)chunks[0].freshness_policy=policy;
+ s.lastWire=w;const chunks=chunksFor(w);if(policy)chunks[0].freshness_policy=policy;
  let r;for(const body of chunks){r=await s.post('/api/pim/sync',body,s.auth);if(r.status!==200)return r;}
  return r;
 }
@@ -138,12 +138,16 @@ test('freshness policy from PIM: applied by SITE, shown in /pim/status, invalid 
   assert.equal((await aged(s,{'RUB-F0001':30*H},{policy:{version:1,pay_fresh_hours:24,sell_max_days:3}})).status,200);
   st=(await s.get('/api/pim/status',s.auth)).data;assert.deepEqual(st.freshness_policy,{version:1,pay_fresh_hours:24,sell_max_days:3});
   assert.equal(sku(await product(s),'RUB-F0001').stock_freshness,'CONFIRM','30 h > 24 h');
+  // The same catalog (unchanged models) with a looser policy: payment comes back without new supplier data.
+  {const c=chunksFor(s.lastWire);c[0].freshness_policy={version:1,pay_fresh_hours:48,sell_max_days:3};for(const b of c)assert.equal((await s.post('/api/pim/sync',b,s.auth)).status,200);}
+  let fv=sku(await product(s),'RUB-F0001');assert.equal(fv.stock_freshness,'FRESH');assert.equal(fv.payment_allowed,true,'30 h ≤ 48 h');
+  assert.equal(s.sql("SELECT pim_payment_allowed FROM variants WHERE sku='RUB-F0001'")[0].pim_payment_allowed,1,'stored state widened too');
   assert.equal((await aged(s,{'RUB-F0001':4*D})).status,200);assert.equal(sku(await product(s),'RUB-F0001').order_submission_allowed,false,'4 d > 3 d');
   for(const bad of [{version:1,pay_fresh_hours:72,sell_max_days:3},{version:1,pay_fresh_hours:0,sell_max_days:8},{version:1,pay_fresh_hours:72.5,sell_max_days:8},
    {version:1,pay_fresh_hours:'72',sell_max_days:8},{version:2,pay_fresh_hours:72,sell_max_days:8},{version:1,pay_fresh_hours:72,sell_max_days:61},{version:1,pay_fresh_hours:72,sell_max_days:8,extra:1},[72,8]]){
    const r=await aged(s,{'RUB-F0001':H},{policy:bad});assert.equal(r.status,400,JSON.stringify(bad));assert.match(JSON.stringify(r.data),/FRESHNESS_POLICY/);
   }
-  assert.deepEqual((await s.get('/api/pim/status',s.auth)).data.freshness_policy,{version:1,pay_fresh_hours:24,sell_max_days:3},'unchanged after refusals');
+  assert.deepEqual((await s.get('/api/pim/status',s.auth)).data.freshness_policy,{version:1,pay_fresh_hours:48,sell_max_days:3},'unchanged after refusals');
   // Only chunk 0 carries the policy.
   const chunks=chunksFor(structuredClone(s.wire),{size:1});chunks[1].freshness_policy={version:1,pay_fresh_hours:72,sell_max_days:8};
   assert.equal((await s.post('/api/pim/sync',chunks[0],s.auth)).status,200);assert.equal((await s.post('/api/pim/sync',chunks[1],s.auth)).status,400);

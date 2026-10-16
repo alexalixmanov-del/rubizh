@@ -10,8 +10,10 @@ declare(strict_types=1);
 // Both thresholds are owner settings in PIM, sent with the sync batch (freshness_policy) and kept in meta. A SKU whose
 // availability the owner set by hand in PIM (availability_source MANUAL) has no age. A SKU without any data time, or with a
 // time more than a day ahead, is never treated as fresh: it is sold through manager confirmation (fail closed, review M3).
-// The flags PIM sent stay in variants.data; the effective columns are recomputed from them, so every reader (catalog,
-// product, filters, sitemap, checkout) sees the same state (K6).
+// The stored permission columns are what PIM allows now (a sync writes them); the age only ever narrows them, and data only
+// gets older between syncs. The flags PIM sent also stay in variants.data: when the owner changes the policy, the columns are
+// recomputed from them (a looser policy may widen again). Every reader (catalog, product, filters, sitemap, checkout) sees
+// the same state (K6).
 
 const SHOP_FRESHNESS_DEFAULT=['version'=>1,'pay_fresh_hours'=>72,'sell_max_days'=>8];
 const SHOP_FRESHNESS_HIDE_REASON='STALE_SUPPLIER_DATA';
@@ -72,9 +74,10 @@ function shopFreshnessTier(array $v,array $policy,?int $nowMs=null): string {
     if($age<=$policy['pay_fresh_hours']*3600000)return 'FRESH';
     return $age<=$policy['sell_max_days']*86400000?'CONFIRM':'HIDDEN';
 }
-/** Effective permissions of a variant: what PIM sent, narrowed by the tier. */
-function shopFreshnessFlags(array $v,string $tier): array {
-    [$submit,$pay,$confirm]=shopFreshnessRaw($v);
+/** Effective permissions: the stored columns (or, $fromData, what PIM sent in variants.data), narrowed by the tier. */
+function shopFreshnessFlags(array $v,string $tier,bool $fromData=false): array {
+    if($fromData)[$submit,$pay,$confirm]=shopFreshnessRaw($v);
+    else{$submit=(int)($v['pim_order_submission_allowed']??0)===1;$pay=(int)($v['pim_payment_allowed']??0)===1;$confirm=(int)($v['pim_requires_order_confirmation']??0)===1;}
     if($tier==='CONFIRM'&&$pay){$pay=false;$confirm=true;}
     if($tier==='HIDDEN'){$submit=false;$pay=false;}
     return ['pim_order_submission_allowed'=>(int)$submit,'pim_payment_allowed'=>(int)$pay,'pim_requires_order_confirmation'=>(int)$confirm,'availability'=>$pay?'in':($submit?'order':'out')];
@@ -88,11 +91,12 @@ function shopFreshnessApplyRow(PDO $db,array $v,?int $nowMs=null): array {
  * Bring the stored effective columns and model visibility in line with the data age (review M1/M2):
  * - public reads: at most once a minute (claimed atomically in meta), after the response when the server allows it,
  *   at most 2 s of work per run, lock waits ≤ 2 s; what is not finished continues on the next run;
- * - sync: $productIds = the models just written, inside the sync transaction (no window where a stale model is listed).
+ * - sync: $productIds = the models just written, inside the sync transaction (no window where a stale model is listed);
+ *   $fromData after a policy change: recompute from what PIM sent (variants.data), so a looser policy can widen again.
  * No locking scan: rows are read with only the needed JSON fields and each change is a conditional UPDATE that applies
  * only if the row still holds the same PIM data (revision, observation time, data hash). Returns the number of changed rows.
  */
-function shopFreshnessSweep(PDO $db,bool $force=false,?array $productIds=null): int {
+function shopFreshnessSweep(PDO $db,bool $force=false,?array $productIds=null,bool $fromData=false): int {
     if(empty($GLOBALS['rubizh_pim_v3_columns']))return 0;
     $scoped=$productIds!==null;
     if($scoped){$productIds=array_values(array_unique(array_filter($productIds,'is_string')));if(!$productIds)return 0;}
@@ -116,7 +120,7 @@ function shopFreshnessSweep(PDO $db,bool $force=false,?array $productIds=null): 
         while($v=$q->fetch(PDO::FETCH_ASSOC)){
             if($v['product_id']!==$current){if($current!==null)$models[$current]=$model;$current=$v['product_id'];$model=['open'=>false,'best'=>'out'];
                 if(microtime(true)>$deadline){$complete=false;$current=null;break;}}
-            $tier=shopFreshnessTier($v,$policy,$nowMs);$f=shopFreshnessFlags($v,$tier);
+            $tier=shopFreshnessTier($v,$policy,$nowMs);$f=shopFreshnessFlags($v,$tier,$fromData);
             if($tier!=='HIDDEN')$model['open']=true;
             $model['best']=$f['availability']==='in'||$model['best']==='in'?'in':($f['availability']==='order'||$model['best']==='order'?'order':'out');
             if((int)$v['pim_order_submission_allowed']!==$f['pim_order_submission_allowed']||(int)$v['pim_payment_allowed']!==$f['pim_payment_allowed']||(int)$v['pim_requires_order_confirmation']!==$f['pim_requires_order_confirmation']||$v['availability']!==$f['availability']){

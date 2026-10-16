@@ -282,13 +282,14 @@ function pimV3HandleSync(PDO $db,string $raw): array {
     // A re-send that waited for a still-running commit of the same batch returns that stored ACK instead of rewriting.
     $again=$db->prepare('SELECT status,summary_json FROM rubizh_pim_batches WHERE batch_id=?');$again->execute([$batch]);$now=$again->fetch(PDO::FETCH_ASSOC);
     if(($now['status']??'')==='COMMITTED'){$db->query("SELECT RELEASE_LOCK('rubizh-category-migration')");return (json_decode((string)$now['summary_json'],true)?:[])+['replayed'=>true];}
-    $out=[];$hidden=[];$catalogRevision=$chunk['catalog_revision'];
+    $out=[];$hidden=[];$policyChanged=false;$catalogRevision=$chunk['catalog_revision'];
     try{
         $db->beginTransaction();
         shopPricingCatalogVersion($db,true);
         pimV3SyncCategories($db,$categories,$catalogRevision);
         foreach($products as $m)$out[]=['id'=>$m['id'],'status'=>pimV3WriteModel($db,$m,$batch,$catalogRevision),'contract_version'=>3,'pricing_policy_version'=>1,'canonical_category_id'=>$m['canonical_category_id']];
         $hidden=pimV3Hide($db,$hide,$batch);
+        $policyChanged=$freshness!==null&&$freshness!==shopFreshnessPolicy($db);
         if($freshness!==null)shopFreshnessPolicyStore($db,$freshness);
         // Stage 5.1 (review L2): the models just written get their data-age state in the same transaction.
         // A failure here never aborts the catalog write: the forced sweep after the commit applies the rule anyway.
@@ -303,7 +304,7 @@ function pimV3HandleSync(PDO $db,string $raw): array {
     }catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}
     finally{$db->query("SELECT RELEASE_LOCK('rubizh-category-migration')");}
     // Stage 5.1: rewritten SKUs carry PIM's own flags; apply the data age before anyone reads them.
-    try{if(shopFreshnessSweep($db,true))$changed=true;}catch(Throwable $e){error_log('rubizh freshness sweep: '.get_class($e));}
+    try{if(shopFreshnessSweep($db,true,null,$policyChanged))$changed=true;}catch(Throwable $e){error_log('rubizh freshness sweep: '.get_class($e));}
     if(function_exists('recount_categories'))try{recount_categories($db);}catch(Throwable){}
     // Public snapshots may otherwise stay stale for minutes; explicit hides must not linger in listings.
     if($changed&&function_exists('shopCacheClear'))try{shopCacheClear();}catch(Throwable){}
