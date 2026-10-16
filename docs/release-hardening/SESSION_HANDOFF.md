@@ -2,29 +2,18 @@
 
 > Актуальный checkpoint — глобальный этап 3 (RC1), приведён первым. Блоки этапа 2-B и ранее ниже — история.
 
-## Этап 5 — ПАУЗА по решению владельца (2026-10-16)
+## Этап 5 — в работе (контрольное сохранение 2026-10-16)
 
-Возобновлять только по команде владельца «продолжай этап 5». ТЗ этапа 5 (части 1–2 + уточнение по robots.txt) — в переписке; кратко — в памяти сессии `rubizh-stage5-scope`.
+Пауза снята командой владельца «продолжай этап 5». Контрольное сохранение: WIP-коммит, gitleaks 0, push без --force (теги не ставились).
 
-**Ветки и SHA (push не делался, тегов нет):**
-- SITE `hardening/stage-5` от `rubizh-stage-4.1-verified` (a8c0bb3): `bbb802e` D-65 · `bd33a3e` 5-7 · `3b61b9b` 5-2/5-4 (SITE: `/api/pim/costs`, бэкап PIM на SITE, `pim_key_next`) · плюс коммит с этим блоком.
-- PIM `hardening/stage-5-pim` от `fix/pimc-p1` (5fd46cb), голова `3fbbfcb`, дерево чистое, 709/709 тестов, dry-run 49/49, npm audit 0, сборка воспроизводима. Коммиты: `857ab2a` PIMC-C1 · `fad93ea` воспроизводимая сборка · `b32281a` PIMC-P3/P4 · `af9fd8c` ajv 8.20.0 · `0a4abfb` свежесть 24/36 ч + PIMC-P2 · `23359a5` экспорт payout · `85b2d40` ротация ключа · `3fbbfcb` автобэкап на SITE. Подробности и изменённые тесты PIM — `pim.rubizh/app/reviews/STAGE5-PIM.md`.
-- CRM `crm.rubizh`: не менялась (ветка `hardening/stage-5` ещё не создана).
+**Ветки и SHA (запушены):**
+- SITE `hardening/stage-5` (lieverifying/rubizh) от a8c0bb3: `bbb802e` D-65 · `bd33a3e` 5-7 · `3b61b9b` 5-2/5-4 SITE · `ccc42ba` 5-3 (PDF-рахунок, новый бандл `shop-client.2026101601.js`, старый восстановлен и сохранён) · `0c414a7` точная фикстура себестоимости · `6a6d4dd` WIP 5-5 (страницы групп `/rozdil/<slug>`, robots.txt, image sitemap, JSON-LD, карточка без JS, описания категорий).
+- CRM `hardening/stage-5` (alexalixmanov-del/crm.rubizh, remote `ci`) от 57e9ef4: `3007612` кнопка «Завантажити рахунок (PDF)».
+- PIM `hardening/stage-5-pim` (alexalixmanov-del/pim.rubizh): `3fbbfcb` (8 коммитов, 709/709).
 
-**Сделано:** 5-1 D-65 (сервер, витрина, оферта, старые заказы не пересчитываются); 5-7; 5-2 SITE и PIM; 5-4 целиком (PIM + SITE: бэкап, два ключа).
+**Дальше:** доделать 5-5 (проверить витрину на 360/1440, seo-specialist), 5-6 CRM-5.1, решения владельца в `docs/crm/01-CRM_ARCHITECTURE.md`, ревью (security, php, typescript, react, a11y, seo, code), quality gate, закрепление CRM в `.github/workflows/ci.yml`, финальный push и теги `crm-stage-5-verified` → `pim-stage-5-verified` → `rubizh-stage-5-verified`.
 
-**Незакоммичено в SITE (5-3 PDF-рахунок, в работе; новые тесты `tests/stage5-invoice-pdf.test.mjs` зелёные, полный прогон не делался):**
-- новые: `shop/invoice-pdf.php` (генератор PDF, сумма прописью, поля платника, данные счёта), `shop/invoice.php` (скачивание покупателем), `shop/fonts/` (подмножество IBM Plex Sans, переименовано по OFL, + OFL.txt, README), `tests/stage5-invoice-pdf.test.mjs`;
-- изменённые: `shop/order-create.php` (поля платника для оплаты по счёту), `shop/settings-lib.php` и `shop/settings.php` (`invoice_vat_note`, предупреждение «Заповніть статус ПДВ у налаштуваннях»), `shop/receipt-view.php`, `auth/order-detail.php` (ссылки на PDF), `index.html` и `assets/shop-client.2026101101.js` (поля платника на оформлении), `staff/orders4.php` и `staff/router.php` (GET `/api/staff/orders/{id}/invoice-pdf`, `invoice_pdf` в карточке), `contracts/crm/crm-api.json` (право `order.invoice.pdf` = OWNER/MANAGER/ACCOUNTANT, маршрут, схемы), `shop/.htaccess` (запрет прямого доступа к библиотекам), `package.json` и `package-lock.json` (devDependency `pdfjs-dist` 6.3.289 — версия 5.7.284 уязвима; npm audit 0).
-
-**Следующий шаг (по порядку):**
-1. 5-3: перегенерировать `docs/crm/03-RBAC_MATRIX.md`, `docs/crm/04-CRM_API.md` и `crm.rubizh/src/contract.gen.ts` (`node dev/crm-contract-gen.mjs --crm …`); в CRM — ветка `hardening/stage-5`, кнопка «Завантажити рахунок (PDF)» и предупреждение для OWNER; a11y-architect по форме платника; прогон смежных тестов, коммит.
-2. Заменить `contracts/pim-private-costs/1/fixture.json` точным выводом экспортёра PIM (`pim.rubizh/app/contracts/fixtures/pim-site-private-costs-v1.exact.json`).
-3. 5-5 SEO (страницы групп, robots.txt с группами Googlebot и Bingbot и склейкой с блоком adm.tools, карточка без JS, image sitemap, JSON-LD, единая проверка meta, описания категорий).
-4. 5-6 CRM-5.1 (WebKit).
-5. Записать решения владельца в `docs/crm/01-CRM_ARCHITECTURE.md`; ревью (security, php, typescript, seo, code); quality gate; push CRM → закрепление в ci.yml → PIM → SITE; теги.
-
-**Изменённые существующие тесты SITE (пока один):** `pricing-policy` «Two separate plates…»: 2740 → 2960 (плита по рознице 1590 + 1370 по kit), пункт 5-1 D-65 — бронезахист не получает kit-цену.
+**Изменённые существующие тесты SITE:** `pricing-policy` «Two separate plates…» 2740 → 2960 (D-65); тесты бандла читают живой бандл из `index.html` (5-3); `stage41-site` D-62 — группы ведут на `/rozdil/<slug>`, якорная прокрутка проверяется на `#ac-vzuttia` (решение владельца по D-62).
 
 <!-- STAGE4_PROGRESS_BEGIN -->
 
