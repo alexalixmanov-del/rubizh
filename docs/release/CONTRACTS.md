@@ -110,6 +110,12 @@ ACK: промежуточный `{ok:true,batch_id,chunk_index,status:"STAGED"}`
 
 SITE: строка без `pim_order_submission_allowed=1` → `UNAVAILABLE` («Наявність невідома…», `shop/pim-v3-checkout.php:48`); без подтверждённой цены заказ невозможен (`:52`); любая не-payable строка → весь заказ `WAITING_CONFIRMATION` (`:72-80`); счёт только при `CONFIRMED` после повторной проверки (`:92-98`; `shop/mono-lib.php:27`); резерв только для числового остатка (`:57-59`).
 
+### 1.5.1 Свежесть данных поставщиков (этап 5.1)
+
+- **SKU:** `stock_imported_at` (время импорта в PIM, мс, или `null`) рядом с `stock_observed_at`; возраст данных = `stock_observed_at`, иначе `stock_imported_at`. Фикстура `contracts/pim-v3/2/wire.exact.json` перегенерирована экспортёром PIM (sha256 в `manifest.json`).
+- **Chunk 0:** необязательный `freshness_policy {version:1, pay_fresh_hours 1–336, sell_max_days 1–60}` (`sell_max_days*24 > pay_fresh_hours`, без других ключей); неверный или не в chunk 0 → весь пакет `400 FRESHNESS_POLICY`. Сайт объявляет `capabilities.freshness_policy_version=1`; PIM без этой возможности не публикует.
+- **Применение на SITE:** `shop/stock-freshness.php`; уровни FRESH / CONFIRM / HIDDEN, публичное поле SKU `stock_freshness` и `availability_note` («Менеджер підтвердить наявність перед оплатою»). Подробно — `CONFIG.md` §17. Тест: `tests/stage51-freshness.test.mjs`; PIM — `app/tests/stage5-freshness.test.cjs`, `final-workflow.test.cjs`.
+
 ### 1.6 Legacy-синхронизация (R1: по умолчанию выключена)
 
 - `api/config.sample.php:14` `'pim_legacy_sync' => false`; строгая проверка `!==true` → `LEGACY_SYNC_DISABLED` (`api/lib.php:232-237`); отсутствие ключа, `'true'`, `1` — выключено. Через `site-settings.json` не переопределяется (`shop/settings-lib.php:4,8`). Тот же предохранитель — `pimLegacyWrite`/`pimAssertLegacyModels` (`api/lib.php:245-259`), `api/kits.php:5,13`.

@@ -31,6 +31,7 @@ function pimV3VariantPublic(array $v,?array $policy): array {
         'order_submission_allowed'=>(int)$v['pim_order_submission_allowed']===1,'payment_allowed'=>(int)$v['pim_payment_allowed']===1,'requires_order_confirmation'=>(int)$v['pim_requires_order_confirmation']===1,
         'delivery_lead_time_days'=>$v['pim_delivery_lead_time_days']===null?null:(int)$v['pim_delivery_lead_time_days'],'ready_to_dispatch'=>(int)$v['pim_ready_to_dispatch']===1,
         'lead_time'=>$v['pim_delivery_lead_time_days']===null?'':'Орієнтовно '.(int)$v['pim_delivery_lead_time_days'].' дн.',
+        'stock_freshness'=>$v['stock_freshness']??'FRESH','availability_note'=>($v['stock_freshness']??'')==='CONFIRM'&&(int)$v['pim_order_submission_allowed']===1?SHOP_FRESHNESS_CONFIRM_NOTE:null,
         'size_unconfirmed'=>false,'stock'=>null,'pricing_policy_version'=>$policy!==null?1:null,
         'price'=>$pricing['price']??null,'kit_price'=>$pricing['kit_price']??null,'kit_discount_pct'=>$pricing['kit_discount_pct']??0,'wholesale'=>$pricing['wholesale']??[]];
 }
@@ -49,7 +50,8 @@ function pimV3ProductDto(PDO $db,array $row): array {
     $data=json_decode((string)$row['data'],true)?:[];$id=$row['id'];
     [$gallery,$colorPhotos]=pimV3Photos($db,$id);
     $q=$db->prepare('SELECT v.*,cp.policy_json FROM variants v LEFT JOIN rubizh_catalog_pricing cp ON cp.sku=v.sku AND cp.product_id=v.product_id WHERE v.product_id=? AND v.pim_active=1 ORDER BY v.sort');$q->execute([$id]);
-    $variants=array_map(fn($v)=>pimV3VariantPublic($v,$v['policy_json']===null?null:json_decode($v['policy_json'],true,32,JSON_THROW_ON_ERROR)),$q->fetchAll(PDO::FETCH_ASSOC));
+    // Stage 5.1: the supplier data age, exactly now (same function as checkout).
+    $variants=array_map(fn($v)=>pimV3VariantPublic(shopFreshnessApplyRow($db,$v),$v['policy_json']===null?null:json_decode($v['policy_json'],true,32,JSON_THROW_ON_ERROR)),$q->fetchAll(PDO::FETCH_ASSOC));
     $c=$db->prepare('SELECT color_id,color,camouflage FROM rubizh_product_colors WHERE product_id=? AND active=1 ORDER BY sort');$c->execute([$id]);
     $colors=[];foreach($c->fetchAll(PDO::FETCH_ASSOC) as $r){$skus=array_values(array_column(array_filter($variants,fn($v)=>$v['color_id']===$r['color_id']),'sku'));if(!$skus)continue;
         $colors[]=['id'=>$r['color_id'],'color'=>$r['color'],'camouflage'=>$r['camouflage'],'label'=>trim(implode(' / ',array_filter([$r['color'],$r['camouflage']])))?:'Колір','photos'=>$colorPhotos[$r['color_id']]??[],'skus'=>$skus];}

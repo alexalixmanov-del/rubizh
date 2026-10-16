@@ -13,6 +13,7 @@ require_once __DIR__.'/../shop/units.php';
 require_once __DIR__.'/../shop/normalization.php';
 require_once __DIR__.'/../shop/taxonomy.php';
 require_once __DIR__.'/../shop/pim-v3-read.php';
+require_once __DIR__.'/../shop/stock-freshness.php';
 
 function cfg(string $k = null) {
   static $c = null;
@@ -45,6 +46,8 @@ function db(): PDO {
   }
   migrate($pdo);
   pimV3DetectColumns($pdo);
+  // Stage 5.1: supplier data age → payment/visibility (at most once a minute; never breaks a read).
+  try{shopFreshnessSweep($pdo);}catch(Throwable $e){error_log('rubizh freshness sweep: '.get_class($e));}
   return $pdo;
 }
 

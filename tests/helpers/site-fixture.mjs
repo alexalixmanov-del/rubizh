@@ -13,7 +13,11 @@ export const phpArgs=['-n','-d','error_reporting=24575','-d','pdo_mysql.default_
 const liveAllowed={monobank:{sandbox:'RUBIZH_MONO_TOKEN'},novaposhta:{readonly:'RUBIZH_NP_API_KEY'}}[process.env.RUBIZH_INTEGRATION_PROVIDER]?.[process.env.RUBIZH_INTEGRATION_MODE];
 export const phpEnv=Object.fromEntries(Object.entries({...process.env,LD_LIBRARY_PATH:runtime+'/lib/x86_64-linux-gnu'}).filter(([k])=>k===liveAllowed||!['RUBIZH_MONO_TOKEN','RUBIZH_NP_API_KEY','RUBIZH_TURBOSMS_TOKEN','RUBIZH_TURBOSMS_SENDER'].includes(k)));
 export const PIM_KEY='pim-v3-fixture-key-at-least-24-characters';
-export const wire=JSON.parse(readFileSync(path.join(root,'contracts/pim-v3/2/wire.exact.json'),'utf8'));
+// Stage 5.1: SITE applies the supplier data age at every read. The exact fixture was exported with data 6 h old at its fixed
+// clock (2026-10-09); tests keep that same age relative to the real clock. The file itself stays the exporter's output.
+export const FIXTURE_DATA_AGE_MS=6*3600000;
+export function freshWire(w,ageMs=FIXTURE_DATA_AGE_MS){const t=Date.now()-ageMs;for(const m of w.products)for(const v of m.variants)if(v.stock_observed_at!=null)v.stock_observed_at=t;return w;}
+export const wire=freshWire(JSON.parse(readFileSync(path.join(root,'contracts/pim-v3/2/wire.exact.json'),'utf8')));
 const port=()=>new Promise(r=>{const s=createServer().listen(0,'127.0.0.1',()=>{const p=s.address().port;s.close(()=>r(p));});});
 export function php(code,{allowFail=false,timeout=60000}={}){const r=spawnSync(runtime+'/bin/php8.4',[...phpArgs,'-r',code],{env:phpEnv,encoding:'utf8',timeout,maxBuffer:64*1024*1024});if(!allowFail)assert.equal(r.status,0,r.stdout+'\n'+r.stderr);return r;}
 function copyTree(from,to){mkdirSync(to,{recursive:true});for(const f of readdirSync(from)){const src=path.join(from,f),dst=path.join(to,f);if(statSync(src).isDirectory()){if(['downloads','preview','node_modules','.git','tests','docs'].includes(f))continue;copyTree(src,dst);}else if(!['config.php','np-private.php','mono-private.php','site-settings.json','site-settings.lock'].includes(f))copyFileSync(src,dst);}}

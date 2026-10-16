@@ -22,7 +22,7 @@ function pimV3SchemaReady(PDO $db): bool {
 function pimV3Enabled(PDO $db): bool {return cfg('pim_v3_sync')===true&&pimV3SchemaReady($db);}
 function pimV3Capabilities(PDO $db): array {
     if(!pimV3Enabled($db))return ['pricing_policy_version'=>1];
-    return PIM_V3_CONTRACT+['envelope'=>'products','max_chunk_models'=>PIM_V3_MAX_CHUNK_MODELS];
+    return PIM_V3_CONTRACT+['envelope'=>'products','max_chunk_models'=>PIM_V3_MAX_CHUNK_MODELS,'freshness_policy_version'=>1];
 }
 
 function pimV3Translit(string $s): string {
@@ -45,6 +45,8 @@ function pimV3ParseChunk(string $raw): array {
     if(!is_array($arr['hide_ids']??null)||!array_is_list($arr['hide_ids'])||count($arr['hide_ids'])>20000||array_filter($arr['hide_ids'],fn($id)=>!pimV3Identifier($id)))throw new PimV3Rejected('HIDE_IDS',[],400);
     if($i<$n-1&&$arr['hide_ids']!==[])throw new PimV3Rejected('HIDE_IDS_LAST_CHUNK_ONLY',[],400);
     if($i===0&&!is_array($arr['categories']??null))throw new PimV3Rejected('CATEGORIES_REQUIRED',[],400);
+    // Stage 5.1: the owner's supplier data freshness thresholds (optional, chunk 0; invalid → the whole batch is refused).
+    if(array_key_exists('freshness_policy',$arr)&&($i!==0||shopFreshnessPolicyErrors($arr['freshness_policy'])))throw new PimV3Rejected('FRESHNESS_POLICY',['errors'=>$i!==0?['CHUNK_0_ONLY']:shopFreshnessPolicyErrors($arr['freshness_policy'])],400);
     if(!is_string($arr['catalog_revision']??null)||!preg_match('/^[A-Za-z0-9_.:-]{8,64}$/D',$arr['catalog_revision']))throw new PimV3Rejected('CATALOG_REVISION',[],400);
     return [$arr,$obj];
 }
@@ -88,7 +90,7 @@ function pimV3KitSlot(?string $component): ?string {
         'carrier'=>'armor','plates'=>'armor','helmet'=>'head','hearing'=>'head','eye_protection'=>'head','backpack'=>'gear','pouch'=>'gear','rps'=>'gear','battle_belt'=>'gear','ifak'=>'med','tourniquet'=>'med'][$component??'']??null;
 }
 function pimV3PublicVariantData(array $v): array {
-    $keep=['sku','color_id','color','camouflage','size','size_raw','size_display','size_normalized','size_system','size_status','size_type','size_alpha','size_fit','size_height','availability','order_submission_allowed','payment_allowed','requires_order_confirmation','delivery_lead_time_days','ready_to_dispatch','price_ready','pricing_policy_version','price','site_price','kit_price','wholesale','stock_observed_at','stale_source','expires_at','barcode'];
+    $keep=['sku','color_id','color','camouflage','size','size_raw','size_display','size_normalized','size_system','size_status','size_type','size_alpha','size_fit','size_height','availability','order_submission_allowed','payment_allowed','requires_order_confirmation','delivery_lead_time_days','ready_to_dispatch','price_ready','pricing_policy_version','price','site_price','kit_price','wholesale','stock_observed_at','stock_imported_at','stale_source','expires_at','barcode'];
     $out=array_intersect_key($v,array_fill_keys($keep,true));
     if(isset($out['wholesale']))$out['wholesale']=array_map(fn($t)=>array_intersect_key((array)$t,array_fill_keys(['price','discount','requested_discount','capped'],true)),(array)$out['wholesale']);
     return $out;
@@ -263,7 +265,8 @@ function pimV3HandleSync(PDO $db,string $raw): array {
     $q=$db->prepare('SELECT chunk_no,private_payload FROM rubizh_pim_batch_chunks WHERE batch_id=? ORDER BY chunk_no');$q->execute([$batch]);$chunks=$q->fetchAll(PDO::FETCH_KEY_PAIR);
     if(count($chunks)!==$count||array_keys($chunks)!==range(0,$count-1))throw new PimV3Rejected('MISSING_CHUNKS',[],409);
     $products=[];$objects=[];$categories=null;
-    foreach($chunks as $no=>$payload){[$a,$o]=pimV3ParseChunk($payload);if($a['batch_id']!==$batch||$a['chunk_count']!==$count||$a['catalog_revision']!==$chunk['catalog_revision'])throw new PimV3Rejected('BATCH_MIXED',[],409);array_push($products,...$a['products']);array_push($objects,...$o->products);if($no===0)$categories=$a['categories'];}
+    $freshness=null;
+    foreach($chunks as $no=>$payload){[$a,$o]=pimV3ParseChunk($payload);if($a['batch_id']!==$batch||$a['chunk_count']!==$count||$a['catalog_revision']!==$chunk['catalog_revision'])throw new PimV3Rejected('BATCH_MIXED',[],409);array_push($products,...$a['products']);array_push($objects,...$o->products);if($no===0){$categories=$a['categories'];$freshness=$a['freshness_policy']??null;}}
     $hide=$chunk['hide_ids'];
     $fail=function(string $code,array $results,int $status=422)use($db,$batch){$db->prepare("UPDATE rubizh_pim_batches SET status='REJECTED',error_code=?,summary_json=?,updated_at=UTC_TIMESTAMP() WHERE batch_id=?")->execute([mb_substr($code,0,64),json_encode(['results'=>$results],JSON_UNESCAPED_UNICODE),$batch]);throw new PimV3Rejected($code,$results,$status);};
     $catErrors=pimV3CategoryErrors($categories);
@@ -286,6 +289,7 @@ function pimV3HandleSync(PDO $db,string $raw): array {
         pimV3SyncCategories($db,$categories,$catalogRevision);
         foreach($products as $m)$out[]=['id'=>$m['id'],'status'=>pimV3WriteModel($db,$m,$batch,$catalogRevision),'contract_version'=>3,'pricing_policy_version'=>1,'canonical_category_id'=>$m['canonical_category_id']];
         $hidden=pimV3Hide($db,$hide,$batch);
+        if($freshness!==null)shopFreshnessPolicyStore($db,$freshness);
         $changed=count(array_filter($out,fn($r)=>$r['status']!=='unchanged'))+count($hidden);
         $db->exec("INSERT INTO meta(k,v) VALUES('catalog_updated','".now().'-pim3-'.substr(hash('sha256',$batch),0,8)."') ON DUPLICATE KEY UPDATE v=VALUES(v)");
         if($changed)$db->prepare("INSERT INTO meta(k,v) VALUES('pricing_catalog_version',?) ON DUPLICATE KEY UPDATE v=VALUES(v)")->execute([bin2hex(random_bytes(16))]);
@@ -295,6 +299,8 @@ function pimV3HandleSync(PDO $db,string $raw): array {
         $db->commit();
     }catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}
     finally{$db->query("SELECT RELEASE_LOCK('rubizh-category-migration')");}
+    // Stage 5.1: rewritten SKUs carry PIM's own flags; apply the data age before anyone reads them.
+    try{if(shopFreshnessSweep($db,true))$changed=true;}catch(Throwable $e){error_log('rubizh freshness sweep: '.get_class($e));}
     if(function_exists('recount_categories'))try{recount_categories($db);}catch(Throwable){}
     // Public snapshots may otherwise stay stale for minutes; explicit hides must not linger in listings.
     if($changed&&function_exists('shopCacheClear'))try{shopCacheClear();}catch(Throwable){}

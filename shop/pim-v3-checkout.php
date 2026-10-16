@@ -42,6 +42,9 @@ function pimV3ResolveLine(PDO $db,array $line,array $model,bool $lock,array &$to
     $q=$db->prepare('SELECT v.*,f.supplier_name AS fulfillment_supplier_name FROM variants v LEFT JOIN rubizh_catalog_fulfillment f ON f.sku=v.sku AND f.product_id=v.product_id WHERE v.sku=? AND v.product_id=? AND v.pim_active=1'.($lock?' FOR UPDATE':''));
     $q->execute([$sku,$model['id']]);$v=$q->fetch(PDO::FETCH_ASSOC);
     if(!$v)throw new ShopPricingException('INVALID_VARIANT','SKU більше не належить цьому товару. Оновіть кошик.');
+    // Stage 5.1: the supplier data age narrows what PIM allowed, exactly now (not the once-a-minute stored state).
+    $v=shopFreshnessApplyRow($db,$v);
+    if($v['stock_freshness']==='HIDDEN')throw new ShopPricingException('UNAVAILABLE','Дані постачальника про наявність застаріли: товар тимчасово недоступний. Оновіть кошик.');
     if($colorId!==''&&$v['pim_color_id']!==$colorId)throw new ShopPricingException('INVALID_VARIANT','SKU не належить вибраному кольору.');
     $size=trim((string)($v['pim_size_display']??''))?:trim((string)($v['pim_size_normalized']??''));
     if(isset($line['size'])&&is_string($line['size'])&&$line['size']!==''&&$line['size']!==$size)throw new ShopPricingException('INVALID_VARIANT','Розмір не відповідає SKU.');
@@ -64,7 +67,7 @@ function pimV3ResolveLine(PDO $db,array $line,array $model,bool $lock,array &$to
         '_pricing'=>$policy,'_approved_wholesale_tier'=>$tier,'price_mode'=>$mode,'retail_price'=>shopMoneyValue($policy['price_cents']),'price_pending'=>false,'stock_confirmed'=>$numeric,
         'availability'=>$payable?'in':'order','availability_v3'=>$v['pim_effective_availability'],'payment_allowed'=>$payable,'requires_order_confirmation'=>(int)$v['pim_requires_order_confirmation']===1,
         'delivery_lead_time_days'=>$v['pim_delivery_lead_time_days']===null?null:(int)$v['pim_delivery_lead_time_days'],
-        'request_state'=>$payable?'stock_check':($v['pim_effective_availability']==='PREORDER'?'confirmed_preorder':'order_on_request'),
+        'request_state'=>$payable||$v['stock_freshness']==='CONFIRM'?'stock_check':($v['pim_effective_availability']==='PREORDER'?'confirmed_preorder':'order_on_request'),'stock_freshness'=>$v['stock_freshness'],
         'fulfillment_supplier'=>npSupplierCode($sku,$model['id'],(string)($v['fulfillment_supplier_name']??''))];
 }
 
@@ -87,7 +90,9 @@ function pimV3OrderDecision(array $lines,string $payment,?int $maxQty=null): arr
     $unknown=[];foreach($lines as $l)if(!empty($l['payment_allowed'])&&empty($l['stock_confirmed'])&&($l['sku']??'')!=='')$unknown[$l['sku']]=($unknown[$l['sku']]??0)+(float)$l['qty'];
     $qtyReview=$unknown&&max($unknown)>($maxQty??shopDirectPayMaxQty());
     $confirm=$confirm||$qtyReview;
-    return ['contract_version'=>3,'order_state'=>$confirm?'WAITING_CONFIRMATION':'CONFIRMED','legacy_status'=>$confirm?'new':'confirmed','payment_now'=>!$confirm,'confirmation_reason'=>$qtyReview?'QTY_UNCONFIRMED':null];
+    // Stage 5.1: supplier data older than pay_fresh_hours → the manager confirms availability before any payment.
+    $stale=(bool)array_filter($lines,fn($l)=>($l['stock_freshness']??null)==='CONFIRM');
+    return ['contract_version'=>3,'order_state'=>$confirm?'WAITING_CONFIRMATION':'CONFIRMED','legacy_status'=>$confirm?'new':'confirmed','payment_now'=>!$confirm,'confirmation_reason'=>$stale?'STALE_SUPPLIER_DATA':($qtyReview?'QTY_UNCONFIRMED':null)];
 }
 function pimV3RecordOrder(PDO $db,int $id,array $lines,array $decision,string $revision): void {
     if($decision['contract_version']!==3)return;

@@ -55,7 +55,7 @@ test('SEO-5.2 robots.txt: Googlebot, Bingbot, GPTBot and «*» get the same acce
 });
 
 test('D-62: the storefront fallback groups equal shop/category-groups.json (slug, title, roots)',()=>{
- const bundle=readFileSync(path.join(root,'assets/shop-client.2026101601.js'),'utf8'),json=JSON.parse(readFileSync(path.join(root,'shop/category-groups.json'),'utf8'));
+ const bundle=readFileSync(path.join(root,readFileSync(path.join(root,'index.html'),'utf8').match(/src="\/(assets\/shop-client\.[^"?]+\.js)/)[1]),'utf8'),json=JSON.parse(readFileSync(path.join(root,'shop/category-groups.json'),'utf8'));
  const literal=bundle.match(/const STORE_GROUPS_FALLBACK=(\[.*?\]);\n/)[1];const fallback=new Function('return '+literal)();
  assert.deepEqual(fallback.map(g=>[g.slug,g.title,g.roots]),json.map(g=>[g.slug,g.title,g.roots]));
 });

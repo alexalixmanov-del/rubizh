@@ -53,7 +53,9 @@ try{
             $sizes=array_values(array_unique(array_filter(array_map(fn($v)=>trim((string)($v['size_display']??'')),$p['variants']))));
             if($colors)$fallback.='<p>Колір: '.storefrontEsc(implode(', ',$colors)).'</p>';
             if($sizes)$fallback.='<p>Розміри: '.storefrontEsc(implode(', ',$sizes)).'</p>';
-            $fallback.='<p>Наявність: '.storefrontEsc(['in'=>'в наявності','order'=>'під замовлення','out'=>'немає в наявності'][$p['availability']]??'уточнюйте').'</p>';
+            // Stage 5.1: the same wording as the storefront when only manager-confirmed sale is possible (data older than pay_fresh_hours).
+            $confirmOnly=!array_filter($p['variants'],fn($v)=>!empty($v['payment_allowed']))&&array_filter($p['variants'],fn($v)=>($v['stock_freshness']??'')==='CONFIRM'&&!empty($v['order_submission_allowed']));
+            $fallback.='<p>Наявність: '.storefrontEsc($confirmOnly?mb_strtolower(mb_substr(SHOP_FRESHNESS_CONFIRM_NOTE,0,1)).mb_substr(SHOP_FRESHNESS_CONFIRM_NOTE,1):(['in'=>'в наявності','order'=>'під замовлення','out'=>'немає в наявності'][$p['availability']]??'уточнюйте')).'</p>';
             if($p['price_min']!==null)$fallback.='<p>Ціна: '.storefrontEsc(number_format((float)$p['price_min'],0,'',' ')).' ₴'.(count(array_unique(array_filter(array_column($p['variants'],'price'))))>1?' (від)':'').'</p>';
             $fallback.='<p>'.storefrontEsc($p['description']).'</p><a href="/catalog">До каталогу</a></article>';
         }

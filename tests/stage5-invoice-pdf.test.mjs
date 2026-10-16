@@ -88,7 +88,7 @@ test('invoice PDF over HTTP: owner of the order only (IDOR), roles in CRM, no PD
 });
 
 test('checkout: payer fields only for invoice payment, with the OPSEC hint; settings page has the VAT status field',()=>{
- const html=readFileSync(path.join(root,'index.html'),'utf8'),bundle=readFileSync(path.join(root,'assets/shop-client.2026101601.js'),'utf8'),settings=readFileSync(path.join(root,'shop/settings.php'),'utf8');
+ const html=readFileSync(path.join(root,'index.html'),'utf8'),bundle=readFileSync(path.join(root,readFileSync(path.join(root,'index.html'),'utf8').match(/src="\/(assets\/shop-client\.[^"?]+\.js)/)[1]),'utf8'),settings=readFileSync(path.join(root,'shop/settings.php'),'utf8');
  assert.match(html,/<sc-if value="\{\{ payInvoice \}\}"[^>]*>\s*<fieldset data-payer-fields="1"/);
  for(const n of ['payer_name','payer_code','payer_address'])assert.match(html,new RegExp('<label[^>]*>[^<]+<input name="'+n+'"'),n+' has a visible label');
  assert.match(html,/Без прізвищ військових/);assert.match(bundle,/payer_name:\(e\.payerName/);

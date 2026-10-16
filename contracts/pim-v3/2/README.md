@@ -21,6 +21,19 @@ categories[] (143 PIM IDs) · products[] (READY MODELs only) · hide_ids[] (expl
 The envelope is `products[]`. There is no `models[]` key; the synthetic
 `models[]` wrapper of snapshot 1 is test-only.
 
+## Stage 5.1 additions (2026-10-16, additive)
+
+- Every SKU carries `stock_imported_at` (PIM import time, epoch ms, or `null`) next to
+  `stock_observed_at` (the supplier's own time, or `null`); the data age is
+  `stock_observed_at`, else `stock_imported_at`. `stock_warning_hours` is the owner's
+  `pay_fresh_hours` (72 by default). The fixture was regenerated from the exporter.
+- Chunk 0 may carry `freshness_policy: {version: 1, pay_fresh_hours: 1–336,
+  sell_max_days: 1–60}` with `sell_max_days*24 > pay_fresh_hours` and no other keys;
+  an invalid one, or one in another chunk, refuses the batch with `400 FRESHNESS_POLICY`.
+  SITE advertises `capabilities.freshness_policy_version: 1` and applies the policy to
+  the data age at every read (`shop/stock-freshness.php`, `docs/release/CONFIG.md` §17).
+  PIM sends the policy with every batch and publishes only to a SITE that advertises it.
+
 ## Transport
 
 `POST /api/pim/sync` with the PIM bearer key, in chunks of at most 200 models:

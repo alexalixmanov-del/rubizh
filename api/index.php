@@ -96,7 +96,8 @@ if ($isPim) {
     $q = fn($sql) => $pdo->query($sql)->fetchColumn();
     require_once __DIR__.'/../shop/pim-v3-sync.php';
     out(['ok' => true, 'api_version' => API_VERSION, 'capabilities'=>pimV3Capabilities($pdo),'key_slot'=>$GLOBALS['rubizh_pim_key_slot'],'key_rotation'=>$GLOBALS['rubizh_pim_key_rotation'],'private_costs_version'=>1,
-      'products' => ['visible' => (int)$q("SELECT COUNT(*) FROM products WHERE visible=1"), 'hidden' => (int)$q("SELECT COUNT(*) FROM products WHERE visible=0")],
+      'freshness_policy'=>shopFreshnessPolicy($pdo),
+      'products' => ['visible' => (int)$q("SELECT COUNT(*) FROM products WHERE visible=1"), 'hidden' => (int)$q("SELECT COUNT(*) FROM products WHERE visible=0"),'hidden_stale_supplier_data'=>!empty($GLOBALS['rubizh_pim_v3_columns'])?(int)$q("SELECT COUNT(*) FROM products WHERE pim_publication_reason='".SHOP_FRESHNESS_HIDE_REASON."'"):0],
       'variants' => (int)$q("SELECT COUNT(*) FROM variants v JOIN products p ON p.id=v.product_id WHERE p.visible=1"),
       'categories' => (int)$q("SELECT COUNT(*) FROM categories WHERE product_count>0"),
       'photos' => ['ok' => (int)$q("SELECT COUNT(*) FROM photos WHERE status='ok'"), 'pending' => (int)$q("SELECT COUNT(*) FROM photos WHERE status='pending'"), 'error' => (int)$q("SELECT COUNT(*) FROM photos WHERE status='error'")],

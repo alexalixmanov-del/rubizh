@@ -606,3 +606,19 @@ CRM работает на `/crm/` того же домена; Staff API — `/ap
 ### 16.4 Стенд (не задавать на production)
 
 `environment=staging`, `mono_mock=true`, `np_mock=true`, `staging_allow_loopback`, `staging_origins` — только тестовый стенд. Синтетические данные: `php dev/crm-synthetic.php --orders=520 [--bulk=50000]` (отказывается работать без этих ключей и при любом включённом live-флаге CRM).
+
+## 17. Свежесть данных поставщиков (этап 5.1, решение владельца 2026-10-16)
+
+Заменяет единый `freshHours 36` этапа 5. Пороги — **настройки владельца в PIM** («Цены»), не `api/config.php`: PIM передаёт их в chunk 0 каждого пакета `/api/pim/sync` (`freshness_policy`), SITE хранит последнюю принятую политику в `meta.pim_freshness_policy` и применяет её на сервере (`shop/stock-freshness.php`).
+
+| Настройка PIM → поле контракта | Default | Проверка | Смысл |
+|---|---|---|---|
+| `payFreshHours` → `pay_fresh_hours` | 72 | целое, 1–336 | данные не старше — прямая оплата как прислал PIM (с учётом `direct_pay_max_qty`) |
+| `sellMaxDays` → `sell_max_days` | 8 | целое, 1–60, `sell_max_days*24 > pay_fresh_hours` | до этого возраста товар продаётся только через «Очікує підтвердження менеджера» (без MonoPay до подтверждения, покупатель видит «Менеджер підтвердить наявність перед оплатою»); старше — SKU не заказывается, модель без других заказываемых SKU скрыта с витрины (`visible=0`, `pim_publication_reason='STALE_SUPPLIER_DATA'`, не удаляется) до свежих данных |
+
+- **Возраст данных** — время наблюдения поставщика (`stock_observed_at`), а если его нет — время импорта в PIM (`stock_imported_at`, хранится в `variants.data`). Без обоих и при наличии, заданном вручную в PIM (`availability_source=MANUAL`), возраста нет.
+- **Где применяется:** оформление и счёт — точно в момент запроса (`pimV3ResolveLine`); карточка товара — точно (`pimV3ProductDto`); списки, фильтры, sitemap, видимость моделей — сохранённое состояние, которое пересчитывается сразу после каждой синхронизации и не реже раза в минуту при чтении (`shopFreshnessSweep`, отметка `meta.pim_freshness_swept_at`); после изменений сбрасывается кэш каталога.
+- **Нет политики от PIM** (старый PIM или пустой `meta`) — действуют значения по умолчанию 72 ч / 8 дн. Неверная политика в пакете — весь пакет отклоняется `400 FRESHNESS_POLICY`, сохранённая политика не меняется.
+- **Видно владельцу:** `GET /api/pim/status` (по ключу PIM) — `freshness_policy`, `capabilities.freshness_policy_version=1`, `products.hidden_stale_supplier_data`. PIM публикует только на сайт с `freshness_policy_version=1`.
+- **Заказы:** оплаченные и уже созданные заказы правило не меняет; заказ с позицией из «правила 2» создаётся в `WAITING_CONFIRMATION` (`contact.confirmation_reason=STALE_SUPPLIER_DATA`) и виден в CRM в «Очікують підтвердження».
+
