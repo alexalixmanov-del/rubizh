@@ -13,6 +13,13 @@ return [
   // Legacy writes require explicit boolean permission; contract 3 models remain protected.
   'pim_legacy_sync' => false,
   'pim_key' => 'ЗАМЕНИТЕ_НА_ДЛИННЫЙ_СЛУЧАЙНЫЙ_КЛЮЧ',
+  // Ротация без простоя: новый ключ сначала сюда (сайт принимает оба), затем в PIM «Новий ключ» → «Перевірити» →
+  // «Зробити основним»; после этого перенести его в pim_key и очистить pim_key_next. Пусто = ротации нет.
+  'pim_key_next' => '',
+  // Резервные копии PIM (stage 5): папка вне публичного корня сайта, хранится 14 последних копий.
+  'pim_backup_dir' => __DIR__ . '/../../private/pim-backups',
+  'pim_backup_keep' => 14,
+  'pim_backup_max_bytes' => 67108864,
 
   // Откуда разрешено отправлять товары (адрес PIM)
   'pim_origins' => ['https://pim.rubizh.shop'],

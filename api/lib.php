@@ -132,7 +132,7 @@ function cors(bool $pim): void {
   if ($pim) {
     $allowed = cfg('pim_origins') ?: [];
     if ($origin && (in_array($origin, $allowed, true) || in_array('*', $allowed, true))) header('Access-Control-Allow-Origin: ' . $origin);
-    header('Access-Control-Allow-Headers: Authorization, Content-Type');
+    header('Access-Control-Allow-Headers: Authorization, Content-Type, X-Backup-Sha256, X-Backup-Label');
     header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
     header('Vary: Origin');
   } else {
@@ -145,7 +145,16 @@ function require_pim(): void {
   if (!$h && function_exists('getallheaders')) { foreach (getallheaders() as $k => $v) if (strtolower($k) === 'authorization') $h = $v; }
   $key = (string)cfg('pim_key');
   if (strlen($key) < 24 || str_contains($key, 'ЗАМЕНИТЕ')) fail(500, 'В config.php не задан pim_key (минимум 24 символа)');
-  if (!hash_equals('Bearer ' . $key, trim($h))) fail(401, 'Неверный ключ PIM');
+  // Rotation without downtime (stage 5): an optional pim_key_next is accepted too until the owner promotes it. A weak,
+  // placeholder or duplicate next key fails closed. Both keys are always compared (no short-circuit on the first).
+  $next = cfg('pim_key_next');$next = $next === null ? '' : (string)$next;
+  if ($next !== '' && (strlen($next) < 24 || str_contains($next, 'ЗАМЕНИТЕ') || hash_equals($key, $next))) fail(500, 'pim_key_next має бути новим ключем ≥24 символів');
+  $given = trim((string)$h);
+  $current = hash_equals('Bearer ' . $key, $given);
+  $nextOk = $next !== '' && hash_equals('Bearer ' . $next, $given);
+  if (!$current && !$nextOk) fail(401, 'Неверный ключ PIM');
+  $GLOBALS['rubizh_pim_key_slot'] = $current ? 'current' : 'next';
+  $GLOBALS['rubizh_pim_key_rotation'] = $next !== '';
 }
 
 /* ---------- приём товаров ---------- */

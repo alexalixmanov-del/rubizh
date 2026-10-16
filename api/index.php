@@ -1,6 +1,6 @@
 <?php
 // РУБІЖ · API магазина
-//   PIM (по ключу):  POST /api/pim/sync · POST /api/pim/photos · GET /api/pim/status
+//   PIM (по ключу):  POST /api/pim/sync · POST /api/pim/photos · POST /api/pim/costs · POST /api/pim/backup · GET /api/pim/backups[/{id}] · GET /api/pim/status
 //   Сайт (открыто):  GET /api/categories · GET /api/catalog · GET /api/product/{slug} · GET /api/health
 //   Планировщик:     GET /api/cron/photos?key=...
 declare(strict_types=1);
@@ -75,6 +75,17 @@ if ($isPim) {
     out(['ok' => true, 'mode' => $mode, 'counts' => $cnt, 'hidden' => $hidden, 'photos_pending' => $pending, 'results' => $results]);
   }
 
+  // OD-4.1 (stage 5): private supplier payouts — a separate private contract, never part of the public catalog.
+  if($path==='/pim/costs'&&$method==='POST'){
+    require_once __DIR__.'/pim-private.php';
+    if((int)($_SERVER['CONTENT_LENGTH']??0)>2*1024*1024)fail(413,'Запрос слишком большой');
+    try{out(pimPrivateCostsHandle($pdo,(string)file_get_contents('php://input',false,null,0,2*1024*1024+1)));}
+    catch(PimPrivateRejected $e){header('Cache-Control: no-store');out(['ok'=>false,'error'=>'Private costs: '.$e->getMessage(),'error_code'=>$e->getMessage()],$e->getCode()?:422);}
+  }
+  // 5-4 (stage 5): automatic PIM backup outside IndexedDB — private folder outside the web root, 14 newest copies.
+  if($path==='/pim/backup'&&$method==='POST'){@set_time_limit(120);require_once __DIR__.'/pim-private.php';try{out(pimBackupStore());}catch(PimPrivateRejected $e){header('Cache-Control: no-store');out(['ok'=>false,'error'=>'PIM backup: '.$e->getMessage(),'error_code'=>$e->getMessage()],$e->getCode()?:422);}}
+  if($path==='/pim/backups'&&$method==='GET'){require_once __DIR__.'/pim-private.php';header('Cache-Control: no-store');out(pimBackupList());}
+  if(preg_match('~^/pim/backups/([^/]+)$~',$path,$bm)&&$method==='GET'){require_once __DIR__.'/pim-private.php';pimBackupSend($bm[1]);}
   if ($path === '/pim/photos' && $method === 'POST') {
     @set_time_limit(60);
     $b = json_decode(file_get_contents('php://input') ?: '{}', true) ?: [];
@@ -84,7 +95,7 @@ if ($isPim) {
   if ($path === '/pim/status') {
     $q = fn($sql) => $pdo->query($sql)->fetchColumn();
     require_once __DIR__.'/../shop/pim-v3-sync.php';
-    out(['ok' => true, 'api_version' => API_VERSION, 'capabilities'=>pimV3Capabilities($pdo),
+    out(['ok' => true, 'api_version' => API_VERSION, 'capabilities'=>pimV3Capabilities($pdo),'key_slot'=>$GLOBALS['rubizh_pim_key_slot'],'key_rotation'=>$GLOBALS['rubizh_pim_key_rotation'],'private_costs_version'=>1,
       'products' => ['visible' => (int)$q("SELECT COUNT(*) FROM products WHERE visible=1"), 'hidden' => (int)$q("SELECT COUNT(*) FROM products WHERE visible=0")],
       'variants' => (int)$q("SELECT COUNT(*) FROM variants v JOIN products p ON p.id=v.product_id WHERE p.visible=1"),
       'categories' => (int)$q("SELECT COUNT(*) FROM categories WHERE product_count>0"),

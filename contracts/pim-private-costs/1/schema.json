@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rubizh.shop/contracts/pim-private-costs/1/schema.json",
+  "title": "PIM → SITE private supplier payouts (OD-4.1)",
+  "description": "Private section of the PIM ↔ SITE contract: the supplier payout per SKU in kopecks. Sent only to POST /api/pim/costs with the PIM key; never part of the public catalog (contract 3 wire).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["private_contract", "version", "currency", "generated_at", "revision", "costs"],
+  "properties": {
+    "private_contract": {"const": "rubizh-pim-private-costs"},
+    "version": {"const": 1},
+    "currency": {"const": "UAH"},
+    "generated_at": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"},
+    "revision": {"type": "string", "pattern": "^[a-f0-9]{8,64}$"},
+    "costs": {
+      "type": "array",
+      "maxItems": 20000,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sku", "supplier_payout_minor"],
+        "properties": {
+          "sku": {"type": "string", "pattern": "^[A-Za-z0-9._-]{1,64}$"},
+          "supplier_payout_minor": {"type": "integer", "minimum": 0, "maximum": 10000000000}
+        }
+      }
+    }
+  }
+}
