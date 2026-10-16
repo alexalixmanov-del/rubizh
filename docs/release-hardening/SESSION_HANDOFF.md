@@ -1,21 +1,57 @@
 # SESSION HANDOFF — RUBIZH SITE release hardening
 
-> Актуальный checkpoint — глобальный этап 3 (RC1), приведён первым. Блоки этапа 2-B и ранее ниже — история.
+> Актуальный checkpoint — глобальный этап 5, приведён первым. Блоки этапа 2-B и ранее ниже — история.
 
-## Этап 5 — в работе (контрольное сохранение 2026-10-16)
+<!-- STAGE5_HANDOFF_BEGIN -->
 
-**ПАУЗА (отключение света, 2026-10-16 ~16:15):** всё сделано и закоммичено (5-1…5-7, ревью и их правки, документация, CRM закреплена `dd91d2b` в ci.yml); финальная регрессия SITE прервана. Следующий шаг: финальный прогон на последнем SHA (#49 с RZ_DISABLE_CURL=1), замеры от сети (3 прогона, медиана), STAGE_CHECKPOINT/08/SESSION_HANDOFF, push, CI на финальном SHA, теги crm/pim/rubizh-stage-5-verified, отчёт.
+## Глобальный этап 5 — PIM, PDF-рахунок, себестоимость из PIM, D-65, SEO, checkpoint 2026-10-16
 
-Пауза снята командой владельца «продолжай этап 5». Контрольное сохранение: WIP-коммит, gitleaks 0, push без --force (теги не ставились).
+Статус: **GO этапа 5** при зелёном CI на SHA checkpoint-коммита (SHA и номер CI — в аннотации тега `rubizh-stage-5-verified`). Существующие теги не двигались. Production — **NO-GO**. Merge не выполнялся. Этап 5.2 (импорт поставщиков 5-B) не начат.
 
-**Ветки и SHA (запушены):**
-- SITE `hardening/stage-5` (lieverifying/rubizh) от a8c0bb3: `bbb802e` D-65 · `bd33a3e` 5-7 · `3b61b9b` 5-2/5-4 SITE · `ccc42ba` 5-3 (PDF-рахунок, новый бандл `shop-client.2026101601.js`, старый восстановлен и сохранён) · `0c414a7` точная фикстура себестоимости · `6a6d4dd` WIP 5-5 (страницы групп `/rozdil/<slug>`, robots.txt, image sitemap, JSON-LD, карточка без JS, описания категорий).
-- CRM `hardening/stage-5` (alexalixmanov-del/crm.rubizh, remote `ci`) от 57e9ef4: `3007612` кнопка «Завантажити рахунок (PDF)».
-- PIM `hardening/stage-5-pim` (alexalixmanov-del/pim.rubizh): `3fbbfcb` (8 коммитов, 709/709).
+| Объект | SHA / тег |
+|---|---|
+| SITE | `hardening/stage-5` от `rubizh-stage-4.1-verified` (`a8c0bb3`), тег `rubizh-stage-5-verified` |
+| CRM | `614a044cbe710c59d296ccc6534afc8fa58dd923` (`hardening/stage-5`, remote `ci`), тег `crm-stage-5-verified`; закреплён в `.github/workflows/ci.yml` |
+| PIM | `55e0432` (`hardening/stage-5-pim`), тег `pim-stage-5-verified`; 711/711 тестов |
 
-**Дальше:** доделать 5-5 (проверить витрину на 360/1440, seo-specialist), 5-6 CRM-5.1, решения владельца в `docs/crm/01-CRM_ARCHITECTURE.md`, ревью (security, php, typescript, react, a11y, seo, code), quality gate, закрепление CRM в `.github/workflows/ci.yml`, финальный push и теги `crm-stage-5-verified` → `pim-stage-5-verified` → `rubizh-stage-5-verified`.
+| Пункт | Статус | Тесты |
+|---|---|---|
+| 5-1 D-65 бронезахист по фиксированной цене | FIXED | `stage5-armor`, `pricing-policy` |
+| 5-2 себестоимость из PIM (`api/pim/costs`, только pim_key, OWNER/ACCOUNTANT) | DONE | `stage5-pim-costs` |
+| 5-3 PDF-рахунок ФОП (сайт, кабинет, CRM) | DONE | `stage5-invoice-pdf` |
+| 5-4 PIM: freshHours 36, резервная копия на SITE (ротация 14), PIMC-P2/P3/P4/C1, ajv, ротация pim_key | DONE | PIM 711/711, `stage5-pim-backup`, `stage5-pim-key` |
+| 5-5 SEO: страницы групп `/rozdil/<slug>`, robots.txt, image sitemap, JSON-LD, карточка без JS, описания категорий | DONE | `stage5-seo`, `stage41-site` |
+| 5-6 CRM-5.1 | FIXED (корень: запрос Staff API, начатый во время ухода со страницы; CRM 614a044) | `crm-stage4-matrix` (без исключения), `stage5-crm51-webkit` |
+| 5-7 лимит запросов к банку на payment-return, телефон менеджера из настроек | FIXED | `stage5-payment-return` |
 
-**Изменённые существующие тесты SITE:** `pricing-policy` «Two separate plates…» 2740 → 2960 (D-65); тесты бандла читают живой бандл из `index.html` (5-3); `stage41-site` D-62 — группы ведут на `/rozdil/<slug>`, якорная прокрутка проверяется на `#ac-vzuttia` (решение владельца по D-62).
+Quality gate: полная регрессия — CI на Linux (решение владельца; CI 38942879087 на `45dc356` — success; локальный полный прогон на macOS прерван по решению владельца: 440 ok, единственный not ok — #49 из-за сети); #49 отдельно с `RZ_DISABLE_CURL=1` — ok; npm audit 0 (SITE, CRM, PIM); gitleaks 0; финальный security-reviewer — PASS. Решение владельца S5-02: ИИ-краулерам публичные страницы разрешены, как сейчас.
+
+Замеры (от сети, заряд 42–43 %, M2, macOS 26.3.1, MariaDB 11.4.13, синтетическая фикстура, 3 прогона, медиана; код выполнения на `45dc356` тот же, что на `d8fcbf0`): `/rozdil` 7.5 мс, категория 8.6 мс, главная 7.5 мс, sitemap с изображениями 5.5 мс, товар 6.8 мс, PDF-рахунок 60 строк 6.4 мс (37 КБ).
+
+### Изменённые тесты этапа 5 — SITE
+
+| Тест | Было → стало | Пункт ТЗ | Почему |
+|---|---|---|---|
+| pricing-policy «Two separate plates…» | бронеплита+подсумок в комплекте 2740 (обе по kit) → 2960 (плита 1590 розница + 1370 kit) | 5-1 D-65 | бронезахист никогда не получает kit-цену |
+| np-setup, stage2-r8-limits, crm-stage4-site (3 места), release-archive-safety | путь `assets/shop-client.2026101101.js` → живой бандл из `index.html` (сейчас `shop-client.2026101601.js`) | 5-3 (новый бандл по требованию владельца, Q-9) | проверки те же, но на действующем бандле; старый файл сохранён без изменений |
+| stage5-armor (новый тест этапа) | файл бандла → `shop-client.2026101601.js` | 5-3 | D-65 перенесён в новый бандл |
+| stage41-site D-62 (3 теста) | группы → `/categories#ac-…` ⇒ группы → `/rozdil/bronezakhyst`, `/rozdil/sporiadzhennia`; прокрутка якоря проверяется на `#ac-vzuttia` | 5-5 D-62 (решение владельца: отдельные индексируемые страницы групп) | прежние ожидания описывали вариант этапа 4.1, который владелец заменил |
+| crm-stage4-matrix (исключение CRM-5.1, ослабление этапа 4) | сообщение WebKit во время перехода откладывалось, переходы ждали простоя Staff API ⇒ исключения и ожидания нет, считается каждая ошибка каждого движка | 5-6 | строже: корень найден и исправлен в CRM |
+| stage41-site D-62 HTTP | Location `/rozdil/bronezakhyst` ⇒ `/rozdil/bronezakhyst?sort=stock` | 5-5 (SEO-ревью) | редирект групп сохраняет остальные параметры, как для одной категории; title удалён |
+| stage5-pim-key (новый тест этапа) | слабый `pim_key_next` → 500 ⇒ игнорируется, текущий ключ работает, неверные ключи ограничиваются (429) | 5-4 (security-ревью) | 500 до проверки ключа раскрывал состояние ротации анонимному запросу |
+| stage5-payment-return (новый тест этапа) | ≤6 обращений к банку ⇒ ≤12 | 5-7 | прогон может пересечь границу минутного окна; лимит 6 в окно не менялся |
+
+### Изменённые тесты этапа 5 — PIM (`reviews/STAGE5-PIM.md`)
+
+| Test | Before → after | Order item | Why |
+|---|---|---|---|
+| order-policy «age and supplier warning thresholds never change valid stock or payment» | 90-day-old stock IN_STOCK, payable; supplier limit 1 h still IN_STOCK → 90 days: UNKNOWN, not payable; 25 h: IN_STOCK; supplier limit 1 h with 2 h: UNKNOWN; no observation: IN_STOCK (renamed) | 5-4 freshness, PIMC-P2 | the old rule «age never changes payment» is what the owner reversed |
+| order-policy «missing or invalid stock … expiry only follows explicit source expiry» | last step reused the 90-day observation → that step now uses a 1-hour-old observation (renamed) | 5-4 freshness | the step checks a future explicit expiry, not age |
+| inventory-policy «new queued model retains mapped size, status column and actual observation provenance» | observed 2026-10-01 (15 days old) → observed 1 hour ago | 5-4 freshness | the test checks provenance and payment; with a 15-day-old observation payment is now (correctly) refused |
+
+**Открытые вопросы владельцу:** текст оферты (D-65); содержимое noscript и рендеринг Google; проверка OPSEC плательщика — только подсказка; сравнение robots.txt с production — SEO-6.1 (этап 6); заполнить `invoice_vat_note`; папка резервных копий PIM на хостинге (`pim_backup_dir` вне webroot); ротация ключа PL-3; история себестоимости без дат. Следующий этап 5.2 — только по команде владельца.
+
+<!-- STAGE5_HANDOFF_END -->
 
 <!-- STAGE4_PROGRESS_BEGIN -->
 

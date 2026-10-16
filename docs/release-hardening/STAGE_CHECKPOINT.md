@@ -1,6 +1,34 @@
 # STAGE CHECKPOINT — история контрольных точек
 
-> Актуальный checkpoint — этап 4.1, затем этап 4 (CRM), затем этап 3 (RC1). Блоки этапа 2-B и ранее ниже — история.
+> Актуальный checkpoint — этап 5, затем этап 4.1, затем этап 4 (CRM), затем этап 3 (RC1). Блоки этапа 2-B и ранее ниже — история.
+
+<!-- STAGE5_CHECKPOINT_BEGIN -->
+
+## Глобальный этап 5 — PIM, PDF-рахунок, себестоимость из PIM, D-65, SEO, checkpoint 2026-10-16
+
+Статус: **GO этапа 5** при зелёном CI на SHA checkpoint-коммита (SHA и номер CI — в аннотации тега `rubizh-stage-5-verified`). Существующие теги не двигались. Production — **NO-GO**. Merge не выполнялся. Этап 5.2 (импорт поставщиков 5-B) не начат.
+
+| Объект | SHA / тег |
+|---|---|
+| SITE | `hardening/stage-5` от `rubizh-stage-4.1-verified` (`a8c0bb3`), тег `rubizh-stage-5-verified` |
+| CRM | `614a044cbe710c59d296ccc6534afc8fa58dd923` (`hardening/stage-5`, remote `ci`), тег `crm-stage-5-verified`; закреплён в `.github/workflows/ci.yml` |
+| PIM | `55e0432` (`hardening/stage-5-pim`), тег `pim-stage-5-verified`; 711/711 тестов |
+
+| Пункт | Статус | Тесты |
+|---|---|---|
+| 5-1 D-65 бронезахист по фиксированной цене | FIXED | `stage5-armor`, `pricing-policy` |
+| 5-2 себестоимость из PIM (`api/pim/costs`, только pim_key, OWNER/ACCOUNTANT) | DONE | `stage5-pim-costs` |
+| 5-3 PDF-рахунок ФОП (сайт, кабинет, CRM) | DONE | `stage5-invoice-pdf` |
+| 5-4 PIM: freshHours 36, резервная копия на SITE (ротация 14), PIMC-P2/P3/P4/C1, ajv, ротация pim_key | DONE | PIM 711/711, `stage5-pim-backup`, `stage5-pim-key` |
+| 5-5 SEO: страницы групп `/rozdil/<slug>`, robots.txt, image sitemap, JSON-LD, карточка без JS, описания категорий | DONE | `stage5-seo`, `stage41-site` |
+| 5-6 CRM-5.1 | FIXED (корень: запрос Staff API, начатый во время ухода со страницы; CRM 614a044) | `crm-stage4-matrix` (без исключения), `stage5-crm51-webkit` |
+| 5-7 лимит запросов к банку на payment-return, телефон менеджера из настроек | FIXED | `stage5-payment-return` |
+
+Quality gate: полная регрессия — CI на Linux (решение владельца; CI 38942879087 на `45dc356` — success; локальный полный прогон на macOS прерван по решению владельца: 440 ok, единственный not ok — #49 из-за сети); #49 отдельно с `RZ_DISABLE_CURL=1` — ok; npm audit 0 (SITE, CRM, PIM); gitleaks 0; финальный security-reviewer — PASS. Решение владельца S5-02: ИИ-краулерам публичные страницы разрешены, как сейчас.
+
+Замеры (от сети, заряд 42–43 %, M2, macOS 26.3.1, MariaDB 11.4.13, синтетическая фикстура, 3 прогона, медиана; код выполнения на `45dc356` тот же, что на `d8fcbf0`): `/rozdil` 7.5 мс, категория 8.6 мс, главная 7.5 мс, sitemap с изображениями 5.5 мс, товар 6.8 мс, PDF-рахунок 60 строк 6.4 мс (37 КБ).
+
+<!-- STAGE5_CHECKPOINT_END -->
 
 <!-- STAGE41_CHECKPOINT_BEGIN -->
 
