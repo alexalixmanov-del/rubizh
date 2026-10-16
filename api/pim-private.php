@@ -35,7 +35,8 @@ function pimPrivateCostsHandle(PDO $db,string $raw): array {
     $exists=$db->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='rubizh_crm_sku_costs'")->fetchColumn();
     if(!(int)$exists)throw new PimPrivateRejected('CRM_SCHEMA_MISSING',409);
     // A delayed or replayed older batch never overwrites newer costs (review of stage 5).
-    $at=json_decode($raw,true)['generated_at'];
+    // Compared as one fixed-width UTC form (milliseconds always present), so «…:05Z» and «…:05.123Z» order correctly.
+    $g=json_decode($raw,true)['generated_at'];preg_match('/^(.{19})(?:\.(\d{1,3}))?Z$/',$g,$m);$at=$m[1].'.'.str_pad($m[2]??'',3,'0').'Z';
     $db->beginTransaction();
     try{
         $last=$db->query("SELECT v FROM meta WHERE k='pim_costs_generated_at' FOR UPDATE")->fetchColumn();
