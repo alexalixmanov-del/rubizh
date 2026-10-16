@@ -15,7 +15,9 @@ function shopOrderContact(array $contact): array {
     $brigade=shopDonationTarget($contact['brigade']??'');
     $donationChannel=customerField($contact,'donation_channel',12)?:'viber';if(!in_array($donationChannel,['viber','telegram'],true))throw new RuntimeException('Оберіть Viber або Telegram.');
     $donationPhone=preg_replace('/\D/','',customerField($contact,'donation_phone',30))?:$phone;if(preg_match('/^0\d{9}$/D',$donationPhone))$donationPhone='38'.$donationPhone;if(!preg_match('/^380\d{9}$/D',$donationPhone))throw new RuntimeException('Перевірте номер для скріна донату.');
-    return ['name'=>$name,'phone_raw'=>$phoneRaw,'phone'=>$phone,'email'=>$email,'city'=>$city,'address'=>$address,'type'=>$type,'comment'=>$comment,'recipient'=>$recipient,'brigade'=>$brigade,'donation_channel'=>$donationChannel,'donation_phone'=>$donationPhone];
+    // 5-3: optional payer requisites for the invoice PDF (stored only for invoice orders).
+    require_once __DIR__.'/invoice-pdf.php';$payer=shopInvoicePayer($contact);
+    return ['payer'=>$payer,'name'=>$name,'phone_raw'=>$phoneRaw,'phone'=>$phone,'email'=>$email,'city'=>$city,'address'=>$address,'type'=>$type,'comment'=>$comment,'recipient'=>$recipient,'brigade'=>$brigade,'donation_channel'=>$donationChannel,'donation_phone'=>$donationPhone];
 }
 
 /**
@@ -43,6 +45,7 @@ function shopCreateOrder(PDO $db,array $lines,array $c,array $delivery,string $p
         foreach($raw as $lineNo=>$line)$fulfillment->execute([$id,$lineNo,$line['product_id'],$line['sku'],$line['qty'],$line['fulfillment_supplier'],$lineAmounts[$lineNo],$line['sale_unit']]);
         if(($opts['owner']??null)!==null)$db->prepare('INSERT INTO rubizh_account_orders(order_id,customer_id) VALUES(?,?)')->execute([$id,$opts['owner']]);
         $contact=['name'=>$c['name'],'phone_raw'=>$c['phone_raw'],'phone_normalized'=>'+'.$c['phone'],'phone'=>'+'.$c['phone'],'email'=>$c['email'],'recipient'=>$c['recipient'],'city'=>$delivery['city'],'address'=>$delivery['address'],'delivery_type'=>$c['type'],'comment'=>$c['comment'],'payment'=>$pay,'promo_code'=>$promo,'catalog_version'=>$quote['catalog_version'],'request_state'=>count(array_filter($raw,fn($l)=>$l['request_state']==='order_on_request'))?'order_on_request':'stock_check','np_delivery'=>$delivery,'shipping_estimate'=>false,'shipping_paid_to_carrier'=>true,'brigade'=>$c['brigade'],'supplier_articles'=>catalog_order_articles($db,$calc['lines']),'donation_channel'=>$c['donation_channel'],'donation_phone'=>'+'.$c['donation_phone'],'donation_percent'=>3,'donation_amount'=>shopDonationAmount($total),'offer_version'=>'2026-10-07','accepted_at'=>gmdate('c')];
+        if($pay==='invoice')$contact+=$c['payer']??[];
         if($channel!=='web')$contact+=['channel'=>$channel,'created_by_staff'=>$opts['staff']??null];
         if(!empty($decision['confirmation_reason']))$contact['confirmation_reason']=$decision['confirmation_reason'];
         $db->prepare('INSERT INTO rubizh_order_details(order_id,contact_json,subtotal,discount_amount,shipping_amount) VALUES(?,?,?,?,?)')->execute([$id,json_encode($contact,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),$calc['subtotal'],$discount,$shipping]);

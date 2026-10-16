@@ -41,7 +41,7 @@ test('D-65: an order placed before D-65 keeps its stored armor kit price on re-v
 test('D-65: the buyer is told why armor is retail',()=>run(`check(str_contains(shopKitExplanation(compose([kl('helmet','head'),kl('plate','armor')])),'Бронезахист продається за фіксованою ціною'));`));
 
 test('D-65 K6: the storefront kit calculation shows exactly what the server charges',()=>{
- const src=readFileSync(path.join(root,'assets/shop-client.2026101101.js'),'utf8');
+ const src=readFileSync(path.join(root,'assets/shop-client.2026101601.js'),'utf8');
  // The kit calculation is a pure function of rows (St); evaluate it with the helpers it needs.
  const start=src.indexOf('St = (t, e, ready) => {'),end=src.indexOf('}, vt = t =>',start);assert.ok(start>0&&end>start,'kit calculation found');
  const helper=src.match(/function storeKitFixedPrice\(.*\n/);assert.ok(helper,'storeKitFixedPrice helper exists');

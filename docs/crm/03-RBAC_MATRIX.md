@@ -32,6 +32,7 @@
 | `payment.view` | ✓ | ✓ | — | — | ✓ |
 | `payment.invoice.create` | ✓ | ✓ | — | — | — |
 | `payment.invoice.accept` | ✓ | — | — | — | ✓ |
+| `order.invoice.pdf` | ✓ | ✓ | — | — | ✓ |
 | `payment.review` | ✓ | — | — | — | — |
 | `payment.manual_reconcile` | ✓ | — | — | — | — |
 | `payment.refund.execute` | ✓ | — | — | — | — |
@@ -124,6 +125,7 @@
 | POST | `/orders/{id}/delivery` | `order.delivery.edit` |  | ✓ | ✓ | 200 | 200 | 403 | 403 | 403 |
 | POST | `/orders/{id}/note` | `note.create` |  |  | ✓ | 200 | 200 | 200 | 200 | 403 |
 | POST | `/orders/{id}/shipments` | `shipment.manage` |  | ✓ | ✓ | 200 | 200 | 200 | 403 | 403 |
+| GET | `/orders/{id}/invoice-pdf` | `order.invoice.pdf` |  |  |  | 200 | 200 | 403 | 403 | 200 |
 | POST | `/orders/{id}/accept-invoice-payment` | `payment.invoice.accept` | ↻ | ✓ | ✓ | 200 | 403 | 403 | 403 | 200 |
 | POST | `/orders/{id}/reconcile-not-created` | `payment.manual_reconcile` | ↻ | ✓ | ✓ | 200 | 403 | 403 | 403 | 403 |
 | POST | `/orders/{id}/manual-reconcile` | `payment.manual_reconcile` | ↻ | ✓ | ✓ | 200 | 403 | 403 | 403 | 403 |

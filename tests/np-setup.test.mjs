@@ -144,7 +144,7 @@ test('LOG01: transient read outages save one real checkout with manual address; 
  }finally{s.stop();}
 });
 test('Only current directory 503 enables free text, and input edits preserve no verified refs',async()=>{
- const source=readFileSync(path.join(root,'assets/shop-client.2026101101.js'),'utf8');
+ const source=readFileSync(path.join(root,readFileSync(path.join(root,'index.html'),'utf8').match(/src="\/(assets\/shop-client\.[^"?]+\.js)/)[1]),'utf8');
  function method(name,context){const from=source.lastIndexOf('\n        '+name+'=')+('\n        '+name+'=').length;const next=source.slice(from).search(/\n        [a-zA-Z_]\w*[=(]/);return runInNewContext('(function(){return ('+source.slice(from,from+next).trim().replace(/;$/,'')+');})',{setTimeout,clearTimeout,document:{querySelector:()=>null},storeCheckoutPay:()=> 'invoice',storeAttemptKey:()=> 'fixture-key'}).call(context);}
  for(const status of [503,400,429,401,undefined]){const c={state:{npEnabled:true,npManual:true,npCityRef:'',delivery:'np',cityQ:'Київ',pointQ:'',npCities:[]},setState(p){Object.assign(this.state,p);},storeRequest:async()=>{throw Object.assign(new Error('fixture'),{status});}};
   c.npSearch=method('npSearch',c);c.npSearch('cities','Київ');await new Promise(resolve=>setTimeout(resolve,320));assert.equal(c.state.npManual===true,status===503,String(status));

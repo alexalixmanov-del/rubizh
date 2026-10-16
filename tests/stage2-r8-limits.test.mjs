@@ -46,7 +46,7 @@ test('R8: account session soft ceiling issues a usable challenge; hard ceiling s
 });
 test('R8: active storefront JavaScript sends GET proof header and refreshes production customer session',async()=>{
  const {readFileSync}=await import('node:fs');const {runInNewContext}=await import('node:vm');const {webcrypto}=await import('node:crypto');
- const source=readFileSync(root+'/assets/shop-client.2026101101.js','utf8');const field=name=>{const a=source.indexOf('        '+name+'=');assert.ok(a>=0);return source.slice(a,source.indexOf('\n        };',a)+11);};
+ const source=readFileSync(root+'/'+readFileSync(root+'/index.html','utf8').match(/src="\/(assets\/shop-client\.[^"?]+\.js)/)[1],'utf8');const field=name=>{const a=source.indexOf('        '+name+'=');assert.ok(a>=0);return source.slice(a,source.indexOf('\n        };',a)+11);};
  const requests=[];let challenged=false;const nonce='a'.repeat(32);
  const context={AbortController,setTimeout,clearTimeout,TextEncoder,window:{location:{hostname:'rubizh.shop'},crypto:webcrypto},crypto:webcrypto,fetch:async(url,options)=>{
   requests.push([url,options]);if(url==='/auth/session.php')return {ok:true,json:async()=>({ok:true,authed:true,email:'fixture@test.invalid'})};

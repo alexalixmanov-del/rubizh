@@ -1,0 +1,2 @@
+# 5-3: invoice fonts are read by shop/invoice-pdf.php only; never served over HTTP.
+Require all denied

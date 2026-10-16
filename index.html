@@ -10,7 +10,7 @@
 <script defer src="/assets/react-dom.c5c970a9cf36.js"></script>
 <script defer src="/assets/category-directory.2026100802.js"></script>
 <script defer src="/assets/pim-v3-product.2026101101.js?v=2026101101"></script>
-<script defer src="/assets/shop-client.2026101101.js?v=2026101604"></script>
+<script defer src="/assets/shop-client.2026101601.js"></script>
 <script defer src="/assets/store-runtime.4b6bbf46ca4c.js"></script>
 
 <link rel="icon" href="/favicon.ico?v=2" sizes="any">
@@ -1116,6 +1116,15 @@
                 </div>
               </sc-for>
             </div>
+            <sc-if value="{{ payInvoice }}" hint-placeholder-val="{{ false }}">
+              <fieldset data-payer-fields="1" style="border:0;margin:14px 0 0;padding:0;display:flex;flex-direction:column;gap:10px">
+                <legend style="color:var(--legacy-d3d9cf);font-size:14px;margin-bottom:4px">Дані платника для рахунку (необов’язково)</legend>
+                <label style="display:block;color:var(--legacy-99a398);font-size:13px">Платник — назва організації або ПІБ ФОП<input name="payer_name" maxlength="200" autocomplete="organization" value="{{ payerName }}" sc-camel-on-input="{{ onPayerName }}" aria-describedby="payer-help" style="width:100%;box-sizing:border-box;margin-top:6px;background:var(--legacy-0f120f);border:1px solid var(--legacy-2a322b);color:var(--legacy-edefea);padding:12px;font-size:16px;min-height:44px"></label>
+                <label style="display:block;color:var(--legacy-99a398);font-size:13px">ЄДРПОУ або РНОКПП<input name="payer_code" inputmode="numeric" maxlength="12" value="{{ payerCode }}" sc-camel-on-input="{{ onPayerCode }}" style="width:100%;box-sizing:border-box;margin-top:6px;background:var(--legacy-0f120f);border:1px solid var(--legacy-2a322b);color:var(--legacy-edefea);padding:12px;font-size:16px;min-height:44px"></label>
+                <label style="display:block;color:var(--legacy-99a398);font-size:13px">Адреса платника<input name="payer_address" maxlength="240" autocomplete="street-address" value="{{ payerAddress }}" sc-camel-on-input="{{ onPayerAddress }}" style="width:100%;box-sizing:border-box;margin-top:6px;background:var(--legacy-0f120f);border:1px solid var(--legacy-2a322b);color:var(--legacy-edefea);padding:12px;font-size:16px;min-height:44px"></label>
+                <p id="payer-help" style="margin:0;color:var(--legacy-99a398);font-size:12.5px;line-height:1.5">Без прізвищ військових і без номера військової частини. Ці дані потраплять лише в PDF-рахунок.</p>
+              </fieldset>
+            </sc-if>
           </div>
         </div>
 

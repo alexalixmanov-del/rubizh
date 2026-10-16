@@ -13,6 +13,7 @@
   },
   "devDependencies": {
     "axe-core": "4.10.2",
+    "pdfjs-dist": "6.3.289",
     "playwright": "1.62.1"
   }
 }

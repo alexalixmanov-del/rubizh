@@ -91,7 +91,7 @@ test('D-52: unknown stock quantity — ≤3 pcs per SKU pay now, more waits for 
 
 // ---- D-53: one meaning everywhere — in stock: pay at once; on request / large quantity: manager confirms first ----
 test('D-53: storefront, FAQ, offer and e-mail texts match the payment process; product card shipment line follows PIM data',{skip,timeout:240000},async()=>{
- const html=readFileSync(root+'/index.html','utf8')+readFileSync(root+'/shop/receipt-view.php','utf8'),bundle=readFileSync(root+'/assets/shop-client.2026101101.js','utf8'),offer=readFileSync(root+'/offer.html','utf8'),mail=readFileSync(root+'/auth/email-templates.php','utf8');
+ const html=readFileSync(root+'/index.html','utf8')+readFileSync(root+'/shop/receipt-view.php','utf8'),bundle=readFileSync(root+'/'+readFileSync(root+'/index.html','utf8').match(/src="\/(assets\/shop-client\.[^"?]+\.js)/)[1],'utf8'),offer=readFileSync(root+'/offer.html','utf8'),mail=readFileSync(root+'/auth/email-templates.php','utf8');
  for(const [name,src] of [['index.html',html],['bundle',bundle],['offer',offer],['mail',mail]]){
   assert.doesNotMatch(src,/Наявність (і розмір )?підтверджуємо перед оплатою/,name);assert.doesNotMatch(src,/Перевірка перед оплатою/,name);assert.doesNotMatch(src,/Уточнимо після підтвердження/,name);
   assert.doesNotMatch(src,/Оплата після підтвердження наявності — 100%/,name);assert.doesNotMatch(src,/"Підтверджуємо перед оплатою"|"Відправка після підтвердження"|Наявність підтверджено менеджером\. Можна оплатити/,name);assert.doesNotMatch(src,/Наявність і комплектацію підтверджено менеджером/,name);
@@ -132,7 +132,7 @@ test('D-54: wholesale request is stored on the server, validated, idempotent and
   const manager=await s.login('MANAGER');const list=await manager.get('/wholesale');assert.equal(list.status,200);assert.equal(list.data.data.rows.length,2);assert.ok(!('request_id' in list.data.data.rows[0])&&!('payload_hash' in list.data.data.rows[0]));
   const upd=await manager.send('/wholesale/'+row.id,{state:'IN_PROGRESS',note:'Подзвонив'});assert.equal(upd.status,200,JSON.stringify(upd.data));assert.equal(upd.data.data.state,'IN_PROGRESS');
   assert.equal((await (await s.login('WAREHOUSE')).get('/wholesale')).status,403,'warehouse has no access');
-  const html=readFileSync(root+'/index.html','utf8'),bundle=readFileSync(root+'/assets/shop-client.2026101101.js','utf8');
+  const html=readFileSync(root+'/index.html','utf8'),bundle=readFileSync(root+'/'+readFileSync(root+'/index.html','utf8').match(/src="\/(assets\/shop-client\.[^"?]+\.js)/)[1],'utf8');
   assert.match(html,/placeholder="Вкажіть позиції та розміри, без прізвищ"/);assert.doesNotMatch(html,/Файл можна прикріпити до підготовленого листа/);assert.doesNotMatch(bundle,/Оптовий запит РУБІЖ/,'no mailto for the wholesale form');
   const page=await browser.newPage({viewport:{width:390,height:844}});const nav=[];page.on('request',r=>{if(r.url().startsWith('mailto:'))nav.push(r.url());});
   await page.goto(s.base+'/');await page.locator('#b2b-form').scrollIntoViewIfNeeded();
@@ -148,7 +148,7 @@ test('D-54: wholesale request is stored on the server, validated, idempotent and
 });
 
 test('A5: no cash-on-delivery wording or branches in storefront, receipt, cabinet and e-mail (legacy rows show a neutral status)',()=>{
- const files=['assets/shop-client.2026101101.js','index.html','shop/customer-states.php','auth/account.php','auth/email-templates.php','auth/order-detail.php','shop/receipt-view.php','offer.html'];
+ const files=[readFileSync(root+'/index.html','utf8').match(/src="\/(assets\/shop-client\.[^"?]+\.js)/)[1],'index.html','shop/customer-states.php','auth/account.php','auth/email-templates.php','auth/order-detail.php','shop/receipt-view.php','offer.html'];
  for(const f of files){const src=readFileSync(root+'/'+f,'utf8');assert.doesNotMatch(src,/Оплата при отриманні|'При отриманні'|Післяплата|накладен|післяопл/i,f);assert.doesNotMatch(src,/payment_method[!=]==['"]cod['"]|npCodEnabled/,f);}
  const out=php(`require '${root}/shop/customer-states.php';echo json_encode(shopCustomerStates(['status'=>'new','payment_status'=>'cod']),JSON_UNESCAPED_UNICODE);`).stdout;assert.match(out,/Уточнюється/);assert.doesNotMatch(out,/отриманні/);
 });

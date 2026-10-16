@@ -48,6 +48,6 @@ test('production build: no «Післяплата»/«накладен»/«пі�
  if(existsSync(crm))for(const f of walk(crm))files['crm/'+f.slice(crm.length+1)]=readFileSync(f,'utf8');
  const bad=[];for(const [name,text] of Object.entries(files))for(const re of [/Післяплата/u,/накладен/iu,/післяопл/iu,/DEMO-/u,/example\.invalid/iu])if(re.test(text))bad.push(name+' '+re);
  assert.deepEqual(bad,[]);
- assert.ok(files['rubizh/assets/shop-client.2026101101.js'],'the live storefront bundle ships');
+ const liveBundle=files['rubizh/index.html'].match(/src="\/(assets\/shop-client\.[^"?]+\.js)/)[1];assert.ok(files['rubizh/'+liveBundle],'the live storefront bundle ships');
  for(const n of Object.keys(files).filter(n=>/^rubizh\/assets\/[^/]+\.(js|css)$/.test(n))){const base=n.split('/').pop();assert.ok(Object.entries(files).some(([k,t])=>k!==n&&t.includes(base)),base+' is referenced by a shipped file');}
 });

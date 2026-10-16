@@ -24,6 +24,7 @@ function crmHandle(PDO $db,?array $actor,array $route,array $p,array $b,array $q
   'orders.create'=>crmPhoneOrder($db,$actor,$b,$key),
   'orders.bulk.assign'=>crmBulkAssign($db,$actor,$b),
   'orders.view'=>crmOrderCard($db,$id,$actor),
+  'orders.invoice.pdf'=>crmInvoicePdf($db,$id,$actor),
   'orders.assign'=>crmAssign4($db,$actor,$id,$b),
   'orders.confirm','orders.resolve_item'=>crmConfirm4($db,$actor,$id,$b),
   'orders.line.stock'=>crmMutate($db,$actor,$id,$b,'order.line_stock',fn()=>shopConfirmLineStock($db,$id,$line,$actor['id'],$b['status'],(string)($b['note']??'')),true,(string)($b['note']??'')),
@@ -95,7 +96,27 @@ function crmOrderCardExtras(PDO $db,array $o,array $actor): array {
  $o['tasks']=crmQuery($db,'SELECT t.*,u.name assignee_name FROM rubizh_crm_tasks t LEFT JOIN rubizh_staff_users u ON u.id=t.assignee_id WHERE t.order_id=? ORDER BY t.state=\'DONE\',t.due_at IS NULL,t.due_at,t.id LIMIT 50',[$id]);
  foreach($o['tasks'] as &$t){$t['id']=(int)$t['id'];$t['order_id']=$t['order_id']===null?null:(int)$t['order_id'];$t['version']=(int)$t['version'];}unset($t);
  $o['notes']??=crmNotes($db,'order',(string)$id);
+ $o['invoice_pdf']=crmInvoicePdfState($db,$id,$actor);
  return $o;
+}
+/** 5-3: whether the invoice PDF can be downloaded (null for roles without order.invoice.pdf). */
+function crmInvoicePdfState(PDO $db,int $id,array $actor): ?array {
+ if(!crmCan($actor,'order.invoice.pdf'))return null;require_once __DIR__.'/../shop/invoice-pdf.php';
+ try{shopInvoiceData($db,$id);return ['available'=>true,'reason'=>null];}
+ catch(ShopInvoiceUnavailable $e){$r=$e->getMessage();return ['available'=>false,'reason'=>$r,'message'=>crmInvoicePdfMessage($r,$actor)];}
+}
+function crmInvoicePdfMessage(string $reason,array $actor): string {
+ return match($reason){'VAT_NOTE_MISSING'=>$actor['role']==='OWNER'?'Заповніть статус ПДВ у налаштуваннях':'Рахунок недоступний: власник ще не заповнив статус ПДВ у налаштуваннях.',
+  'NOT_INVOICE'=>'Замовлення оплачується карткою — рахунок ФОП не потрібен.','NOT_READY'=>'Рахунок буде доступний після підтвердження замовлення.','CANCELLED'=>'Замовлення скасовано.',default=>'Рахунок недоступний.'};
+}
+/** GET /orders/{id}/invoice-pdf — the PDF itself; the order must be visible to the actor (crmOrder checks it). */
+function crmInvoicePdf(PDO $db,int $id,array $actor): never {
+ crmOrder($db,$id,$actor);require_once __DIR__.'/../shop/invoice-pdf.php';
+ try{$data=shopInvoiceData($db,$id);$pdf=shopInvoicePdf($data);}
+ catch(ShopInvoiceUnavailable $e){throw new CrmError($e->getMessage(),409,['message'=>crmInvoicePdfMessage($e->getMessage(),$actor)]);}
+ crmAudit($db,$actor,'order',(string)$id,'order.invoice_pdf',[],['number'=>$data['number']]);
+ header('Content-Type: application/pdf');header('Content-Disposition: attachment; filename="rakhunok-'.preg_replace('/[^A-Za-z0-9-]/','',$data['number']).'.pdf"');header('Content-Length: '.strlen($pdf));
+ http_response_code(200);echo $pdf;exit;
 }
 
 function crmAssign4(PDO $db,array $actor,int $id,array $b): array {
