@@ -1421,8 +1421,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
             const e = new URLSearchParams;
             return "product" === t.screen && e.set("id", t.current), "guide" === t.screen && e.set("id", t.guide),
             "page" === t.screen && e.set("id", t.page), "catalog" === t.screen && (t.cpath && t.cpath.length && e.set("path", JSON.stringify(t.cpath)),
-            t.sq && e.set("q", t.sq), t.quick && e.set("quick", t.quick), t.roots && t.roots.length && (e.set("roots", JSON.stringify(t.roots)),
-            e.set("title", t.rootsTitle || ""))), window.location.pathname + window.location.search + ("home" === t.screen ? "" : "#" + t.screen + (e.toString() ? "?" + e.toString() : ""));
+            t.sq && e.set("q", t.sq), t.quick && e.set("quick", t.quick), /* D-62: the multi-root filter has no address any more (groups live on /categories) */ !1), window.location.pathname + window.location.search + ("home" === t.screen ? "" : "#" + t.screen + (e.toString() ? "?" + e.toString() : ""));
         };
         historyReadLegacyUrl=() => {
             const t = window.location.hash.slice(1), e = t.indexOf("?"), i = e < 0 ? t : t.slice(0, e), s = new URLSearchParams(e < 0 ? "" : t.slice(e + 1));
@@ -5361,7 +5360,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                 goB2BCalc: () => {
                     this.setState({
                         b2bSent: !1
-                    }), this.goB2BForm();
+                    }), this.goB2BForm(), setTimeout(() => document.querySelector("#b2b-form input:not([name=rz_check])")?.focus(), 120);
                 },
                 calcHistory: [ [ "12 комплектів «Зима / Штурм»", "19.09.2026", 438e3, "Погоджено" ], [ "40 × бойова сорочка UBACS", "02.09.2026", 94e3, "Оплачено" ], [ "6 комплектів «Базовий літній»", "24.09.2026", 58300, "У роботі" ] ].map(([t, e, i, s]) => ({
                     title: t,
@@ -6140,7 +6139,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                 });
             }
         };
-        top5Vm=()=>Dt.map(c=>{const count=c.roots.reduce((n,r)=>n+Number(this._storeCategories?.find(x=>x.path===r)?.product_count||0),0);const params=new URLSearchParams({roots:JSON.stringify(c.roots)});/* D-62: a group of several roots opens its section on /categories (clean address, no ?roots=). */const href=c.roots.length===1?'/catalog/'+(this._storeCategories?.find(x=>x.path===c.roots[0])?.url_path||w(c.roots[0])):'/categories#ac-'+w(c.roots[0]);return {title:c.title,sub:'',count:x(count,'товар','товари','товарів'),aria:c.title,href,hasImg:!!c.img,imgStyle:{position:'absolute',inset:0,backgroundImage:`url('${c.img}')`,backgroundSize:'cover',backgroundPosition:'center'},open:ev=>{if(ev?.metaKey||ev?.ctrlKey||ev?.shiftKey||ev?.button>0)return;ev?.preventDefault?.();c.roots.length===1?this.goRoots(c):this.goAllCats(c.roots[0]);}};});
+        top5Vm=()=>Dt.map(c=>{const count=c.roots.reduce((n,r)=>n+Number(this._storeCategories?.find(x=>x.path===r)?.product_count||0),0);/* D-62: a group of several roots opens its section on /categories (clean address, no ?roots=). */const href=c.roots.length===1?'/catalog/'+(this._storeCategories?.find(x=>x.path===c.roots[0])?.url_path||w(c.roots[0])):'/categories#ac-'+w(c.roots[0]);return {title:c.title,sub:'',count:x(count,'товар','товари','товарів'),aria:c.title,href,hasImg:!!c.img,imgStyle:{position:'absolute',inset:0,backgroundImage:`url('${c.img}')`,backgroundSize:'cover',backgroundPosition:'center'},open:ev=>{if(ev?.metaKey||ev?.ctrlKey||ev?.shiftKey||ev?.button>0)return;ev?.preventDefault?.();c.roots.length===1?this.goRoots(c):this.goAllCats(c.roots[0]);}};});
         storeLoadRecommendations=async()=>{if(this._recommendations)return;this._recommendations=true;try{const j=await this.storeRequest('/shop/catalog.php?action=storefront');this.storeCache(j.products||[]);this.setState({storePreparedKits:j.kits||[],storeKitsReady:true});}catch(e){this._recommendations=false;this.setState({storeKitsReady:true});}};
         buildKit=cfg=>{const season=cfg.season||'Демісезон',have=cfg.have||[],size=cfg.formSize==='S–M'?'M':cfg.formSize==='XL–XXL'?'XL':'L',num={M:'48',L:'50',XL:'54'}[size],used=new Set(),lines=[],miss={},names=[],budget=cfg.budget>=61000?Infinity:(Number(cfg.budget)||Infinity);let sum=0;const add=(slot,test,prefs=[])=>{const candidates=Z.filter(p=>storeKitEligible(p)&&storeKitPrimary(p)&&!used.has(p.id)&&storeSlot(p)===slot&&storeSeasonOK(p,season)&&(!test||test(p))).sort((a,b)=>(storePalette(b.camo)===storePalette(cfg.camo)?1:0)-(storePalette(a.camo)===storePalette(cfg.camo)?1:0)||a.price-b.price);for(const p of candidates){const keys=Object.keys(p.variants).filter(k=>this.avail(p,k)!=='out'&&!p.variants[k].size_unconfirmed),k=prefs.length?keys.find(k=>prefs.includes(p.variants[k].size_display)||prefs.includes(p.variants[k].size_native)):keys.find(k=>/Один розмір|універс/i.test(p.variants[k].size_display))||keys[0];if(!k||sum+p.variants[k].price>budget)continue;used.add(p.id);sum+=p.variants[k].price;lines.push(this.kitLine(slot,p.id,k));names.push(p.name);delete miss[slot];return p;}miss[slot]=true;return null;};if(!have.includes('Форма')){if(season==='Зима'){add('body',p=>storeRole(p)==='thermal',[size,num]);add('body',p=>['fleece','outer'].includes(storeRole(p)),[size,num]);}else add('body',p=>storeRole(p)==='ubacs'||/сороч|костюм/i.test(p.name),[size,num]);add('legs',p=>storeRole(p)==='pants',[size,num]);}if(!have.includes('Берці'))add('boots',null,[cfg.shoe||'43']);if(!have.includes('Аптечка'))add('med',p=>storeRole(p)==='ifak'||/турнікет|джгут/i.test(p.name));if(!have.includes('Плитоноска з плитами')&&['Штурм','Розвідка'].includes(cfg.spec))add('armor',p=>storeRole(p)==='protection'&&storeHasPlates(p));if(!have.includes('Шолом')&&['Штурм','Розвідка','Оператор БпЛА'].includes(cfg.spec))add('head',p=>/шолом|каск/i.test(p.name));else add('head',p=>season==='Зима'?/шапк|балаклав/i.test(p.name):/кепк|панам|бейсбол/i.test(p.name));add('small',p=>storeRole(p)==='gloves',[size,num]);if(!have.includes('Рюкзак')&&['Штурм','Розвідка','Медик','Оператор БпЛА'].includes(cfg.spec))add('gear',p=>storeRole(p)==='backpack');return {lines,miss,names,sum};};
         storeImage=(row,p)=>{row.photoLoading='lazy';row.photoPriority='auto';if(!p)return;const cover=storeCardCover(p),urls=cover===''?[]:[...new Set([cover].concat((p.photoData||[]).flatMap(x=>[x.thumb,x.url]),p.photos||[]).filter(Boolean))];row.thumb=urls[0]||'';row.photo=urls[0]||'';row.hasThumb=row.hasPhoto=!!urls.length;row.noPhoto=!urls.length;row.photoErr=ev=>{const img=ev.currentTarget,idx=Number(img.dataset.tryIndex||0)+1;img.dataset.tryIndex=idx;if(urls[idx])img.src=urls[idx];else img.style.visibility='hidden';};};
@@ -7203,7 +7202,8 @@ this.setState(s=>{const cart=s.cart.map(l=>({...l}));for(const a of added){const
             t.notifyEmail = e.notifyEmail || "", t.b2bConsent = !!e.b2bConsent, t.b2bBusy = !!e.b2bBusy;
             for (const e of [ "b2bEmail", "b2bQty", "b2bText", "b2bName", "b2bPhone", "b2bHp", "notifyEmail" ]) t["on" + e[0].toUpperCase() + e.slice(1)] = t => this.setState({
                 [e]: t.target.value,
-                b2bSent: !1
+                b2bSent: !1,
+                b2bErr: ""
             });
             t.onB2bConsent = t => this.setState({ b2bConsent: !!t.target.checked });
             const k = (t, e) => window.location.assign("mailto:info@rubizh.shop?subject=" + encodeURIComponent(t) + "&body=" + encodeURIComponent(e));
@@ -7212,19 +7212,21 @@ this.setState(s=>{const cart=s.cart.map(l=>({...l}));for(const a of added){const
                 if (e.b2bBusy) return;
                 const types = { "Фізособа": "PERSON", "ФОП": "FOP", "ТОВ": "LLC", "Благодійний фонд": "CHARITY", "Військова частина": "MILITARY" };
                 const phone = (e.b2bPhone || "").replace(/\D/g, "");
-                if ((e.b2bName || "").trim().length < 2 || !/^(?:380\d{9}|0\d{9})$/.test(phone)) return void this.setState({ storeError: "Вкажіть ім’я та телефон у форматі +380XXXXXXXXX." });
-                if (!(e.b2bText || "").trim()) return void this.setState({ storeError: "Опишіть склад замовлення: позиції та розміри." });
-                if (!e.b2bConsent) return void this.setState({ storeError: "Потрібна згода на обробку персональних даних." });
+                const b2bFail = m => { this.setState({ b2bErr: m }); setTimeout(() => document.querySelector("[data-b2b-error]")?.focus(), 60); };
+                if ((e.b2bName || "").trim().length < 2) return void b2bFail("Вкажіть ім’я.");
+                if (!/^(?:380\d{9}|0\d{9})$/.test(phone)) return void b2bFail("Вкажіть телефон у форматі +380XXXXXXXXX.");
+                if (!(e.b2bText || "").trim()) return void b2bFail("Опишіть склад замовлення: позиції та розміри.");
+                if (!e.b2bConsent) return void b2bFail("Потрібна згода на обробку персональних даних.");
                 this._b2bRequestId = this._b2bRequestId || Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, "0")).join("");
-                this.setState({ b2bBusy: !0, storeError: "" });
+                this.setState({ b2bBusy: !0, b2bErr: "" });
                 try {
-                    const r = await this.storeRequest("/shop/wholesale-request.php", { website: e.b2bHp || "", request_id: this._b2bRequestId, name: e.b2bName || "", phone: e.b2bPhone || "", buyer_type: types[e.b2bType || "ФОП"] || "FOP", tax_id: e.invoiceTax || "", email: e.b2bEmail || "", kits: (e.b2bQty || "").trim() ? (e.b2bQty || "").trim() : null, composition: e.b2bText || "", priority: "donation" === e.bigPref ? "DONATION" : "PRICE", consent: !0 });
+                    const r = await this.storeRequest("/shop/wholesale-request.php", { rz_check: e.b2bHp || "", request_id: this._b2bRequestId, name: e.b2bName || "", phone: e.b2bPhone || "", buyer_type: types[e.b2bType || "ФОП"] || "FOP", tax_id: e.invoiceTax || "", email: e.b2bEmail || "", kits: (e.b2bQty || "").trim() ? (e.b2bQty || "").trim() : null, composition: e.b2bText || "", priority: "donation" === e.bigPref ? "DONATION" : "PRICE", consent: !0 });
                     this._b2bRequestId = null;
-                    this.setState({ b2bSent: !0, b2bBusy: !1, b2bMessage: r.message, b2bText: "", b2bQty: "" });
+                    this.setState({ b2bSent: !0, b2bBusy: !1, b2bMessage: r.message, b2bText: "", b2bQty: "", b2bErr: "" });setTimeout(() => document.querySelector("[data-b2b-thanks]")?.focus(), 60);
                 } catch (r) {
-                    this.setState({ b2bBusy: !1, storeError: r.message || "Заявку не збережено. Спробуйте ще раз." });
+                    this.setState({ b2bBusy: !1 }); b2bFail(r.message || "Заявку не збережено. Спробуйте ще раз.");
                 }
-            }, /* OD-4.6: a real form; Enter or the submit button send it, never a page reload. */t.submitB2B = ev => { ev && ev.preventDefault && ev.preventDefault(); t.sendB2B(); }, t.b2bBtnLabel = e.b2bBusy ? "Надсилаємо…" : "Надіслати запит", t.b2bSentText = e.b2bMessage || "Дякуємо, заявку прийнято. Менеджер зв’яжеться з вами протягом робочого дня.",
+            }, /* OD-4.6: a real form; Enter or the submit button send it, never a page reload. */t.submitB2B = ev => { ev && ev.preventDefault && ev.preventDefault(); t.sendB2B(); }, t.b2bBtnLabel = e.b2bBusy ? "Надсилаємо…" : "Надіслати запит", t.b2bErr = e.b2bErr || "", t.b2bSentText = e.b2bMessage || "Дякуємо, заявку прийнято. Менеджер зв’яжеться з вами протягом робочого дня.",
             t.sendNotify = () => {
                 /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.notifyEmail || "") ? (k("Наявність товару РУБІЖ", "Прошу уточнити надходження: " + s.name + "\n" + new URL("/product/" + s.slug, window.location.origin).href + "\nEmail: " + e.notifyEmail),
                 this.setState({

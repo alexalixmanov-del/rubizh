@@ -86,7 +86,7 @@ test('D-64: «кількості позицій» appears nowhere in the storefr
  const hits=files.filter(f=>{try{return /кількост[іи] (?:окремих |різних )?позиці/i.test(readFileSync(new URL(f,root),'utf8'));}catch{return false;}});
  assert.deepEqual(hits,[],'old «by the number of positions» wording');
  const sf=readFileSync(new URL('storefront.php',root),'utf8');
- const kit=sf.slice(sf.indexOf("['/kit','/kit/']"),sf.indexOf("['/kit','/kit/']")+900);
+ const at=sf.indexOf("elseif($uri==='/kit/')");assert.ok(at>0,'the /kit/ route');const kit=sf.slice(at,at+900);
  assert.match(kit,/<meta name="description" content="[^"]*Оберіть речі щонайменше з двох різних розділів — отримаєте ціну комплекту/);
  assert.match(kit,/<p>[^<]*Оберіть речі щонайменше з двох різних розділів — отримаєте ціну комплекту/);
 });
@@ -118,7 +118,7 @@ test('D-62: old /catalog?roots=[…] addresses answer 301 to the clean address (
  const r=php(code);
  assert.deepEqual(r.stdout.trim().split('\n').map(JSON.parse),['/categories#ac-bronezakhyst','/categories#ac-riukzaky-sumky-ta-bauly','/catalog/vzuttia','/categories','/categories','/categories']);
  const {readFileSync}=await import('node:fs');const sf=readFileSync(root+'storefront.php','utf8');
- assert.match(sf,/isset\(\$_GET\['roots'\]\)[^;]*shopRootsRedirect\([^;]*;[^;]*header\('Location: '\.\$[a-z]+,true,301\)/i,'storefront.php redirects ?roots= with 301');
+ const hook=sf.slice(sf.indexOf("isset($_GET['roots'])"),sf.indexOf("isset($_GET['roots'])")+400);assert.match(hook,/shopRootsRedirect\(/);assert.match(hook,/header\('Location: '\.\$to,true,301\)/,'storefront.php redirects ?roots= with 301');
  assert.doesNotMatch(readFileSync(root+'sitemap.php','utf8'),/roots=/);
 });
 test('D-62: over HTTP the old ?roots= addresses answer 301 and the clean category stays indexable',{skip:!process.env.RUBIZH_TEST_MYSQL_SOCKET,timeout:240000},async()=>{
@@ -127,7 +127,7 @@ test('D-62: over HTTP the old ?roots= addresses answer 301 and the clean categor
  try{
   const p={id:'d62-jacket',slug:'d62-jacket',canonical_category_id:'clothing_jackets',name:'Куртка D-62',brand:'QA',category:'Одяг та форма / Куртки',category_path:['Одяг та форма','Куртки'],description:'Тест.',photos:['https://img.test/a.png'],variants:[{sku:'D62-1',color:'Олива',size:'M',size_display:'M',price:1500,availability:'in',stock:2,photos:['https://img.test/a.png']}]};
   php(`define('RUBIZH_AUTH_NO_SESSION',true);require '${site.site}/auth/bootstrap.php';require_once '${site.site}/api/lib.php';save_product(db(),json_decode(${JSON.stringify(JSON.stringify(p))},true));`);
-  writeFileSync(site.site+'/router.php',`<?php $p=parse_url($_SERVER['REQUEST_URI'],PHP_URL_PATH);if($p==='/'||preg_match('~^/(?:product|catalog|categories)(?:/.*)?$~',$p)){require __DIR__.'/storefront.php';return;}return false;`);
+  writeFileSync(site.site+'/router.php',`<?php $p=parse_url($_SERVER['REQUEST_URI'],PHP_URL_PATH);if($p==='/'||preg_match('~^/(?:product|catalog|categories|kit)(?:/.*)?$~',$p)){require __DIR__.'/storefront.php';return;}return false;`);
   const get=q=>fetch(site.base+'/catalog?'+new URLSearchParams(q),{redirect:'manual'});
   let r=await get({roots:JSON.stringify(['Бронезахист','Шоломи та захист голови']),title:'Бронезахист',sort:'stock'});
   assert.equal(r.status,301);assert.equal(r.headers.get('location'),'/categories#ac-bronezakhyst');
@@ -135,6 +135,12 @@ test('D-62: over HTTP the old ?roots= addresses answer 301 and the clean categor
   const clean=await (await fetch(site.base+'/catalog/odiah-ta-forma')).text();
   assert.match(clean,/<link rel="canonical" href="https:\/\/rubizh\.shop\/catalog\/odiah-ta-forma">/);assert.doesNotMatch(clean,/noindex/);
   const cats=await (await fetch(site.base+'/categories')).text();assert.match(cats,/<link rel="canonical" href="https:\/\/rubizh\.shop\/categories">/);
+  // One address per page; a single root keeps its other filters; an array-valued roots does not break the redirect.
+  r=await fetch(site.base+'/kit',{redirect:'manual'});assert.equal(r.status,301);assert.equal(r.headers.get('location'),'/kit/');
+  const kit=await (await fetch(site.base+'/kit/')).text();const kd=(kit.match(/<meta name="description" content="([^"]*)"/)||[])[1]||'';assert.ok(kd.length<=160,'kit description ≤160: '+kd.length);assert.match(kd,/Оберіть речі щонайменше з двох різних розділів — отримаєте ціну комплекту/);
+  r=await fetch(site.base+'/categories/',{redirect:'manual'});assert.equal(r.status,301);assert.equal(r.headers.get('location'),'/categories');
+  r=await get({roots:JSON.stringify(['Одяг та форма']),sizes:'["M"]',title:'x'});assert.equal(r.status,301);assert.equal(r.headers.get('location'),'/catalog/odiah-ta-forma?sizes=%5B%22M%22%5D');
+  r=await fetch(site.base+'/catalog?roots[]=x',{redirect:'manual'});assert.equal(r.status,301);assert.equal(r.headers.get('location'),'/categories');assert.doesNotMatch(await r.text(),/Warning|Notice/);
  }finally{site.stop();}
 });
 
