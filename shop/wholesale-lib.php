@@ -20,6 +20,8 @@ function wholesaleRnokppValid(string $c): bool {
 }
 /** Validated request or InvalidArgumentException with a Ukrainian message. */
 function wholesaleValidate(array $in): array {
+    // OD-4.6: a hidden «website» field is a trap for bots; a person never fills it.
+    if(is_string($in['website']??null)&&trim($in['website'])!=='')throw new InvalidArgumentException('Заявку не прийнято. Оновіть сторінку й спробуйте ще раз.');
     $s=fn(string $k,int $max)=>is_string($in[$k]??null)?trim(preg_replace('/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/u','',$in[$k])):'';
     $name=$s('name',120);if(mb_strlen($name)<2||mb_strlen($name)>120)throw new InvalidArgumentException('Вкажіть ім’я.');
     $phone=preg_replace('/\D/','',$s('phone',30));if(preg_match('/^0\d{9}$/D',$phone))$phone='38'.$phone;if(!preg_match('/^380\d{9}$/D',$phone))throw new InvalidArgumentException('Вкажіть телефон у форматі +380XXXXXXXXX.');

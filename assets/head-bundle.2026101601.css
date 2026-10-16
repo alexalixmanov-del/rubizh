@@ -1637,3 +1637,6 @@ html body [data-card-sizes]:not(:has([data-card-size])) {display:none}
 @media (max-width:767px) {
   html body [data-card-sizes] {min-height:44px}
 }
+
+/* OD-4.6: the wholesale form is a real form; its choices are buttons (aria-pressed) that look like the former chips. */
+#b2b-form [data-b2b-choice] {background:transparent;font:inherit;text-align:left;cursor:pointer;min-height:44px}

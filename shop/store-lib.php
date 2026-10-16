@@ -69,9 +69,9 @@ function shopCsrf(array $input): void {
     if(!is_string($input['csrf'] ?? null) || !hash_equals($_SESSION['csrf'],$input['csrf']))shopJson(['ok'=>false,'error'=>'Оновіть сторінку та спробуйте ще раз.'],403);
     if(!shopRequestOriginAllowed(shopAllowedOrigins()))shopJson(['ok'=>false,'error'=>'Недозволений запит.'],403);
 }
-function shopLimit(PDO $db,string $kind,int $max,int $window=3600): void {
+function shopLimit(PDO $db,string $kind,int $max,int $window=3600,?string $identity=null): void {
     $scope=(string)($_SESSION['checkout_scope']??session_id());
-    $identity=$scope!==''?'session:'.$scope.'|device:'.rubizhDeviceIdentity():'network:'.rubizhNetworkIdentity();
+    $identity??=$scope!==''?'session:'.$scope.'|device:'.rubizhDeviceIdentity():'network:'.rubizhNetworkIdentity();
     $key=hash('sha256',$kind.'|'.$identity);$start=(int)(floor(time()/$window)*$window);
     $db->prepare('INSERT INTO rubizh_shop_limits(bucket,window_start,hits) VALUES(?,?,1) ON DUPLICATE KEY UPDATE hits=IF(window_start=VALUES(window_start),hits+1,1),window_start=VALUES(window_start)')->execute([$key,$start]);
     $q=$db->prepare('SELECT hits FROM rubizh_shop_limits WHERE bucket=?');$q->execute([$key]);if((int)$q->fetchColumn()>$max){header('Retry-After: '.max(1,$start+$window-time()));shopJson(['ok'=>false,'error'=>'Забагато запитів. Зачекайте або зверніться до менеджера.'],429);}

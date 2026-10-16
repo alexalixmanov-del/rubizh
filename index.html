@@ -10,7 +10,7 @@
 <script defer src="/assets/react-dom.c5c970a9cf36.js"></script>
 <script defer src="/assets/category-directory.2026100802.js"></script>
 <script defer src="/assets/pim-v3-product.2026101101.js?v=2026101101"></script>
-<script defer src="/assets/shop-client.2026101101.js?v=2026101602"></script>
+<script defer src="/assets/shop-client.2026101101.js?v=2026101603"></script>
 <script defer src="/assets/store-runtime.4b6bbf46ca4c.js"></script>
 
 <link rel="icon" href="/favicon.ico?v=2" sizes="any">
@@ -375,9 +375,11 @@
             </div>
             <p style="margin:0;color:var(--legacy-99a398);font-size:13.5px;line-height:1.55;text-wrap:pretty">На бронезахист, шоломи та дорогу електроніку знижки практично немає — там ціна вже мінімальна. Основна економія на формі, взутті та спорядженні.</p>
           </div>
-          <div id="b2b-form" style="flex:1 1 320px;min-width:0;display:flex;flex-direction:column;gap:10px">
-            <div style="font-family:'UAH','Oswald',sans-serif;font-size:16px;text-transform:uppercase;letter-spacing:.05em">Запит на прорахунок</div>
-            <div role="group" aria-label="Тип покупця" style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ b2bTypes }}" as="t" hint-placeholder-count="5"><div tabindex="0" role="button" sc-camel-on-click="{{ t.pick }}" style="{{ t.style }}">{{ t.t }}</div></sc-for></div>
+          <form id="b2b-form" novalidate aria-labelledby="b2b-form-title" sc-camel-on-submit="{{ submitB2B }}" style="flex:1 1 320px;min-width:0;display:flex;flex-direction:column;gap:10px;margin:0">
+            <div id="b2b-form-title" style="font-family:'UAH','Oswald',sans-serif;font-size:16px;text-transform:uppercase;letter-spacing:.05em">Запит на прорахунок</div>
+            <sc-if value="{{ b2bSent }}" hint-placeholder-val="{{ false }}"><div role="status" data-b2b-thanks="1" style="border:1px solid var(--legacy-35502f);background:var(--legacy-17241a);padding:16px;color:var(--legacy-c6d3a8);font-size:15px;line-height:1.55;display:flex;flex-direction:column;gap:12px;align-items:flex-start"><span>{{ b2bSentText }}</span><button type="button" sc-camel-on-click="{{ goB2BCalc }}" style="min-height:44px;padding:0 14px;border:1px solid var(--legacy-2a322b);background:transparent;color:var(--link);font:inherit;font-size:14px;cursor:pointer">Надіслати ще одну заявку</button></div></sc-if>
+            <sc-if value="{{ b2bNotSent }}" hint-placeholder-val="{{ true }}">
+            <div role="group" aria-label="Тип покупця" style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ b2bTypes }}" as="t" hint-placeholder-count="5"><button type="button" data-b2b-choice="1" aria-pressed="{{ t.pressed }}" sc-camel-on-click="{{ t.pick }}" style="{{ t.style }}">{{ t.t }}</button></sc-for></div>
             <input value="{{ b2bName }}" sc-camel-on-input="{{ onB2bName }}" placeholder="Ім’я" aria-label="Ім’я" autocomplete="name" required style="background:var(--legacy-0f120f);border:1px solid var(--legacy-2a322b);padding:13px;color:var(--legacy-edefea);outline:none;font-family:'IBM Plex Sans',sans-serif;font-size:14px">
             <input value="{{ b2bPhone }}" sc-camel-on-input="{{ onB2bPhone }}" placeholder="Телефон +380" aria-label="Телефон" autocomplete="tel" inputmode="tel" type="tel" required style="background:var(--legacy-0f120f);border:1px solid var(--legacy-2a322b);padding:13px;color:var(--legacy-edefea);outline:none;font-family:'IBM Plex Sans',sans-serif;font-size:14px">
             <input value="{{ invoiceTax }}" sc-camel-on-input="{{ onInvoiceTax }}" placeholder="ЄДРПОУ або ІПН (необов’язково)" aria-label="ЄДРПОУ або ІПН" inputmode="numeric" style="background:var(--legacy-0f120f);border:1px solid var(--legacy-2a322b);padding:13px;color:var(--legacy-edefea);outline:none;font-family:'IBM Plex Sans',sans-serif;font-size:14px">
@@ -388,13 +390,14 @@
             <div style="color:var(--legacy-c7cec3);font-size:13.5px;margin-top:4px">Що для вас важливіше</div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:8px">
               <sc-for list="{{ prefCards }}" as="c" hint-placeholder-count="2">
-                <div tabindex="0" role="button" sc-camel-on-click="{{ c.pick }}" style="{{ c.style }}"><div style="{{ c.titleStyle }}">{{ c.title }}</div><div style="color:var(--legacy-99a398);font-size:12.5px;line-height:1.45">{{ c.note }}</div></div>
+                <button type="button" data-b2b-choice="1" aria-pressed="{{ c.pressed }}" sc-camel-on-click="{{ c.pick }}" style="{{ c.style }}"><span style="{{ c.titleStyle }}">{{ c.title }}</span><span style="display:block;color:var(--legacy-99a398);font-size:12.5px;line-height:1.45">{{ c.note }}</span></button>
               </sc-for>
             </div>
             <label style="display:flex;gap:8px;align-items:flex-start;color:var(--legacy-c7cec3);font-size:12.5px;line-height:1.5"><input type="checkbox" checked="{{ b2bConsent }}" sc-camel-on-change="{{ onB2bConsent }}" aria-label="Згода на обробку персональних даних" style="margin-top:3px">Погоджуюся на обробку персональних даних для прорахунку відповідно до <a href="/privacy" target="_blank" rel="noopener" style="color:var(--legacy-c7cec3)">політики конфіденційності</a>.</label>
-            <sc-if value="{{ b2bSent }}" hint-placeholder-val="{{ false }}"><div style="border:1px solid var(--legacy-35502f);background:var(--legacy-17241a);padding:12px;color:var(--legacy-c6d3a8);font-size:13.5px;line-height:1.5">{{ b2bSentText }}</div></sc-if>
-            <sc-if value="{{ b2bNotSent }}" hint-placeholder-val="{{ true }}"><div tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ sendB2B }}" style="padding:15px;background:var(--legacy-f2a33c);color:var(--button-text);text-align:center;font-family:'UAH','Oswald',sans-serif;letter-spacing:.1em;text-transform:uppercase;font-weight:600;cursor:pointer" style-hover="background:var(--legacy-ffc36b)">Надіслати заявку</div></sc-if>
-          </div>
+            <div aria-hidden="true" style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden"><label>Ваш сайт<input name="website" type="text" tabindex="-1" autocomplete="off" value="{{ b2bHp }}" sc-camel-on-input="{{ onB2bHp }}"></label></div>
+            <button type="submit" data-ui-button="center" aria-disabled="{{ b2bBusy }}" style="padding:15px;min-height:48px;border:0;background:var(--legacy-f2a33c);color:var(--button-text);text-align:center;font-family:'UAH','Oswald',sans-serif;font-size:15px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;cursor:pointer" style-hover="background:var(--legacy-ffc36b)">{{ b2bBtnLabel }}</button>
+            </sc-if>
+          </form>
         </div>
       </section>
     </main>

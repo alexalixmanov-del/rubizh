@@ -5319,6 +5319,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                 prefCards: [ [ "discount", "Хочу нижчу ціну", "Менеджер порахує максимальну знижку під ваш склад" ], [ "donation", "Хочу більший донат бригаді", "Замість знижки збільшуємо переказ" ] ].map(([e, i, s]) => ({
                     title: i,
                     note: s,
+                    pressed: String(t.bigPref === e),
                     pick: () => this.setState({
                         bigPref: e
                     }),
@@ -5332,6 +5333,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                 })),
                 b2bTypes: [ "Фізособа", "ФОП", "ТОВ", "Благодійний фонд", "Військова частина" ].map(e => ({
                     t: e,
+                    pressed: String((t.b2bType || "ФОП") === e),
                     pick: () => this.setState({
                         b2bType: e
                     }),
@@ -7197,9 +7199,9 @@ this.setState(s=>{const cart=s.cart.map(l=>({...l}));for(const a of added){const
             t.doneMain=async()=>{if(stage==='cancelled'){this.go('catalog');return;}if(stage==='paid'){window.location.assign('/auth/?tab=orders&order='+receipt.id);return;}if(receipt.payment_method==='invoice'){this.setState(s=>({receiptRequisitesOpen:!s.receiptRequisitesOpen}));return;}try{const result=await this.storeRequest('/shop/payment-start.php',{order_id:receipt.id});if(!/^https:\/\/(?:pay\.mbnk\.biz|pay\.monobank\.ua)\//.test(result.url))throw new Error('Рахунок потребує звірки.');window.location.assign(result.url);}catch(error){this.setState({receiptActionError:error.message});}};
             if(stage==='pending'&&receipt?.payment_ready!==true){t.donePending=false;t.doneRequisites=false;t.doneDeadline='';t.doneBadge='Очікує підтвердження';t.doneNote='Ми отримали замовлення. Менеджер перевірить наявність, комплектацію та строк відправлення. Оплата стане доступною після підтвердження.';t.doneAmountLabel='Сума замовлення';t.doneMainLabel='Переглянути замовлення →';t.doneNext='Очікуйте підтвердження менеджера та повідомлення з переходом до оплати.';t.doneMain=()=>window.location.assign(receipt.payment_url||'/auth/?tab=orders');}
             t.doneActionError=e.receiptActionError||'';
-            t.b2bEmail = e.b2bEmail || "", t.b2bQty = e.b2bQty || "", t.b2bText = e.b2bText || "", t.b2bName = e.b2bName || "", t.b2bPhone = e.b2bPhone || "",
+            t.b2bEmail = e.b2bEmail || "", t.b2bQty = e.b2bQty || "", t.b2bText = e.b2bText || "", t.b2bName = e.b2bName || "", t.b2bPhone = e.b2bPhone || "", t.b2bHp = e.b2bHp || "",
             t.notifyEmail = e.notifyEmail || "", t.b2bConsent = !!e.b2bConsent, t.b2bBusy = !!e.b2bBusy;
-            for (const e of [ "b2bEmail", "b2bQty", "b2bText", "b2bName", "b2bPhone", "notifyEmail" ]) t["on" + e[0].toUpperCase() + e.slice(1)] = t => this.setState({
+            for (const e of [ "b2bEmail", "b2bQty", "b2bText", "b2bName", "b2bPhone", "b2bHp", "notifyEmail" ]) t["on" + e[0].toUpperCase() + e.slice(1)] = t => this.setState({
                 [e]: t.target.value,
                 b2bSent: !1
             });
@@ -7216,13 +7218,13 @@ this.setState(s=>{const cart=s.cart.map(l=>({...l}));for(const a of added){const
                 this._b2bRequestId = this._b2bRequestId || Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, "0")).join("");
                 this.setState({ b2bBusy: !0, storeError: "" });
                 try {
-                    const r = await this.storeRequest("/shop/wholesale-request.php", { request_id: this._b2bRequestId, name: e.b2bName || "", phone: e.b2bPhone || "", buyer_type: types[e.b2bType || "ФОП"] || "FOP", tax_id: e.invoiceTax || "", email: e.b2bEmail || "", kits: (e.b2bQty || "").trim() ? (e.b2bQty || "").trim() : null, composition: e.b2bText || "", priority: "donation" === e.bigPref ? "DONATION" : "PRICE", consent: !0 });
+                    const r = await this.storeRequest("/shop/wholesale-request.php", { website: e.b2bHp || "", request_id: this._b2bRequestId, name: e.b2bName || "", phone: e.b2bPhone || "", buyer_type: types[e.b2bType || "ФОП"] || "FOP", tax_id: e.invoiceTax || "", email: e.b2bEmail || "", kits: (e.b2bQty || "").trim() ? (e.b2bQty || "").trim() : null, composition: e.b2bText || "", priority: "donation" === e.bigPref ? "DONATION" : "PRICE", consent: !0 });
                     this._b2bRequestId = null;
                     this.setState({ b2bSent: !0, b2bBusy: !1, b2bMessage: r.message, b2bText: "", b2bQty: "" });
                 } catch (r) {
                     this.setState({ b2bBusy: !1, storeError: r.message || "Заявку не збережено. Спробуйте ще раз." });
                 }
-            }, t.b2bSentText = e.b2bMessage || "Заявку прийнято. Менеджер зв’яжеться з вами протягом робочого дня.",
+            }, /* OD-4.6: a real form; Enter or the submit button send it, never a page reload. */t.submitB2B = ev => { ev && ev.preventDefault && ev.preventDefault(); t.sendB2B(); }, t.b2bBtnLabel = e.b2bBusy ? "Надсилаємо…" : "Надіслати запит", t.b2bSentText = e.b2bMessage || "Дякуємо, заявку прийнято. Менеджер зв’яжеться з вами протягом робочого дня.",
             t.sendNotify = () => {
                 /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.notifyEmail || "") ? (k("Наявність товару РУБІЖ", "Прошу уточнити надходження: " + s.name + "\n" + new URL("/product/" + s.slug, window.location.origin).href + "\nEmail: " + e.notifyEmail),
                 this.setState({
