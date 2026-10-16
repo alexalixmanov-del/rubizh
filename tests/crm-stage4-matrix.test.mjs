@@ -17,31 +17,23 @@ async function seeded(){
  assert.deepEqual(r.errors,[]);s.orderId=+s.sql('SELECT MAX(id) id FROM rubizh_customer_orders')[0].id;return s;
 }
 async function signIn(page,base,role='OWNER'){await page.goto(base+'/crm/');await page.getByLabel('Email').fill(staffEmail(role));await page.getByLabel('Пароль',{exact:true}).fill(password);await page.getByRole('button',{name:'Увійти'}).click();await page.getByRole('navigation',{name:'Основне'}).first().waitFor({state:'attached'});}
-// A navigation started while a background poll (45–60 s) is in flight makes WebKit report the cancelled request as a page
-// error; a person never navigates in the same millisecond. Wait for the Staff API to be idle, then navigate.
-function trackApi(page){page.__api=0;const dec=r=>{if(r.url().includes('/api/staff/'))page.__api=Math.max(0,page.__api-1);};page.on('request',r=>{if(r.url().includes('/api/staff/'))page.__api++;});page.on('requestfinished',dec);page.on('requestfailed',dec);}
-async function apiIdle(page){for(let i=0;i<200&&page.__api>0;i++)await page.waitForTimeout(50);}
-// WebKit reports a same-origin Staff API request cancelled by the navigation itself as «… due to access control checks»
-// (a same-origin request cannot fail CORS). Only that message, only during page.goto, only for this origin's /api/staff/
-// is set aside and counted in the report; every other page error still fails the matrix.
-// CRM-5.1 (stage 5): the cause is in WebKit + Playwright, not the CRM — Playwright turns every WebKit console message of level
-// «error» from source «javascript» into a page error, and WebKit on Linux logs a navigation-cancelled load that way even when the
-// rejection is handled (proof: stage5-crm51-webkit, a page with no CRM code). The exemption is WebKit-only.
-function isNavCancel(page,message){return page.__engine==='webkit'&&page.__navigating===true&&message.includes('due to access control checks')&&message.includes('/api/staff/')&&message.includes(new URL(page.url()).host);}
-async function visit(page,url){if(page.__api!==undefined)await apiIdle(page);page.__navigating=true;try{await page.goto(url);}finally{page.__navigating=false;}await page.getByRole('heading',{level:1}).first().waitFor({timeout:20000});await page.waitForLoadState('networkidle');}
+// CRM-5.1 fixed in stage 5: the CRM starts no Staff API read while the page is being left (crm.rubizh src/lib.ts), so
+// navigations are not timed around background polls and no page error is set aside — every engine, every error counts
+// (root cause and proof: stage5-crm51-webkit).
+async function visit(page,url){await page.goto(url);await page.getByRole('heading',{level:1}).first().waitFor({timeout:20000});await page.waitForLoadState('networkidle');}
 
 for(const engine of Object.keys(ENGINES))test(`CRM matrix ${engine}: 7 widths × light/dark × every section: no overflow, no JS/CSP/server errors`,{skip,timeout:3600000},async()=>{
  const s=await seeded();const browser=await ENGINES[engine]();const report=[];
  try{
   for(const width of WIDTHS)for(const theme of ['light','dark']){
-   const ctx=await browser.newContext({viewport:{width,height:width<768?844:900}});const page=await ctx.newPage();page.__engine=engine;const errors=[];trackApi(page);
-   page.__cancelled=0;page.on('pageerror',e=>{if(isNavCancel(page,e.message)){page.__cancelled++;return;}errors.push(e.message);});page.on('response',r=>{if(r.url().includes('/api/staff/')&&r.status()>=500)errors.push(r.status()+' '+r.url());});
+   const ctx=await browser.newContext({viewport:{width,height:width<768?844:900}});const page=await ctx.newPage();const errors=[];
+   page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.url().includes('/api/staff/')&&r.status()>=500)errors.push(r.status()+' '+r.url());});
    await page.addInitScript(t=>{try{localStorage.setItem('crm.theme',t);}catch{}document.addEventListener('securitypolicyviolation',e=>{(window.__csp=window.__csp||[]).push(e.violatedDirective+' '+e.blockedURI);});},theme);
    await signIn(page,s.base);
    for(const path of [...SECTIONS,'/orders/'+s.orderId]){
     await visit(page,s.base+'/crm'+path);
     const m=await page.evaluate(()=>({overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth,csp:window.__csp||[]}));
-    report.push({engine,width,theme,path,overflow:m.overflow,navigation_cancelled_requests:page.__cancelled});
+    report.push({engine,width,theme,path,overflow:m.overflow});
     assert.ok(m.overflow<=1,`${engine} ${width} ${theme} ${path}: horizontal overflow ${m.overflow}px`);assert.deepEqual(m.csp,[],`${engine} ${width} ${path} CSP`);
    }
    assert.deepEqual(errors,[],`${engine} ${width} ${theme} errors`);await ctx.close();

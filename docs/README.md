@@ -8,7 +8,7 @@
 |---|---|---|---|
 | **SITE** (этот репозиторий) | github.com/lieverifying/rubizh | витрина, корзина, оформление, оплата (MonoPay), доставка (Нова пошта), кабинет покупателя, домен заказов, Staff API для CRM | разработка — только через ветки и PR |
 | **PIM** | github.com/alexalixmanov-del/pim.rubizh | каталог, поставщики, цены; публикует каталог в SITE (контракт 3) | **только чтение** |
-| **CRM frontend** | github.com/alexalixmanov-del/crm.rubizh (ветка `hardening/stage-5`, закреплён `dd91d2b` в CI) | SPA для персонала поверх Staff API SITE (`/crm/`); документация — [`docs/crm/`](crm/) (00…08, 16) | этап 4: разработка в ветке этапа; CI SITE закрепляет SHA `57e9ef4` |
+| **CRM frontend** | github.com/alexalixmanov-del/crm.rubizh (ветка `hardening/stage-5`, закреплён `614a044` в CI) | SPA для персонала поверх Staff API SITE (`/crm/`); документация — [`docs/crm/`](crm/) (00…08, 16) | этап 4: разработка в ветке этапа; CI SITE закрепляет SHA `57e9ef4` |
 
 Технологии SITE: plain PHP 8.2+ без фреймворка и Composer, PDO MySQL/MariaDB, Apache + `.htaccess`; фронтенд — `index.html` с шаблонами + `assets/*.js` (React 18, без сборщика, версия в имени файла). Тесты — Node `node:test` + Playwright.
 
@@ -47,7 +47,7 @@
 ```bash
 # PHP 8.2/8.3 с pdo_mysql mbstring gd curl openssl fileinfo intl zip sodium; MariaDB 11.4 с сокетом; Node 22; Python 3
 npm ci
-git clone https://github.com/alexalixmanov-del/crm.rubizh ../crm && (cd ../crm && git checkout dd91d2b8a28b87e2dd49944d14988b957520a69c && npm ci --ignore-scripts && npm run build)
+git clone https://github.com/alexalixmanov-del/crm.rubizh ../crm && (cd ../crm && git checkout 614a044cbe710c59d296ccc6534afc8fa58dd923 && npm ci --ignore-scripts && npm run build)
 npx playwright install --with-deps chromium firefox webkit   # Firefox/WebKit — матрица CRM/SITE этапа 4
 export CHROMIUM_PATH="$(find ~/.cache/ms-playwright -path '*chrome-linux*/chrome' -type f | head -1)"   # CI: symlink в /usr/bin/chromium
 sudo mkdir -p /workspace/php-runtime/root/usr/bin /workspace/reports && sudo chown "$(id -u):$(id -g)" /workspace/reports
