@@ -13,7 +13,7 @@ Owner decision OD-4.1 (2026-10-16): the cost for CRM «Валовий прибу
   cost/payout keys from every public response.
 - **Who sees it:** CRM `dashboard.finance` — OWNER and ACCOUNTANT (`contracts/crm/crm-api.json`). The formula in
   `docs/crm/05-CRM_ANALYTICS_FORMULAS.md` is unchanged: while any sold SKU has no cost — «Немає даних собівартості від PIM».
-- **Tests:** SITE `tests/stage5-pim-costs.test.mjs`; PIM `app/tests/private-costs.test.cjs` (exporter output = `fixture.json`
+- **Tests:** SITE `tests/stage5-pim-costs.test.mjs`; PIM `app/tests/stage5-private-costs.test.cjs` (exporter output = the exact fixture
   for its synthetic catalog, wire unchanged).
 
-`fixture.json` is synthetic (not owner data).
+`fixture.json` is the exact output of the PIM exporter on the synthetic catalog of the wire fixture (not owner data) — a copy of PIM `app/contracts/fixtures/pim-site-private-costs-v1.exact.json`.

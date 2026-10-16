@@ -2,7 +2,7 @@
 // (contracts/pim-private-costs/1) to POST /api/pim/costs — only with pim_key. SITE keeps it in rubizh_crm_sku_costs; it
 // never appears in a public response; CRM «Валовий прибуток» (05-CRM_ANALYTICS_FORMULAS, unchanged) is visible to OWNER
 // and ACCOUNTANT only and says «Немає даних собівартості від PIM» while any sold SKU has no cost. Fixtures only.
-import {test} from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';
+import {test} from 'node:test';import {createRequire} from 'node:module';const require=createRequire(import.meta.url);import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';
 import {startCrm,line,roles5} from './helpers/crm-fixture.mjs';import {root} from './helpers/site-fixture.mjs';
 const skip=!process.env.RUBIZH_TEST_MYSQL_SOCKET;
 const fixture=JSON.parse(readFileSync(root+'/contracts/pim-private-costs/1/fixture.json','utf8'));
@@ -14,6 +14,11 @@ test('contract: the private costs fixture is the published shape (no supplier na
  assert.deepEqual(Object.keys(schema.properties.costs.items.properties).sort(),['sku','supplier_payout_minor']);
  for(const c of fixture.costs){assert.ok(Number.isInteger(c.supplier_payout_minor)&&c.supplier_payout_minor>=0);assert.match(c.sku,/^[A-Za-z0-9._-]{1,64}$/);}
  assert.doesNotMatch(JSON.stringify(fixture),/supplier_name|supplier_code|fulfillment/);
+ // The fixture is the exact output of the PIM exporter (pim.rubizh app/contracts/fixtures/pim-site-private-costs-v1.exact.json)
+ // and the SITE parser accepts it as is.
+ const {spawnSync}=require('node:child_process'),runtime=(process.env.RUBIZH_PHP_RUNTIME||'/workspace/php-runtime/root/usr');
+ const r=spawnSync(runtime+'/bin/php8.4',['-n','-r',`require '${root}/api/pim-private.php';echo count(pimPrivateCostsParse(file_get_contents('${root}/contracts/pim-private-costs/1/fixture.json')));`],{encoding:'utf8',env:{...process.env,LD_LIBRARY_PATH:runtime+'/lib/x86_64-linux-gnu'}});
+ assert.equal(r.status,0,r.stdout+r.stderr);assert.equal(Number(r.stdout),fixture.costs.length);
 });
 
 test('POST /api/pim/costs: pim_key only, strict validation, upsert; costs never public; gross profit for OWNER and ACCOUNTANT only',{skip,timeout:300000},async()=>{
