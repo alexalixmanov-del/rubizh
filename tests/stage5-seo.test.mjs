@@ -54,6 +54,12 @@ test('SEO-5.2 robots.txt: Googlebot, Bingbot, GPTBot and «*» get the same acce
  assert.match(ours,/^Sitemap: https:\/\/rubizh\.shop\/sitemap\.xml$/m);
 });
 
+test('D-62: the storefront fallback groups equal shop/category-groups.json (slug, title, roots)',()=>{
+ const bundle=readFileSync(path.join(root,'assets/shop-client.2026101601.js'),'utf8'),json=JSON.parse(readFileSync(path.join(root,'shop/category-groups.json'),'utf8'));
+ const literal=bundle.match(/const STORE_GROUPS_FALLBACK=(\[.*?\]);\n/)[1];const fallback=new Function('return '+literal)();
+ assert.deepEqual(fallback.map(g=>[g.slug,g.title,g.roots]),json.map(g=>[g.slug,g.title,g.roots]));
+});
+
 const schemas=html=>[...html.matchAll(/<script[^>]*type="application\/ld\+json"[^>]*>(.*?)<\/script>/gs)].map(m=>JSON.parse(m[1]));
 const metas=html=>({descriptions:[...html.matchAll(/<meta\b[^>]*name="description"[^>]*content="([^"]*)"/g)].map(m=>m[1]),canonicals:[...html.matchAll(/<link\b[^>]*rel="canonical"[^>]*href="([^"]*)"/g)].map(m=>m[1]),robots:[...html.matchAll(/<meta\b[^>]*name="robots"[^>]*content="([^"]*)"/g)].map(m=>m[1])});
 // The fixture router serves only / and /product/ through storefront.php; route every storefront path like .htaccess does.
@@ -67,12 +73,15 @@ test('D-62 group pages, 301s, sitemap with images, home JSON-LD, product without
   // Group page: clean address, H1, short text, subcategories, goods, canonical, breadcrumbs, one description.
   const g=await s.get('/rozdil/sporiadzhennia');assert.equal(g.status,200);
   const m=metas(g.text);assert.equal(m.descriptions.length,1);assert.deepEqual(m.canonicals,['https://rubizh.shop/rozdil/sporiadzhennia']);assert.deepEqual(m.robots,[]);
-  assert.match(g.text,/<title>Спорядження — купити в РУБІЖ<\/title>/);assert.match(m.descriptions[0],/^Спорядження в РУБІЖ/);
+  assert.match(g.text,/<title>Спорядження: рюкзаки, підсумки, РПС — РУБІЖ<\/title>/,'the group title differs from its root categories');assert.match(m.descriptions[0],/^Спорядження в РУБІЖ/);
   const noscript=g.text.slice(g.text.indexOf('<noscript>'),g.text.indexOf('</noscript>'));
   assert.match(noscript,/<h1>Спорядження<\/h1>/);assert.match(noscript,/Рюкзаки, сумки та баули, підсумки/);assert.match(noscript,/<h2>Категорії<\/h2><ul><li><a href="\/catalog\//);
   const pouch=wire.products.find(p=>p.id==='m-pouch');assert.ok(noscript.includes('/product/'+pouch.slug),'goods of the group');
   const crumbs=schemas(g.text).find(x=>x['@type']==='BreadcrumbList');assert.deepEqual(crumbs.itemListElement.map(i=>i.name),['РУБІЖ','Каталог','Спорядження']);
-  assert.equal((await s.get('/rozdil/bronezakhyst')).status,200);assert.equal((await s.get('/rozdil/nemaie')).status,404);
+  assert.equal((await s.get('/rozdil/bronezakhyst')).status,200);for(const bad of ['/rozdil/nemaie','/rozdil','/rozdil/Bronezakhyst','/rozdil/a/b','/categories/xyz'])assert.equal((await s.get(bad)).status,404,bad+' is not a soft 404');
+  // A selection of roots that is not exactly a group keeps the directory, and other filters travel with the redirect.
+  let mixed=await fetch(s.base+'/catalog?roots='+encodeURIComponent(JSON.stringify(['Бронезахист','Підсумки'])),{redirect:'manual'});assert.equal(mixed.headers.get('location'),'/categories#ac-bronezakhyst');
+  mixed=await fetch(s.base+'/catalog?roots='+encodeURIComponent(JSON.stringify(['Шоломи та захист голови','Бронезахист']))+'&q=plate',{redirect:'manual'});assert.equal(mixed.headers.get('location'),'/rozdil/bronezakhyst?q=plate');
   const slash=await fetch(s.base+'/rozdil/bronezakhyst/',{redirect:'manual'});assert.equal(slash.status,301);assert.equal(slash.headers.get('location'),'/rozdil/bronezakhyst');
   // Old multi-root addresses answer 301 to the group page.
   for(const [roots,to] of [[['Бронезахист','Шоломи та захист голови'],'/rozdil/bronezakhyst'],[['Рюкзаки, сумки та баули','Підсумки','РПС та розвантаження'],'/rozdil/sporiadzhennia']]){

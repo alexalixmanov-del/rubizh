@@ -34,12 +34,17 @@ function pimPrivateCostsHandle(PDO $db,string $raw): array {
     $costs=pimPrivateCostsParse($raw);
     $exists=$db->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='rubizh_crm_sku_costs'")->fetchColumn();
     if(!(int)$exists)throw new PimPrivateRejected('CRM_SCHEMA_MISSING',409);
+    // A delayed or replayed older batch never overwrites newer costs (review of stage 5).
+    $at=json_decode($raw,true)['generated_at'];
     $db->beginTransaction();
     try{
+        $last=$db->query("SELECT v FROM meta WHERE k='pim_costs_generated_at' FOR UPDATE")->fetchColumn();
+        if(is_string($last)&&strcmp($at,$last)<0){$db->rollBack();throw new PimPrivateRejected('STALE_BATCH',409);}
+        $db->prepare("INSERT INTO meta(k,v) VALUES('pim_costs_generated_at',?) ON DUPLICATE KEY UPDATE v=VALUES(v)")->execute([$at]);
         $q=$db->prepare("INSERT INTO rubizh_crm_sku_costs(sku,cost_minor,source,observed_at) VALUES(?,?,'pim',UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE cost_minor=VALUES(cost_minor),source=VALUES(source),observed_at=VALUES(observed_at)");
         foreach($costs as $sku=>$minor)$q->execute([(string)$sku,$minor]);
         $db->commit();
-    }catch(Throwable $e){$db->rollBack();throw $e;}
+    }catch(PimPrivateRejected $e){throw $e;}catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}
     return ['ok'=>true,'private_contract'=>'rubizh-pim-private-costs','version'=>1,'stored'=>count($costs)];
 }
 
@@ -51,17 +56,24 @@ const PIM_BACKUP_ID='/^pim-\d{8}T\d{12}Z-[a-f0-9]{12}$/D';
 function pimBackupDir(): string {
     $dir=(string)(cfg('pim_backup_dir')??dirname(__DIR__,2).'/private/pim-backups');
     if(!is_dir($dir)&&!@mkdir($dir,0700,true)&&!is_dir($dir))fail(500,'Папка резервних копій PIM недоступна');
+    // Second layer: even a misplaced folder is not served by Apache.
+    if(!is_file($dir.'/.htaccess'))@file_put_contents($dir.'/.htaccess',"Require all denied\n");
     $real=realpath($dir);$roots=array_filter([realpath(dirname(__DIR__)),realpath((string)($_SERVER['DOCUMENT_ROOT']??''))]);
     foreach($roots as $root)if($real===false||$real===$root||str_starts_with($real.'/',rtrim($root,'/').'/'))fail(500,'Папка резервних копій PIM не може бути в публічному корені сайту');
     return $real;
 }
 /** The secrets a copy must never contain: the PIM keys and the scheduler key. */
 function pimBackupSecrets(): array {
-    return array_values(array_filter([(string)cfg('pim_key'),(string)(cfg('pim_key_next')??''),(string)(cfg('cron_key')??'')],fn($k)=>strlen($k)>=16));
+    $keys=array_values(array_filter([(string)cfg('pim_key'),(string)(cfg('pim_key_next')??''),(string)(cfg('cron_key')??'')],fn($k)=>strlen($k)>=16));
+    // Also the JSON-escaped spelling of each key (a key with «/», «"» or «\\» is stored escaped inside the copy).
+    foreach($keys as $k){$j=substr(json_encode($k,JSON_UNESCAPED_UNICODE),1,-1);if($j!==$k)$keys[]=$j;}
+    return $keys;
 }
 /** POST /api/pim/backup — raw gzip body, X-Backup-Sha256 (hex), X-Backup-Label (URL-encoded, ≤80 characters). */
 function pimBackupStore(): array {
     $dir=pimBackupDir();$max=max(1024,(int)(cfg('pim_backup_max_bytes')??64*1024*1024));
+    require_once __DIR__.'/../shop/runtime.php';if(!rubizhRateAllow('pim-backup','pim',30,3600))throw new PimPrivateRejected('TOO_MANY_BACKUPS',429);
+    foreach(glob($dir.'/.upload-*')?:[] as $stale)if(filemtime($stale)<time()-3600)@unlink($stale);
     if((int)($_SERVER['CONTENT_LENGTH']??0)>$max)throw new PimPrivateRejected('TOO_LARGE',413);
     $digest=strtolower(trim((string)($_SERVER['HTTP_X_BACKUP_SHA256']??'')));if(!preg_match('/^[a-f0-9]{64}$/D',$digest))throw new PimPrivateRejected('INVALID_SHA256',422);
     $label=rawurldecode((string)($_SERVER['HTTP_X_BACKUP_LABEL']??''));
@@ -78,7 +90,7 @@ function pimBackupStore(): array {
         if($gz===false)throw new PimPrivateRejected('NOT_GZIP',422);
         while(!gzeof($gz)){$part=gzread($gz,1<<16);if($part===false||$part===''&&!gzeof($gz)){gzclose($gz);throw new PimPrivateRejected('NOT_GZIP',422);}$plain+=strlen($part);$window=$tail.$part;
             foreach($secrets as $s)if(str_contains($window,$s)){gzclose($gz);throw new PimPrivateRejected('SECRET_IN_BACKUP',422);}
-            if($plain>8*$max){gzclose($gz);throw new PimPrivateRejected('TOO_LARGE',413);}
+            if($plain>4*$max){gzclose($gz);throw new PimPrivateRejected('TOO_LARGE',413);}
             $tail=$keep?substr($window,-$keep):'';}
         gzclose($gz);
         $now=microtime(true);$id='pim-'.gmdate('Ymd\THis',(int)$now).sprintf('%06d',(int)(($now-floor($now))*1e6)).'Z-'.substr($digest,0,12);

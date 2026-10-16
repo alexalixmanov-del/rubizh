@@ -128,3 +128,15 @@ test('CRM screen: OWNER sees «Заповніть статус ПДВ у нал�
   assert.deepEqual(errors,[]);
  }finally{await browser.close();s.stop();}
 });
+
+test('PDF layout: for 1–45 lines (and a discount) no text reaches the footer; the totals block is never split',async()=>{
+ const pdfjs=await import('pdfjs-dist/legacy/build/pdf.mjs');const bad=[];
+ for(let n=1;n<=45;n++){const inv={...sample(n),discount_kop:n%3?0:1000,subtotal_kop:572100*n+(n%3?0:1000)};
+  const bytes=Buffer.from(php(`echo base64_encode(shopInvoicePdf(${phpJson(inv)}));`),'base64');
+  const doc=await pdfjs.getDocument({data:new Uint8Array(bytes),verbosity:0,isEvalSupported:false}).promise;let totalsPage=null,wordsPage=null;
+  for(let i=1;i<=doc.numPages;i++){for(const it of (await (await doc.getPage(i)).getTextContent()).items){if(!it.str.trim())continue;const y=it.transform[5];
+   if(!/^Рахунок № |^Сторінка /.test(it.str)&&y<52)bad.push(n+': «'+it.str.slice(0,30)+'» at y='+y.toFixed(1));
+   if(it.str.startsWith('Разом до сплати'))totalsPage=i;if(it.str.startsWith('Призначення платежу'))wordsPage=i;}}
+  if(totalsPage!==wordsPage)bad.push(n+': totals on page '+totalsPage+', purpose on page '+wordsPage);}
+ assert.deepEqual(bad,[]);
+});

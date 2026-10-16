@@ -258,9 +258,9 @@ function shopRootsRedirect(array $categories,string $rootsJson): string {
     $slug=shopClientSlug($roots[0]);return $slug===''?'/categories':'/categories#ac-'.$slug;
 }
 /** Stage 5 (owner, D-62): the home groups of several root categories («Бронезахист», «Спорядження») — /rozdil/<slug>. */
-function shopCategoryGroups(): array {static $groups=null;return $groups??=json_decode((string)file_get_contents(__DIR__.'/category-groups.json'),true,8,JSON_THROW_ON_ERROR);}
+function shopCategoryGroups(): array {static $groups=null;if($groups!==null)return $groups;try{$groups=json_decode((string)file_get_contents(__DIR__.'/category-groups.json'),true,8,JSON_THROW_ON_ERROR);}catch(Throwable $e){error_log('rubizh category groups: '.get_class($e));$groups=[];}return $groups;}
 function shopCategoryGroup(string $slug): ?array {foreach(shopCategoryGroups() as $g)if($g['slug']===$slug)return $g;return null;}
-function shopCategoryGroupForRoots(array $roots): ?array {foreach(shopCategoryGroups() as $g)if(in_array($roots[0]??null,$g['roots'],true))return $g;return null;}
+function shopCategoryGroupForRoots(array $roots): ?array {$want=array_values(array_unique($roots));sort($want);foreach(shopCategoryGroups() as $g){$has=$g['roots'];sort($has);if($has===$want)return $g;}return null;}
 /**
  * Stage 5 (5-5): an individual meta description for every category from its own goods — the number of models, the lowest
  * price and the leading brands — instead of one generic sentence. ≤160 characters.

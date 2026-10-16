@@ -148,11 +148,17 @@ function require_pim(): void {
   // Rotation without downtime (stage 5): an optional pim_key_next is accepted too until the owner promotes it. A weak,
   // placeholder or duplicate next key fails closed. Both keys are always compared (no short-circuit on the first).
   $next = cfg('pim_key_next');$next = $next === null ? '' : (string)$next;
-  if ($next !== '' && (strlen($next) < 24 || str_contains($next, 'ЗАМЕНИТЕ') || hash_equals($key, $next))) fail(500, 'pim_key_next має бути новим ключем ≥24 символів');
+  // A weak, placeholder or duplicate next key is never honoured (logged, not revealed to anonymous callers).
+  if ($next !== '' && (strlen($next) < 24 || str_contains($next, 'ЗАМЕНИТЕ') || hash_equals($key, $next))) {error_log('rubizh: pim_key_next ignored (weak, placeholder or equal to pim_key)');$next = '';}
   $given = trim((string)$h);
   $current = hash_equals('Bearer ' . $key, $given);
   $nextOk = $next !== '' && hash_equals('Bearer ' . $next, $given);
-  if (!$current && !$nextOk) fail(401, 'Неверный ключ PIM');
+  if (!$current && !$nextOk) {
+    // Failed keys are counted per network (stage 5 review): guessing is throttled.
+    require_once __DIR__.'/../shop/runtime.php';
+    if (!rubizhRateAllow('pim-auth-fail', rubizhNetworkIdentity(), 30, 600)) {header('Retry-After: 600');fail(429, 'Забагато невдалих спроб. Спробуйте пізніше.');}
+    fail(401, 'Неверный ключ PIM');
+  }
   $GLOBALS['rubizh_pim_key_slot'] = $current ? 'current' : 'next';
   $GLOBALS['rubizh_pim_key_rotation'] = $next !== '';
 }

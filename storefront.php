@@ -69,7 +69,7 @@ try{
     }elseif($uri==='/catalog'||str_starts_with($uri,'/catalog/')){
         $category=trim(substr($uri,8),'/');$args=$_GET;$args['category']=$category;
         // D-62: the former multi-root filter addresses moved to clean ones (group → /categories#section).
-        if($category===''&&isset($_GET['roots'])){$to=shopRootsRedirect($boot['categories'],is_string($_GET['roots'])?$_GET['roots']:'');if(str_starts_with($to,'/catalog/')){$rest=array_diff_key($_GET,['roots'=>1,'title'=>1]);if($rest)$to.='?'.http_build_query($rest);}header('Location: '.$to,true,301);exit;}
+        if($category===''&&isset($_GET['roots'])){$to=shopRootsRedirect($boot['categories'],is_string($_GET['roots'])?$_GET['roots']:'');if(str_starts_with($to,'/catalog/')||str_starts_with($to,'/rozdil/')){$rest=array_diff_key($_GET,['roots'=>1,'title'=>1]);if($rest)$to.='?'.http_build_query($rest);}header('Location: '.$to,true,301);exit;}
         foreach(['priceFrom'=>'price_from','priceTo'=>'price_to'] as $from=>$to)if(isset($_GET[$from]))$args[$to]=$_GET[$from];
         foreach(['brands','camo','sizes'] as $key){$selected=json_decode((string)($_GET[$key] ?? '[]'),true);if(is_array($selected))$args[$key]=implode('|',array_map(fn($v)=>$key==='sizes'?str_replace('|',':',(string)$v):(string)$v,$selected));}
         if(($_GET['inStock'] ?? '')==='1'||($_GET['quick'] ?? '')==='stock')$args['availability']='in';elseif(($_GET['withOrder'] ?? '')==='0')$args['availability']='available';if(($_GET['quick'] ?? '')==='new')$args['sort']='new';
@@ -92,7 +92,7 @@ $boot['catalog']=shopCatalog($db,$args);
         else{
             $args=$_GET;$args['roots']=json_encode($group['roots'],JSON_UNESCAPED_UNICODE);foreach(['priceFrom'=>'price_from','priceTo'=>'price_to'] as $from=>$to)if(isset($_GET[$from]))$args[$to]=$_GET[$from];
             $boot['catalog']=shopCatalog($db,$args);$boot['group']=$group['slug'];$canonical='https://rubizh.shop/rozdil/'.$group['slug'];if($boot['catalog']['page']>1)$canonical.='?page='.$boot['catalog']['page'];
-            $title=$group['title'].' — купити в РУБІЖ';
+            $title=(string)($group['seo_title']??$group['title'].' — купити в РУБІЖ');
             $head='<title>'.storefrontEsc($title).'</title><link rel="canonical" href="'.storefrontEsc($canonical).'"><meta name="description" content="'.storefrontEsc($group['description']).'">';
             if(array_filter($_GET,fn($value,$key)=>$key!=='page'&&($key!=='sort'||$value!=='pop'),ARRAY_FILTER_USE_BOTH))$head.='<meta name="robots" content="noindex,follow">';
             $crumbs=[['@type'=>'ListItem','position'=>1,'name'=>'РУБІЖ','item'=>'https://rubizh.shop/'],['@type'=>'ListItem','position'=>2,'name'=>'Каталог','item'=>'https://rubizh.shop/catalog'],['@type'=>'ListItem','position'=>3,'name'=>$group['title']]];
@@ -102,6 +102,7 @@ $boot['catalog']=shopCatalog($db,$args);
             $fallback.='</ul><h2>Товари</h2><ul>';foreach($boot['catalog']['items'] as $p)$fallback.='<li><a href="/product/'.storefrontEsc($p['slug']).'">'.storefrontEsc($p['name']).'</a> · '.storefrontEsc((string)$p['price_min']).' ₴</li>';$fallback.='</ul>';
             for($page=1;$page<=max(1,$boot['catalog']['pages']);$page++)$fallback.='<a href="'.storefrontEsc($uri.'?page='.$page).'">'.$page.'</a> ';
         }
+    }elseif($uri==='/rozdil'||str_starts_with($uri,'/rozdil/')||str_starts_with($uri,'/categories/')){$status=404;$fallback='<h1>Сторінку не знайдено</h1><a href="/categories">Усі категорії</a>'; // no soft-404 on the home page (SEO review)
     }elseif(preg_match('~^/kit/([a-f0-9]{32})/?$~',$uri,$m)){$boot['kitCode']=$m[1];$head='<title>Комплект побратима — РУБІЖ</title><meta name="robots" content="noindex,follow">';}
     elseif($uri==='/kit'){header('Location: /kit/'.(($_SERVER['QUERY_STRING']??'')!==''?'?'.$_SERVER['QUERY_STRING']:''),true,301);exit;}
     elseif($uri==='/kit/'){$head='<title>Зібрати комплект — РУБІЖ</title><link rel="canonical" href="https://rubizh.shop/kit/"><meta name="description" content="Конструктор комплекту РУБІЖ. Оберіть речі щонайменше з двох різних розділів — отримаєте ціну комплекту.">';$fallback='<h1>Зібрати комплект</h1><p>Голова, тіло, ноги, взуття, бронезахист, спорядження й медицина — по одній речі на слот. Оберіть речі щонайменше з двох різних розділів — отримаєте ціну комплекту.</p><a href="/catalog">До каталогу</a>';}

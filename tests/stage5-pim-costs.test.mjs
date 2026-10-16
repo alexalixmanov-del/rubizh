@@ -48,6 +48,9 @@ test('POST /api/pim/costs: pim_key only, strict validation, upsert; costs never 
   // Upsert, never delete: a later batch without RUB-F0002 keeps it.
   assert.equal((await send({...body,costs:[{sku:'RUB-F0001',supplier_payout_minor:123458}]})).status,200);
   assert.deepEqual(s.sql("SELECT sku,cost_minor FROM rubizh_crm_sku_costs ORDER BY sku").map(r=>[r.sku,+r.cost_minor]),[['RUB-F0001',123458],['RUB-F0002',98761]]);
+  // A delayed or replayed older batch never overwrites newer costs.
+  const stale=await send({...body,generated_at:'2020-01-01T00:00:00.000Z',costs:[{sku:'RUB-F0001',supplier_payout_minor:1}]});assert.equal(stale.status,409);assert.equal(stale.data.error_code,'STALE_BATCH');
+  assert.equal(+s.sql("SELECT cost_minor FROM rubizh_crm_sku_costs WHERE sku='RUB-F0001'")[0].cost_minor,123458);
 
   // Role × field: the gross profit with its cost only for OWNER and ACCOUNTANT.
   const table=[];

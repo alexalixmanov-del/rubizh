@@ -102,8 +102,10 @@ function crmOrderCardExtras(PDO $db,array $o,array $actor): array {
 /** 5-3: whether the invoice PDF can be downloaded (null for roles without order.invoice.pdf). */
 function crmInvoicePdfState(PDO $db,int $id,array $actor): ?array {
  if(!crmCan($actor,'order.invoice.pdf'))return null;require_once __DIR__.'/../shop/invoice-pdf.php';
- try{shopInvoiceData($db,$id);return ['available'=>true,'reason'=>null];}
+ try{shopInvoiceData($db,$id,false);return ['available'=>true,'reason'=>null];}
  catch(ShopInvoiceUnavailable $e){$r=$e->getMessage();return ['available'=>false,'reason'=>$r,'message'=>crmInvoicePdfMessage($r,$actor)];}
+ // The card must open even when one stored order cannot be turned into an invoice (review of stage 5).
+ catch(Throwable $e){error_log('rubizh invoice state: '.get_class($e).' order '.$id);return ['available'=>false,'reason'=>'ERROR','message'=>'Рахунок тимчасово недоступний.'];}
 }
 function crmInvoicePdfMessage(string $reason,array $actor): string {
  return match($reason){'VAT_NOTE_MISSING'=>$actor['role']==='OWNER'?'Заповніть статус ПДВ у налаштуваннях':'Рахунок недоступний: власник ще не заповнив статус ПДВ у налаштуваннях.',
@@ -115,7 +117,7 @@ function crmInvoicePdf(PDO $db,int $id,array $actor): never {
  try{$data=shopInvoiceData($db,$id);$pdf=shopInvoicePdf($data);}
  catch(ShopInvoiceUnavailable $e){throw new CrmError($e->getMessage(),409,['message'=>crmInvoicePdfMessage($e->getMessage(),$actor)]);}
  crmAudit($db,$actor,'order',(string)$id,'order.invoice_pdf',[],['number'=>$data['number']]);
- header('Content-Type: application/pdf');header('Content-Disposition: attachment; filename="rakhunok-'.preg_replace('/[^A-Za-z0-9-]/','',$data['number']).'.pdf"');header('Content-Length: '.strlen($pdf));
+ header('Content-Type: application/pdf');header('Content-Disposition: attachment; filename="rakhunok-'.preg_replace('/[^A-Za-z0-9-]/','',$data['number']).'.pdf"');header('Content-Length: '.strlen($pdf));header('Cache-Control: private, no-store');header('X-Content-Type-Options: nosniff');
  http_response_code(200);echo $pdf;exit;
 }
 

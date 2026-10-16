@@ -131,7 +131,7 @@ test('D-62: over HTTP the old ?roots= addresses answer 301 and the clean categor
   writeFileSync(site.site+'/router.php',`<?php $p=parse_url($_SERVER['REQUEST_URI'],PHP_URL_PATH);if($p==='/'||preg_match('~^/(?:product|catalog|categories|kit)(?:/.*)?$~',$p)){require __DIR__.'/storefront.php';return;}return false;`);
   const get=q=>fetch(site.base+'/catalog?'+new URLSearchParams(q),{redirect:'manual'});
   let r=await get({roots:JSON.stringify(['Бронезахист','Шоломи та захист голови']),title:'Бронезахист',sort:'stock'});
-  assert.equal(r.status,301);assert.equal(r.headers.get('location'),'/rozdil/bronezakhyst');
+  assert.equal(r.status,301);assert.equal(r.headers.get('location'),'/rozdil/bronezakhyst?sort=stock','the other filters travel with the redirect (stage 5 SEO review)');
   r=await get({roots:JSON.stringify(['Одяг та форма'])});assert.equal(r.status,301);assert.equal(r.headers.get('location'),'/catalog/odiah-ta-forma');
   const clean=await (await fetch(site.base+'/catalog/odiah-ta-forma')).text();
   assert.match(clean,/<link rel="canonical" href="https:\/\/rubizh\.shop\/catalog\/odiah-ta-forma">/);assert.doesNotMatch(clean,/noindex/);

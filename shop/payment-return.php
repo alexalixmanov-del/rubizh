@@ -18,7 +18,7 @@ try{
  if($invoice&&monoConfigured()&&in_array($invoice['status'],['creating','unknown','created','processing','hold','awaiting_webhook'],true)){
   // 5-7: the bank is asked at most 6 times a minute per order and 30 times an hour per visitor; otherwise the page shows
   // the stored state (the signed webhook still confirms the payment).
-  if(!shopLimitAllow($db,'payment-return-order',6,60,'order:'.$id)||!shopLimitAllow($db,'payment-return',30,3600))$notice='Очікуємо підтвердження банку. Повернення на сайт саме по собі не підтверджує оплату.';
+  if(!shopLimitAllow($db,'payment-return-order',6,60,'order:'.$id)||!shopLimitAllow($db,'payment-return',30,3600)){if($notice==='')$notice='Очікуємо підтвердження банку. Повернення на сайт саме по собі не підтверджує оплату.';}
   else try{monoRefresh($db,$invoice);$order=npOrder($db,$id);$q->execute([$id]);$invoice=$q->fetch(PDO::FETCH_ASSOC);}catch(Throwable $e){$notice='Очікуємо підтвердження банку. Повернення на сайт саме по собі не підтверджує оплату.';}
  }
  $receipt=shopOrderReceipt($db,$id);

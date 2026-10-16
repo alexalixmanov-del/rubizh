@@ -65,11 +65,11 @@ final class RzPdfFont {
     }
     /** Glyph ids for a UTF-8 string; a character outside the font becomes «?» (never a broken glyph). */
     public function glyphs(string $s): array {
-        $out=[];foreach(mb_str_split(self::normalize($s),1,'UTF-8') as $ch){$cp=mb_ord($ch,'UTF-8');if(!isset($this->cmap[$cp]))$cp=63;$gid=$this->cmap[$cp];$this->used[$gid]=$cp;$out[]=$gid;}
+        $out=[];foreach(mb_str_split(self::normalize($s),1,'UTF-8') as $ch){$cp=mb_ord($ch,'UTF-8');if(!isset($this->cmap[$cp]))$cp=63;$gid=$this->cmap[$cp]??0;$this->used[$gid]=$cp;$out[]=$gid;}
         return $out;
     }
     public function width(string $s,float $size): float {$w=0;foreach(mb_str_split(self::normalize($s),1,'UTF-8') as $ch){$gid=$this->cmap[mb_ord($ch,'UTF-8')]??$this->cmap[63]??0;$w+=$this->advance[$gid]??0;}return $w*$size/$this->units;}
-    public static function normalize(string $s): string {return strtr($s,["\u{02BC}"=>'’',"\u{00A0}"=>' ',"\u{202F}"=>' ',"\t"=>' ']);}
+    public static function normalize(string $s): string {return (string)preg_replace('/[\x{200B}-\x{200F}\x{2060}\x{FE0E}\x{FE0F}]/u','',strtr($s,["\u{02BC}"=>'’',"\u{00A0}"=>' ',"\u{202F}"=>' ',"\t"=>' ']));}
     public function scale(int $v): int {return (int)round($v*1000/$this->units);}
 }
 
@@ -149,14 +149,17 @@ function shopInvoicePdf(array $invoice): string {
         $pdf->textRight($cols[5]-70,$y,shopInvoiceMoney($l['price_kop']),'R',$size);$pdf->textRight($cols[5]-4,$y,shopInvoiceMoney($l['sum_kop']),'R',$size);
         $y-=$h;$pdf->line($L,$y+9,$R,$y+9,0.3);
     }
-    if($y<200){$pdf->addPage();$y=RzPdf::H-56.0;}
+    // The totals block moves to a new page as a whole when it would reach the footer (height measured, not guessed).
+    $words=$pdf->wrap('Всього на суму: '.shopAmountInWordsUa($invoice['total_kop']),$R-$L,'B',10);$tail=array_merge($pdf->wrap('Сплатити до: '.$invoice['due'],$R-$L,'R',10),$pdf->wrap('Призначення платежу: '.$invoice['purpose'],$R-$L,'R',10));
+    $need=6+(($invoice['discount_kop']??0)>0?28:0)+16+22+14*count($words)+6+14*count($tail);
+    if($y-$need<70){$pdf->addPage();$y=RzPdf::H-56.0;}
     $y-=6;
     if(($invoice['discount_kop']??0)>0){$pdf->textRight($R-110,$y,'Сума товарів:','R',10);$pdf->textRight($R-4,$y,shopInvoiceMoney($invoice['subtotal_kop']),'R',10);$y-=14;$pdf->textRight($R-110,$y,'Знижка:','R',10);$pdf->textRight($R-4,$y,'-'.shopInvoiceMoney($invoice['discount_kop']),'R',10);$y-=14;}
     $pdf->textRight($R-110,$y,'Разом до сплати:','B',11);$pdf->textRight($R-4,$y,shopInvoiceMoney($invoice['total_kop']).' грн','B',11);$y-=16;
     $pdf->textRight($R-4,$y,trim((string)$invoice['vat_note']),'R',10);$y-=22;
-    foreach($pdf->wrap('Всього на суму: '.shopAmountInWordsUa($invoice['total_kop']),$R-$L,'B',10) as $part){$pdf->text($L,$y,$part,'B',10);$y-=14;}
+    foreach($words as $part){$pdf->text($L,$y,$part,'B',10);$y-=14;}
     $y-=6;
-    foreach(['Сплатити до: '.$invoice['due'],'Призначення платежу: '.$invoice['purpose']] as $row)foreach($pdf->wrap($row,$R-$L,'R',10) as $part){$pdf->text($L,$y,$part,'R',10);$y-=14;}
+    foreach($tail as $part){$pdf->text($L,$y,$part,'R',10);$y-=14;}
     return $pdf->output($title,function(RzPdf $p,int $n,int $total)use($L,$R,$invoice){$p->line($L,48,$R,48,0.3);$p->text($L,34,'Рахунок № '.$invoice['number'],'R',8);$p->textRight($R,34,'Сторінка '.$n.' з '.$total,'R',8);});
 }
 
@@ -168,7 +171,7 @@ function shopInvoicePayer(array $contact): array {
     $code=(string)preg_replace('/\D/','',$code);
     require_once __DIR__.'/wholesale-lib.php';
     if($code!==''&&!(strlen($code)===8&&wholesaleEdrpouValid($code)||strlen($code)===10&&wholesaleRnokppValid($code)))throw new RuntimeException('Перевірте ЄДРПОУ (8 цифр) або РНОКПП (10 цифр): контрольна цифра не збігається.');
-    foreach([$name,$address] as $text)if(preg_match('~(?:в\s*/\s*ч|військов\w*\s+частин\w*|(?<![\p{L}\d])[АA]\s?\d{4}(?![\p{L}\d]))~iu',$text))throw new RuntimeException('Не вказуйте номер військової частини в даних платника.');
+    foreach([$name,$address] as $text)if(preg_match('~(?:в\s*[/.]\s*ч|(?<![\p{L}])вч(?![\p{L}])|військов\w*\s+частин\w*|(?<![\p{L}\d])[АA]\s?\d{4}(?![\p{L}\d])|(?<![\p{L}])ч\.?\s*\d{3,5}(?![\d]))~iu',$text))throw new RuntimeException('Не вказуйте номер військової частини в даних платника.');
     return array_filter(['payer_name'=>$name,'payer_code'=>$code,'payer_address'=>$address],fn($v)=>$v!=='');
 }
 
@@ -176,19 +179,21 @@ function shopInvoicePayer(array $contact): array {
 function shopInvoiceVatNote(): string {return trim((string)(cfg('invoice_vat_note')??''));}
 
 /** Invoice data of an order, or ShopInvoiceUnavailable (NOT_INVOICE, NOT_READY, CANCELLED, VAT_NOTE_MISSING). */
-function shopInvoiceData(PDO $db,int $orderId): array {
+function shopInvoiceData(PDO $db,int $orderId,bool $write=true): array {
     require_once __DIR__.'/../api/seller.php';require_once __DIR__.'/np-fulfillment.php';
     $o=npOrder($db,$orderId);$c=$o['contact'];
     if(($c['payment']??'')!=='invoice')throw new ShopInvoiceUnavailable('NOT_INVOICE');
     if($o['status']==='cancelled')throw new ShopInvoiceUnavailable('CANCELLED');
     if(!shopPaymentReady($o)&&!in_array($o['payment_status'],['paid','refunded'],true))throw new ShopInvoiceUnavailable('NOT_READY');
     $vat=shopInvoiceVatNote();if($vat==='')throw new ShopInvoiceUnavailable('VAT_NOTE_MISSING');
-    $timing=shopEnsureTiming($db,$o);$kyiv=new DateTimeZone('Europe/Kyiv');
+    // The CRM card only looks (no write on a read path); the download creates the timing row when it is missing.
+    if($write)$timing=shopEnsureTiming($db,$o);else{$q=$db->prepare('SELECT * FROM rubizh_order_timing WHERE order_id=?');$q->execute([$orderId]);$timing=$q->fetch(PDO::FETCH_ASSOC);if(!$timing)throw new ShopInvoiceUnavailable('NOT_READY');}
+    $kyiv=new DateTimeZone('Europe/Kyiv');
     $date=(new DateTimeImmutable((string)$o['created_at'],new DateTimeZone('UTC')))->setTimezone($kyiv);
     $due=(new DateTimeImmutable((string)$timing['payment_due'],new DateTimeZone('UTC')))->setTimezone($kyiv);
     $s=rubizhSeller();$lines=[];
     foreach($o['items'] as $l){$unit=($l['sale_unit']??'piece')==='m2'?'м²':'шт.';$name=trim(($l['name']??'').(($l['variant']??'')!==''?' · '.$l['variant']:'').(($l['sku']??'')!==''?' · '.$l['sku']:''));
-        $lines[]=['name'=>$name,'unit'=>$unit,'qty'=>is_int($l['qty'])?$l['qty']:rtrim(rtrim(number_format((float)$l['qty'],2,',',''),'0'),','),'price_kop'=>shopMoney($l['price']),'sum_kop'=>shopMoney($l['amount']??round((float)$l['price']*(float)$l['qty'],2))];}
+        $lines[]=['name'=>$name,'unit'=>$unit,'qty'=>is_int($l['qty'])?$l['qty']:rtrim(rtrim(number_format((float)$l['qty'],2,',',''),'0'),','),'price_kop'=>shopMoney($l['price']),'sum_kop'=>isset($l['amount'])?shopMoney($l['amount']):shopLineMoney(shopMoney($l['price']),$l['qty'])];}
     return ['number'=>$o['order_number'],'date'=>$date->format('d.m.Y'),
         'seller'=>['name'=>(string)$s['name'],'tax_id'=>(string)$s['tax_id'],'iban'=>(string)$s['iban'],'bank'=>(string)$s['bank'],'mfo'=>(string)$s['mfo'],'address'=>(string)$s['address'],'phone'=>(string)$s['phone_label'],'email'=>(string)$s['email']],
         'buyer'=>['name'=>(string)(($c['payer_name']??'')?:(($c['recipient']??'')?:$c['name'])),'code'=>(string)($c['payer_code']??''),'address'=>(string)($c['payer_address']??'')],
