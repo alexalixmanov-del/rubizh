@@ -82,6 +82,7 @@
     "settings.personal": ["OWNER", "MANAGER", "WAREHOUSE", "SUPPORT", "ACCOUNTANT"],
     "settings.system": ["OWNER"],
     "search": ["OWNER", "MANAGER", "WAREHOUSE", "SUPPORT", "ACCOUNTANT"],
+    "order.search.contact": ["OWNER", "MANAGER", "SUPPORT", "ACCOUNTANT"],
     "wholesale.view": ["OWNER", "MANAGER"],
     "wholesale.manage": ["OWNER", "MANAGER"],
     "inventory.return": ["OWNER"]

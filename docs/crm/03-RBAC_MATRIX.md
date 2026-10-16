@@ -60,6 +60,7 @@
 | `settings.personal` | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `settings.system` | ✓ | — | — | — | — |
 | `search` | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `order.search.contact` | ✓ | ✓ | — | ✓ | ✓ |
 | `wholesale.view` | ✓ | ✓ | — | — | — |
 | `wholesale.manage` | ✓ | ✓ | — | — | — |
 | `inventory.return` | ✓ | — | — | — | — |
@@ -186,3 +187,6 @@
 | GET | `/wholesale` | `wholesale.view` |  |  |  | 200 | 200 | 403 | 403 | 403 |
 | POST | `/wholesale/{id}` | `wholesale.manage` |  |  | ✓ | 200 | 200 | 403 | 403 | 403 |
 | POST | `/wholesale/{id}/phone` | `wholesale.view` |  |  |  | 200 | 200 | 403 | 403 | 403 |
+| GET | `/wholesale/{id}` | `wholesale.view` |  |  |  | 200 | 200 | 403 | 403 | 403 |
+| POST | `/wholesale/{id}/note` | `wholesale.manage` |  |  | ✓ | 200 | 200 | 403 | 403 | 403 |
+| POST | `/wholesale/{id}/order` | `wholesale.manage` |  |  | ✓ | 200 | 200 | 403 | 403 | 403 |

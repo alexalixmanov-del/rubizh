@@ -116,6 +116,9 @@
 | `wholesale.list` | GET | `/wholesale` | `wholesale.view` | query `ListQuery` | `WholesaleList` | D-54: оптові заявки |
 | `wholesale.update` | POST | `/wholesale/{id}` | `wholesale.manage` | `WholesaleUpdateRequest` | `Wholesale` | Статус оптової заявки |
 | `wholesale.phone` | POST | `/wholesale/{id}/phone` | `wholesale.view` | `Empty` | `PhoneReveal` | Показати повний телефон оптової заявки (запис в audit, ліміт) |
+| `wholesale.detail` | GET | `/wholesale/{id}` | `wholesale.view` | — | `WholesaleDetail` | OD-4.6: заявка, коментарі та історія |
+| `wholesale.note` | POST | `/wholesale/{id}/note` | `wholesale.manage` | `NoteRequest` | `Note` | OD-4.6: коментар до оптової заявки |
+| `wholesale.order` | POST | `/wholesale/{id}/order` | `wholesale.manage` | `WholesaleOrderRequest` | `Order` | OD-4.6: замовлення із заявки (покупець — із заявки, рядки й сума — сервісом замовлень SITE) |
 
 ## Ошибки
 

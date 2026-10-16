@@ -31,7 +31,8 @@ function crmAuditRows(PDO $db,array $q,array $actor): array {
 }
 function crmList(PDO $db,string $entity,array $q): array {
  $p=crmPage($q);$table=['payments'=>'rubizh_mono_invoices','shipments'=>'rubizh_order_shipments','returns'=>'rubizh_returns'][$entity]??null;if(!$table)throw new CrmError('NOT_FOUND',404);$where=['1=1'];$args=[];
- if(!empty($q['q'])){$where[]="(o.order_number LIKE ? ESCAPE '!' OR o.email LIKE ? ESCAPE '!'".($entity==='shipments'?" OR e.tracking_number LIKE ? ESCAPE '!'":'').')';$args=[crmLike($q['q']),crmLike($q['q'])];if($entity==='shipments')$args[]=crmLike($q['q']);}
+ if(!empty($q['q'])){$mail=($q['_contact']??true)===true; // stage 4.1: no e-mail search without order.search.contact
+  $where[]="(o.order_number LIKE ? ESCAPE '!'".($mail?" OR o.email LIKE ? ESCAPE '!'":'').($entity==='shipments'?" OR e.tracking_number LIKE ? ESCAPE '!'":'').')';$args=[crmLike($q['q'])];if($mail)$args[]=crmLike($q['q']);if($entity==='shipments')$args[]=crmLike($q['q']);}
  if(!empty($q['state'])){$where[]=($entity==='returns'?'e.state':'e.status').'=?';$args[]=$q['state'];}$where=implode(' AND ',$where);$total=(int)crmOne($db,"SELECT COUNT(*) n FROM $table e JOIN rubizh_customer_orders o ON o.id=e.order_id WHERE $where",$args)['n'];$rows=crmQuery($db,"SELECT e.*,o.order_number,o.payment_status,o.pim_payment_state,o.email FROM $table e JOIN rubizh_customer_orders o ON o.id=e.order_id WHERE $where ORDER BY e.id DESC LIMIT {$p['limit']} OFFSET {$p['offset']}",$args);return ['rows'=>$rows,'pagination'=>['page'=>$p['page'],'limit'=>$p['limit'],'total'=>$total,'pages'=>(int)ceil($total/$p['limit'])]];
 }
 function crmStaffSave(PDO $db,array $actor,array $b,?string $id=null): array {

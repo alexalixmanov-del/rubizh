@@ -10,9 +10,11 @@ function crmLike(string $q): string {return '%'.str_replace(['!','%','_'],['!!',
  * phone (≥7 digits, contact evidence; orders older than the evidence fall back to the stored contact), TTN / SKU /
  * number fragments, and names (letters: the stored contact — the only JSON scan, and only for such queries).
  */
-function crmSearchOrderIds(PDO $db,string $q,bool $phones=true): ?array {
+function crmSearchOrderIds(PDO $db,string $q,bool $phones=true,bool $contact=true): ?array {
  if(preg_match('/^RB-[0-9A-Z-]*$/iD',$q))return null;
  $like=crmLike($q);$digits=preg_replace('/\D/','',$q);$sql=[];$args=[];
+ // Owner decision (stage 4.1): without order.search.contact (WAREHOUSE) an order is found only by its number or TTN.
+ if(!$contact){$q2=$db->prepare("SELECT order_id FROM rubizh_order_shipments WHERE tracking_number LIKE ? ESCAPE '!' UNION SELECT id FROM rubizh_customer_orders WHERE order_number LIKE ? ESCAPE '!'");$q2->execute([$like,$like]);return array_map('intval',$q2->fetchAll(PDO::FETCH_COLUMN));}
  if(str_contains($q,'@')){$sql[]="SELECT id FROM rubizh_customer_orders WHERE email LIKE ? ESCAPE '!'";$args[]=$like;}
  elseif(preg_match('/^[\d\s()+-]+$/D',$q)){
   $sql[]="SELECT order_id FROM rubizh_order_shipments WHERE tracking_number LIKE ? ESCAPE '!'";$args[]=$like;
@@ -33,7 +35,7 @@ function crmOrderWhere(array $q,array $actor,?PDO $db=null): array {
  $where=['1=1'];$args=[];$search=trim((string)($q['q']??''));if(mb_strlen($search)>120)throw new CrmError('SEARCH_TOO_LONG');
  // Search (ТЗ 7.16: number, phone, name, TTN, SKU). PERF-4.2: matching order ids are collected once from narrow sources
  // chosen by the kind of query, then the count and the page select by id (50 000 orders: one scan, not two).
- if($search!==''){$db??=database();$ids=crmSearchOrderIds($db,$search,crmCan($actor,'customer.phone.full'));if($ids===null){$where[]="o.order_number LIKE ? ESCAPE '!'";$args[]=str_replace(['!','%','_'],['!!','!%','!_'],strtoupper($search)).'%';}else $where[]=$ids?'o.id IN ('.implode(',',$ids).')':'0=1';}
+ if($search!==''){$db??=database();$ids=crmSearchOrderIds($db,$search,crmCan($actor,'customer.phone.full'),crmCan($actor,'order.search.contact'));if($ids===null){$where[]="o.order_number LIKE ? ESCAPE '!'";$args[]=str_replace(['!','%','_'],['!!','!%','!_'],strtoupper($search)).'%';}else $where[]=$ids?'o.id IN ('.implode(',',$ids).')':'0=1';}
  foreach(['from'=>'>=','to'=>'<='] as $k=>$op)if(!empty($q[$k])){if(!preg_match('/^\d{4}-\d{2}-\d{2}$/D',$q[$k]))throw new CrmError('INVALID_DATE');$where[]="o.created_at $op ?";$args[]=$q[$k].($k==='to'?' 23:59:59':' 00:00:00');}
  if(!empty($q['customer'])){if(str_starts_with((string)$q['customer'],'order:')){$where[]='o.id=? AND ao.order_id IS NULL';$args[]=(int)substr($q['customer'],6);}else{$where[]='ao.customer_id=?';$args[]=$q['customer'];}}
  foreach(['manager'=>'a.staff_id','supplier'=>'supplier'] as $k=>$column)if(($q[$k]??'')!==''){if($k==='supplier'){$where[]='EXISTS(SELECT 1 FROM rubizh_order_fulfillment_lines f WHERE f.order_id=o.id AND f.supplier_code=?)';}else $where[]="$column=?";$args[]=$q[$k];}

@@ -380,7 +380,7 @@ function crmSearch(PDO $db,array $actor,string $q): array {
  $q=trim($q);$empty=['orders'=>[],'customers'=>[],'shipments'=>[],'products'=>[]];if(mb_strlen($q)<2)return $empty;
  $orders=array_map(fn($o)=>['id'=>$o['id'],'number'=>$o['number'],'customer'=>$o['customer']['name'],'display'=>$o['display']??null],crmOrders($db,['q'=>$q,'limit'=>8],$actor)['rows']);
  $customers=crmCan($actor,'customer.view')?array_map(fn($c)=>['id'=>$c['id'],'name'=>$c['name'],'phone_masked'=>$c['phone_masked'],'email'=>$c['email']],crmCustomers4($db,$actor,['q'=>$q,'limit'=>5])['rows']):[];
- $ships=crmCan($actor,'shipment.view')?array_map(fn($s)=>['id'=>(int)$s['id'],'tracking_number'=>$s['tracking_number'],'order_number'=>$s['order_number'],'status'=>$s['status']],crmList($db,'shipments',['q'=>$q,'limit'=>5])['rows']):[];
+ $ships=crmCan($actor,'shipment.view')?array_map(fn($s)=>['id'=>(int)$s['id'],'tracking_number'=>$s['tracking_number'],'order_number'=>$s['order_number'],'status'=>$s['status']],crmList($db,'shipments',['q'=>$q,'limit'=>5,'_contact'=>crmCan($actor,'order.search.contact')])['rows']):[];
  $products=array_map(fn($p)=>['id'=>$p['id'],'name'=>$p['name'],'skus'=>$p['skus']],crmProducts($db,['q'=>$q,'limit'=>5])['rows']);
  return ['orders'=>$orders,'customers'=>$customers,'shipments'=>$ships,'products'=>$products];
 }
