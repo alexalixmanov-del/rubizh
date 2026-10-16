@@ -22,7 +22,7 @@ try{
     rubizhPublicGate('storefront',180);rubizhHttpWork('public-read',16);$GLOBALS['rubizh_public_query_budget']=true;$themeMarkup=shopThemeMarkup();
     $db=db();
     if(str_starts_with($uri,'/catalog/')&&($redirect=shopTaxonomyRedirect($db,trim(substr($uri,9),'/'),$_GET))!==null){header('Location: '.$redirect,true,301);exit;}
-    $boot['categories']=shopCategories($db);
+    $boot['categories']=shopCategories($db);$boot['groups']=shopCategoryGroups();
     if(shopTaxonomyActive($db))$boot['taxonomyVersion']=shopTaxonomySpec()['version'];
     if(preg_match('~^/product/([a-z0-9-]{1,191})/?$~',$uri,$m)){
         $q=$db->prepare('SELECT * FROM products p WHERE visible=1 AND '.shopUsablePhotoSql('p').' AND slug=?');$q->execute([$m[1]]);$row=$q->fetch(PDO::FETCH_ASSOC);
@@ -46,7 +46,16 @@ try{
             $head='<title>'.storefrontEsc($title).'</title><meta name="description" content="'.storefrontEsc($description).'"><link rel="canonical" href="'.storefrontEsc($canonical).'"><meta property="og:title" content="'.storefrontEsc($title).'"><meta property="og:description" content="'.storefrontEsc($description).'"><meta property="og:url" content="'.storefrontEsc($canonical).'"><meta property="og:type" content="product">';
             if($p['photos'])$head.='<meta property="og:image" content="'.storefrontEsc(str_starts_with($p['photos'][0]['url'],'/')?'https://rubizh.shop'.$p['photos'][0]['url']:$p['photos'][0]['url']).'">';
             $head.='<script id="rubizh-product-schema" type="application/ld+json">'.json_encode($structured,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT).'</script>'.storefrontBreadcrumb($boot['categories'],(string)$p['category'],$p['name']);
-            $fallback='<article><h1>'.storefrontEsc($p['name']).'</h1><p>'.storefrontEsc($p['description']).'</p><p>'.storefrontEsc((string)$p['price_min']).' ₴</p><a href="/catalog">До каталогу</a></article>';
+            // SEO-5.3: the product card without JavaScript — main photo, colours, sizes, availability and price in the server HTML.
+            $fallback='<article><h1>'.storefrontEsc($p['name']).'</h1>';
+            if($p['photos']){$ph=$p['photos'][0];$fallback.='<img src="'.storefrontEsc((string)$ph['url']).'" alt="'.storefrontEsc($p['name']).'"'.(!empty($ph['width'])&&!empty($ph['height'])?' width="'.(int)$ph['width'].'" height="'.(int)$ph['height'].'"':'').' style="max-width:100%;height:auto">';}
+            $colors=array_values(array_unique(array_filter(array_map(fn($v)=>trim((string)($v['color']??'')),$p['variants']))));
+            $sizes=array_values(array_unique(array_filter(array_map(fn($v)=>trim((string)($v['size_display']??'')),$p['variants']))));
+            if($colors)$fallback.='<p>Колір: '.storefrontEsc(implode(', ',$colors)).'</p>';
+            if($sizes)$fallback.='<p>Розміри: '.storefrontEsc(implode(', ',$sizes)).'</p>';
+            $fallback.='<p>Наявність: '.storefrontEsc(['in'=>'в наявності','order'=>'під замовлення','out'=>'немає в наявності'][$p['availability']]??'уточнюйте').'</p>';
+            if($p['price_min']!==null)$fallback.='<p>Ціна: '.storefrontEsc(number_format((float)$p['price_min'],0,'',' ')).' ₴'.(count(array_unique(array_filter(array_column($p['variants'],'price'))))>1?' (від)':'').'</p>';
+            $fallback.='<p>'.storefrontEsc($p['description']).'</p><a href="/catalog">До каталогу</a></article>';
         }
     }elseif($uri==='/porady'||str_starts_with($uri,'/porady/')){
         if(in_array($uri,['/porady/dohliad-rip-stop','/porady/rozkladka'],true)){header('Location: /porady',true,301);exit;}
@@ -68,17 +77,41 @@ $boot['catalog']=shopCatalog($db,$args);
         $boot['categoryPath']=[];foreach($boot['categories'] as $c)if($c['url_path']===$category)$boot['categoryPath']=explode(' / ',$c['path']);
         if($category!==''&&!$boot['categoryPath']){ $known=shopTaxonomyTarget($db,$category);if($known)$boot['categoryPath']=explode(' / ',$known['path']);else $status=404;}
         $title=$boot['categoryPath']?end($boot['categoryPath']).' — купити в РУБІЖ':'Каталог тактичного спорядження — РУБІЖ';$canonical='https://rubizh.shop/catalog'.($category!==''?'/'.$category:'');if($boot['catalog']['page']>1)$canonical.='?page='.$boot['catalog']['page'];
-        $head='<title>'.storefrontEsc($title).'</title><link rel="canonical" href="'.storefrontEsc($canonical).'"><meta name="description" content="'.storefrontEsc($title.' — ціни, розміри та доставка по Україні.').'">';
+        $categoryDescription='';foreach($boot['categories'] as $c)if($c['path']===implode(' / ',$boot['categoryPath']))$categoryDescription=(string)($c['seo_description']??'');
+        $head='<title>'.storefrontEsc($title).'</title><link rel="canonical" href="'.storefrontEsc($canonical).'"><meta name="description" content="'.storefrontEsc($categoryDescription!==''?$categoryDescription:$title.' — ціни, розміри та доставка по Україні.').'">';
         // The client always serializes its default sort; it does not make a clean catalog filtered.
         if(array_filter($_GET,fn($value,$key)=>$key!=='page'&&($key!=='sort'||$value!=='pop'),ARRAY_FILTER_USE_BOTH))$head.='<meta name="robots" content="noindex,follow">';
         if($status!==404)$head.=storefrontBreadcrumb($boot['categories'],implode(' / ',$boot['categoryPath']));
         $fallback='<h1>'.storefrontEsc($title).'</h1><ul>';foreach($boot['catalog']['items'] as $p)$fallback.='<li><a href="/product/'.storefrontEsc($p['slug']).'">'.storefrontEsc($p['name']).'</a> · '.storefrontEsc((string)$p['price_min']).' ₴</li>';$fallback.='</ul>';
         for($page=1;$page<=max(1,$boot['catalog']['pages']);$page++)$fallback.='<a href="'.storefrontEsc($uri.'?page='.$page).'">'.$page.'</a> ';
+    }elseif(preg_match('~^/rozdil/([a-z0-9-]{1,64})(/?)$~',$uri,$m)){
+        // Stage 5 (owner, D-62): an indexable page for a home group of several roots — H1, short text, subcategories, goods.
+        $group=shopCategoryGroup($m[1]);
+        if(!$group){$status=404;$fallback='<h1>Розділ не знайдено</h1><a href="/categories">Усі категорії</a>';}
+        elseif($m[2]==='/'){header('Location: /rozdil/'.$group['slug'].(($_SERVER['QUERY_STRING']??'')!==''?'?'.$_SERVER['QUERY_STRING']:''),true,301);exit;}
+        else{
+            $args=$_GET;$args['roots']=json_encode($group['roots'],JSON_UNESCAPED_UNICODE);foreach(['priceFrom'=>'price_from','priceTo'=>'price_to'] as $from=>$to)if(isset($_GET[$from]))$args[$to]=$_GET[$from];
+            $boot['catalog']=shopCatalog($db,$args);$boot['group']=$group['slug'];$canonical='https://rubizh.shop/rozdil/'.$group['slug'];if($boot['catalog']['page']>1)$canonical.='?page='.$boot['catalog']['page'];
+            $title=$group['title'].' — купити в РУБІЖ';
+            $head='<title>'.storefrontEsc($title).'</title><link rel="canonical" href="'.storefrontEsc($canonical).'"><meta name="description" content="'.storefrontEsc($group['description']).'">';
+            if(array_filter($_GET,fn($value,$key)=>$key!=='page'&&($key!=='sort'||$value!=='pop'),ARRAY_FILTER_USE_BOTH))$head.='<meta name="robots" content="noindex,follow">';
+            $crumbs=[['@type'=>'ListItem','position'=>1,'name'=>'РУБІЖ','item'=>'https://rubizh.shop/'],['@type'=>'ListItem','position'=>2,'name'=>'Каталог','item'=>'https://rubizh.shop/catalog'],['@type'=>'ListItem','position'=>3,'name'=>$group['title']]];
+            $head.='<script type="application/ld+json">'.json_encode(['@context'=>'https://schema.org','@type'=>'BreadcrumbList','itemListElement'=>$crumbs],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT).'</script>';
+            $fallback='<nav aria-label="Навігація"><a href="/">Головна</a> / <a href="/catalog">Каталог</a> / '.storefrontEsc($group['title']).'</nav><h1>'.storefrontEsc($group['title']).'</h1><p>'.storefrontEsc($group['intro']).'</p><h2>Категорії</h2><ul>';
+            foreach($boot['categories'] as $c)foreach($group['roots'] as $root)if($c['path']===$root||str_starts_with($c['path'],$root.' / '))$fallback.='<li><a href="/catalog/'.storefrontEsc($c['url_path']).'">'.storefrontEsc($c['name']).'</a></li>';
+            $fallback.='</ul><h2>Товари</h2><ul>';foreach($boot['catalog']['items'] as $p)$fallback.='<li><a href="/product/'.storefrontEsc($p['slug']).'">'.storefrontEsc($p['name']).'</a> · '.storefrontEsc((string)$p['price_min']).' ₴</li>';$fallback.='</ul>';
+            for($page=1;$page<=max(1,$boot['catalog']['pages']);$page++)$fallback.='<a href="'.storefrontEsc($uri.'?page='.$page).'">'.$page.'</a> ';
+        }
     }elseif(preg_match('~^/kit/([a-f0-9]{32})/?$~',$uri,$m)){$boot['kitCode']=$m[1];$head='<title>Комплект побратима — РУБІЖ</title><meta name="robots" content="noindex,follow">';}
     elseif($uri==='/kit'){header('Location: /kit/'.(($_SERVER['QUERY_STRING']??'')!==''?'?'.$_SERVER['QUERY_STRING']:''),true,301);exit;}
     elseif($uri==='/kit/'){$head='<title>Зібрати комплект — РУБІЖ</title><link rel="canonical" href="https://rubizh.shop/kit/"><meta name="description" content="Конструктор комплекту РУБІЖ. Оберіть речі щонайменше з двох різних розділів — отримаєте ціну комплекту.">';$fallback='<h1>Зібрати комплект</h1><p>Голова, тіло, ноги, взуття, бронезахист, спорядження й медицина — по одній речі на слот. Оберіть речі щонайменше з двох різних розділів — отримаєте ціну комплекту.</p><a href="/catalog">До каталогу</a>';}
     elseif(preg_match('~^/(?:product|kit)(?:/|$)~',$uri)){$status=404;$fallback='<h1>Сторінку не знайдено</h1><p>Перевірте адресу або відкрийте каталог.</p><a href="/catalog">До каталогу</a>';}
-    else{$boot['catalog']=shopCatalog($db,[]);$head='<link rel="canonical" href="https://rubizh.shop/">';$fallback='<h1>РУБІЖ — тактичний одяг та спорядження</h1><ul>';foreach($boot['categories'] as $c)if(!str_contains($c['path'],' / '))$fallback.='<li><a href="/catalog/'.storefrontEsc($c['url_path']).'">'.storefrontEsc($c['name']).'</a></li>';$fallback.='</ul>';}
+    else{$boot['catalog']=shopCatalog($db,[]);$head='<link rel="canonical" href="https://rubizh.shop/">';
+        // SEO-5.5: who publishes the site and the site itself (search action → the catalog search).
+        $seller=rubizhSeller();$social=array_values(array_filter(shopPublicSocial()));
+        $org=['@context'=>'https://schema.org','@type'=>'Organization','@id'=>'https://rubizh.shop/#organization','name'=>'РУБІЖ','url'=>'https://rubizh.shop/','logo'=>'https://rubizh.shop/assets/apple-touch-icon.png','email'=>$seller['email'],'telephone'=>$seller['phone']]+($social?['sameAs'=>$social]:[]);
+        $site=['@context'=>'https://schema.org','@type'=>'WebSite','@id'=>'https://rubizh.shop/#website','name'=>'РУБІЖ','url'=>'https://rubizh.shop/','inLanguage'=>'uk','publisher'=>['@id'=>'https://rubizh.shop/#organization'],'potentialAction'=>['@type'=>'SearchAction','target'=>'https://rubizh.shop/catalog?q={search_term_string}','query-input'=>'required name=search_term_string']];
+        foreach([$org,$site] as $ld)$head.='<script type="application/ld+json">'.json_encode($ld,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT).'</script>';$fallback='<h1>РУБІЖ — тактичний одяг та спорядження</h1><ul>';foreach($boot['categories'] as $c)if(!str_contains($c['path'],' / '))$fallback.='<li><a href="/catalog/'.storefrontEsc($c['url_path']).'">'.storefrontEsc($c['name']).'</a></li>';$fallback.='</ul>';}
 }catch(Throwable $e){error_log('rubizh storefront: '.get_class($e).' code '.(string)$e->getCode());$status=$e instanceof RubizhHttpException?$e->status:503;$boot['error']=$e instanceof RubizhHttpException?$e->getMessage():'Каталог тимчасово недоступний. Спробуйте ще раз.';$head='<meta name="robots" content="noindex,follow">';if($e instanceof RubizhHttpException&&$e->retryAfter)header('Retry-After: '.$e->retryAfter);}
 http_response_code($status);header('Content-Type: text/html; charset=utf-8');header('Cache-Control: '.($status>=400?'no-store':(!empty($_SESSION['customer_id'])?'private, no-store':'no-cache')));header('X-Content-Type-Options: nosniff');
 if($status===503)header('Retry-After: 60');

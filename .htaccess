@@ -23,7 +23,7 @@ RewriteRule ^(offer|privacy)\.html$ /$1 [R=301,L]
 RewriteRule ^katalog/vsi/?$ /catalog [R=301,L]
 RewriteRule ^katalog/(.*)$ /catalog/$1 [R=301,L]
 RewriteRule ^tovar/(.*)$ /product/$1 [R=301,L]
-RewriteRule ^(?:product|catalog|kit|categories|porady)(?:/.*)?$ storefront.php [QSA,L]
+RewriteRule ^(?:product|catalog|kit|categories|porady|rozdil)(?:/.*)?$ storefront.php [QSA,L]
 RewriteRule ^(?:offer|privacy)/?$ storefront.php [QSA,L]
 RewriteRule ^sitemap\.xml$ sitemap.php [L]
 <IfModule mod_deflate.c>

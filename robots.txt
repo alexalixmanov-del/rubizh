@@ -1,13 +1,75 @@
+# RUBIZH robots.txt (stage 5, SEO-5.2).
+# The hosting (adm.tools) may prepend its own managed block («User-agent: *» with «Allow: /» and «Disallow: /» for some
+# bots). These rules do not rely on that block being present or absent: every group below carries the full rule set,
+# because a crawler that has its own group ignores the «*» group.
+
 User-agent: *
+Allow: /$
+Allow: /catalog
+Allow: /product/
+Allow: /categories
+Allow: /rozdil/
+Allow: /porady
+Allow: /offer
+Allow: /privacy
+Allow: /assets/
+Allow: /media/
+Allow: /sitemap.xml
 Disallow: /auth/
 Disallow: /shop/
 Allow: /shop/catalog.php
 Allow: /shop/analytics.php
 Disallow: /api/
+Disallow: /staff/
+Disallow: /crm/
 Allow: /kit/$
 Disallow: /kit/
 
-# Public Allow rules override the hosting-wide Disallow: / for these agents.
+User-agent: Googlebot
+Allow: /$
+Allow: /catalog
+Allow: /product/
+Allow: /categories
+Allow: /rozdil/
+Allow: /porady
+Allow: /offer
+Allow: /privacy
+Allow: /assets/
+Allow: /media/
+Allow: /sitemap.xml
+Disallow: /auth/
+Disallow: /shop/
+Allow: /shop/catalog.php
+Allow: /shop/analytics.php
+Disallow: /api/
+Disallow: /staff/
+Disallow: /crm/
+Allow: /kit/$
+Disallow: /kit/
+
+User-agent: Bingbot
+Allow: /$
+Allow: /catalog
+Allow: /product/
+Allow: /categories
+Allow: /rozdil/
+Allow: /porady
+Allow: /offer
+Allow: /privacy
+Allow: /assets/
+Allow: /media/
+Allow: /sitemap.xml
+Disallow: /auth/
+Disallow: /shop/
+Allow: /shop/catalog.php
+Allow: /shop/analytics.php
+Disallow: /api/
+Disallow: /staff/
+Disallow: /crm/
+Allow: /kit/$
+Disallow: /kit/
+
+# AI search and assistant crawlers: the public pages stay readable even where the hosting block says «Disallow: /».
 User-agent: GPTBot
 User-agent: OAI-SearchBot
 User-agent: ChatGPT-User
@@ -20,6 +82,7 @@ Allow: /$
 Allow: /catalog
 Allow: /product/
 Allow: /categories
+Allow: /rozdil/
 Allow: /porady
 Allow: /offer
 Allow: /privacy
@@ -31,6 +94,8 @@ Disallow: /shop/
 Allow: /shop/catalog.php
 Allow: /shop/analytics.php
 Disallow: /api/
+Disallow: /staff/
+Disallow: /crm/
 Allow: /kit/$
 Disallow: /kit/
 

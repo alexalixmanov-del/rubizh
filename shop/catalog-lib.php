@@ -173,6 +173,11 @@ function shopCatalogBuild(PDO $db,array $input): array {
 
 // Було: окремий підзапит COUNT на кожну з ~233 категорій для кожного відвідувача. Тепер — один GROUP BY + кеш.
 function shopCategories(PDO $db): array {
+ // 5-5: every category carries its own meta description (the same text on direct visits and after SPA navigation).
+ $list=shopCategoriesList($db);$seo=shopCategoryDescriptions($db,$list);
+ return array_map(fn($c)=>$c+['seo_description'=>$seo[$c['path']]??''],$list);
+}
+function shopCategoriesList(PDO $db): array {
  if(shopTaxonomyActive($db))return shopCached('canonical-categories',fn()=>shopTaxonomyCategories($db),'',['operation'=>'categories']);
  return shopCached('categories',function()use($db){
   $filter=$db->query("SELECT v FROM meta WHERE k='hide_unavailable'")->fetchColumn()!=='0'?" AND EXISTS(SELECT 1 FROM variants av WHERE av.product_id=p.id AND ".shopBuyableSql('av',shopSizeRequiredProductSql($db)).")":'';
@@ -248,5 +253,38 @@ function shopRootsRedirect(array $categories,string $rootsJson): string {
     $roots=json_decode($rootsJson,true);
     if(!is_array($roots)||!$roots||array_filter($roots,fn($r)=>!is_string($r)||$r===''))return '/categories';
     if(count($roots)===1){foreach($categories as $c)if(($c['path']??'')===$roots[0]&&($c['url_path']??'')!=='')return '/catalog/'.$c['url_path'];return '/categories';}
+    // Stage 5 (owner, D-62): a group of several roots has its own indexable page.
+    $group=shopCategoryGroupForRoots($roots);if($group)return '/rozdil/'.$group['slug'];
     $slug=shopClientSlug($roots[0]);return $slug===''?'/categories':'/categories#ac-'.$slug;
+}
+/** Stage 5 (owner, D-62): the home groups of several root categories («Бронезахист», «Спорядження») — /rozdil/<slug>. */
+function shopCategoryGroups(): array {static $groups=null;return $groups??=json_decode((string)file_get_contents(__DIR__.'/category-groups.json'),true,8,JSON_THROW_ON_ERROR);}
+function shopCategoryGroup(string $slug): ?array {foreach(shopCategoryGroups() as $g)if($g['slug']===$slug)return $g;return null;}
+function shopCategoryGroupForRoots(array $roots): ?array {foreach(shopCategoryGroups() as $g)if(in_array($roots[0]??null,$g['roots'],true))return $g;return null;}
+/**
+ * Stage 5 (5-5): an individual meta description for every category from its own goods — the number of models, the lowest
+ * price and the leading brands — instead of one generic sentence. ≤160 characters.
+ */
+function shopCategoryDescriptions(PDO $db,array $categories): array {
+    return shopCached('category-descriptions-v1',function()use($db,$categories){
+        $stats=[];
+        foreach($db->query("SELECT p.category_path path,p.brand,COUNT(*) n,MIN(NULLIF(p.price_min,0)) mn FROM products p WHERE p.visible=1 GROUP BY p.category_path,p.brand")->fetchAll(PDO::FETCH_ASSOC) as $r){
+            $parts=explode(' / ',(string)$r['path']);
+            for($k=1;$k<=count($parts);$k++){$pp=implode(' / ',array_slice($parts,0,$k));
+                if($r['mn']!==null)$stats[$pp]['mn']=min($stats[$pp]['mn']??PHP_FLOAT_MAX,(float)$r['mn']);
+                $brand=trim((string)$r['brand']);if($brand!=='')$stats[$pp]['brands'][$brand]=($stats[$pp]['brands'][$brand]??0)+(int)$r['n'];}
+        }
+        $out=[];
+        foreach($categories as $c){
+            $n=(int)($c['product_count']??0);$st=$stats[$c['path']]??[];$brands=$st['brands']??[];arsort($brands);
+            $form=$n%10===1&&$n%100!==11?'товар':($n%10>=2&&$n%10<=4&&($n%100<12||$n%100>14)?'товари':'товарів');
+            $head=$c['name'].' у РУБІЖ: '.$n.' '.$form.(isset($st['mn'])?' від '.number_format($st['mn'],0,'',' ').' ₴':'');
+            $tail='. Ціни, розміри, наявність і доставка Новою поштою по Україні.';
+            $text=$head.($brands?' — '.implode(', ',array_slice(array_keys($brands),0,3)):'').$tail;
+            if(mb_strlen($text)>160)$text=$head.$tail;
+            if(mb_strlen($text)>160)$text=$head.'. Доставка Новою поштою по Україні.';
+            $out[$c['path']]=mb_substr($text,0,160);
+        }
+        return $out;
+    },'',['operation'=>'categories']);
 }

@@ -56,6 +56,10 @@ function storeGalleryReset(){try{const track=document.querySelector('[data-gal-t
 const STORE_SLOT_NAMES=(Array.isArray(window.RUBIZH_BOOT?.kitSlots)&&window.RUBIZH_BOOT.kitSlots.length?window.RUBIZH_BOOT.kitSlots:[['gear','^(?:підсум|чохол|сумк|футляр|холдер|тримач)|рюкзак|баул|розвантаж|рпс|гідратор|бойовий пояс'],['med','аптеч|турнікет|джгут|гемостат|бандаж|ifak'],['small','шкарпет|рукавич|рукавиц|наколін|налокіт'],['head','шолом|каск|шапк|кепк|панам|бейсбол|балаклав|навушник|баф|окуляр'],['boots','берц|черевик|кросів|взутт|бахіл'],['armor','плитоноск|бронежилет|бронеплит|бронепакет|балістичн.*пакет'],['legs','штани|штанів|брюки|джогер|шорти'],['small','пояс|ремінь'],['body','курт|убакс|ubacs|сороч|футбол|поло|термобілиз|термобель|фліс|флис|кофта|худі|софтшел|пончо|костюм']]).map(([s,p])=>[s,new RegExp(p,'i')]);
 function storeSlot(p){if(p.v3)return p.kit_slot||'none';for(const [slot,re] of STORE_SLOT_NAMES)if(re.test(p.name||''))return slot;const path=(p.path||String(p.category||'').split(' / ')).join(' / ');for(const [slot,re] of [['med',/медицин|медицина/i],['head',/голов|шолом/i],['armor',/бронезахист/i],['boots',/взуття/i],['legs',/штани/i],['small',/рукавич|аксесуари одягу/i],['gear',/рюкзак|підсум|рпс|спорядження/i],['body',/одяг|форма/i]])if(re.test(path))return slot;return 'small';}
 // D-65 (owner 2026-10-16): «Бронезахист» (the armor section, the category and its subcategories) never gets the kit price — the server's shopKitFixedPrice.
+// Stage 5 (owner, D-62): home groups of several roots have indexable pages /rozdil/<slug> (server: shop/category-groups.json).
+function storeGroups(){const boot=window.RUBIZH_BOOT?.groups;return Array.isArray(boot)&&boot.length?boot:STORE_GROUPS_FALLBACK;}
+const STORE_GROUPS_FALLBACK=[{slug:'bronezakhyst',title:'Бронезахист',roots:['Бронезахист','Шоломи та захист голови'],description:'',intro:''},{slug:'sporiadzhennia',title:'Спорядження',roots:['Рюкзаки, сумки та баули','Підсумки','РПС та розвантаження'],description:'',intro:''}];
+function storeGroupForRoots(roots){if(!Array.isArray(roots)||roots.length<2)return null;return storeGroups().find(g=>g.roots.length===roots.length&&g.roots.every(r=>roots.includes(r)))||null;}
 function storeKitFixedPrice(p){if(storeSlot(p)==='armor')return true;const path=(p.path||String(p.category||'').split(' / ')).join(' / ');return path==='Бронезахист'||path.startsWith('Бронезахист / ');}
 const STORE_KIT_FIXED_NOTE='Бронезахист продається за фіксованою ціною, ціна комплекту на нього не застосовується.';
 function storeMoney(n){return new Intl.NumberFormat('uk-UA',{maximumFractionDigits:2}).format(Math.round(Number(n||0)*100)/100)+'\u00a0₴';}
@@ -991,6 +995,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
         };
     }, Dt = [ {
         title: "Бронезахист",
+        slug: "bronezakhyst",
         roots: [ "Бронезахист", "Шоломи та захист голови" ],
         sub: "плити, плитоноски, шоломи, балістичні пакети",
         img: "/assets/category-armor.8d7b42242386.webp"
@@ -1006,6 +1011,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
         img: "/assets/category-footwear.6a8bd09a2528.webp"
     }, {
         title: "Спорядження",
+        slug: "sporiadzhennia",
         roots: [ "Рюкзаки, сумки та баули", "Підсумки", "РПС та розвантаження" ],
         sub: "рюкзаки, підсумки, РПС, сумки",
         img: "/assets/category-backpacks.3ab1ce8d263c.webp"
@@ -3365,9 +3371,10 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
             sort: "rel" === this.state.sort ? "pop" : this.state.sort
         });
         goRoots=t => {
+            const g=storeGroupForRoots(t.roots);
             1 === t.roots.length ? this.goPath([ t.roots[0] ], {
                 sort: "stock"
-            }) : this.goAllCats(t.roots[0]), window.scrollTo(0, 0);/* D-62: groups open their /categories section */
+            }) : g ? this.goPath([], {roots:g.roots.slice(),rootsTitle:g.title}) : this.goAllCats(t.roots[0]), window.scrollTo(0, 0);/* Stage 5 (D-62): a group opens its own page /rozdil/<slug> */
         };
         top5Vm=() => {
             const t = t => Z.filter(e => e.storeReady && t.includes(e.path[0]) && Object.keys(e.variants).some(t => "in_stock" === this.avail(e, t))).length, e = t => Z.filter(e => e.storeReady && t.includes(e.path[0])).length, i = new Set(Dt.flatMap(t => t.roots)), s = K.filter(e => !i.has(e.name) && t([ e.name ]) > 0).sort((t, i) => e([ i.name ]) - e([ t.name ])).map(t => ({
@@ -4121,6 +4128,10 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                         jt(t), this.goPath(s);
                     }
                 });
+            }), !t.cpath.length && storeGroupForRoots(t.roots) && Ut.push({
+                name: t.rootsTitle || storeGroupForRoots(t.roots).title,
+                href: "/rozdil/" + storeGroupForRoots(t.roots).slug,
+                open: t => jt(t)
             }), t.quick && Ut.push({
                 name: Dt,
                 href: "new" === t.quick ? "/novynky" : "/v-naiavnosti",
@@ -4133,7 +4144,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                     cursor: e === Ut.length - 1 ? "default" : "pointer"
                 };
             });
-            const Nt = "rubizh.shop" + Ut[Ut.length - 1].href + (t.catPg > 1 ? "?page=" + t.catPg : ""), Kt = this.visibleNodes(Rt ? Rt.kids : K), Ht = Rt ? this.visibleNodes(1 === t.cpath.length ? K : H(t.cpath.slice(0, -1)).kids).filter(t => t.name !== Rt.name) : [], Qt = t => ({
+            const Nt = "rubizh.shop" + Ut[Ut.length - 1].href + (t.catPg > 1 ? "?page=" + t.catPg : ""), Kt = this.visibleNodes(Rt ? Rt.kids : !t.cpath.length && storeGroupForRoots(t.roots) ? K.filter(n => storeGroupForRoots(t.roots).roots.includes(n.name)).flatMap(n => n.kids?.length ? n.kids : [ n ]) : K), Ht = Rt ? this.visibleNodes(1 === t.cpath.length ? K : H(t.cpath.slice(0, -1)).kids).filter(t => t.name !== Rt.name) : [], Qt = t => ({
                 path: t.path,
                 name: t.name,
                 n: this.nodeCount(t.path),
@@ -4448,8 +4459,8 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                 goCatalog: () => this.goPath([]),
                 goArmor: () => this.goPath([ "Бронезахист" ]),
                 catH1: Dt,
-                hasCatDesc: !!t.quick || void 0 !== Vt,
-                catDesc: "new" === t.quick ? "Товари, додані за останні 14 днів." : "stock" === t.quick ? "Лише те, що є на складі зараз. Відправимо сьогодні, якщо замовите до 17:00." : void 0 !== Vt ? O[Vt].desc : "",
+                hasCatDesc: !!t.quick || void 0 !== Vt || !t.cpath.length && !!storeGroupForRoots(t.roots)?.intro,
+                catDesc: !t.cpath.length && storeGroupForRoots(t.roots)?.intro && !t.quick ? storeGroupForRoots(t.roots).intro : "new" === t.quick ? "Товари, додані за останні 14 днів." : "stock" === t.quick ? "Лише те, що є на складі зараз. Відправимо сьогодні, якщо замовите до 17:00." : void 0 !== Vt ? O[Vt].desc : "",
                 catCrumbs: Ut,
                 pageUrl: Nt,
                 hasSubTiles: Kt.length > 0,
@@ -5910,7 +5921,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
             const i = JSON.stringify([ route, t.screen, t.cpath, t.current, page, noindex, t.guide, t.storeSettings?.seller?.name, e?.name, description, e?.price, e?.photos, e?.brand, e?.variants ]);
             if (this._metaKey === i) return;
             this._metaKey = i;
-            const s = "https://rubizh.shop" + this.historyUrl(t).split("?")[0].split("#")[0], o = "product" === t.screen ? e.name + " — РУБІЖ" : "catalog" === t.screen ? t.cpath.at(-1) ? t.cpath.at(-1) + " — купити в РУБІЖ" : "Каталог тактичного спорядження — РУБІЖ" : "allcats" === t.screen ? "Усі категорії — РУБІЖ" : "guides" === t.screen ? "Поради — РУБІЖ" : "guide" === t.screen ? ((A.find(g => g.key === t.guide) || {}).title || "Поради") + " — Поради РУБІЖ" : "kit" === t.screen ? "Зібрати комплект — РУБІЖ" : "РУБІЖ — тактичний одяг та спорядження";
+            const s = "https://rubizh.shop" + this.historyUrl(t).split("?")[0].split("#")[0], group = "catalog" === t.screen && !t.cpath.length ? storeGroupForRoots(t.roots) : null, o = "product" === t.screen ? e.name + " — РУБІЖ" : "catalog" === t.screen ? t.cpath.at(-1) ? t.cpath.at(-1) + " — купити в РУБІЖ" : group ? group.title + " — купити в РУБІЖ" : "Каталог тактичного спорядження — РУБІЖ" : "allcats" === t.screen ? "Усі категорії — РУБІЖ" : "guides" === t.screen ? "Поради — РУБІЖ" : "guide" === t.screen ? ((A.find(g => g.key === t.guide) || {}).title || "Поради") + " — Поради РУБІЖ" : "kit" === t.screen ? "Зібрати комплект — РУБІЖ" : "РУБІЖ — тактичний одяг та спорядження";
             document.title = o;
             const a = (t, e, i) => {
                 const nodes=document.head.querySelectorAll(t);let s = nodes[0];
@@ -5923,7 +5934,8 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                 href: s + ("catalog" === t.screen && page > 1 ? "?page=" + page : "")
             }), a('meta[name="description"]', "meta", {
                 name: "description",
-                content: Array.from("product" === t.screen ? description || "Замовити "+e.name+" у РУБІЖ. Розміри, ціна та доставка по Україні." : o + " — ціни, розміри та доставка по Україні.").slice(0,160).join('')
+                // 5-5: the same individual description as the server page (category seo_description, group description).
+                content: Array.from("product" === t.screen ? description || "Замовити "+e.name+" у РУБІЖ. Розміри, ціна та доставка по Україні." : group?.description || ("catalog" === t.screen && t.cpath.length ? (this._storeCategories || window.RUBIZH_BOOT?.categories || []).find(c => c.path === t.cpath.join(" / "))?.seo_description : "") || o + " — ціни, розміри та доставка по Україні.").slice(0,160).join('')
             }), a('meta[property="og:title"]', "meta", {
                 property: "og:title",
                 content: o
@@ -5955,7 +5967,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
             document.head.querySelectorAll('script[type="application/ld+json"]').forEach(node=>{try{if(JSON.parse(node.textContent)['@type']==='BreadcrumbList')node.remove();}catch(error){}});
             if(t.screen==='product'||t.screen==='catalog'){
                 const node=document.createElement('script');node.id='rubizh-breadcrumb-schema';node.type='application/ld+json';
-                node.textContent=JSON.stringify(this.storeSeoBreadcrumb(t.screen==='product'?e.path:t.cpath,t.screen==='product'?e.name:null));document.head.appendChild(node);
+                node.textContent=JSON.stringify(this.storeSeoBreadcrumb(t.screen==='product'?e.path:t.cpath,t.screen==='product'?e.name:group?group.title:null));document.head.appendChild(node);
             }
         };
         storeKitQuery=(page=1) => {
@@ -6143,7 +6155,7 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                 });
             }
         };
-        top5Vm=()=>Dt.map(c=>{const count=c.roots.reduce((n,r)=>n+Number(this._storeCategories?.find(x=>x.path===r)?.product_count||0),0);/* D-62: a group of several roots opens its section on /categories (clean address, no ?roots=). */const href=c.roots.length===1?'/catalog/'+(this._storeCategories?.find(x=>x.path===c.roots[0])?.url_path||w(c.roots[0])):'/categories#ac-'+w(c.roots[0]);return {title:c.title,sub:'',count:x(count,'товар','товари','товарів'),aria:c.title,href,hasImg:!!c.img,imgStyle:{position:'absolute',inset:0,backgroundImage:`url('${c.img}')`,backgroundSize:'cover',backgroundPosition:'center'},open:ev=>{if(ev?.metaKey||ev?.ctrlKey||ev?.shiftKey||ev?.button>0)return;ev?.preventDefault?.();c.roots.length===1?this.goRoots(c):this.goAllCats(c.roots[0]);}};});
+        top5Vm=()=>Dt.map(c=>{const count=c.roots.reduce((n,r)=>n+Number(this._storeCategories?.find(x=>x.path===r)?.product_count||0),0);/* D-62: a group of several roots opens its section on /categories (clean address, no ?roots=). */const href=c.roots.length===1?'/catalog/'+(this._storeCategories?.find(x=>x.path===c.roots[0])?.url_path||w(c.roots[0])):'/rozdil/'+c.slug;return {title:c.title,sub:'',count:x(count,'товар','товари','товарів'),aria:c.title,href,hasImg:!!c.img,imgStyle:{position:'absolute',inset:0,backgroundImage:`url('${c.img}')`,backgroundSize:'cover',backgroundPosition:'center'},open:ev=>{if(ev?.metaKey||ev?.ctrlKey||ev?.shiftKey||ev?.button>0)return;ev?.preventDefault?.();this.goRoots(c);}};});
         storeLoadRecommendations=async()=>{if(this._recommendations)return;this._recommendations=true;try{const j=await this.storeRequest('/shop/catalog.php?action=storefront');this.storeCache(j.products||[]);this.setState({storePreparedKits:j.kits||[],storeKitsReady:true});}catch(e){this._recommendations=false;this.setState({storeKitsReady:true});}};
         buildKit=cfg=>{const season=cfg.season||'Демісезон',have=cfg.have||[],size=cfg.formSize==='S–M'?'M':cfg.formSize==='XL–XXL'?'XL':'L',num={M:'48',L:'50',XL:'54'}[size],used=new Set(),lines=[],miss={},names=[],budget=cfg.budget>=61000?Infinity:(Number(cfg.budget)||Infinity);let sum=0;const add=(slot,test,prefs=[])=>{const candidates=Z.filter(p=>storeKitEligible(p)&&storeKitPrimary(p)&&!used.has(p.id)&&storeSlot(p)===slot&&storeSeasonOK(p,season)&&(!test||test(p))).sort((a,b)=>(storePalette(b.camo)===storePalette(cfg.camo)?1:0)-(storePalette(a.camo)===storePalette(cfg.camo)?1:0)||a.price-b.price);for(const p of candidates){const keys=Object.keys(p.variants).filter(k=>this.avail(p,k)!=='out'&&!p.variants[k].size_unconfirmed),k=prefs.length?keys.find(k=>prefs.includes(p.variants[k].size_display)||prefs.includes(p.variants[k].size_native)):keys.find(k=>/Один розмір|універс/i.test(p.variants[k].size_display))||keys[0];if(!k||sum+p.variants[k].price>budget)continue;used.add(p.id);sum+=p.variants[k].price;lines.push(this.kitLine(slot,p.id,k));names.push(p.name);delete miss[slot];return p;}miss[slot]=true;return null;};if(!have.includes('Форма')){if(season==='Зима'){add('body',p=>storeRole(p)==='thermal',[size,num]);add('body',p=>['fleece','outer'].includes(storeRole(p)),[size,num]);}else add('body',p=>storeRole(p)==='ubacs'||/сороч|костюм/i.test(p.name),[size,num]);add('legs',p=>storeRole(p)==='pants',[size,num]);}if(!have.includes('Берці'))add('boots',null,[cfg.shoe||'43']);if(!have.includes('Аптечка'))add('med',p=>storeRole(p)==='ifak'||/турнікет|джгут/i.test(p.name));if(!have.includes('Плитоноска з плитами')&&['Штурм','Розвідка'].includes(cfg.spec))add('armor',p=>storeRole(p)==='protection'&&storeHasPlates(p));if(!have.includes('Шолом')&&['Штурм','Розвідка','Оператор БпЛА'].includes(cfg.spec))add('head',p=>/шолом|каск/i.test(p.name));else add('head',p=>season==='Зима'?/шапк|балаклав/i.test(p.name):/кепк|панам|бейсбол/i.test(p.name));add('small',p=>storeRole(p)==='gloves',[size,num]);if(!have.includes('Рюкзак')&&['Штурм','Розвідка','Медик','Оператор БпЛА'].includes(cfg.spec))add('gear',p=>storeRole(p)==='backpack');return {lines,miss,names,sum};};
         storeImage=(row,p)=>{row.photoLoading='lazy';row.photoPriority='auto';if(!p)return;const cover=storeCardCover(p),urls=cover===''?[]:[...new Set([cover].concat((p.photoData||[]).flatMap(x=>[x.thumb,x.url]),p.photos||[]).filter(Boolean))];row.thumb=urls[0]||'';row.photo=urls[0]||'';row.hasThumb=row.hasPhoto=!!urls.length;row.noPhoto=!urls.length;row.photoErr=ev=>{const img=ev.currentTarget,idx=Number(img.dataset.tryIndex||0)+1;img.dataset.tryIndex=idx;if(urls[idx])img.src=urls[idx];else img.style.visibility='hidden';};};
@@ -6576,9 +6588,10 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
             if ("catalog" === t.screen) {
                 t.sq && e.set("q", t.sq), t.catPg > 1 && e.set("page", t.catPg);
                 for (const i of [ "sort", "quick", "priceFrom", "priceTo" ]) t[i] && e.set(i, t[i]);
-                for (const i of [ "camo", "sizes", "brands", "attrs", "roots" ]) t[i]?.length && e.set(i, JSON.stringify(t[i]));
+                const group=!(t.cpath||[]).length&&storeGroupForRoots(t.roots);
+                for (const i of [ "camo", "sizes", "brands", "attrs", "roots" ]) t[i]?.length && !(group&&i==="roots") && e.set(i, JSON.stringify(t[i]));
                 t.inStock && e.set("inStock", "1"), !1 === t.withOrder && e.set("withOrder", "0");
-                return X(t.cpath||[]) + (e.size ? "?" + e : "");
+                return (group ? "/rozdil/" + group.slug : X(t.cpath||[])) + (e.size ? "?" + e : "");
             }
             if(t.screen==='allcats')return '/categories';if(t.screen==='guides')return '/porady';if(t.screen==='guide')return '/porady/'+w((A.find(g=>g.key===t.guide)||A[0]).title);
             return "kit" === t.screen && /^https:\/\/rubizh\.shop\/kit\/[a-f0-9]{32}$/.test(this.state.kitLink || "") ? new URL(this.state.kitLink).pathname : "kit" === t.screen ? "/kit/" : "page" === t.screen && [ "offer", "privacy" ].includes(t.page) ? "/" + t.page : ("page" === t.screen && e.set("id", t.page),
@@ -6605,6 +6618,9 @@ function storeKitPriority(p){const role=storeRole(p);return ({ubacs:0,outer:1,fl
                 });
             }
             if(e==='/porady'||e==='/porady/')return this.historyRoute({...this.state,screen:'guides'});if(e.startsWith('/porady/')){const key=t.guideKey||A.find(g=>w(g.title)===decodeURIComponent(e.slice(8)))?.key;if(key)return this.historyRoute({...this.state,screen:'guide',guide:key});}
+            if(e.startsWith('/rozdil/')){const g=storeGroups().find(g=>g.slug===e.slice(8).replace(/\/$/,''));if(g){const r={...this.state,screen:'catalog',cpath:[],roots:g.roots.slice(),rootsTitle:g.title,sq:(i.get('q')||'').trim(),catPg:Math.max(1,Number(i.get('page'))||1)};for(const k of ['sort','quick','priceFrom','priceTo'])i.has(k)&&(r[k]=i.get(k));for(const k of ['camo','sizes','brands','attrs'])try{const v=JSON.parse(i.get(k)||'[]');Array.isArray(v)&&(r[k]=v.filter(x=>typeof x==='string'));}catch(x){}r.inStock=i.get('inStock')==='1';r.withOrder=i.get('withOrder')!=='0';return this.historyRoute(r);}}
+            // Stage 5 (D-62): the old group sections /categories#ac-<first root> now live on the group page.
+            if(e==='/categories'){const old=storeGroups().find(g=>location.hash==='#ac-'+w(g.roots[0]));if(old){location.replace('/rozdil/'+old.slug);return this.historyRoute({...this.state,screen:'catalog',cpath:[],roots:old.roots.slice(),rootsTitle:old.title});}}
             if(e==='/categories'){/* D-62: /categories#ac-<section> scrolls to that section once the directory is rendered. */const anchor=/^#ac-[a-z0-9-]+$/.test(location.hash)?location.hash.slice(1):'';if(anchor){let tries=0;const seek=()=>{const el=document.getElementById(anchor);if(el)window.scrollTo({top:el.getBoundingClientRect().top+window.scrollY-80});else if(++tries<40)setTimeout(seek,75);};setTimeout(seek,90);}return this.historyRoute({...this.state,screen:'allcats'});}
             if(e==='/kit'||e==='/kit/')return this.historyRoute({...this.state,screen:'kit'});
             if ("/catalog" === e || e.startsWith("/catalog/")) {

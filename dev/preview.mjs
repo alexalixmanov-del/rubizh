@@ -57,7 +57,7 @@ export function startPreview(port=4173) {
         const type=types[path.extname(file)];if(!type)return json({ok:false},404);
         const data=await readFile(file);res.writeHead(200,{'Content-Type':type});return res.end(req.method==='HEAD'?undefined:data);
       }
-      const isStorefront=name==='/'||/^\/(catalog|product|categories|kit|porady)(\/|$)/.test(name);
+      const isStorefront=name==='/'||/^\/(catalog|product|categories|kit|porady|rozdil)(\/|$)/.test(name);
       if(!isStorefront&&!['/offer','/privacy'].includes(name))return json({ok:false,error:'Сторінку не знайдено.'},404);
       let html=await readFile(path.join(root,isStorefront?'index.html':name.slice(1)+'.html'),'utf8');
       html=html.replace('<head>','<head><meta name="robots" content="noindex, nofollow"><script>window.RUBIZH_BOOT='+JSON.stringify({categories,settings:{donation:{enabled:false,percent:0}}})+';</script>');

@@ -99,16 +99,17 @@ test('D-62: home category cards link to clean addresses; a group opens its secti
  const cards=await page.locator('a.rz-category').evaluateAll(a=>a.map(x=>({t:x.getAttribute('aria-label')||x.textContent.trim(),h:x.getAttribute('href')})));
  assert.ok(cards.length>=5,JSON.stringify(cards));
  assert.deepEqual(cards.filter(c=>/[?&]roots=|^\/catalog\?/.test(c.h)),[],'no ?roots= links: '+JSON.stringify(cards));
- assert.equal(cards.find(c=>c.t==='Бронезахист')?.h,'/categories#ac-bronezakhyst');
- assert.equal(cards.find(c=>c.t==='Спорядження')?.h,'/categories#ac-riukzaky-sumky-ta-bauly');
+ // Stage 5 (owner, D-62): the groups have their own indexable pages.
+ assert.equal(cards.find(c=>c.t==='Бронезахист')?.h,'/rozdil/bronezakhyst');
+ assert.equal(cards.find(c=>c.t==='Спорядження')?.h,'/rozdil/sporiadzhennia');
  await page.locator('a.rz-category[aria-label="Бронезахист"]').click();
- await page.waitForURL(u=>new URL(u).pathname==='/categories');await page.locator('#ac-bronezakhyst').waitFor();await page.waitForTimeout(600);
- const top=await page.locator('#ac-bronezakhyst').evaluate(e=>e.getBoundingClientRect().top);
- assert.ok(top>=0&&top<500,'the section is scrolled into view: '+top);
+ await page.waitForURL(u=>new URL(u).pathname==='/rozdil/bronezakhyst');
+ assert.equal((await page.locator('#dc-root h1').first().innerText()).trim().toUpperCase(),'БРОНЕЗАХИСТ');
 },{width:1440,height:900}));
 test('D-62: a direct /categories#ac-… address scrolls to its section',()=>withPage(async page=>{
- await page.goto(base+'/categories#ac-bronezakhyst');await page.locator('#ac-bronezakhyst').waitFor();await page.waitForTimeout(800);
- const top=await page.locator('#ac-bronezakhyst').evaluate(e=>e.getBoundingClientRect().top);
+ // A section that is not a home group (the group sections now open /rozdil/<slug>, stage5-seo).
+ await page.goto(base+'/categories#ac-vzuttia');await page.locator('#ac-vzuttia').waitFor();await page.waitForTimeout(800);
+ const top=await page.locator('#ac-vzuttia').evaluate(e=>e.getBoundingClientRect().top);
  assert.ok(top>=0&&top<500,'scrolled: '+top);
 },{width:390,height:844}));
 test('D-62: old /catalog?roots=[…] addresses answer 301 to the clean address (group → /categories#ac-…, one root → /catalog/<url>)',async()=>{
@@ -116,7 +117,7 @@ test('D-62: old /catalog?roots=[…] addresses answer 301 to the clean address (
  const code=`require '${root}shop/catalog-lib.php';$c=[['name'=>'Бронезахист','path'=>'Бронезахист','url_path'=>'bronezakhyst'],['name'=>'Шоломи та захист голови','path'=>'Шоломи та захист голови','url_path'=>'shlomy'],['name'=>'Взуття','path'=>'Взуття','url_path'=>'vzuttia']];
   foreach(['["Бронезахист","Шоломи та захист голови"]','["Рюкзаки, сумки та баули","Підсумки","РПС та розвантаження"]','["Взуття"]','["Невідоме"]','not json','[1,2]'] as $r)echo json_encode(shopRootsRedirect($c,$r),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),"\\n";`;
  const r=php(code);
- assert.deepEqual(r.stdout.trim().split('\n').map(JSON.parse),['/categories#ac-bronezakhyst','/categories#ac-riukzaky-sumky-ta-bauly','/catalog/vzuttia','/categories','/categories','/categories']);
+ assert.deepEqual(r.stdout.trim().split('\n').map(JSON.parse),['/rozdil/bronezakhyst','/rozdil/sporiadzhennia','/catalog/vzuttia','/categories','/categories','/categories']);
  const {readFileSync}=await import('node:fs');const sf=readFileSync(root+'storefront.php','utf8');
  const hook=sf.slice(sf.indexOf("isset($_GET['roots'])"),sf.indexOf("isset($_GET['roots'])")+400);assert.match(hook,/shopRootsRedirect\(/);assert.match(hook,/header\('Location: '\.\$to,true,301\)/,'storefront.php redirects ?roots= with 301');
  assert.doesNotMatch(readFileSync(root+'sitemap.php','utf8'),/roots=/);
@@ -130,7 +131,7 @@ test('D-62: over HTTP the old ?roots= addresses answer 301 and the clean categor
   writeFileSync(site.site+'/router.php',`<?php $p=parse_url($_SERVER['REQUEST_URI'],PHP_URL_PATH);if($p==='/'||preg_match('~^/(?:product|catalog|categories|kit)(?:/.*)?$~',$p)){require __DIR__.'/storefront.php';return;}return false;`);
   const get=q=>fetch(site.base+'/catalog?'+new URLSearchParams(q),{redirect:'manual'});
   let r=await get({roots:JSON.stringify(['Бронезахист','Шоломи та захист голови']),title:'Бронезахист',sort:'stock'});
-  assert.equal(r.status,301);assert.equal(r.headers.get('location'),'/categories#ac-bronezakhyst');
+  assert.equal(r.status,301);assert.equal(r.headers.get('location'),'/rozdil/bronezakhyst');
   r=await get({roots:JSON.stringify(['Одяг та форма'])});assert.equal(r.status,301);assert.equal(r.headers.get('location'),'/catalog/odiah-ta-forma');
   const clean=await (await fetch(site.base+'/catalog/odiah-ta-forma')).text();
   assert.match(clean,/<link rel="canonical" href="https:\/\/rubizh\.shop\/catalog\/odiah-ta-forma">/);assert.doesNotMatch(clean,/noindex/);
