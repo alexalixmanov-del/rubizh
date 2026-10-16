@@ -16,7 +16,7 @@ function crmMessages(): array {
   'HTTPS_REQUIRED'=>'Потрібне захищене з’єднання.','PAYLOAD_TOO_LARGE'=>'Запит завеликий.','INVALID_JSON'=>'Перевірте введені дані.','STAFF_SCHEMA_REQUIRED'=>'CRM оновлюється. Спробуйте пізніше.','SERVICE_UNAVAILABLE'=>'Сервіс тимчасово недоступний. Дію не виконано.',
   'WEAK_PASSWORD'=>'Пароль занадто простий: щонайменше 12 символів, не з переліку поширених і не з вашого email.','TOKEN_INVALID'=>'Посилання недійсне або вже використане. Попросіть нове.','STAFF_EXISTS'=>'Співробітник з таким email уже є.',
   'LAST_OWNER_REQUIRED'=>'Має залишитися щонайменше один активний власник.','CRM_SECRET_KEY_MISSING'=>'Двофакторна перевірка ще не налаштована на сервері.','TOTP_ALREADY_ENABLED'=>'Двофакторну перевірку вже ввімкнено.','TOTP_SETUP_REQUIRED'=>'Спочатку почніть підключення.','TOTP_ENROLL_GRANT_REQUIRED'=>'Підключення двофакторної перевірки доступне за посиланням від власника (запрошення або скидання пароля).',
-  'REASON_REQUIRED'=>'Вкажіть причину (6–400 символів).','INVALID_ASSIGNEE'=>'Цьому співробітнику не можна призначити замовлення.','VERIFIED_PAYMENT_REQUIRED'=>'Немає підтвердженої банком оплати.',
+  'ALREADY_ORDERED'=>'Із цієї заявки вже створено замовлення.','BUSY'=>'Цю дію вже виконує інший співробітник. Спробуйте за хвилину.','REASON_REQUIRED'=>'Вкажіть причину (6–400 символів).','INVALID_ASSIGNEE'=>'Цьому співробітнику не можна призначити замовлення.','VERIFIED_PAYMENT_REQUIRED'=>'Немає підтвердженої банком оплати.',
   'REFUND_LIMIT_EXCEEDED'=>'Сума перевищує доступний до повернення залишок.','REFUND_RECONCILIATION_REQUIRED'=>'Попереднє повернення потребує звірки з банком.','PROVIDER_RESULT_UNKNOWN'=>'Банк або перевізник не підтвердив результат. Перевірте перед повтором.',
   'LINE_OUT_OF_STOCK'=>'Є позиція без наявності: замініть або приберіть її перед підтвердженням.','INVALID_STATE_TRANSITION'=>'Цей перехід недоступний.','PAID_ORDER_REQUIRED'=>'Дія доступна лише для оплаченого замовлення.',
  ];
@@ -41,7 +41,7 @@ function crmIdempotencyKey(array $route,array $body): ?string {
  if(empty($route['idempotent']))return null;
  // Money and creation routes always need the per-attempt key (M-11); elsewhere a key is honoured when the client sends
  // one (the CRM frontend always does) and the order version alone protects legacy clients.
- $required=in_array($route['id'],['orders.create','payments.refund','orders.invoice.accept','orders.reconcile.not_created','orders.reconcile.manual','staff.invite','staff.reset','orders.shipment.draft','returns.create'],true);
+ $required=in_array($route['id'],['orders.create','payments.refund','orders.invoice.accept','orders.reconcile.not_created','orders.reconcile.manual','staff.invite','staff.reset','orders.shipment.draft','returns.create','wholesale.order'],true);
  if($key===null&&!$required)return null;
  if(!is_string($key)||!preg_match('/^[a-f0-9]{32}$/D',$key))throw new CrmError('IDEMPOTENCY_KEY_REQUIRED',400);
  return $key;

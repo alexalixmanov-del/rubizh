@@ -2,7 +2,7 @@
 declare(strict_types=1);
 // v1 = RC1 CRM; v2 = stage 4 (roles WAREHOUSE/SUPPORT/ACCOUNTANT, CRM-own tables, SITE line checks, invoice payments).
 // v1 step SQL must stay byte-identical: the journal hashes it to detect drift.
-const CRM_SCHEMA_VERSION=3;
+const CRM_SCHEMA_VERSION=4;
 function crmSchemaSteps(): array {
  $tables=[
  'rubizh_staff_roles'=>"role VARCHAR(16) PRIMARY KEY,label VARCHAR(80) NOT NULL",
@@ -57,6 +57,8 @@ function crmSchemaStepsV2(): array {
  // short index instead of parsing every contact JSON. Invalid legacy JSON yields NULL instead of failing the migration.
  $j=fn(string $k)=>"JSON_UNQUOTE(JSON_EXTRACT(contact_json,'$.$k'))";
  $out[]=['kind'=>'column','table'=>'rubizh_order_details','name'=>'crm_search','sql'=>"ALTER TABLE rubizh_order_details ADD COLUMN crm_search VARCHAR(600) AS (IF(JSON_VALID(contact_json),LEFT(CONCAT_WS(' ',".$j('name').','.$j('recipient').','.$j('city')."),600),NULL)) VIRTUAL"];
+ // OD-4.6: a wholesale request has an assignee (OWNER/MANAGER) and, once ordered, its order.
+ foreach(['assigned_to'=>'CHAR(32) NULL','order_id'=>'BIGINT UNSIGNED NULL'] as $c=>$type)$out[]=['kind'=>'column','table'=>'rubizh_wholesale_requests','name'=>$c,'sql'=>"ALTER TABLE rubizh_wholesale_requests ADD COLUMN $c $type"];
  // Indexes for 50 000-order lists: assignment filter, timing, audit by order.
  foreach(['crm_order_updated'=>['rubizh_customer_orders','updated_at,id'],'crm_order_status_created'=>['rubizh_customer_orders','status,created_at,id'],'crm_np_audit_action'=>['rubizh_np_audit','action,id'],
   // Covering indexes for substring search (number, email, TTN): the scan reads the index, not the wide rows (PERF-4.2).
@@ -84,4 +86,6 @@ function crmMigrate(PDO $db): void {
 }
 
 function crmStepExists(PDO $db,array $s): bool {if($s['kind']!=='index')return shopP0StepExists($db,$s);$q=$db->prepare('SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND INDEX_NAME=?');$q->execute([$s['table'],$s['name']]);return (bool)$q->fetchColumn();}
-function crmObjectHash(PDO $db,array $s): string {if($s['kind']==='table'){$v=$db->query('SHOW CREATE TABLE `'.$s['name'].'`')->fetch(PDO::FETCH_NUM)[1];$v=preg_replace('/ AUTO_INCREMENT=\d+/','',$v);}elseif($s['kind']==='column'){$q=$db->prepare('SELECT COLUMN_TYPE,IS_NULLABLE,EXTRA,GENERATION_EXPRESSION FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND COLUMN_NAME=?');$q->execute([$s['table'],$s['name']]);$v=json_encode($q->fetch(PDO::FETCH_ASSOC),JSON_THROW_ON_ERROR);}elseif($s['kind']==='trigger'){$q=$db->prepare('SELECT EVENT_MANIPULATION,EVENT_OBJECT_TABLE,ACTION_STATEMENT,ACTION_TIMING FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA=DATABASE() AND TRIGGER_NAME=?');$q->execute([$s['name']]);$v=json_encode($q->fetch(PDO::FETCH_ASSOC),JSON_THROW_ON_ERROR);}else{$q=$db->prepare('SELECT NON_UNIQUE,SEQ_IN_INDEX,COLUMN_NAME,SUB_PART,INDEX_TYPE FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND INDEX_NAME=? ORDER BY SEQ_IN_INDEX');$q->execute([$s['table'],$s['name']]);$v=json_encode($q->fetchAll(PDO::FETCH_ASSOC),JSON_THROW_ON_ERROR);}return hash('sha256',$v);}
+function crmObjectHash(PDO $db,array $s): string {if($s['kind']==='table'){$v=$db->query('SHOW CREATE TABLE `'.$s['name'].'`')->fetch(PDO::FETCH_NUM)[1];$v=preg_replace('/ AUTO_INCREMENT=\d+/','',$v);
+  // Columns added to this table by later column steps carry their own hash (OD-4.6: wholesale assignee and order).
+  foreach(crmSchemaSteps() as $c)if($c['kind']==='column'&&$c['table']===$s['name'])$v=preg_replace('/^\s*`'.preg_quote($c['name'],'/').'` [^\n]*\n/m','',$v);}elseif($s['kind']==='column'){$q=$db->prepare('SELECT COLUMN_TYPE,IS_NULLABLE,EXTRA,GENERATION_EXPRESSION FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND COLUMN_NAME=?');$q->execute([$s['table'],$s['name']]);$v=json_encode($q->fetch(PDO::FETCH_ASSOC),JSON_THROW_ON_ERROR);}elseif($s['kind']==='trigger'){$q=$db->prepare('SELECT EVENT_MANIPULATION,EVENT_OBJECT_TABLE,ACTION_STATEMENT,ACTION_TIMING FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA=DATABASE() AND TRIGGER_NAME=?');$q->execute([$s['name']]);$v=json_encode($q->fetch(PDO::FETCH_ASSOC),JSON_THROW_ON_ERROR);}else{$q=$db->prepare('SELECT NON_UNIQUE,SEQ_IN_INDEX,COLUMN_NAME,SUB_PART,INDEX_TYPE FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND INDEX_NAME=? ORDER BY SEQ_IN_INDEX');$q->execute([$s['table'],$s['name']]);$v=json_encode($q->fetchAll(PDO::FETCH_ASSOC),JSON_THROW_ON_ERROR);}return hash('sha256',$v);}

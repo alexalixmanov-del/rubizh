@@ -42,6 +42,9 @@ function crmHandleMore(PDO $db,array $actor,array $route,array $p,array $b,array
   'wholesale.list'=>crmWholesaleList($db,$q),
   'wholesale.update'=>crmWholesaleUpdate($db,$actor,$id,$b),
   'wholesale.phone'=>crmWholesalePhone($db,$actor,$id),
+  'wholesale.detail'=>crmWholesaleDetail($db,$id),
+  'wholesale.note'=>crmWholesaleNeed($db,$id)?crmNote($db,$actor,'wholesale',(string)$id,$b+['request_id'=>$key]):[],
+  'wholesale.order'=>crmWholesaleOrder($db,$actor,$id,$b,(string)$key),
   default=>throw new CrmError('NOT_FOUND',404),
  };
 }
@@ -406,11 +409,25 @@ function crmExportCustomers(PDO $db,array $actor,array $q,bool $full,string $rea
 }
 
 // ---- D-54 wholesale requests (SITE table; empty until its migration) ---------------------------------------------------
+/** OD-4.6: the request row as the CRM shows it — masked phone, assignee and the order made from it. */
+function crmWholesaleRows(PDO $db,string $where,array $args,string $tail=''): array {
+ $rows=crmQuery($db,"SELECT w.id,w.number,w.name,w.phone,w.buyer_type,w.tax_id,w.email,w.kits,w.composition,w.priority,w.state,w.manager_note,w.created_at,w.updated_at,w.assigned_to,u.name AS assignee_name,w.order_id,o.order_number FROM rubizh_wholesale_requests w LEFT JOIN rubizh_staff_users u ON u.id=w.assigned_to LEFT JOIN rubizh_customer_orders o ON o.id=w.order_id WHERE $where ORDER BY w.id DESC $tail",$args);
+ foreach($rows as &$r){$r['id']=(int)$r['id'];$r['phone_masked']=crmMaskPhone($r['phone']??null);$r['assignee']=$r['assigned_to']?['id'=>$r['assigned_to'],'name'=>(string)$r['assignee_name']]:null;$r['order']=$r['order_id']?['id'=>(int)$r['order_id'],'number'=>(string)$r['order_number']]:null;unset($r['phone'],$r['assigned_to'],$r['assignee_name'],$r['order_id'],$r['order_number']);}unset($r); // R4-05: full number only via the audited reveal
+ return $rows;
+}
+function crmWholesaleNeed(PDO $db,int $id): array {
+ if(!crmApiTableExists($db,'rubizh_wholesale_requests'))throw new CrmError('NOT_FOUND',404);
+ $r=crmOne($db,'SELECT * FROM rubizh_wholesale_requests WHERE id=?',[$id]);if(!$r)throw new CrmError('NOT_FOUND',404);return $r;
+}
 function crmWholesaleList(PDO $db,array $q): array {
  $p=crmPage($q);if(!crmApiTableExists($db,'rubizh_wholesale_requests'))return ['rows'=>[],'pagination'=>crmPagination($p,0)];
  $total=(int)crmOne($db,'SELECT COUNT(*) n FROM rubizh_wholesale_requests')['n'];
- $rows=crmQuery($db,"SELECT id,number,name,phone,buyer_type,tax_id,email,kits,composition,priority,state,manager_note,created_at,updated_at FROM rubizh_wholesale_requests ORDER BY id DESC LIMIT {$p['limit']} OFFSET {$p['offset']}");foreach($rows as &$r){$r['id']=(int)$r['id'];$r['phone_masked']=crmMaskPhone($r['phone']??null);unset($r['phone']);}unset($r); // R4-05: full number only via the audited reveal
- return ['rows'=>$rows,'pagination'=>crmPagination($p,$total)];
+ return ['rows'=>crmWholesaleRows($db,'1=1',[],"LIMIT {$p['limit']} OFFSET {$p['offset']}"),'pagination'=>crmPagination($p,$total)];
+}
+function crmWholesaleDetail(PDO $db,int $id): array {
+ crmWholesaleNeed($db,$id);
+ $history=crmQuery($db,"SELECT a.action,u.name AS actor,a.created_at FROM rubizh_staff_audit a LEFT JOIN rubizh_staff_users u ON u.id=a.actor_id WHERE a.entity='wholesale' AND a.entity_id=? ORDER BY a.id DESC LIMIT 100",[(string)$id]);
+ return ['request'=>crmWholesaleRows($db,'w.id=?',[$id])[0],'notes'=>array_map(fn($n)=>['id'=>(int)$n['id'],'body'=>$n['body'],'author'=>$n['author'],'created_at'=>$n['created_at']],crmNotes($db,'wholesale',(string)$id)),'history'=>$history];
 }
 function crmWholesalePhone(PDO $db,array $actor,int $id): array {
  if(!crmApiTableExists($db,'rubizh_wholesale_requests'))throw new CrmError('NOT_FOUND',404);
@@ -418,9 +435,27 @@ function crmWholesalePhone(PDO $db,array $actor,int $id): array {
  crmRevealQuota($db,$actor);crmAudit($db,$actor,'wholesale',(string)$id,'wholesale.phone_view',[],['viewed'=>true]);return ['phone'=>$r['phone']];
 }
 function crmWholesaleUpdate(PDO $db,array $actor,int $id,array $b): array {
- if(!crmApiTableExists($db,'rubizh_wholesale_requests'))throw new CrmError('NOT_FOUND',404);
- $r=crmOne($db,'SELECT * FROM rubizh_wholesale_requests WHERE id=?',[$id]);if(!$r)throw new CrmError('NOT_FOUND',404);
- $db->prepare('UPDATE rubizh_wholesale_requests SET state=?,manager_note=?,updated_at=UTC_TIMESTAMP() WHERE id=?')->execute([$b['state'],(string)($b['note']??$r['manager_note']),$id]);
- crmAudit($db,$actor,'wholesale',(string)$id,'wholesale.update',['state'=>$r['state']],['state'=>$b['state']]);
- $r=crmOne($db,'SELECT id,number,state FROM rubizh_wholesale_requests WHERE id=?',[$id]);$r['id']=(int)$r['id'];return $r;
+ $r=crmWholesaleNeed($db,$id);$assignee=array_key_exists('assignee',$b)?$b['assignee']:$r['assigned_to'];
+ if($assignee!==null&&$assignee!==$r['assigned_to']&&!crmOne($db,"SELECT id FROM rubizh_staff_users WHERE id=? AND enabled=1 AND role IN ('OWNER','MANAGER')",[$assignee]))throw new CrmError('INVALID_ASSIGNEE',400);
+ $db->prepare('UPDATE rubizh_wholesale_requests SET state=?,manager_note=?,assigned_to=?,updated_at=UTC_TIMESTAMP() WHERE id=?')->execute([$b['state'],(string)($b['note']??$r['manager_note']),$assignee,$id]);
+ crmAudit($db,$actor,'wholesale',(string)$id,'wholesale.update',['state'=>$r['state'],'assignee'=>$r['assigned_to']],['state'=>$b['state'],'assignee'=>$assignee]);
+ $w=crmWholesaleRows($db,'w.id=?',[$id])[0];return ['id'=>$w['id'],'number'=>$w['number'],'state'=>$w['state'],'assignee'=>$w['assignee'],'order'=>$w['order']];
+}
+/**
+ * OD-4.6: an order made from a wholesale request. The buyer (name, phone, e-mail) comes from the request; lines, prices,
+ * stock and delivery go through the same SITE order service as a telephone order (shopCreateOrder → shopValidateOrder).
+ * One order per request; a repeated attempt with the same key returns the same order.
+ */
+function crmWholesaleOrder(PDO $db,array $actor,int $id,array $b,string $key): array {
+ crmPermit($actor,'order.create');$lock='rubizh_ws_order_'.$id;
+ if((int)$db->query("SELECT GET_LOCK(".$db->quote($lock).",10)")->fetchColumn()!==1)throw new CrmError('BUSY',409);
+ try{
+  $r=crmWholesaleNeed($db,$id);
+  if($r['order_id']){$o=crmOne($db,'SELECT id,external_id FROM rubizh_customer_orders WHERE id=?',[$r['order_id']]);if($o&&$o['external_id']==='crm:'.$key)return crmOrderCard($db,(int)$o['id'],$actor);throw new CrmError('ALREADY_ORDERED',409,['order_id'=>(int)$r['order_id']]);}
+  $comment=trim('Оптова заявка '.$r['number'].'. '.(string)($b['comment']??''));
+  $card=crmPhoneOrder($db,$actor,['customer'=>['name'=>$r['name'],'phone'=>$r['phone'],'email'=>$r['email'],'recipient'=>(string)($b['recipient']??'')],'lines'=>$b['lines'],'delivery'=>$b['delivery'],'payment'=>$b['payment']??'invoice','channel'=>'other','comment'=>mb_substr($comment,0,1000)]+(isset($b['expected_total_minor'])?['expected_total_minor'=>$b['expected_total_minor']]:[]),$key);
+  $db->prepare("UPDATE rubizh_wholesale_requests SET order_id=?,state=IF(state='NEW','IN_PROGRESS',state),assigned_to=COALESCE(assigned_to,?),updated_at=UTC_TIMESTAMP() WHERE id=?")->execute([$card['id'],in_array($actor['role'],['OWNER','MANAGER'],true)?$actor['id']:null,$id]);
+  crmAudit($db,$actor,'wholesale',(string)$id,'wholesale.order',['state'=>$r['state']],['order_id'=>(int)$card['id']],'',$key);
+  return $card;
+ }finally{$db->query("SELECT RELEASE_LOCK(".$db->quote($lock).")");}
 }

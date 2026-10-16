@@ -116,11 +116,13 @@ test('D-54: wholesale request is stored on the server, validated, idempotent and
   const rid=()=>crypto.randomUUID().replaceAll('-','');
   const ok={request_id:rid(),name:'Ігор',phone:'067 123 45 67',buyer_type:'MILITARY',tax_id:'',email:'',kits:'12',composition:'Куртка Softshell M ×6, L ×6',priority:'DONATION',consent:true};
   assert.equal((await s.post('/shop/wholesale-request.php',{...ok},{Cookie:cookie})).status,403,'CSRF required');
+  // S4-10: a session sends at most 10 requests an hour — the validation probes use their own session.
+  const probe=await s.get('/shop/customer.php'),probeCookie=probe.headers.get('set-cookie').split(';')[0],probeSend=b=>s.post('/shop/wholesale-request.php',{csrf:probe.data.csrf,...b},{Cookie:probeCookie});
   for(const [patch,re] of [[{consent:false},/згода/],[{name:''},/ім’я/i],[{phone:'12345'},/\+380/],[{buyer_type:'ARMY'},/тип покупця/],[{tax_id:'12345670'},/контрольна цифра/],[{tax_id:'1234567890'},/контрольна цифра/],[{email:'x@'},/email/],[{composition:''},/склад/i],[{kits:'0'},/комплектів/]]){
-   const r=await send({...ok,request_id:rid(),...patch});assert.equal(r.status,400,JSON.stringify(patch));assert.match(r.data.error,re);
+   const r=await probeSend({...ok,request_id:rid(),...patch});assert.equal(r.status,400,JSON.stringify(patch));assert.match(r.data.error,re);
   }
   assert.equal(+s.sql('SELECT COUNT(*) n FROM rubizh_wholesale_requests')[0].n,0,'invalid requests are not stored');
-  const valid=await send({...ok,tax_id:'14360570'});assert.equal(valid.status,200,JSON.stringify(valid.data));assert.match(valid.data.number,/^WS-\d{6}-[0-9A-F]{6}$/);assert.match(valid.data.message,/^Заявку WS-.* прийнято/);
+  const valid=await send({...ok,tax_id:'14360570'});assert.equal(valid.status,200,JSON.stringify(valid.data));assert.match(valid.data.number,/^WS-\d{6}-[0-9A-F]{6}$/);assert.match(valid.data.message,/^Дякуємо, заявка № WS-.* прийнята/);// OD-4.6 wording
   const again=await send({...ok,tax_id:'14360570'});assert.equal(again.data.number,valid.data.number,'same request_id → same request');assert.equal(again.data.repeated,true);
   assert.equal((await send({...ok,tax_id:'14360570',composition:'інше'})).status,400,'same request_id with other data is rejected');
   assert.equal((await send({...ok,request_id:rid(),tax_id:'3184710691',buyer_type:'FOP'})).status,200,'valid РНОКПП');
@@ -136,12 +138,12 @@ test('D-54: wholesale request is stored on the server, validated, idempotent and
   await page.goto(s.base+'/');await page.locator('#b2b-form').scrollIntoViewIfNeeded();
   await page.getByRole('button',{name:'Військова частина'}).click();await page.getByLabel('Ім’я',{exact:true}).fill('Ігор');await page.getByLabel('Телефон',{exact:true}).fill('+380671234567');
   await page.getByLabel('Склад замовлення').fill('Куртка Softshell M ×2');await page.getByLabel('Згода на обробку персональних даних').check();
-  await page.getByRole('button',{name:'Надіслати заявку'}).click();await page.getByText(/Заявку WS-\d{6}-[0-9A-F]{6} прийнято/).waitFor({timeout:15000});
+  await page.getByRole('button',{name:'Надіслати запит'}).click();await page.getByText(/Дякуємо, заявка № WS-\d{6}-[0-9A-F]{6} прийнята/).waitFor({timeout:15000});// OD-4.6 wording
   assert.deepEqual(nav,[]);assert.equal(s.sql("SELECT buyer_type FROM rubizh_wholesale_requests ORDER BY id DESC LIMIT 1")[0].buyer_type,'MILITARY');
   const crm=await browser.newPage({viewport:{width:1440,height:900}});await crm.goto(s.base+'/crm/');await crm.getByLabel('Email').fill('manager@fixture.test');await crm.getByLabel('Пароль',{exact:true}).fill(password);await crm.getByRole('button',{name:'Увійти'}).click();await crm.getByRole('navigation',{name:'Основне'}).waitFor();
   await crm.goto(s.base+'/crm/customers?segment=WHOLESALE');await crm.getByRole('table').getByText(valid.data.number).waitFor();
-  const card=crm.getByRole('row').filter({hasText:valid.data.number});await card.getByRole('button',{name:'Змінити'}).click();await crm.getByLabel('Статус').selectOption('QUOTED');await crm.getByRole('dialog').getByRole('button').last().click();
-  await crm.getByRole('row').filter({hasText:valid.data.number}).getByText('Прорахунок надіслано').waitFor();assert.equal(s.sql("SELECT state FROM rubizh_wholesale_requests WHERE number='"+valid.data.number+"'")[0].state,'QUOTED');
+  const card=crm.getByRole('row').filter({hasText:valid.data.number});await card.getByRole('button',{name:'Відкрити'}).click();await crm.getByLabel('Статус').selectOption('QUOTE_SENT');await crm.getByRole('dialog').getByRole('button',{name:'Зберегти'}).click();// OD-4.6 statuses
+  await crm.getByRole('row').filter({hasText:valid.data.number}).getByText('КП надіслано').waitFor();assert.equal(s.sql("SELECT state FROM rubizh_wholesale_requests WHERE number='"+valid.data.number+"'")[0].state,'QUOTE_SENT');
  }finally{await browser.close();s.stop();}
 });
 
