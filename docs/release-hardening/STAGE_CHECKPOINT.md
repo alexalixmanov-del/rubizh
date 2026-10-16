@@ -1,6 +1,22 @@
 # STAGE CHECKPOINT — история контрольных точек
 
-> Актуальный checkpoint — глобальный этап 4 (CRM), приведён первым; затем этап 3 (RC1). Блоки этапа 2-B и ранее ниже — история.
+> Актуальный checkpoint — этап 4.1, затем этап 4 (CRM), затем этап 3 (RC1). Блоки этапа 2-B и ранее ниже — история.
+
+<!-- STAGE41_CHECKPOINT_BEGIN -->
+
+## Этап 4.1 — недостающая часть 4-SITE и OD-4.6, checkpoint 2026-10-16
+
+Статус: **GO этапа 4.1** при зелёном CI на SHA checkpoint-коммита (SHA и номер CI — в аннотации тега `rubizh-stage-4.1-verified`). Существующие теги этапа 4 не двигались. Production — **NO-GO** (как этап 4). Merge не выполнялся.
+
+| Объект | SHA |
+|---|---|
+| SITE | ветка `hardening/stage-4-crm` от `rubizh-stage-4-verified` (`a6100ec`) |
+| CRM | `57e9ef432680ce84fc1552ff2a240da42a5aa6e7` (`hardening/stage-4-crm`, тег `crm-stage-4.1-verified`; закреплён в CI SITE) |
+| PIM (только чтение) | `5fd46cb` |
+
+D-55…D-60, D-62…D-64 — FIXED (`stage41-site`); OD-4.6 — DONE (`crm-stage41-wholesale`); решение владельца по поиску — DONE (`crm-stage41-search`); S4-10 — FIXED. Схема CRM v4. Ревью: typescript-reviewer, a11y-architect, seo-specialist, code-reviewer — 0 CRITICAL/HIGH, замечания исправлены (коммиты 4bfacb8, c4740c7, CRM 57e9ef4); click-path-audit пути «главная → заявка → CRM → заказ» — без находок. Снимки до/после — `stage-4.1/screens/`.
+
+<!-- STAGE41_CHECKPOINT_END -->
 
 <!-- STAGE4_CRM_CHECKPOINT_BEGIN -->
 
