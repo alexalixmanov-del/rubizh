@@ -24,14 +24,17 @@ async function apiIdle(page){for(let i=0;i<200&&page.__api>0;i++)await page.wait
 // WebKit reports a same-origin Staff API request cancelled by the navigation itself as «… due to access control checks»
 // (a same-origin request cannot fail CORS). Only that message, only during page.goto, only for this origin's /api/staff/
 // is set aside and counted in the report; every other page error still fails the matrix.
-function isNavCancel(page,message){return page.__navigating===true&&message.includes('due to access control checks')&&message.includes('/api/staff/')&&message.includes(new URL(page.url()).host);}
+// CRM-5.1 (stage 5): the cause is in WebKit + Playwright, not the CRM — Playwright turns every WebKit console message of level
+// «error» from source «javascript» into a page error, and WebKit on Linux logs a navigation-cancelled load that way even when the
+// rejection is handled (proof: stage5-crm51-webkit, a page with no CRM code). The exemption is WebKit-only.
+function isNavCancel(page,message){return page.__engine==='webkit'&&page.__navigating===true&&message.includes('due to access control checks')&&message.includes('/api/staff/')&&message.includes(new URL(page.url()).host);}
 async function visit(page,url){if(page.__api!==undefined)await apiIdle(page);page.__navigating=true;try{await page.goto(url);}finally{page.__navigating=false;}await page.getByRole('heading',{level:1}).first().waitFor({timeout:20000});await page.waitForLoadState('networkidle');}
 
 for(const engine of Object.keys(ENGINES))test(`CRM matrix ${engine}: 7 widths × light/dark × every section: no overflow, no JS/CSP/server errors`,{skip,timeout:3600000},async()=>{
  const s=await seeded();const browser=await ENGINES[engine]();const report=[];
  try{
   for(const width of WIDTHS)for(const theme of ['light','dark']){
-   const ctx=await browser.newContext({viewport:{width,height:width<768?844:900}});const page=await ctx.newPage();const errors=[];trackApi(page);
+   const ctx=await browser.newContext({viewport:{width,height:width<768?844:900}});const page=await ctx.newPage();page.__engine=engine;const errors=[];trackApi(page);
    page.__cancelled=0;page.on('pageerror',e=>{if(isNavCancel(page,e.message)){page.__cancelled++;return;}errors.push(e.message);});page.on('response',r=>{if(r.url().includes('/api/staff/')&&r.status()>=500)errors.push(r.status()+' '+r.url());});
    await page.addInitScript(t=>{try{localStorage.setItem('crm.theme',t);}catch{}document.addEventListener('securitypolicyviolation',e=>{(window.__csp=window.__csp||[]).push(e.violatedDirective+' '+e.blockedURI);});},theme);
    await signIn(page,s.base);
