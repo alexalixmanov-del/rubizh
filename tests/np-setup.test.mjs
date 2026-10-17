@@ -17,6 +17,7 @@ function fixture(mode='normal'){
  for(const dir of ['dev','api','shop'])mkdirSync(path.join(site,dir),{recursive:true});
  copyFileSync(path.join(root,'dev/configure-np.php'),path.join(site,'dev/configure-np.php'));
  copyFileSync(path.join(root,'shop/np-lib.php'),path.join(site,'shop/np-lib.php'));
+ copyFileSync(path.join(root,'shop/staging-gate.php'),path.join(site,'shop/staging-gate.php'));// stage 5.5: required by np-lib.php
  writeFileSync(path.join(site,'api/lib.php'),`<?php function cfg($key=null){$c=require __DIR__.'/config.php';return $key===null?$c:($c[$key]??null);}`);
  const config=path.join(site,'api/config.php');writeFileSync(config,`<?php return ['db_pass'=>'private-db-fixture','mono_token'=>'private-mono-fixture','nova_poshta_api_key'=>'private-np-fixture','supplier_contacts'=>['m_vin'=>['enabled'=>false]],'np_cod_contract_confirmed'=>true,'np_cod_service'=>'afterpayment'];`);
  const transport=path.join(parent,'transport.php');
