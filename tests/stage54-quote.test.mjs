@@ -97,3 +97,14 @@ test('storefront bundles: QUOTE label in the new bundle; earlier bundles kept by
  // The product view never adds a QUOTE SKU to the cart.
  const view=readFileSync(path.join(root,html.match(/src="\/(assets\/pim-v3-product\.[^"?]+\.js)/)[1]),'utf8');assert.match(view,/const add=\(\)=>v&&\(state==='pay'\|\|state==='request'\)&&app\.add/);
 });
+
+test('5.4.1 (owner): a QUOTE model is in the sitemap while its data is fresh enough to be shown, and leaves it when the age rule hides it',{skip,timeout:300000},async()=>{
+ const s=await startCrm();
+ try{
+  assert.equal((await republish(s,quoteAll)).status,200);const slug=(await product(s)).slug;
+  assert.ok((await s.get('/sitemap.php')).text.includes('/product/'+slug+'<'),'a quote model is in the sitemap');
+  // 9 days old: the age rule hides the model (as any other) — it is not in the sitemap.
+  assert.equal((await republish(s,w=>{quoteAll(w);for(const m of w.products)if(m.id==='m-jacket')for(const v of m.variants)v.stock_observed_at=Date.now()-9*24*3600000;})).status,200);
+  assert.ok(!(await s.get('/sitemap.php')).text.includes('/product/'+slug+'<'),'hidden by age → not in the sitemap');
+ }finally{s.stop();}
+});
