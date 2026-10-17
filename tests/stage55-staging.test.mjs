@@ -28,8 +28,12 @@ test('D-80: closed mode — password everywhere, noindex, no sitemap, stubs behi
   assert.equal((await request(site.base,'/sitemap.xml',{auth:[USER,PASSWORD]})).status,404,'no sitemap in staging');
   // PIM uses its own key; the API checks it (a wrong key is the API's 401 JSON, not the gate).
   const pim=await request(site.base,'/api/pim/status',{bearer:PIM_KEY});assert.equal(pim.status,200,'PIM with its key');
-  const bad=await request(site.base,'/api/pim/status',{bearer:'wrong-key-of-enough-length-000000'});assert.notEqual(bad.headers['www-authenticate']?.startsWith('Basic'),true);
+  // Stage 5.5 review: the gate checks the PIM key itself — a wrong key gets the gate's 401, and a dot segment never skips the gate.
+  const bad=await request(site.base,'/api/pim/status',{bearer:'wrong-key-of-enough-length-000000'});assert.equal(bad.status,401);assert.match(bad.headers['www-authenticate']||'',/^Basic/);
+  for(const p of ['/api/pim/../../shop/customer.php','/api/pim/%2e%2e/%2e%2e/shop/customer.php','/api/pim/..%2f..%2fshop/customer.php']){const t=await request(site.base,p,{bearer:PIM_KEY});assert.equal(t.status,401,p);assert.match(t.headers['www-authenticate']||'',/^Basic/,p);}
   assert.equal((await request(site.base,'/api/staff/session',{bearer:PIM_KEY})).status,401,'the CRM API is behind the gate even with a bearer');
+  // Stage 5.5 review: a made-up bearer does not open the public catalogue API (only /api/pim/… checks a key).
+  for(const p of ['/api/storefront','/api/catalog'])assert.equal((await request(site.base,p,{bearer:'made-up-bearer-value'})).status,401,p+' with a made-up bearer');
   assert.equal(relaxed(site,php,'rubizh.shop'),'[true,true,true]','behind the gate the stubs work on rubizh.shop');
  }finally{site.stop();}
  // environment=staging on rubizh.shop without a gate: a misconfiguration — 503, nothing relaxed.
@@ -39,6 +43,9 @@ test('D-80: closed mode — password everywhere, noindex, no sitemap, stubs behi
   const r=await request(open.base,'/');assert.equal(r.status,503);assert.equal(r.headers['x-robots-tag'],'noindex, nofollow');assert.doesNotMatch(r.body,/<html/);
   assert.equal(relaxed(open,php,'rubizh.shop'),'[false,false,false]','no stubs on rubizh.shop without the gate');
   assert.equal((await request(open.base,'/',{host:'127.0.0.1'})).status,200,'a local stand keeps the earlier staging behaviour');
+  // Stage 5.5 review: the Host header is the caller's — any public spelling or alias fails closed, only local names relax.
+  for(const host of ['rubizh.shop:443','RUBIZH.SHOP.','www.rubizh.shop','alias.example.com']){assert.equal((await request(open.base,'/',{host})).status,503,host);assert.equal(relaxed(open,php,host),'[false,false,false]',host);}
+  for(const host of ['127.0.0.1:8080','localhost','shop.test','[::1]:8080'])assert.equal(relaxed(open,php,host),'[true,true,true]',host);
  }finally{open.stop();}
  // Production with the stub flags (and even a gate) set by mistake: nothing is relaxed, no password asked, indexable.
  const prod=await startSite({enableV3:false,extraConfig:`,'environment'=>'production','mono_mock'=>true,'np_mock'=>true,'staging_gate'=>['user'=>'${USER}','password_hash'=>'${hash}']`});

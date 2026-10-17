@@ -36,7 +36,10 @@ try{
  const counts=Object.fromEntries(site.sql("SELECT table_name t FROM information_schema.tables WHERE table_schema=DATABASE() AND table_type='BASE TABLE' ORDER BY 1").map(({t})=>[t,Number(site.sql('SELECT COUNT(*) n FROM `'+t+'`')[0].n)]));
  const personal=Object.entries(counts).filter(([t,n])=>n>0&&/customer|order|phone|identit|session|address|donation|cart|payment|refund|invoice|notification|mail|wholesale|request|costs/i.test(t)&&!/^rubizh_staff_/.test(t));
  report.tables=counts;report.non_empty_sensitive=personal;
+ // Stage 5.5 review: the dump goes to the hosting — any personal or cost row stops the build (not only a report line).
+ if(!('rubizh_crm_sku_costs' in counts))throw Error('the supplier costs table is missing: the cost check cannot be made');
  if(counts.rubizh_crm_sku_costs)throw Error('supplier costs present');
+ if(personal.length)throw Error('personal data in the dump: '+personal.map(([t,n])=>t+'='+n).join(', '));
  // Dump: schema, data, triggers; DEFINER removed (a shared hosting user cannot create objects for root@localhost).
  const dump=spawnSync('/opt/homebrew/opt/mariadb@11.4/bin/mariadb-dump',['--socket='+process.env.RUBIZH_TEST_MYSQL_SOCKET,'-uroot','--single-transaction','--routines','--triggers','--skip-comments','--default-character-set=utf8mb4',site.schema],{encoding:'utf8',maxBuffer:1024*1024*1024});
  if(dump.status!==0)throw Error('dump: '+dump.stderr);

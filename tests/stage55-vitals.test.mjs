@@ -126,3 +126,16 @@ test('D-72: CRM «Швидкість сайту» for OWNER on Analytics: access
   await ctx.close();
  }finally{await browser.close();s.stop();}
 });
+test('D-72 (stage 5.5 review): a host where prepare-runtime was not re-run — the first beacon creates the table, the report is empty, not an error',{skip,timeout:300000},async()=>{
+ const s=await startCrm();
+ try{
+  s.sql('DROP TABLE rubizh_vitals');
+  const owner=await s.login('OWNER');const empty=await owner.get('/site-speed');assert.equal(empty.status,200,JSON.stringify(empty.data));
+  assert.equal(empty.data.data.rows.length,30);assert.ok(empty.data.data.rows.every(r=>r.d7.n===0&&r.d28.n===0));
+  s.sql('DROP TABLE rubizh_vitals');
+  assert.equal((await beacon(s,{t:'home',m:'LCP',v:2100,d:'mobile'})).status,204,'the beacon creates the table');
+  assert.equal(+s.sql('SELECT COUNT(*) n FROM rubizh_vitals')[0].n,1);
+  const idx=s.sql("SHOW INDEX FROM rubizh_vitals WHERE Key_name='idx_vitals_slice'").map(r=>r.Column_name);
+  assert.deepEqual(idx,['template','metric','device','value','day'],'the report reads one slice in value order from the index');
+ }finally{s.stop();}
+});

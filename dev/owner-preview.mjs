@@ -18,7 +18,14 @@ const argv=process.argv.slice(2),flag=f=>argv.includes(f);
 const cache=path.join(process.env.XDG_CACHE_HOME||path.join(homedir(),'.cache'),'rubizh-owner-preview');
 const stateFile=path.join(cache,'current.json');
 const say=(...a)=>{if(!flag('--ready-json'))console.log(...a);};
-const fail=m=>{console.error('Не вдалося запустити перегляд: '+m);process.exit(1);};
+// A failure after MariaDB or the temporary folder exist still stops and removes them (stage 5.5 review): nothing is left running.
+const fail=m=>{console.error('Не вдалося запустити перегляд: '+m);cleanupNow();process.exit(1);};
+let mariadb=null,site=null,work=null,stopping=false,ownDb=false;
+function cleanupNow(){
+ try{site?.stop();}catch(e){console.error('Сайт: '+e.message);}
+ if(mariadb&&mariadb.exitCode===null){try{mariadb.kill('SIGKILL');}catch(e){console.error('MariaDB: '+e.message);}}
+ if(work)try{rmSync(work,{recursive:true,force:true});}catch(e){console.error('Тимчасові файли: '+e.message);}
+}
 const which=n=>{const r=spawnSync('/bin/sh',['-c','command -v '+n],{encoding:'utf8'});return r.status===0?r.stdout.trim():'';};
 const firstFile=list=>list.find(f=>f&&existsSync(f))||'';
 // Functions that reach the network from PHP. The stand's mocks never need them.
@@ -34,19 +41,19 @@ if(argv[0]==='ttn'){
  console.log(`Заглушка НП: ТТН ${number} має статус ${code}. У CRM відкрийте замовлення й оновіть статус доставки.`);process.exit(0);
 }
 
-const started=Date.now(),work=mkdtempSync(path.join(tmpdir(),'rz-op-'));
-let mariadb=null,site=null,stopping=false,ownDb=false;
+const started=Date.now();work=mkdtempSync(path.join(tmpdir(),'rz-op-'));
 async function stop(code=0){
  if(stopping)return;stopping=true;
- try{site?.stop();}catch{}
+ try{site?.stop();}catch(e){console.error('Сайт: '+e.message);}
  // On a shared MariaDB (tests) only this stand's schema is removed; an own server is stopped with its data directory.
- if(site&&!ownDb)spawnSync(process.env.RUBIZH_PHP_RUNTIME+'/bin/php8.4',['-n','-r',`(new PDO('mysql:unix_socket=${process.env.RUBIZH_TEST_MYSQL_SOCKET}','root',''))->exec('DROP DATABASE IF EXISTS ${site.schema}');`]);
- if(mariadb){mariadb.kill('SIGTERM');await new Promise(r=>{const t=setTimeout(()=>{try{mariadb.kill('SIGKILL')}catch{}r();},15000);mariadb.once('exit',()=>{clearTimeout(t);r();});});}
+ if(site&&!ownDb){const d=spawnSync(process.env.RUBIZH_PHP_RUNTIME+'/bin/php8.4',['-n','-r',`(new PDO('mysql:unix_socket=${process.env.RUBIZH_TEST_MYSQL_SOCKET}','root',''))->exec('DROP DATABASE IF EXISTS ${site.schema}');`],{encoding:'utf8'});if(d.status!==0)console.error('Схему стенду не видалено: '+(d.stderr||d.stdout).slice(-300));}
+ if(mariadb&&mariadb.exitCode===null){mariadb.kill('SIGTERM');await new Promise(r=>{const t=setTimeout(()=>{try{mariadb.kill('SIGKILL')}catch{}r();},15000);mariadb.once('exit',()=>{clearTimeout(t);r();});});}
  try{rmSync(work,{recursive:true,force:true});}catch{}
  try{rmSync(stateFile,{force:true});}catch{}
  say('Перегляд зупинено: сайт, CRM і MariaDB.');process.exit(code);
 }
-process.on('SIGINT',()=>stop(0));process.on('SIGTERM',()=>stop(0));
+process.on('SIGINT',()=>stop(0));process.on('SIGTERM',()=>stop(0));process.on('SIGHUP',()=>stop(0));
+for(const ev of ['uncaughtException','unhandledRejection'])process.on(ev,e=>{console.error('Помилка перегляду: '+(e?.stack||e));if(stopping){cleanupNow();process.exit(1);}stop(1);});
 
 // 1. PHP: the tests' runtime layout (bin/php8.4 under RUBIZH_PHP_RUNTIME), wrapped so that the network stays off.
 {

@@ -3,15 +3,22 @@ declare(strict_types=1);
 // Stage 5.5 (owner D-80): the closed mode on rubizh.shop before opening day. With environment=staging and a configured
 // staging_gate (user + password_hash) every web request needs HTTP Basic Auth and is marked noindex; only then do the
 // staging relaxations (mock bank, Nova Poshta and SMS stubs, no e-mail) apply on the production host. environment=staging
-// on rubizh.shop without a valid gate is a misconfiguration: the site answers 503 and nothing is relaxed. Any other
-// environment never relaxes anything. A local stand (not rubizh.shop) keeps the earlier staging behaviour.
+// without a valid gate is a misconfiguration on any public host: the site answers 503 and nothing is relaxed (the Host
+// header is the caller's, so only a short list of local names counts as a local stand — 127.0.0.1, ::1, localhost, *.test,
+// *.localhost — and the command line, S55-01). Any other environment never relaxes anything.
 function rubizhStagingSettings(): array {
     static $c=null;if($c!==null)return $c;
     $f=$GLOBALS['rubizh_config_file']??dirname(__DIR__).'/api/config.php';$all=is_file($f)?(require $f):[];
     $c=['environment'=>is_array($all)?($all['environment']??null):null,'gate'=>is_array($all)?($all['staging_gate']??null):null];
     return $c;
 }
-function rubizhProductionHost(): bool {return in_array(strtolower((string)($_SERVER['HTTP_HOST']??'')),['rubizh.shop','www.rubizh.shop'],true);}
+// Stage 5.5 review: lowercase, no port, no trailing dot; anything that is not a local name is treated as public.
+function rubizhRequestHost(): string {$h=strtolower(trim((string)($_SERVER['HTTP_HOST']??'')));if(preg_match('/^\[([0-9a-f:.]+)\](?::\d+)?$/D',$h,$m))return $m[1];return rtrim((string)preg_replace('/:\d+$/D','',$h),'.');}
+function rubizhLocalStand(): bool {
+    if(PHP_SAPI==='cli'&&!isset($_SERVER['HTTP_HOST']))return true;
+    $h=rubizhRequestHost();return in_array($h,['127.0.0.1','::1','localhost'],true)||preg_match('/\.(?:test|localhost)$/D',$h)===1;
+}
+function rubizhProductionHost(): bool {return !rubizhLocalStand();}
 function rubizhStagingGateConfigured(): bool {
     $c=rubizhStagingSettings();$g=$c['gate'];
     if($c['environment']!=='staging'||!is_array($g))return false;
@@ -20,7 +27,7 @@ function rubizhStagingGateConfigured(): bool {
     $algo=password_get_info($hash)['algo']??null;
     return $algo!==null&&$algo!==0;
 }
-// The staging relaxations (mocks, on-screen SMS code, no e-mail): staging, and either not the production host or behind the gate.
+// The staging relaxations (mocks, on-screen SMS code, no e-mail): staging, and either a local stand or behind the gate.
 function rubizhStagingRelaxed(): bool {
     return rubizhStagingSettings()['environment']==='staging'&&(!rubizhProductionHost()||rubizhStagingGateConfigured());
 }
@@ -30,11 +37,17 @@ function rubizhStagingCredentials(): array {
     if(preg_match('/^Basic\s+([A-Za-z0-9+\/=]{4,512})$/D',$h,$m)){$pair=base64_decode($m[1],true);if(is_string($pair)&&str_contains($pair,':'))return explode(':',$pair,2);}
     return ['',''];
 }
-// PIM talks to /api/ with its own key (Authorization: Bearer); that API checks the key itself, so it is not asked for the gate.
+// PIM talks to /api/pim/… with its own key (Authorization: Bearer). Stage 5.5 review: the gate checks that key itself
+// (pim_key or pim_key_next, constant time) and refuses dot segments — the raw request path is what PHP sees, so
+// «/api/pim/../../shop/…» would otherwise reach any script; the public /api/ routes stay behind the password.
 function rubizhStagingKeyRequest(): bool {
-    $path=(string)parse_url((string)($_SERVER['REQUEST_URI']??'/'),PHP_URL_PATH);
-    $h=(string)($_SERVER['HTTP_AUTHORIZATION']??$_SERVER['REDIRECT_HTTP_AUTHORIZATION']??'');
-    return str_starts_with($path,'/api/')&&!str_starts_with($path,'/api/staff')&&preg_match('/^Bearer\s+\S+$/D',$h)===1;
+    $uri=(string)($_SERVER['REQUEST_URI']??'/');$path=(string)parse_url($uri,PHP_URL_PATH);
+    if(!str_starts_with($path,'/api/pim/')||str_contains($path,'..')||stripos($uri,'%2e')!==false||str_contains($path,'\\'))return false;
+    $h=trim((string)($_SERVER['HTTP_AUTHORIZATION']??$_SERVER['REDIRECT_HTTP_AUTHORIZATION']??''));
+    if(preg_match('/^Bearer\s+(\S+)$/D',$h,$m)!==1)return false;
+    $f=$GLOBALS['rubizh_config_file']??dirname(__DIR__).'/api/config.php';$all=is_file($f)?(require $f):[];if(!is_array($all))return false;
+    $ok=false;foreach([$all['pim_key']??'',$all['pim_key_next']??''] as $k)if(is_string($k)&&strlen($k)>=24&&hash_equals($k,$m[1]))$ok=true;
+    return $ok;
 }
 function rubizhStagingGate(): void {
     if(PHP_SAPI==='cli'||!empty($GLOBALS['rubizh_staging_gate_passed']))return;
