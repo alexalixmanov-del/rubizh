@@ -10,7 +10,7 @@
 <script defer src="/assets/react-dom.c5c970a9cf36.js"></script>
 <script defer src="/assets/category-directory.2026100802.js"></script>
 <script defer src="/assets/pim-v3-product.2026101701.js?v=2026101701"></script>
-<script defer src="/assets/shop-client.2026101801.js"></script>
+<script defer src="/assets/shop-client.2026101802.js"></script>
 <script defer src="/assets/vitals.2026101801.js"></script>
 <script defer src="/assets/store-runtime.6103e16b1d5f.js"></script>
 
@@ -1109,10 +1109,13 @@
 
           </sc-if>
           <div style="border:1px solid var(--legacy-2a322b);background:var(--legacy-141815);padding:18px">
-            <div style="font-family:'UAH','Oswald',sans-serif;font-size:13.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--legacy-99a398);margin-bottom:12px">Оплата</div>
-            <div style="display:flex;flex-direction:column;gap:8px">
+            <div id="checkout-pay-title" style="font-family:'UAH','Oswald',sans-serif;font-size:13.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--legacy-99a398);margin-bottom:12px">Оплата</div>
+            <sc-if value="{{ payNone }}" hint-placeholder-val="{{ false }}">
+              <p role="status" style="margin:0;color:var(--legacy-edefea);font-size:14.5px;line-height:1.5">Оплата на сайті тимчасово недоступна. Залиште оптову заявку на головній сторінці — менеджер зв’яжеться з вами.</p>
+            </sc-if>
+            <div role="group" aria-labelledby="checkout-pay-title" style="display:flex;flex-direction:column;gap:8px">
               <sc-for list="{{ payOptions }}" as="o" hint-placeholder-count="3">
-                <div tabindex="0" role="button" sc-camel-on-click="{{ o.pick }}" style="{{ o.style }}">
+                <div tabindex="0" role="button" aria-pressed="{{ o.checked }}" sc-camel-on-click="{{ o.pick }}" style="{{ o.style }}">
                   <span style="{{ o.dotStyle }}"></span>
                   <div style="flex:1"><div style="font-size:14.5px;color:var(--legacy-edefea)">{{ o.name }}</div><div style="color:var(--legacy-99a398);font-size:12.5px;margin-top:2px">{{ o.note }}</div></div>
                 </div>

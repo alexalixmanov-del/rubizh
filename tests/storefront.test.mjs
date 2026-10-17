@@ -56,6 +56,16 @@ test('Disabled payment methods and donation claims are absent at checkout',()=>w
   assert.equal(await page.getByText('Куди надіслати скрін донату',{exact:true}).count(),0);
   assert.equal(await page.locator('input[name="name"][aria-label]').count(),1);
 }));
+test('Stage 5.5 review (a11y): the chosen payment method is announced (aria-pressed in a labelled group); with no method a notice is shown',()=>withPage(async page=>{
+  await addUniform(page);
+  const group=page.getByRole('group',{name:'Оплата'});await group.waitFor();
+  const opt=group.getByRole('button',{name:/Оплата на рахунок ФОП/});assert.equal(await opt.getAttribute('aria-pressed'),'true');
+  assert.equal(await page.getByRole('status').filter({hasText:'Оплата на сайті тимчасово недоступна'}).count(),0);
+  await page.route('**/shop/customer.php',route=>route.fulfill({contentType:'application/json',body:JSON.stringify({ok:true,csrf:'preview-only',authed:false,customer_id:null,profile:null,favorites:[],items:[],mono_enabled:false,invoice_enabled:false,np_enabled:false,np_cod_enabled:false})}));
+  await page.reload();await page.getByRole('heading',{name:'Оформлення замовлення'}).waitFor();
+  await page.getByRole('status').filter({hasText:'Оплата на сайті тимчасово недоступна'}).waitFor();
+  assert.equal(await page.getByRole('group',{name:'Оплата'}).getByRole('button').count(),0);
+}));
 test('Card appears when the server enables it; COD never appears, even with a stale server flag',()=>withPage(async page=>{
   await page.route('**/shop/customer.php',route=>route.fulfill({contentType:'application/json',body:JSON.stringify({ok:true,csrf:'preview-only',authed:false,customer_id:null,profile:null,favorites:[],items:[],mono_enabled:true,np_enabled:false,np_cod_enabled:true})}));
   await addUniform(page);
