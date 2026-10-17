@@ -37,6 +37,9 @@ test('a per-m² model is shown with its m² price, without cart, payment or size
   const opt=s.sql("SELECT option_id,color_id FROM rubizh_size_options WHERE product_id='m-jacket' AND active=1 LIMIT 1")[0];
   if(opt){q=await quote(s,[{product_id:'m-jacket',color_id:opt.color_id||undefined,option_id:opt.option_id,qty:1,price_mode:'retail'}]);assert.notEqual(q.status,200,'no size request for a QUOTE model');}
   assert.equal(+s.sql('SELECT COUNT(*) n FROM rubizh_customer_orders')[0].n,0,'no order was created');
+  // The server HTML (crawlers, no JavaScript): no schema.org Offer with the m² price as an item price; the price says «/ м²».
+  const html=(await s.get('/product/'+p.slug)).text;assert.doesNotMatch(html.match(/<script id="rubizh-product-schema"[^>]*>(.*?)<\/script>/s)?.[1]||'missing',/"Offer"/);
+  assert.match(html,/Ціна за розрахунком: від [\d\s]+ ₴ \/ м²/);
   // Back to a normal price: the same SKU is sold through the cart again (the mode is per batch, nothing sticks).
   assert.equal((await republish(s,()=>{})).status,200);
   const back=await product(s);assert.equal(back.sale_mode,null);assert.ok(back.variants.some(v=>v.order_submission_allowed));

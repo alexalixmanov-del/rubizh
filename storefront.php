@@ -34,7 +34,9 @@ try{
             $seoVariant=null;foreach($seoVariants as $v)if($v['availability']!=='out'&&$v['price']!==null&&(float)$v['price']===(float)$p['price_min']){$seoVariant=$v;break;}
             if($seoVariant===null)foreach($seoVariants as $v)if($v['price']!==null&&(float)$v['price']===(float)$p['price_min']){$seoVariant=$v;break;}
             $structured=['@context'=>'https://schema.org','@type'=>'Product','name'=>$p['name'],'description'=>$description,'sku'=>($seoVariant['sku']??$p['variants'][0]['sku']??$p['id']),'url'=>$canonical];
-            if($seoVariant!==null&&$seoVariant['price']>0){
+            // Stage 5.4: a QUOTE model (the manager calculates the price, often per m²) advertises no Offer — no item price.
+            $quote=($p['sale_mode']??null)==='QUOTE'||($seoVariant['sale_mode']??null)==='QUOTE';
+            if($seoVariant!==null&&$seoVariant['price']>0&&!$quote){
                 $offer=['@type'=>'Offer','url'=>$canonical,'priceCurrency'=>'UAH','price'=>(string)$seoVariant['price'],'seller'=>['@type'=>'Organization','name'=>rubizhSeller()['name']]];
                 $availability=$seoVariant['availability'];$stock=$seoVariant['stock']??null;
                 if($availability==='out'||($availability==='in'&&$stock!==null&&$stock<=0))$offer['availability']='https://schema.org/OutOfStock';
@@ -56,7 +58,8 @@ try{
             // Stage 5.1: the same wording as the storefront when only manager-confirmed sale is possible (data older than pay_fresh_hours).
             $confirmOnly=!array_filter($p['variants'],fn($v)=>!empty($v['payment_allowed']))&&array_filter($p['variants'],fn($v)=>($v['stock_freshness']??'')==='CONFIRM'&&!empty($v['order_submission_allowed']));
             $fallback.='<p>Наявність: '.storefrontEsc($confirmOnly?mb_strtolower(mb_substr(SHOP_FRESHNESS_CONFIRM_NOTE,0,1)).mb_substr(SHOP_FRESHNESS_CONFIRM_NOTE,1):(['in'=>'в наявності','order'=>'під замовлення','out'=>'немає в наявності'][$p['availability']]??'уточнюйте')).'</p>';
-            if($p['price_min']!==null)$fallback.='<p>Ціна: '.storefrontEsc(number_format((float)$p['price_min'],0,'',' ')).' ₴'.(count(array_unique(array_filter(array_column($p['variants'],'price'))))>1?' (від)':'').'</p>';
+            if($quote)$fallback.='<p>Ціна за розрахунком'.($p['price_min']!==null?': від '.storefrontEsc(number_format((float)$p['price_min'],0,'',' ')).' ₴'.(($p['price_unit']??null)==='m2'?' / м²':''):'').'. Вартість розрахує менеджер — «Розрахувати вартість».</p>';
+            elseif($p['price_min']!==null)$fallback.='<p>Ціна: '.storefrontEsc(number_format((float)$p['price_min'],0,'',' ')).' ₴'.(count(array_unique(array_filter(array_column($p['variants'],'price'))))>1?' (від)':'').'</p>';
             $fallback.='<p>'.storefrontEsc($p['description']).'</p><a href="/catalog">До каталогу</a></article>';
         }
     }elseif($uri==='/porady'||str_starts_with($uri,'/porady/')){
