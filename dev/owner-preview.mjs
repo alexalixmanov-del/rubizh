@@ -149,6 +149,8 @@ let catalogue='тестовий каталог (файл хвилі run11 не �
 if(existsSync(chunksFile)){
  const chunks=JSON.parse((chunksFile.endsWith('.gz')?gunzipSync(readFileSync(chunksFile)):readFileSync(chunksFile)).toString('utf8'));
  // Supplier data time moved to "6 hours ago" in memory (as the fixture does), otherwise the 5.1 freshness rule hides it.
+ // The test catalogue (published by the stand) is hidden by the last chunk, so the site shows the wave only.
+ const last=chunks[chunks.length-1];last.hide_ids=[...new Set([...(last.hide_ids||[]),...site.wire.products.map(m=>m.id)])];
  for(const c of chunks){freshWire(c);const r=await site.post('/api/pim/sync',c,{'Authorization':'Bearer '+PIM_KEY});if(r.status!==200){console.error('Сайт не прийняв частину хвилі '+c.chunk_index+': '+r.status+' '+JSON.stringify(r.data).slice(0,300));await stop(1);}}
  products=chunks.reduce((n,c)=>n+c.products.length,0);catalogue='перша хвиля run11: '+products+' товарів';
 }
