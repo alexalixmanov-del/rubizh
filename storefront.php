@@ -7,8 +7,19 @@ if(in_array($uri,['/offer','/offer/','/privacy','/privacy/'],true)){header('Cach
 // Public datasets are cached with background refresh. Render the inexpensive HTML shell
 // per request so settings, metadata and theme never come from a stale full-page snapshot.
 require_once __DIR__.'/shop/settings-lib.php';
-$boot=['kitSlots'=>shopKitSlotPatterns()];$head='';$fallback='';$status=200;
+$boot=['kitSlots'=>shopKitSlotPatterns()];$head='';$fallback='';$status=200;$firstScreen=false;
 function storefrontEsc(string $s): string{return htmlspecialchars($s,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');}
+// Stage 5.3 (PL-2): the home hero is in the HTML, so the first screen (and its LCP image, preloaded by hero-theme) paints
+// before the client runtime renders. It is the template's own hero section without its bindings, inert and hidden from
+// assistive technology (the live hero replaces it as soon as the app mounts — hero-theme removes [data-first-screen]).
+// The top spacer is the live header's height (stage 5.3 measurement: ≤860 px 134, 861–1279 px 110.5, ≥1280 px 114.5).
+function storefrontHomeFirstScreen(string $html): string{
+    if(!preg_match('~<section class="rz-hero"[^>]*>.*?</section>~s',$html,$m))return '';
+    $hero=preg_replace('~\s(?:sc-[a-z-]+|id|aria-labelledby)="[^"]*"~','',str_replace(' sc-camel-view-box="',' viewBox="',$m[0]));
+    if(!is_string($hero)||str_contains($hero,'{{')||str_contains($hero,'<sc-'))return '';
+    return '<style>.rz-first-screen{min-height:100vh;background:var(--legacy-0b0d0b)}.rz-first-screen-top{height:134px}@media(min-width:861px){.rz-first-screen-top{height:110.5px}}@media(min-width:1280px){.rz-first-screen-top{height:114.5px}}</style>'
+        .'<div class="rz-first-screen" data-first-screen inert aria-hidden="true"><div class="rz-first-screen-top"></div><div class="rz-home">'.$hero.'</div></div>';
+}
 // BreadcrumbList JSON-LD: home → catalog → each published ancestor of the category path → current page (no item URL).
 function storefrontBreadcrumb(array $categories,string $path,?string $leaf=null): string{
     $urls=array_column($categories,'url_path','path');$parts=$path===''?[]:explode(' / ',$path);
@@ -112,7 +123,7 @@ $boot['catalog']=shopCatalog($db,$args);
     elseif($uri==='/kit'){header('Location: /kit/'.(($_SERVER['QUERY_STRING']??'')!==''?'?'.$_SERVER['QUERY_STRING']:''),true,301);exit;}
     elseif($uri==='/kit/'){$head='<title>Зібрати комплект — РУБІЖ</title><link rel="canonical" href="https://rubizh.shop/kit/"><meta name="description" content="Конструктор комплекту РУБІЖ. Оберіть речі щонайменше з двох різних розділів — отримаєте ціну комплекту.">';$fallback='<h1>Зібрати комплект</h1><p>Голова, тіло, ноги, взуття, бронезахист, спорядження й медицина — по одній речі на слот. Оберіть речі щонайменше з двох різних розділів — отримаєте ціну комплекту.</p><a href="/catalog">До каталогу</a>';}
     elseif(preg_match('~^/(?:product|kit)(?:/|$)~',$uri)){$status=404;$fallback='<h1>Сторінку не знайдено</h1><p>Перевірте адресу або відкрийте каталог.</p><a href="/catalog">До каталогу</a>';}
-    else{$boot['catalog']=shopCatalog($db,[]);$head='<link rel="canonical" href="https://rubizh.shop/">';
+    else{$boot['catalog']=shopCatalog($db,[]);$head='<link rel="canonical" href="https://rubizh.shop/">';$firstScreen=$uri==='/';
         // SEO-5.5: who publishes the site and the site itself (search action → the catalog search).
         $seller=rubizhSeller();$social=array_values(array_filter(shopPublicSocial()));
         $org=['@context'=>'https://schema.org','@type'=>'Organization','@id'=>'https://rubizh.shop/#organization','name'=>'РУБІЖ','url'=>'https://rubizh.shop/','logo'=>'https://rubizh.shop/assets/apple-touch-icon.png','email'=>$seller['email'],'telephone'=>$seller['phone']]+($social?['sameAs'=>$social]:[]);
@@ -128,5 +139,5 @@ $html=rubizhSellerHtml(file_get_contents(__DIR__.'/index.html'));
 if(str_contains($head,'<title>'))$html=preg_replace('~<title>.*?</title>~s','',$html,1);
 if(str_contains($head,'<meta name="description"'))$html=preg_replace('~<meta\b[^>]*\bname=["\']description["\'][^>]*>~i','',$html);
 $html=str_replace('</head>',$head.'<script>window.RUBIZH_BOOT='.json_encode($boot,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT).';</script></head>',$html);
-$html=str_replace('<body>','<body><noscript><div style="padding:24px;background:#0B0D0B;color:#EDEFEA">'.$fallback.'<p>Для оформлення замовлення увімкніть JavaScript або <a href="tel:+380976867892">зателефонуйте менеджеру</a>.</p></div></noscript>',$html);
+$html=str_replace('<body>','<body><noscript><div style="padding:24px;background:#0B0D0B;color:#EDEFEA">'.$fallback.'<p>Для оформлення замовлення увімкніть JavaScript або <a href="tel:+380976867892">зателефонуйте менеджеру</a>.</p></div></noscript>'.($firstScreen?storefrontHomeFirstScreen($html):''),$html);
 echo rubizhNonceHtml(str_replace('<head>','<head>'.$themeMarkup,$html),$nonce);
