@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
-function monoMockEnabled(): bool {return cfg('mono_mock')===true&&cfg('environment')==='staging'&&!in_array(strtolower((string)($_SERVER['HTTP_HOST']??'')),['rubizh.shop','www.rubizh.shop'],true);}
+require_once __DIR__.'/staging-gate.php';
+function monoMockEnabled(): bool {return cfg('mono_mock')===true&&rubizhStagingRelaxed();}
 function monoConfigured(): bool {return monoMockEnabled()||cfg('mono_activation_confirmed')===true&&trim((string)(getenv('RUBIZH_MONO_TOKEN')?:cfg('mono_token')))!=='';}
 function monoMigrate(PDO $db): void {if(function_exists('rubizhSchemaPrepared')&&rubizhSchemaPrepared($db))return;static $ready=false;if($ready)return;
  $db->exec("CREATE TABLE IF NOT EXISTS rubizh_mono_invoices(id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,order_id BIGINT UNSIGNED NOT NULL,invoice_id VARCHAR(100) NULL UNIQUE,reference VARCHAR(100) NOT NULL UNIQUE,amount BIGINT UNSIGNED NOT NULL,status VARCHAR(24) NOT NULL DEFAULT 'creating',page_url VARCHAR(500) NOT NULL DEFAULT '',modified_at VARCHAR(40) NOT NULL DEFAULT '',refund_ref VARCHAR(100) NOT NULL DEFAULT '',refund_status VARCHAR(24) NOT NULL DEFAULT '',created_at DATETIME NOT NULL,updated_at DATETIME NOT NULL,INDEX(order_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");

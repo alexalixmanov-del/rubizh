@@ -40,6 +40,8 @@ function turboSmsAccepted(array $response, string $phone): bool {
     } return false;
 }
 function sendPhoneCode(string $phone, string $code, string $id): void {
+    // Stage 5.5 (D-80): the closed staging mode never calls the SMS provider; the code is shown on the confirmation screen.
+    if (rubizhStagingRelaxed()) { $_SESSION['staging_sms_code']=$code; return; }
     // Automated tests only: a test transport replaces the provider (the constant is never defined by the site).
     if (defined('RUBIZH_SMS_TESTS') && is_callable($GLOBALS['sms_test_transport'] ?? null)) { ($GLOBALS['sms_test_transport'])($phone,'RUBIZH: kod '.$code); return; }
     // Browser tests on the PHP built-in server only (never production): codes go to a local outbox file.

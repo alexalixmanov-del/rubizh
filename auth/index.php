@@ -18,6 +18,8 @@ $orderExplicit=!empty($_GET['order']);if(in_array($tab,['overview','security'],t
 $orderView=in_array($_GET['view']??'',['active','history'],true)?$_GET['view']:'active';$preferences=['theme'=>'system','donation_channel'=>'viber','donation_phone'=>''];
 $accountReady = false; $profile = []; $orders = []; $order = null; $orderStats = ['total'=>0,'active'=>0]; $ordersPage = 1; $ordersPages = 1;
 function sendLink(string $recipient, string $link): void {
+    // Stage 5.5 (D-80): the closed staging mode sends no e-mail; the login link is shown on the «check your mail» screen.
+    if (rubizhStagingRelaxed()) { $_SESSION['staging_login_link']=$link; return; }
     $cfg = authConfig();
     $password = (string)($cfg['noreply_password'] ?? '');
     if ($password === '') { throw new RuntimeException('Пошта ще не налаштована. Зверніться до менеджера.'); }

@@ -25,6 +25,8 @@ function rubizhMailPayload(string $recipient, array $email): string {
 }
 
 function rubizhSendEmail(string $recipient, string $password, array $email): void {
+    // Stage 5.5 (D-80): the closed staging mode sends no e-mail at all.
+    require_once dirname(__DIR__).'/shop/staging-gate.php'; if (rubizhStagingRelaxed()) { return; }
     if (!filter_var($recipient, FILTER_VALIDATE_EMAIL) || preg_match('/[\r\n<>]/', $recipient)) { throw new RuntimeException('Некоректний email.'); }
     if (!extension_loaded('curl') || !in_array('smtps', curl_version()['protocols'], true)) { throw new RuntimeException('Пошта тимчасово недоступна. Зверніться до менеджера.'); }
     $from='noreply@rubizh.shop';

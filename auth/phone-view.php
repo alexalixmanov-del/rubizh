@@ -7,6 +7,7 @@
 <form method="post" action="/auth/?phone=1"><input type="hidden" name="csrf" value="<?=esc($_SESSION['csrf'])?>"><button class="auth-submit" name="action" value="approve_merge">Об’єднати й увійти →</button></form>
 <?php elseif ($challenge): ?>
 <p class="auth-step">ПІДТВЕРДЖЕННЯ НОМЕРА</p><h2 id="auth-title">Введіть код із SMS</h2><p class="auth-description">Надіслали шестизначний код на</p><div class="auth-email"><?=esc($challenge['phone'])?></div>
+<?php if (rubizhStagingRelaxed() && isset($_SESSION['staging_sms_code'])): ?><div class="auth-alert" role="status">Тестовий режим: SMS не надсилається. Код: <strong><?=esc((string)$_SESSION['staging_sms_code'])?></strong></div><?php endif; ?>
 <?php if ($message !== ''): ?><div class="auth-alert" role="alert"><?=esc($message)?></div><?php endif; ?>
 <form method="post" action="/auth/?phone=1" class="auth-form"><input type="hidden" name="csrf" value="<?=esc($_SESSION['csrf'])?>"><label for="sms-code">Код підтвердження</label><input id="sms-code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" minlength="6" placeholder="000000" required class="sms-code"><button class="auth-submit" name="action" value="phone_verify">Підтвердити й увійти →</button></form>
 <p class="auth-footnote">Код діє 5 хвилин. Не повідомляйте його іншим.</p>

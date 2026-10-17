@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once dirname(__DIR__).'/shop/staging-gate.php';
 // A9: every external service is behind a feature switch with one contract for live and mock.
 // live  — the flag is ON in the server config (default OFF);
 // mock  — staging stand with the provider mock (monobank mock / NP mock / test transport / local outbox);
@@ -8,7 +9,7 @@ declare(strict_types=1);
 function crmFlags(): array {
  return ['crm_enabled'=>cfg('crm_enabled')===true,'crm_refund_live'=>cfg('crm_refund_live')===true,'crm_np_ttn_live'=>cfg('crm_np_ttn_live')===true,'crm_np_tracking_live'=>cfg('crm_np_tracking_live')===true,'crm_sms_live'=>cfg('crm_sms_live')===true,'crm_email_live'=>cfg('crm_email_live')===true];
 }
-function crmStaging(): bool {return cfg('environment')==='staging'&&!in_array(strtolower((string)($_SERVER['HTTP_HOST']??'')),['rubizh.shop','www.rubizh.shop'],true);}
+function crmStaging(): bool {return rubizhStagingRelaxed();}
 function crmFeature(string $name): string {
  $flag=['refund'=>'crm_refund_live','np_ttn'=>'crm_np_ttn_live','np_tracking'=>'crm_np_tracking_live','sms'=>'crm_sms_live','email'=>'crm_email_live'][$name]??throw new LogicException('feature');
  if(crmFlags()[$flag])return 'live';

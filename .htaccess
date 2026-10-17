@@ -2,6 +2,8 @@
 DirectoryIndex storefront.php index.php index.html
 Options -Indexes
 RewriteEngine On
+# Stage 5.5 (D-80): PHP checks the closed-mode password itself, so it needs the Authorization header.
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 RewriteRule (^|/)\.(?!well-known(?:/|$)) - [F,L]
 RewriteRule ^(?:rubizh-private-backups|rubizh-private|rubizh-runtime|rubizh-automation|node_modules)(?:/|$) - [F,L]
 RewriteRule ^media/.*\.(?:php[0-9]?|phtml|phar)(?:/|$) - [F,L,NC]

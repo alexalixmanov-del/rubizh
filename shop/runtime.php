@@ -163,3 +163,6 @@ function rubizhCatalogInput(array $input): array {
     if(isset($input['attrs'])){$attrs=json_decode($input['attrs'],true,8);if(!is_array($attrs)||count($attrs)>24||array_filter($attrs,fn($v)=>!is_string($v)||strlen($v)>500))throw new RubizhHttpException(400,'Перевірте фільтри каталогу.');}
     return $input;
 }
+// Stage 5.5 (D-80): the closed mode is checked before any page or API code runs.
+require_once __DIR__.'/staging-gate.php';
+rubizhStagingGate();

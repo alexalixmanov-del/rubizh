@@ -1,10 +1,11 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__.'/staging-gate.php';
 // Included by protected server scripts only; no secret appears in browser requests.
 class NpUnknownResult extends RuntimeException {}
 class NpRejected extends RuntimeException {}
 class NpRateLimited extends NpRejected {}
-function npMockEnabled(): bool {return cfg('np_mock')===true&&cfg('environment')==='staging'&&!in_array(strtolower((string)($_SERVER['HTTP_HOST']??'')),['rubizh.shop','www.rubizh.shop'],true);}
+function npMockEnabled(): bool {return cfg('np_mock')===true&&rubizhStagingRelaxed();}
 function npConfigured(): bool {return npMockEnabled()||trim((string)(getenv('RUBIZH_NP_API_KEY')?:cfg('nova_poshta_api_key')))!=='';}
 function npOrigins(): array {
     $origins=[

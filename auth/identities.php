@@ -28,6 +28,8 @@ function authConfig(): array {
 }
 function smsEnabled(): bool {
     $c = authConfig();
+    // Stage 5.5 (D-80): in the closed staging mode SMS login works without a provider (the code is shown on screen).
+    if (function_exists('rubizhStagingRelaxed') && rubizhStagingRelaxed() && ($c['sms_enabled'] ?? false) === true && strlen((string)($c['auth_secret'] ?? '')) >= 40) { return true; }
     return ($c['sms_enabled'] ?? false) === true && strlen((string)($c['auth_secret'] ?? '')) >= 40
         && ($c['turbosms_token'] ?? '') !== '' && ($c['turbosms_sender'] ?? '') !== '';
 }
