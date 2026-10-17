@@ -84,6 +84,7 @@ return [
   'np_mock' => true,
   'np_ttn_enabled' => true,
   'crm_enabled' => true,
+  'crm_secret_key' => '${randomBytes(32).toString('base64')}',
   'crm_refund_live' => false, 'crm_np_ttn_live' => false, 'crm_np_tracking_live' => false, 'crm_sms_live' => false, 'crm_email_live' => false,
 ];
 `,{mode:0o600});
