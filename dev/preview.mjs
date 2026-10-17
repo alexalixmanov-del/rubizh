@@ -27,7 +27,7 @@ export function startPreview(port=4173) {
           default:return json(catalog(url.searchParams));
         }
       }
-      if(name==='/shop/customer.php')return json({ok:true,csrf:'preview-only',authed:false,customer_id:null,profile:null,favorites:[],items:[],mono_enabled:false,np_enabled:false,np_cod_enabled:false});
+      if(name==='/shop/customer.php')return json({ok:true,csrf:'preview-only',authed:false,customer_id:null,profile:null,favorites:[],items:[],mono_enabled:false,invoice_enabled:true,np_enabled:false,np_cod_enabled:false});
       if(name==='/shop/preferences.php')return json({ok:true,csrf:'preview-only',authed:false,preferences:{theme:'dark'}});
       if(name==='/shop/analytics.php')return json({ok:true,ga4:'',meta:'',settings:{donation:{enabled:false,percent:0}}});
       if(name==='/auth/preview-account') {
