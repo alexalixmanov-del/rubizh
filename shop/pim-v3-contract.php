@@ -87,6 +87,29 @@ function pimV3ValidateJson(string $json): array {
     return ['valid'=>$result['errors']===[],'errors'=>$result['errors'],'model_count'=>count($batch->models),'sku_count'=>$result['sku_count']];
 }
 
+/** Stage 5.5 (S55-04): the pinned schema ties a SKU's order/payment flags to its availability. A QUOTE SKU (price per m²,
+ * stage 5.4) is never orderable or payable whatever its availability, and SITE forces its flags off after validation; PIM
+ * sends it exactly so. The schema therefore checks a QUOTE SKU with the flags its availability implies — every other field
+ * (stock, statuses, sizes, prices) is checked as is. The batch itself is not changed.
+ */
+function pimV3QuoteSchemaView(mixed $model): mixed {
+    if(!$model instanceof stdClass||!is_array($model->variants??null))return $model;
+    $quote=false;foreach($model->variants as $v)if($v instanceof stdClass&&($v->sale_mode??null)==='QUOTE')$quote=true;
+    if(!$quote)return $model;
+    $view=json_decode(json_encode($model,JSON_THROW_ON_ERROR),false,64,JSON_THROW_ON_ERROR);
+    foreach($view->variants as $v){
+        if(!$v instanceof stdClass||($v->sale_mode??null)!=='QUOTE')continue;
+        $flags=match($v->availability??null){
+            'IN_STOCK'=>($v->price_ready??null)===true?[true,true,false]:[false,false,true],
+            'PREORDER','ORDER_ON_REQUEST','SIZE_CONFIRMATION_REQUIRED'=>[true,false,true],
+            'UNKNOWN'=>[false,false,true],
+            'OUT_OF_STOCK'=>[false,false,false],
+            default=>null};
+        if($flags!==null)[$v->order_submission_allowed,$v->payment_allowed,$v->requires_order_confirmation]=$flags;
+    }
+    return $view;
+}
+
 /** Model-level contract shared by the offline wrapper and the exact products[] wire envelope.
  * $allowHttp only widens the URL scheme for supplier image sources that the photo worker
  * downloads through its SSRF guard; public DTOs never expose non-local http URLs.
@@ -103,7 +126,7 @@ function pimV3ValidateModels(array $list,string $root,bool $allowHttp=false): ar
             foreach(is_array($model->size_catalogs??null)?$model->size_catalogs:[] as $catalog)if($catalog instanceof stdClass&&is_array($catalog->allowed_sizes??null)&&count($catalog->allowed_sizes)>256)$bounded=false;
             if(!$bounded){$add($p,'ENTITY_LIMIT');continue;}
         }
-        $schemaErrors=pimV3SchemaErrors($model,$schema,$p);
+        $schemaErrors=pimV3SchemaErrors(pimV3QuoteSchemaView($model),$schema,$p);
         $errors=array_slice(array_merge($errors,$schemaErrors),0,100);
         if($schemaErrors!==[])continue;
         $m=get_object_vars($model);

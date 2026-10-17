@@ -110,3 +110,19 @@ test('5.4.1 (owner): a QUOTE model is in the sitemap while its data is fresh eno
   assert.ok(!(await s.get('/sitemap.php')).text.includes('/product/'+slug+'<'),'hidden by age → not in the sitemap');
  }finally{s.stop();}
 });
+
+// Stage 5.5 (S55-04, found building the staging catalogue): PIM sends an in-stock QUOTE SKU exactly as stage 5.4 decided —
+// not orderable, not payable, confirmation required, price ready (the m² price is shown). The pinned schema said «in stock
+// and price ready ⇒ orderable and payable», so SITE refused every such model (12 of the 370 staging models). A QUOTE SKU is
+// outside that rule; SITE still forces its flags off whatever the batch says.
+test('S55-04: an in-stock QUOTE SKU with the flags PIM really sends (not orderable, not payable) is accepted and shown',{skip,timeout:300000},async()=>{
+ const s=await startCrm();
+ try{
+  const real=w=>{for(const m of w.products)if(m.id==='m-jacket')for(const v of m.variants){v.sale_mode='QUOTE';v.price_unit='m2';v.order_submission_allowed=false;v.payment_allowed=false;v.requires_order_confirmation=true;}
+   const m=w.products.find(m=>m.id==='m-jacket');m.order_submission_allowed=false;m.payment_allowed=false;m.requires_order_confirmation=true;};
+  const inStock=s.wire.products.find(m=>m.id==='m-jacket').variants.filter(v=>v.availability==='IN_STOCK'&&v.price_ready===true);assert.ok(inStock.length>0,'the fixture has an in-stock, price-ready SKU');
+  const r=await republish(s,real);assert.equal(r.status,200,JSON.stringify(r.data).slice(0,400));
+  const p=await product(s);assert.equal(p.sale_mode,'QUOTE');assert.ok(p.price_min>0,'the m² price is shown');
+  for(const v of p.variants){assert.equal(v.order_submission_allowed,false);assert.equal(v.payment_allowed,false);}
+ }finally{s.stop();}
+});
