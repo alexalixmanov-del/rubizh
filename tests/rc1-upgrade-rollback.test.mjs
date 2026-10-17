@@ -19,8 +19,9 @@ import {root,runtime,phpArgs,phpEnv} from './helpers/site-fixture.mjs';
 import {password as staffPassword} from './helpers/crm-fixture.mjs';
 
 const socket=process.env.RUBIZH_TEST_MYSQL_SOCKET;
-// Three production-era candidates and RC1 itself (rubizh-stage-3-verified, stage 4 §12).
-const baselines=(process.env.RUBIZH_PRODUCTION_BASELINES||'6c0b15ce05eecae4feafe6b7c75f10a1cd655363,b442eb7bf96823843d2522a223cd8c6506f9e84a,b1662debc5f21a0d464019ee86dd945fcf899bcb,9788a9eddd607f1738832ce2b4f657de6f887b6c').split(',').filter(Boolean);
+// Three production-era candidates, RC1 itself (rubizh-stage-3-verified, stage 4 §12) and the closed-staging version
+// (rubizh-stage-5.3-verified, D-80) — RC2 is rehearsed from each of them (stage 5.5, D-78).
+const baselines=(process.env.RUBIZH_PRODUCTION_BASELINES||'953d086606a022275973b30cac892483faa1d1ea,6c0b15ce05eecae4feafe6b7c75f10a1cd655363,b442eb7bf96823843d2522a223cd8c6506f9e84a,b1662debc5f21a0d464019ee86dd945fcf899bcb,9788a9eddd607f1738832ce2b4f657de6f887b6c').split(',').filter(Boolean);
 const has=cmd=>spawnSync('bash',['-c',cmd],{stdio:'ignore'}).status===0;
 const dumpTool=['mariadb-dump','mysqldump'].find(t=>has('command -v '+t));
 const clientTool=['mariadb','mysql'].find(t=>has('command -v '+t));
