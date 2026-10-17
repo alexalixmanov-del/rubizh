@@ -36,9 +36,9 @@ function rubizhHeaders(): void {
 }
 function rubizhStorefrontCsp(): string {
     $nonce=base64_encode(random_bytes(18));
-    // The existing compiled UI needs unsafe-eval. Inline scripts still require a
-    // fresh nonce; inline event attributes and injected third-party scripts fail.
-    header("Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-".$nonce."' 'unsafe-eval' https://www.googletagmanager.com https://connect.facebook.net; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; font-src 'self'; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://www.facebook.com; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'");
+    // Stage 5.3 (PL-2): no unsafe-eval — the runtime runs the storefront's logic script without compiling it.
+    // Inline scripts still require a fresh nonce; inline event attributes and injected third-party scripts fail.
+    header("Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-".$nonce."' https://www.googletagmanager.com https://connect.facebook.net; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; font-src 'self'; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://www.facebook.com; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'");
     return $nonce;
 }
 function rubizhNonceHtml(string $html,string $nonce): string {return preg_replace('/<script\b/i','<script nonce="'.htmlspecialchars($nonce,ENT_QUOTES,'UTF-8').'"',$html);}
