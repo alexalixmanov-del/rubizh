@@ -159,7 +159,8 @@ test('freshness policy from PIM: applied by SITE, shown in /pim/status, invalid 
 test('storefront bundle: a new versioned file shows «Менеджер підтвердить наявність перед оплатою» for a manager-confirmed SKU; the stage 5 bundle is kept as it was',async()=>{
  const {readFileSync}=await import('node:fs'),path=await import('node:path'),vm=await import('node:vm');
  const root=path.resolve(import.meta.dirname,'..'),live=readFileSync(path.join(root,'index.html'),'utf8').match(/src="\/(assets\/shop-client\.[^"?]+\.js)/)[1];
- assert.equal(live,'assets/shop-client.2026101602.js');
+ // Stage 5.4: later bundles (QUOTE label) keep this behaviour; the live one is this bundle or newer.
+ assert.ok(live.match(/shop-client\.(\d{10})\.js$/)?.[1]>='2026101602',live);
  const src=readFileSync(path.join(root,live),'utf8'),ctx={};
  vm.runInNewContext(src.match(/const STORE_V3_LABEL=\{[^}]*\};/)[0].replace('const ','this.')+src.match(/function storeV3Status\(p\)\{[^\n]*\}/)[0]+';this.storeV3Status=storeV3Status;',ctx);
  const status=variants=>ctx.storeV3Status({variants});

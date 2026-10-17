@@ -116,6 +116,13 @@ SITE: строка без `pim_order_submission_allowed=1` → `UNAVAILABLE` («
 - **Chunk 0:** необязательный `freshness_policy {version:1, pay_fresh_hours 1–336, sell_max_days 1–60}` (`sell_max_days*24 > pay_fresh_hours`, без других ключей); неверный или не в chunk 0 → весь пакет `400 FRESHNESS_POLICY`. Сайт объявляет `capabilities.freshness_policy_version=1`; PIM без этой возможности не публикует.
 - **Применение на SITE:** `shop/stock-freshness.php`; уровни FRESH / CONFIRM / HIDDEN, публичное поле SKU `stock_freshness` и `availability_note` («Менеджер підтвердить наявність перед оплатою»). Подробно — `CONFIG.md` §17. Тест: `tests/stage51-freshness.test.mjs`; PIM — `app/tests/stage5-freshness.test.cjs`, `final-workflow.test.cjs`.
 
+### 1.5.2 Товары «по заявці»: цена за м² (этап 5.4, решение владельца)
+
+- **SKU (дополнительные поля, необязательные):** `sale_mode` — `null` или `"QUOTE"`; `price_unit` — `null` или `"m2"`. QUOTE = цена поставщика за 1 м² (сетки индивидуального размера): это не цена товара. Неизвестное значение → пакет отклоняется (`SALE_MODE` / `PRICE_UNIT`).
+- **SITE (fail closed):** для QUOTE SKU разрешения `pim_order_submission_allowed` и `pim_payment_allowed` всегда записываются выключенными, что бы ни прислал пакет; публичный SKU и модель отдают `sale_mode`/`price_unit`; у модели, где все SKU — QUOTE, нет запросов размера; оформление (`checkout-quote`, `checkout`) отказывает QUOTE SKU и запросам размера такой модели («Вартість цього товару розраховує менеджер…»). Пересчёт свежести берёт разрешения из сохранённых данных и QUOTE не открывает.
+- **Витрина:** цена «… / м²», вместо корзины кнопка «Розрахувати вартість» → оптовая заявка D-54 (`/shop/wholesale-request.php`) с предзаполненным товаром (название, цвет/размер, артикул); менеджер рассчитывает и выставляет счёт в CRM. Без MonoPay. Метка в каталоге — «Ціна за розрахунком». Новые файлы `assets/shop-client.2026101701.js`, `assets/pim-v3-product.2026101701.js` (Q-9: прежние сохранены).
+- **Возможность:** сайт объявляет `capabilities.quote_sale_version=1`; PIM отправляет модели с QUOTE SKU только такому сайту (старому сайту они не уходят). Тесты: SITE `tests/stage54-quote.test.mjs`; PIM `app/tests/stage54-moderation.test.cjs`, `clean-import-hardening`.
+
 ### 1.6 Legacy-синхронизация (R1: по умолчанию выключена)
 
 - `api/config.sample.php:14` `'pim_legacy_sync' => false`; строгая проверка `!==true` → `LEGACY_SYNC_DISABLED` (`api/lib.php:232-237`); отсутствие ключа, `'true'`, `1` — выключено. Через `site-settings.json` не переопределяется (`shop/settings-lib.php:4,8`). Тот же предохранитель — `pimLegacyWrite`/`pimAssertLegacyModels` (`api/lib.php:245-259`), `api/kits.php:5,13`.

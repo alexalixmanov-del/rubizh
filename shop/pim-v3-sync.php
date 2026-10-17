@@ -22,7 +22,7 @@ function pimV3SchemaReady(PDO $db): bool {
 function pimV3Enabled(PDO $db): bool {return cfg('pim_v3_sync')===true&&pimV3SchemaReady($db);}
 function pimV3Capabilities(PDO $db): array {
     if(!pimV3Enabled($db))return ['pricing_policy_version'=>1];
-    return PIM_V3_CONTRACT+['envelope'=>'products','max_chunk_models'=>PIM_V3_MAX_CHUNK_MODELS,'freshness_policy_version'=>1];
+    return PIM_V3_CONTRACT+['envelope'=>'products','max_chunk_models'=>PIM_V3_MAX_CHUNK_MODELS,'freshness_policy_version'=>1,'quote_sale_version'=>1];
 }
 
 function pimV3Translit(string $s): string {
@@ -90,7 +90,7 @@ function pimV3KitSlot(?string $component): ?string {
         'carrier'=>'armor','plates'=>'armor','helmet'=>'head','hearing'=>'head','eye_protection'=>'head','backpack'=>'gear','pouch'=>'gear','rps'=>'gear','battle_belt'=>'gear','ifak'=>'med','tourniquet'=>'med'][$component??'']??null;
 }
 function pimV3PublicVariantData(array $v): array {
-    $keep=['sku','color_id','color','camouflage','size','size_raw','size_display','size_normalized','size_system','size_status','size_type','size_alpha','size_fit','size_height','availability','order_submission_allowed','payment_allowed','requires_order_confirmation','delivery_lead_time_days','ready_to_dispatch','price_ready','pricing_policy_version','price','site_price','kit_price','wholesale','stock_observed_at','stock_imported_at','stale_source','expires_at','barcode'];
+    $keep=['sku','color_id','color','camouflage','size','size_raw','size_display','size_normalized','size_system','size_status','size_type','size_alpha','size_fit','size_height','availability','order_submission_allowed','payment_allowed','requires_order_confirmation','delivery_lead_time_days','ready_to_dispatch','price_ready','pricing_policy_version','price','site_price','kit_price','wholesale','stock_observed_at','stock_imported_at','stale_source','expires_at','barcode','sale_mode','price_unit'];
     $out=array_intersect_key($v,array_fill_keys($keep,true));
     if(isset($out['wholesale']))$out['wholesale']=array_map(fn($t)=>array_intersect_key((array)$t,array_fill_keys(['price','discount','requested_discount','capped'],true)),(array)$out['wholesale']);
     return $out;
@@ -117,6 +117,11 @@ function pimV3ValidateBatch(PDO $db,array $products,array $objects,array $catego
         if(!is_string($cat)||!array_key_exists($cat,$catIds)||$catIds[$cat]===null)$errors[]=['path'=>$p.'.canonical_category_id','code'=>'CATEGORY_NOT_LEAF'];
         foreach(is_array($m['variants']??null)?$m['variants']:[] as $j=>$v){
             if(isset($v['checkout_allowed']))$errors[]=['path'=>$p.'.variants['.$j.']','code'=>'LEGACY_CHECKOUT_ALLOWED'];
+            // Stage 5.4 (owner): a per-m² price is not an item price — QUOTE SKU are shown without the cart (manager quote, D-54).
+            if(array_key_exists('sale_mode',$v)&&!in_array($v['sale_mode'],[null,'QUOTE'],true))$errors[]=['path'=>$p.'.variants['.$j.'].sale_mode','code'=>'SALE_MODE'];
+            if(array_key_exists('price_unit',$v)&&!in_array($v['price_unit'],[null,'m2'],true))$errors[]=['path'=>$p.'.variants['.$j.'].price_unit','code'=>'PRICE_UNIT'];
+            // A per-m² price on an ordinary SKU would be charged as an item price: m² only with QUOTE.
+            if(($v['price_unit']??null)==='m2'&&($v['sale_mode']??null)!=='QUOTE')$errors[]=['path'=>$p.'.variants['.$j.'].price_unit','code'=>'PRICE_UNIT_WITHOUT_QUOTE'];
             if(!is_string($v['sku']??null))continue;$owner->execute([$v['sku']]);$found=$owner->fetchColumn();
             if($found!==false&&strcasecmp((string)$found,$id)!==0)$errors[]=['path'=>$p.'.variants['.$j.'].sku','code'=>'SKU_OWNED_BY_OTHER_MODEL'];
             if(!empty($v['price_ready'])){try{if(shopPricingPolicy($v)===null)$errors[]=['path'=>$p.'.variants['.$j.']','code'=>'PRICING_V1_FIELDS'];}catch(ShopPricingException $e){$errors[]=['path'=>$p.'.variants['.$j.']','code'=>'PRICING_POLICY:'.$e->reason];}}
@@ -155,6 +160,10 @@ function pimV3WriteModel(PDO $db,array $m,string $batch,string $revision): strin
     if($before&&$before['hash']===$hash&&(int)$before['visible']===1&&(int)$before['pim_contract_version']===3){
         $db->prepare('UPDATE products SET synced_at=UTC_TIMESTAMP(),pim_revision=? WHERE id=?')->execute([$revision,$id]);return 'unchanged';
     }
+    // Stage 5.4: a QUOTE SKU (price per m²) is never ordered or paid through the cart, whatever else the batch says (fail
+    // closed) — applied before prices, legacy availability, the model flags, the stored columns and the data JSON.
+    foreach($m['variants'] as $i=>$v)if(($v['sale_mode']??null)==='QUOTE'){$m['variants'][$i]['order_submission_allowed']=false;$m['variants'][$i]['payment_allowed']=false;$m['variants'][$i]['requires_order_confirmation']=true;}
+    if($m['variants']!==[]&&!array_filter($m['variants'],fn($v)=>($v['sale_mode']??null)!=='QUOTE')){$m['order_submission_allowed']=false;$m['payment_allowed']=false;$m['requires_order_confirmation']=true;}
     $variants=$m['variants'];$policies=[];$prices=[];
     foreach($variants as $v){$policy=!empty($v['price_ready'])?shopPricingPolicy($v):null;$policies[$v['sku']]=$policy;if($policy!==null&&!empty($v['order_submission_allowed']))$prices[]=$policy['price_cents'];}
     if(!$prices)foreach($policies as $policy)if($policy!==null)$prices[]=$policy['price_cents'];

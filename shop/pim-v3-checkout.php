@@ -27,6 +27,9 @@ function pimV3ResolveLine(PDO $db,array $line,array $model,bool $lock,array &$to
         'qty'=>$qty,'sale_unit'=>'pcs','qty_label'=>$qty.' шт.','catalog_version'=>shopPricingCatalogVersion($db),'kit_group'=>customerField($line,'kit_group',64),'kit_units'=>shopKitUnits($line)];
     if($optionId!==''){
         if($sku!=='')throw new ShopPricingException('INVALID_VARIANT','Заявка на розмір не має SKU.');
+        // Stage 5.4: a model of QUOTE SKU (price per m²) offers no size requests through the cart (the read side hides them too).
+        $data=$db->prepare('SELECT data FROM variants WHERE product_id=? AND pim_active=1');$data->execute([$model['id']]);
+        foreach($data->fetchAll(PDO::FETCH_COLUMN) as $d)if((json_decode((string)$d,true)['sale_mode']??null)==='QUOTE')throw new ShopPricingException('UNAVAILABLE','Вартість цього товару розраховує менеджер: надішліть запит «Розрахувати вартість».');
         if(($line['price_mode']??'retail')!=='retail')throw new ShopPricingException('DISCOUNT_NOT_ALLOWED','Спеціальна ціна для заявки недоступна.');
         $q=$db->prepare('SELECT * FROM rubizh_size_options WHERE product_id=? AND option_id=? AND active=1');$q->execute([$model['id'],$optionId]);$o=$q->fetch(PDO::FETCH_ASSOC);
         if(!$o)throw new ShopPricingException('INVALID_VARIANT','Розмір більше не пропонується. Оновіть кошик.');
@@ -48,6 +51,8 @@ function pimV3ResolveLine(PDO $db,array $line,array $model,bool $lock,array &$to
     if($colorId!==''&&$v['pim_color_id']!==$colorId)throw new ShopPricingException('INVALID_VARIANT','SKU не належить вибраному кольору.');
     $size=trim((string)($v['pim_size_display']??''))?:trim((string)($v['pim_size_normalized']??''));
     if(isset($line['size'])&&is_string($line['size'])&&$line['size']!==''&&$line['size']!==$size)throw new ShopPricingException('INVALID_VARIANT','Розмір не відповідає SKU.');
+    // Stage 5.4: a QUOTE SKU (price per m²) is calculated by a manager from the «Розрахувати вартість» request, never ordered.
+    if((json_decode((string)($v['data']??''),true)['sale_mode']??null)==='QUOTE')throw new ShopPricingException('UNAVAILABLE','Вартість цього товару розраховує менеджер: надішліть запит «Розрахувати вартість».');
     if((int)$v['pim_order_submission_allowed']!==1)throw new ShopPricingException('UNAVAILABLE',$v['pim_effective_availability']==='UNKNOWN'?'Наявність невідома: оформлення недоступне.':'Товар або розмір недоступний. Оновіть кошик.');
     // Only an explicit supplier expiry ends an observation; data age alone is a warning (no 48h gate).
     if($v['pim_expires_at']!==null&&(int)$v['pim_expires_at']<=time()*1000)throw new ShopPricingException('UNAVAILABLE','Дані постачальника про наявність закінчилися. Оновіть кошик.');

@@ -34,6 +34,15 @@ The envelope is `products[]`. There is no `models[]` key; the synthetic
   the data age at every read (`shop/stock-freshness.php`, `docs/release/CONFIG.md` §17).
   PIM sends the policy with every batch and publishes only to a SITE that advertises it.
 
+## Stage 5.4 additions (2026-10-17, additive)
+
+- A SKU may carry `sale_mode` (`null` | `"QUOTE"`) and `price_unit` (`null` | `"m2"`): a supplier price per m²
+  (made-to-measure nets) is not an item price. Any other value refuses the batch (`SALE_MODE` / `PRICE_UNIT`).
+  SITE stores a QUOTE SKU with ordering and payment off whatever the batch says, offers no size requests for a model
+  of QUOTE SKU only, and refuses QUOTE lines at checkout; the storefront shows «Розрахувати вартість» (wholesale
+  request D-54). SITE advertises `capabilities.quote_sale_version: 1`; PIM sends QUOTE models only to such a SITE.
+  `wire.exact.json` is unchanged (its synthetic catalog has no per-m² goods); SITE `tests/stage54-quote.test.mjs`.
+
 ## Transport
 
 `POST /api/pim/sync` with the PIM bearer key, in chunks of at most 200 models:

@@ -9,8 +9,8 @@
 <script defer src="/assets/react.5e73fabcd0d0.js"></script>
 <script defer src="/assets/react-dom.c5c970a9cf36.js"></script>
 <script defer src="/assets/category-directory.2026100802.js"></script>
-<script defer src="/assets/pim-v3-product.2026101101.js?v=2026101101"></script>
-<script defer src="/assets/shop-client.2026101602.js"></script>
+<script defer src="/assets/pim-v3-product.2026101701.js?v=2026101701"></script>
+<script defer src="/assets/shop-client.2026101701.js"></script>
 <script defer src="/assets/store-runtime.4b6bbf46ca4c.js"></script>
 
 <link rel="icon" href="/favicon.ico?v=2" sizes="any">
@@ -871,6 +871,9 @@
             </div>
             <sc-if value="{{ buyOn }}" hint-placeholder-val="{{ true }}">
               <div tabindex="0" role="button" data-ui-button="center" sc-camel-on-click="{{ addProduct }}" style="flex:1 1 220px;min-height:50px;display:grid;place-items:center;background:var(--legacy-f2a33c);color:var(--button-text);font-family:'UAH','Oswald',sans-serif;font-size:16px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;cursor:pointer" style-hover="background:var(--legacy-ffc36b)">{{ addLabel }}</div>
+            </sc-if>
+            <sc-if value="{{ quoteOn }}" hint-placeholder-val="{{ false }}">
+              <div tabindex="0" role="button" data-ui-button="center" data-quote-button sc-camel-on-click="{{ quoteProduct }}" style="flex:1 1 220px;min-height:50px;display:grid;place-items:center;background:var(--legacy-f2a33c);color:var(--button-text);font-family:'UAH','Oswald',sans-serif;font-size:16px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;cursor:pointer" style-hover="background:var(--legacy-ffc36b)">{{ quoteLabel }}</div>
             </sc-if>
             <sc-if value="{{ buyOff }}" hint-placeholder-val="{{ false }}">
               <div aria-disabled="true" style="flex:1 1 220px;min-height:50px;display:grid;place-items:center;background:var(--legacy-1c221d);border:1px solid var(--legacy-2a322b);color:var(--legacy-5c6659);font-family:'UAH','Oswald',sans-serif;font-size:16px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;cursor:not-allowed">{{ addLabel }}</div>

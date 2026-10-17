@@ -22,18 +22,21 @@ function pimV3OnlyCatalog(PDO $db): bool {
 }
 function pimV3VariantPublic(array $v,?array $policy): array {
     $data=json_decode((string)($v['data']??''),true)?:[];
+    // Stage 5.4: a QUOTE SKU is never offered through the cart, whatever its stored columns say (fail closed).
+    $quote=($data['sale_mode']??null)==='QUOTE';
     $availability=(string)$v['pim_effective_availability'];
     $size=trim((string)($v['pim_size_display']??''))?:trim((string)($v['pim_size_normalized']??''));
     $pricing=$policy!==null?shopPricingPublic($policy):['price'=>null,'site_price'=>null,'kit_price'=>null,'kit_discount_pct'=>0,'wholesale'=>[]];
     return ['sku'=>$v['sku'],'variant_id'=>$v['sku'],'color_id'=>$v['pim_color_id'],'color'=>(string)$v['color'],
         'size_status'=>$v['pim_size_status'],'size_display'=>$v['pim_size_status']==='NO_SIZE_REQUIRED'?'':$size,'size_native'=>$size,'size_system'=>$v['pim_size_system'],'size_type'=>'other',
-        'availability_v3'=>$availability,'availability'=>(int)$v['pim_payment_allowed']===1?'in':((int)$v['pim_order_submission_allowed']===1?'order':'out'),
-        'order_submission_allowed'=>(int)$v['pim_order_submission_allowed']===1,'payment_allowed'=>(int)$v['pim_payment_allowed']===1,'requires_order_confirmation'=>(int)$v['pim_requires_order_confirmation']===1,
+        'availability_v3'=>$availability,'availability'=>$quote?'out':((int)$v['pim_payment_allowed']===1?'in':((int)$v['pim_order_submission_allowed']===1?'order':'out')),
+        'order_submission_allowed'=>(int)$v['pim_order_submission_allowed']===1&&!$quote,'payment_allowed'=>(int)$v['pim_payment_allowed']===1&&!$quote,'requires_order_confirmation'=>(int)$v['pim_requires_order_confirmation']===1,
         'delivery_lead_time_days'=>$v['pim_delivery_lead_time_days']===null?null:(int)$v['pim_delivery_lead_time_days'],'ready_to_dispatch'=>(int)$v['pim_ready_to_dispatch']===1,
         'lead_time'=>$v['pim_delivery_lead_time_days']===null?'':'Орієнтовно '.(int)$v['pim_delivery_lead_time_days'].' дн.',
         'stock_freshness'=>($v['stock_freshness']??'FRESH')==='HIDDEN'?null:($v['stock_freshness']??'FRESH'),'availability_note'=>($v['stock_freshness']??'')==='CONFIRM'&&(int)$v['pim_order_submission_allowed']===1?SHOP_FRESHNESS_CONFIRM_NOTE:null,
         'size_unconfirmed'=>false,'stock'=>null,'pricing_policy_version'=>$policy!==null?1:null,
-        'price'=>$pricing['price']??null,'kit_price'=>$pricing['kit_price']??null,'kit_discount_pct'=>$pricing['kit_discount_pct']??0,'wholesale'=>$pricing['wholesale']??[]];
+        'price'=>$pricing['price']??null,'kit_price'=>$pricing['kit_price']??null,'kit_discount_pct'=>$pricing['kit_discount_pct']??0,'wholesale'=>$pricing['wholesale']??[],
+        'sale_mode'=>($data['sale_mode']??null)==='QUOTE'?'QUOTE':null,'price_unit'=>($data['price_unit']??null)==='m2'?'m2':null];
 }
 /** Photos of one MODEL with color ownership; same local-file/source fallback as legacy product_photos(). */
 function pimV3Photos(PDO $db,string $id): array {
@@ -58,6 +61,8 @@ function pimV3ProductDto(PDO $db,array $row): array {
     $o=$db->prepare('SELECT option_id,scope,color_id,size,size_system FROM rubizh_size_options WHERE product_id=? AND active=1 ORDER BY option_id');$o->execute([$id]);
     $options=array_map(fn($r)=>['option_id'=>$r['option_id'],'scope'=>$r['scope'],'color_id'=>$r['color_id'],'size'=>$r['size'],'size_system'=>$r['size_system'],'availability_v3'=>'SIZE_CONFIRMATION_REQUIRED','order_submission_allowed'=>true,'payment_allowed'=>false,'requires_order_confirmation'=>true],$o->fetchAll(PDO::FETCH_ASSOC));
     $taxonomy=shopTaxonomyProduct($db,$row);
+    // Any QUOTE SKU: checkout refuses size requests of such a model, so none are offered (consistent with PIM).
+    $quote=$variants!==[]&&!array_filter($variants,fn($v)=>$v['sale_mode']!=='QUOTE');if(array_filter($variants,fn($v)=>$v['sale_mode']==='QUOTE'))$options=[];
     $payable=array_filter($variants,fn($v)=>$v['order_submission_allowed']&&$v['price']!==null);
     $prices=array_column($payable?:array_filter($variants,fn($v)=>$v['price']!==null),'price');
     return ['contract_version'=>3,'id'=>$id,'model_id'=>$row['pim_model_id']??$id,'slug'=>$row['slug'],'name'=>$row['name'],'brand'=>shopBrand((string)$row['brand']),
@@ -65,5 +70,5 @@ function pimV3ProductDto(PDO $db,array $row): array {
         'kit_slot'=>$row['pim_kit_slot']??null,'sale_unit'=>'pcs','description'=>shopDescription((string)($data['description']??$row['description'])),'attributes'=>is_array($data['attributes']??null)?$data['attributes']:[],
         'price_min'=>$prices?min($prices):null,'availability'=>$row['availability'],
         'order_submission_allowed'=>(bool)array_filter($variants,fn($v)=>$v['order_submission_allowed'])||$options!==[],'payment_allowed'=>(bool)array_filter($variants,fn($v)=>$v['payment_allowed']),
-        'has_docs'=>false,'docs_note'=>'','photos'=>$gallery,'colors'=>$colors,'size_options'=>$options,'variants'=>$variants];
+        'sale_mode'=>$quote?'QUOTE':null,'price_unit'=>$quote&&!array_filter($variants,fn($v)=>$v['price_unit']!=='m2')?'m2':null,'has_docs'=>false,'docs_note'=>'','photos'=>$gallery,'colors'=>$colors,'size_options'=>$options,'variants'=>$variants];
 }
