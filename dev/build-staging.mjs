@@ -48,6 +48,23 @@ try{
  const zip=path.join(out,'Rubizh-staging-'+head+'.zip');const pk=spawnSync('python3',[path.join(root,'dev/package-release.py'),zip,'--staging'],{cwd:root,encoding:'utf8'});if(pk.status!==0)throw Error('package: '+pk.stderr);
  report.archive=JSON.parse(pk.stdout.trim().split('\n').pop());
  writeFileSync(zip+'.sha256',report.archive.sha256+'  '+path.basename(zip)+'\n');writeFileSync(dumpFile+'.sha256',report.dump.sha256+'  '+path.basename(dumpFile)+'\n');
+ // The CRM front end: built from the CRM commit pinned in CI (uploaded into crm/ on the hosting, as in GO_LIVE C3).
+ const crmSha=readFileSync(path.join(root,'.github/workflows/ci.yml'),'utf8').match(/repository: alexalixmanov-del\/crm\.rubizh\s+ref: ([0-9a-f]{40})/)[1];
+ const crmRepo=path.join(os.homedir(),'Projects/crm.rubizh'),crmTree=path.join(os.tmpdir(),'rubizh-crm-'+crmSha.slice(0,7)+'-'+process.pid);
+ const git=(...a)=>{const g=spawnSync('git',a,{cwd:crmRepo,encoding:'utf8'});if(g.status!==0)throw Error('git '+a.join(' ')+': '+g.stderr);return g.stdout;};
+ git('worktree','add','--detach',crmTree,crmSha);
+ try{
+  spawnSync('ln',['-s',path.join(crmRepo,'node_modules'),path.join(crmTree,'node_modules')]);
+  const b=spawnSync('npm',['run','build'],{cwd:crmTree,encoding:'utf8'});if(b.status!==0)throw Error('CRM build: '+b.stdout+b.stderr);
+  const crmZip=path.join(out,'Rubizh-crm-'+crmSha.slice(0,7)+'.zip');const z=spawnSync('python3',['-c',`import sys,zipfile,os
+from pathlib import Path
+src=Path(sys.argv[1]);out=sys.argv[2]
+with zipfile.ZipFile(out,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
+    for f in sorted(p for p in src.rglob('*') if p.is_file()):
+        i=zipfile.ZipInfo('crm/'+f.relative_to(src).as_posix(),(2026,10,9,0,0,0));i.external_attr=0o644<<16;i.compress_type=zipfile.ZIP_DEFLATED;z.writestr(i,f.read_bytes())`,path.join(crmTree,'dist'),crmZip],{encoding:'utf8'});
+  if(z.status!==0)throw Error('CRM zip: '+z.stderr);
+  report.crm={commit:crmSha,file:path.basename(crmZip),sha256:sha(readFileSync(crmZip))};writeFileSync(crmZip+'.sha256',report.crm.sha256+'  '+path.basename(crmZip)+'\n');chmodSync(crmZip,0o600);
+ }finally{git('worktree','remove','--force',crmTree);}
  // api/config.php template: the owner fills the database name, user and password from the hosting panel.
  const pimKey=secret(32),cronKey=secret(32);
  writeFileSync(path.join(out,'config.staging.php.txt'),`<?php
@@ -92,5 +109,5 @@ return [
   'Ключ PIM для стейджинга (настройки связи с сайтом в PIM, только если будете пробовать отправку): '+pimKey,''].join('\n'),{mode:0o600});
  writeFileSync(path.join(out,'staging-build.json'),JSON.stringify(report,null,1)+'\n',{mode:0o600});
  for(const f of [zip,zip+'.sha256',dumpFile,dumpFile+'.sha256',dumpJson])chmodSync(f,0o600);
- console.log(JSON.stringify({commit:head,archive:report.archive,dump:report.dump,catalogue:{products:report.catalogue.products,skus:report.catalogue.skus},non_empty_sensitive:personal}));
+ console.log(JSON.stringify({commit:head,archive:report.archive,crm:report.crm,dump:report.dump,catalogue:{products:report.catalogue.products,skus:report.catalogue.skus},non_empty_sensitive:personal}));
 }finally{site.stop();}
