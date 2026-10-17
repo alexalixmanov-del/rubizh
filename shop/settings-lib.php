@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 function shopSettingsPath(): string {return __DIR__.'/../api/site-settings.json';}
-function shopSettingsKeys(): array {return ['seller','ga4_id','meta_pixel_id','order_notification_email','supplier_contacts','supplier_sku_map','donation_enabled','donation_percent','donation_report_url','donation_schedule','instagram_url','tiktok_url','invoice_vat_note'];}
+function shopSettingsKeys(): array {return ['seller','ga4_id','meta_pixel_id','order_notification_email','supplier_contacts','supplier_sku_map','donation_enabled','donation_percent','donation_report_url','donation_schedule','instagram_url','tiktok_url','invoice_vat_note','invoice_payment'];}
 function shopSettingsRead(): array {
  $f=shopSettingsPath();if(!is_file($f))return [];
  $a=json_decode((string)file_get_contents($f),true);if(!is_array($a))throw new RuntimeException('Файл налаштувань пошкоджено. Відновіть його з резервної копії.');
@@ -24,6 +24,8 @@ function shopSettingsValidate(array $raw): array {
  if(isset($raw['seller'])){$s=$raw['seller'];if(!is_array($s))throw new RuntimeException('Перевірте реквізити.');foreach(['name','tax_id','iban','bank','mfo','bank_tax_id','address','email','phone','phone_label'] as $k){$v=shopSettingsText($s[$k]??'',500);if($v==='')continue;if($k==='email'&&!filter_var($v,FILTER_VALIDATE_EMAIL))throw new RuntimeException('Некоректний email продавця.');if($k==='iban'&&!preg_match('/^UA\d{27}$/D',str_replace(' ','',$v)))throw new RuntimeException('IBAN має починатися з UA і містити 29 символів.');$out['seller'][$k]=$v;}}
  // 5-3: the VAT line of the invoice PDF — the owner's own wording only; empty = no PDF.
  if(array_key_exists('invoice_vat_note',$raw))$out['invoice_vat_note']=shopSettingsText($raw['invoice_vat_note'],200);
+ // Stage 5.5 (D-79): «auto» (default) — invoice payment while the VAT status is filled; «off» — card only.
+ if(array_key_exists('invoice_payment',$raw))$out['invoice_payment']=$raw['invoice_payment']==='off'?'off':'auto';
  foreach(['ga4_id','meta_pixel_id','order_notification_email','donation_report_url','donation_schedule'] as $k)if(array_key_exists($k,$raw)){$v=shopSettingsText($raw[$k],500);if($k==='ga4_id'&&$v!==''&&!preg_match('/^G-[A-Z0-9]{5,20}$/D',$v))throw new RuntimeException('Перевірте GA4 ID.');if($k==='meta_pixel_id'&&$v!==''&&!preg_match('/^\d{5,30}$/D',$v))throw new RuntimeException('Перевірте Meta Pixel ID.');if($k==='order_notification_email'&&!filter_var($v,FILTER_VALIDATE_EMAIL))throw new RuntimeException('Перевірте email замовлень.');if($k==='donation_report_url'&&$v!==''&&(!filter_var($v,FILTER_VALIDATE_URL)||!str_starts_with($v,'https://')))throw new RuntimeException('Посилання на звіти має бути HTTPS.');$out[$k]=$v;}
  if(array_key_exists('donation_enabled',$raw))$out['donation_enabled']=$raw['donation_enabled']===true;
  if(isset($raw['donation_percent'])){if(!is_numeric($raw['donation_percent'])||(float)$raw['donation_percent']<0||(float)$raw['donation_percent']>100)throw new RuntimeException('Перевірте відсоток підтримки.');$out['donation_percent']=round((float)$raw['donation_percent'],2);}
@@ -43,3 +45,6 @@ function shopPublicSettings(): array {
 function shopPublicSocial(): array {
  $out=[];foreach(['instagram'=>'instagram_url','tiktok'=>'tiktok_url'] as $platform=>$k){try{$out[$platform]=shopSocialUrl(cfg($k)??'',$platform);}catch(RuntimeException $e){$out[$platform]='';}}return $out;
 }
+// Stage 5.5 (D-79): payment by invoice needs the owner's VAT status (no PDF invoice without it) and is off when the owner
+// switched it off. The code stays; the storefront hides the choice and the API refuses it.
+function shopInvoicePaymentEnabled(): bool {return cfg('invoice_payment')!=='off'&&trim((string)(cfg('invoice_vat_note')??''))!=='';}

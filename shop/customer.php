@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-require __DIR__.'/../auth/bootstrap.php';require_once __DIR__.'/store-lib.php';
+require __DIR__.'/../auth/bootstrap.php';require_once __DIR__.'/store-lib.php';require_once __DIR__.'/settings-lib.php';
 try{
     $db=shopStoreDatabase();$id=customerId();
     if(($_SERVER['REQUEST_METHOD'] ?? 'GET')==='POST'){
@@ -23,7 +23,7 @@ try{
     $favorites=$id===null?[]:shopFavoriteIds($db,$id);
     shopJson(['ok'=>true,'csrf'=>$_SESSION['csrf'],'authed'=>$id!==null,'customer_id'=>$id,
         'cart_reminders_enabled'=>shopCartRemindersEnabled(),'cart_reminder'=>shopCartReminderStatus($db,hash('sha256',$_SESSION['checkout_scope'])),'cart_restore_pending'=>!empty($_SESSION['cart_recovery']),
-        'preferences'=>$id===null?null:shopPreferences($db,$id),'mono_enabled'=>monoConfigured(),'np_enabled'=>npConfigured(),
+        'preferences'=>$id===null?null:shopPreferences($db,$id),'mono_enabled'=>monoConfigured(),'invoice_enabled'=>shopInvoicePaymentEnabled(),'np_enabled'=>npConfigured(),
         'profile'=>$id===null?null:array_intersect_key(customerProfile($id),array_flip(['email','first_name','last_name','phone','delivery_type','city','delivery_address'])),
         'favorites'=>$favorites,'items'=>shopProductsByIds($db,$favorites)]);
 }catch(Throwable $e){if(isset($db)&&$db->inTransaction())$db->rollBack();error_log('rubizh customer: '.get_class($e).' code '.(string)$e->getCode());shopJson(['ok'=>false,'error'=>$e instanceof PDOException?'Кабінет тимчасово недоступний.':$e->getMessage()],400);}

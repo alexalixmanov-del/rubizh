@@ -61,7 +61,9 @@ test('invoice PDF over HTTP: owner of the order only (IDOR), roles in CRM, no PD
   // Confirm availability when the order waits for the manager (then the PDF becomes available).
   const owner=await s.login('OWNER');let card=(await owner.get('/orders/'+id)).data.data;
   if(card.actions.includes('confirm')){assert.equal((await buyer()).status,409,'no PDF before confirmation');const r=await owner.send('/orders/'+id+'/confirm',{availability_confirmed:true,expected_version:card.version});assert.ok(r.status<300,JSON.stringify(r.data));card=(await owner.get('/orders/'+id)).data.data;}
-  // No VAT note yet: no PDF anywhere; OWNER gets the owner's wording.
+  // No VAT note: no PDF anywhere; OWNER gets the owner's wording. Stage 5.5 (D-79): an invoice order needs the VAT status
+  // when it is placed, so the owner clears it afterwards here.
+  writeFileSync(s.site+'/api/site-settings.json',JSON.stringify({invoice_vat_note:''}));card=(await owner.get('/orders/'+id)).data.data;
   assert.equal((await buyer()).status,409);
   assert.deepEqual([card.invoice_pdf.available,card.invoice_pdf.reason,card.invoice_pdf.message],[false,'VAT_NOTE_MISSING','Заповніть статус ПДВ у налаштуваннях']);
   const managerCard=(await (await s.login('MANAGER')).get('/orders/'+id)).data.data;assert.equal(managerCard.invoice_pdf.reason,'VAT_NOTE_MISSING');assert.notEqual(managerCard.invoice_pdf.message,'Заповніть статус ПДВ у налаштуваннях');
@@ -119,6 +121,7 @@ test('CRM screen: OWNER sees «Заповніть статус ПДВ у нал�
   if(card.actions.includes('confirm')){await owner.send('/orders/'+id+'/confirm',{availability_confirmed:true,expected_version:card.version});}
   const p=await browser.newPage({viewport:{width:1440,height:900},acceptDownloads:true});const errors=[];p.on('pageerror',e=>errors.push(e.message));
   await p.goto(s.base+'/crm/');await p.getByLabel('Email').fill(staffEmail('OWNER'));await p.getByLabel('Пароль',{exact:true}).fill(password);await p.getByRole('button',{name:'Увійти'}).click();await p.getByRole('navigation',{name:'Основне'}).first().waitFor();
+  writeFileSync(s.site+'/api/site-settings.json',JSON.stringify({invoice_vat_note:''}));// D-79: cleared after the order was placed
   await p.goto(s.base+'/crm/orders/'+id);await p.getByText('Заповніть статус ПДВ у налаштуваннях').waitFor();
   assert.equal(await p.getByRole('button',{name:'Завантажити рахунок (PDF)'}).count(),0,'no button without the VAT status');
   writeFileSync(s.site+'/api/site-settings.json',JSON.stringify({invoice_vat_note:'ТЕСТОВИЙ СТАТУС ПДВ'}));

@@ -93,6 +93,8 @@ test('storefront bundles: QUOTE label in the new bundle; earlier bundles kept by
  assert.equal(ctx.storeV3Status({variants:[{sale_mode:'QUOTE'},{availability_v3:'IN_STOCK',payment_allowed:true}]}),'IN_STOCK','a mixed model sells its normal SKU');
  const sha=f=>crypto.createHash('sha256').update(readFileSync(path.join(root,f))).digest('hex');
  // Stage 5.4.1: the D-62 slow-CPU anchor fix shipped as shop-client.2026101702.js; the stage 5.4 bundle is kept as it was.
+ // Stage 5.5: D-79 shipped as shop-client.2026101801.js; the 5.4.1 bundle is kept as it was.
+ assert.equal(sha('assets/shop-client.2026101702.js'),'501e0a838e093cf4af277095a8148278125e12d836bc7935247f5e52aea44eef','stage 5.4.1 bundle kept');
  assert.equal(sha('assets/shop-client.2026101701.js'),'90da45ae05a094918a82cdb097ab8b3cc647411badd67c033f94a090dbb6c1c6','stage 5.4 bundle kept');
  assert.equal(sha('assets/shop-client.2026101602.js'),'e93d5fb4b9d609d2a548e3f0661923a1f50e8095e5c23bd191546321b77da940','stage 5.1 bundle kept');
  assert.equal(sha('assets/pim-v3-product.2026101101.js'),'82327510e67c480ebddbb367f4b632b9076e882341592ea2cb6b119e47c093e1','previous product view kept');

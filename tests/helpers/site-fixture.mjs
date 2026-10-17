@@ -24,7 +24,7 @@ function copyTree(from,to){mkdirSync(to,{recursive:true});for(const f of readdir
 export async function startSite({enableV3=true,legacySync=true,extraConfig=''}={}){
  const dir=mkdtempSync(path.join(tmpdir(),'rubizh-v3-')),site=path.join(dir,'www'),schema='fixture_pim_v3_'+[...crypto.getRandomValues(new Uint8Array(6))].map(b=>b.toString(16).padStart(2,'0')).join('');
  copyTree(root,site);
- writeFileSync(path.join(site,'api/config.php'),`<?php return ['db_host'=>'localhost','db_name'=>'${schema}','db_user'=>'root','db_pass'=>'','pim_key'=>'${PIM_KEY}','cache_dir'=>'${dir}/cache','media_dir'=>'${dir}/media','media_url'=>'/media','pim_legacy_sync'=>${legacySync?'true':'false'},'pim_v3_sync'=>${enableV3?'true':'false'}${extraConfig}];`);
+ writeFileSync(path.join(site,'api/config.php'),`<?php return ['db_host'=>'localhost','db_name'=>'${schema}','db_user'=>'root','db_pass'=>'','pim_key'=>'${PIM_KEY}','cache_dir'=>'${dir}/cache','media_dir'=>'${dir}/media','media_url'=>'/media','pim_legacy_sync'=>${legacySync?'true':'false'},'pim_v3_sync'=>${enableV3?'true':'false'},'invoice_vat_note'=>'ТЕСТОВИЙ СТАТУС ПДВ'${extraConfig}];`);
  writeFileSync(path.join(site,'auth/config.php'),"<?php return ['sms_enabled'=>false,'google_enabled'=>false,'noreply_password'=>'','auth_secret'=>'pim-v3-fixture-secret-at-least-forty-characters'];");
  const admin=`$db=new PDO('mysql:unix_socket='.getenv('RUBIZH_TEST_MYSQL_SOCKET'),'root','',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);`;
  php(`${admin}$db->exec('CREATE DATABASE ${schema} CHARACTER SET utf8mb4');require '${site}/dev/prepare-runtime.php';`);

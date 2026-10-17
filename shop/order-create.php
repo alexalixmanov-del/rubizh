@@ -28,6 +28,8 @@ function shopOrderContact(array $contact): array {
  */
 function shopCreateOrder(PDO $db,array $lines,array $c,array $delivery,string $pay,array $opts): array {
     if(!in_array($pay,['card','invoice'],true))throw new RuntimeException('Оберіть спосіб оплати: карткою онлайн або на рахунок ФОП.');
+    require_once __DIR__.'/settings-lib.php';
+    if($pay==='invoice'&&!shopInvoicePaymentEnabled())throw new RuntimeException('Оплата на рахунок ФОП зараз недоступна. Оплатіть карткою онлайн або зверніться до менеджера.');
     $channel=$opts['channel']??'web';$promo=(string)($opts['promo']??'');
     for($attempt=0;;$attempt++){
     $db->beginTransaction();
