@@ -86,7 +86,8 @@
     "order.search.contact": ["OWNER", "MANAGER", "SUPPORT", "ACCOUNTANT"],
     "wholesale.view": ["OWNER", "MANAGER"],
     "wholesale.manage": ["OWNER", "MANAGER"],
-    "inventory.return": ["OWNER"]
+    "inventory.return": ["OWNER"],
+    "site.speed.view": ["OWNER"]
   },
   "routes": [
     {"id": "auth.session", "method": "GET", "path": "/auth/session", "auth": "public", "permission": null, "response": "Session", "summary": "Стан сесії співробітника"},
@@ -177,6 +178,7 @@
     {"id": "staff.logout", "method": "POST", "path": "/staff/{sid}/logout", "auth": "staff", "permission": "staff.manage", "step_up": true, "idempotent": true, "request": "ReasonRequest", "response": "StaffUser", "summary": "Примусовий вихід"},
     {"id": "audit.list", "method": "GET", "path": "/audit", "auth": "staff", "permission": "audit.view", "query": "AuditQuery", "response": "AuditList", "summary": "Активність (лише читання)"},
     {"id": "analytics", "method": "GET", "path": "/analytics", "auth": "staff", "permission": "report.view", "query": "PeriodQuery", "response": "Analytics", "summary": "Аналітика"},
+    {"id": "site.speed", "method": "GET", "path": "/site-speed", "auth": "staff", "permission": "site.speed.view", "response": "SiteSpeed", "summary": "D-72: швидкість сайту (LCP, CLS, INP) — медіана й p75 за 7 і 28 днів за шаблонами сторінок і пристроями"},
     {"id": "reports.legacy", "method": "GET", "path": "/reports", "auth": "staff", "permission": "dashboard.view", "query": "PeriodQuery", "response": "Report", "deprecated": true, "summary": "Сумісність: короткий звіт"},
     {"id": "settings.view", "method": "GET", "path": "/settings", "auth": "staff", "permission": "settings.personal", "response": "Settings", "summary": "Налаштування: особисті, системні, стан прапорців"},
     {"id": "settings.system", "method": "POST", "path": "/settings/system", "auth": "staff", "permission": "settings.system", "idempotent": true, "request": "SystemSettingsRequest", "response": "Settings", "summary": "Пороги (OWNER)"},
@@ -294,6 +296,8 @@
     "AuditList": {"type": "object", "required": ["rows", "pagination"], "properties": {"rows": {"type": "array"}, "pagination": {"$ref": "Page"}}},
     "Dashboard": {"type": "object", "required": ["period", "kpi", "statuses", "recent", "attention"], "properties": {"period": {"type": "object"}, "kpi": {"type": "object"}, "chart": {"type": "array"}, "statuses": {"type": "object"}, "recent": {"type": "array"}, "attention": {"type": "array"}, "popular": {"type": "array"}, "managers": {"type": ["array", "null"]}, "activity": {"type": "array"}}},
     "Analytics": {"type": "object", "required": ["period", "totals", "slices"], "properties": {"period": {"type": "object"}, "totals": {"type": "object"}, "slices": {"type": "object"}, "daily": {"type": "array"}, "gross_profit": {"type": "object"}}},
+    "SpeedWindow": {"type": "object", "required": ["n", "median", "p75"], "properties": {"n": {"type": "integer", "minimum": 0}, "median": {"type": ["number", "null"]}, "p75": {"type": ["number", "null"]}}},
+    "SiteSpeed": {"type": "object", "required": ["timezone", "windows", "rows"], "properties": {"timezone": {"type": "string"}, "windows": {"type": "array", "items": {"type": "integer"}}, "from_7": {"type": "string"}, "from_28": {"type": "string"}, "to": {"type": "string"}, "rows": {"type": "array", "items": {"type": "object", "required": ["template", "metric", "device", "d7", "d28"], "properties": {"template": {"enum": ["home", "catalog", "category", "product", "kit"]}, "metric": {"enum": ["LCP", "CLS", "INP"]}, "device": {"enum": ["mobile", "desktop"]}, "d7": {"$ref": "SpeedWindow"}, "d28": {"$ref": "SpeedWindow"}}}}}},
     "Report": {"type": "object", "required": ["period", "metrics"], "properties": {"period": {"type": "object"}, "metrics": {"type": "object"}, "financial": {"type": ["object", "null"]}}},
     "Settings": {"type": "object", "required": ["personal", "flags"], "properties": {"personal": {"type": "object"}, "system": {"type": ["object", "null"]}, "flags": {"type": "object"}, "staff": {"type": "array"}, "sender_profiles": {"type": "array"}, "permissions": {"type": "array"}}},
     "SystemSettingsRequest": {"type": "object", "additionalProperties": false, "properties": {"vip_paid_orders": {"type": "integer", "minimum": 1, "maximum": 1000}, "vip_paid_total_minor": {"type": "integer", "minimum": 0}, "sleeping_days": {"type": "integer", "minimum": 7, "maximum": 3650}, "auto_task_unconfirmed_minutes": {"type": "integer", "minimum": 5, "maximum": 10080}, "auto_task_no_ttn_hours": {"type": "integer", "minimum": 1, "maximum": 720}, "invoice_grace_workdays": {"type": "integer", "minimum": 0, "maximum": 30}, "direct_pay_max_qty": {"type": "integer", "minimum": 1, "maximum": 100}}},

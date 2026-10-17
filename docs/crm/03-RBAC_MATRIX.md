@@ -2,7 +2,7 @@
 
 > Сгенерировано `dev/crm-contract-gen.mjs` из `contracts/crm/crm-api.json`. Не редактировать вручную. Проверка: `tests/crm-stage4-rbac.test.mjs` (каждый маршрут × каждая роль: разрешено → не 401/403/5xx; запрещено → 403; без входа → 401; сессия покупателя → 401).
 
-Права, выполняемые только OWNER независимо от таблицы: `payment.refund.execute`, `payment.manual_reconcile`, `payment.review`, `settings.system`, `staff.manage`, `supplier.manage`, `export.full`, `shipment.resolve_unknown`, `shipment.manual_deliver`, `inventory.return` (`staff/auth.php`, `crmPermit`). MANAGER меняет только свои и неназначенные заказы (403 `ORDER_NOT_ASSIGNED`); платежи видит только своих заказов. WAREHOUSE не получает денежных полей (`crmRedactOrder`). Повторный вход (step-up ≤ 15 мин) — столбец «↻».
+Права, выполняемые только OWNER независимо от таблицы: `payment.refund.execute`, `payment.manual_reconcile`, `payment.review`, `settings.system`, `staff.manage`, `supplier.manage`, `export.full`, `shipment.resolve_unknown`, `shipment.manual_deliver`, `inventory.return`, `site.speed.view` (`staff/auth.php`, `crmPermit`). MANAGER меняет только свои и неназначенные заказы (403 `ORDER_NOT_ASSIGNED`); платежи видит только своих заказов. WAREHOUSE не получает денежных полей (`crmRedactOrder`). Повторный вход (step-up ≤ 15 мин) — столбец «↻».
 
 ## Права × роли
 
@@ -65,6 +65,7 @@
 | `wholesale.view` | ✓ | ✓ | — | — | — |
 | `wholesale.manage` | ✓ | ✓ | — | — | — |
 | `inventory.return` | ✓ | — | — | — | — |
+| `site.speed.view` | ✓ | — | — | — | — |
 
 ## Поля × роли (видит / не видит)
 
@@ -179,6 +180,7 @@
 | POST | `/staff/{sid}/logout` | `staff.manage` | ↻ |  | ✓ | 200 | 403 | 403 | 403 | 403 |
 | GET | `/audit` | `audit.view` |  |  |  | 200 | 200 | 403 | 403 | 200 |
 | GET | `/analytics` | `report.view` |  |  |  | 200 | 403 | 403 | 403 | 200 |
+| GET | `/site-speed` | `site.speed.view` |  |  |  | 200 | 403 | 403 | 403 | 403 |
 | GET | `/reports` | `dashboard.view` |  |  |  | 200 | 200 | 200 | 200 | 200 |
 | GET | `/settings` | `settings.personal` |  |  |  | 200 | 200 | 200 | 200 | 200 |
 | POST | `/settings/system` | `settings.system` |  |  | ✓ | 200 | 403 | 403 | 403 | 403 |

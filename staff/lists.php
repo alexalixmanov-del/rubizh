@@ -35,6 +35,7 @@ function crmHandleMore(PDO $db,array $actor,array $route,array $p,array $b,array
   'settings.staff.create.legacy','settings.staff.update.legacy'=>crmStaffSave($db,$actor,$b,$p['sid']??null),
   'audit.list'=>crmAuditRows($db,$q,$actor),
   'analytics'=>crmAnalytics($db,$actor,$q),
+  'site.speed'=>shopVitalsReport($db),
   'reports.legacy'=>crmReports($db,$q,$actor),
   'settings.view'=>crmSettingsView($db,$actor),
   'settings.system'=>crmSettingsSave($db,$actor,$b),

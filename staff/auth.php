@@ -34,7 +34,7 @@ function crmCan(array $actor,string $permission): bool {return in_array($permiss
 /** Owner-only permissions are re-checked by role, so a mis-seeded table can never widen them. */
 function crmPermit(array $actor,string $permission): void {
  if(!crmCan($actor,$permission))throw new CrmError('PERMISSION_DENIED',403,['permission'=>$permission]);
- if(in_array($permission,['payment.refund.execute','payment.manual_reconcile','payment.review','order.price_override','order.total_override','settings.system','staff.manage','supplier.manage','export.full','shipment.resolve_unknown','shipment.manual_deliver','inventory.return'],true)&&$actor['role']!=='OWNER')throw new CrmError('PERMISSION_DENIED',403);
+ if(in_array($permission,['payment.refund.execute','payment.manual_reconcile','payment.review','order.price_override','order.total_override','settings.system','staff.manage','supplier.manage','export.full','shipment.resolve_unknown','shipment.manual_deliver','inventory.return','site.speed.view'],true)&&$actor['role']!=='OWNER')throw new CrmError('PERMISSION_DENIED',403);
 }
 function crmRequestId(mixed $id): string {if(!is_string($id)||!preg_match('/^[a-f0-9]{32}$/D',$id))throw new CrmError('INVALID_REQUEST_ID');return $id;}
 function crmAudit(PDO $db,?array $a,string $entity,string $id,string $action,array $old,array $new,string $reason='',?string $request=null,string $source='STAFF'): void {

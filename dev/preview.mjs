@@ -14,6 +14,8 @@ export function startPreview(port=4173) {
     try {
       const url=new URL(req.url,'http://localhost');const name=decodeURIComponent(url.pathname);
       // Read-only preview: no form can create an order or send money/messages.
+      // D-72 beacon: accepted and dropped (nothing is stored in the preview).
+      if(req.method==='POST'&&name==='/shop/analytics.php'){res.writeHead(204);return res.end();}
       if(!['GET','HEAD'].includes(req.method))return json({ok:false,error:'Демо-режим: замовлення, оплата та надсилання даних вимкнені.'},403);
       if(name==='/shop/catalog.php') {
         switch(url.searchParams.get('action')) {

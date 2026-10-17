@@ -107,6 +107,7 @@
 | `staff.logout` | POST | `/staff/{sid}/logout` | `staff.manage` | `ReasonRequest` | `StaffUser` | Примусовий вихід |
 | `audit.list` | GET | `/audit` | `audit.view` | query `AuditQuery` | `AuditList` | Активність (лише читання) |
 | `analytics` | GET | `/analytics` | `report.view` | query `PeriodQuery` | `Analytics` | Аналітика |
+| `site.speed` | GET | `/site-speed` | `site.speed.view` | — | `SiteSpeed` | D-72: швидкість сайту (LCP, CLS, INP) — медіана й p75 за 7 і 28 днів за шаблонами сторінок і пристроями |
 | `reports.legacy` (совм.) | GET | `/reports` | `dashboard.view` | query `PeriodQuery` | `Report` | Сумісність: короткий звіт |
 | `settings.view` | GET | `/settings` | `settings.personal` | — | `Settings` | Налаштування: особисті, системні, стан прапорців |
 | `settings.system` | POST | `/settings/system` | `settings.system` | `SystemSettingsRequest` | `Settings` | Пороги (OWNER) |
