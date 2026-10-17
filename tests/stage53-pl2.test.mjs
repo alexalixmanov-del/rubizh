@@ -21,7 +21,7 @@ test('PL-2: the storefront CSP has no unsafe-eval and every storefront route ren
    assert.match(scriptSrc,/'self'/,r);assert.match(scriptSrc,/'nonce-/,r);assert.doesNotMatch(scriptSrc,/'unsafe-eval'|'unsafe-inline'/,r+': '+scriptSrc);
   }
   const live=readFileSync(path.join(root,'index.html'),'utf8').match(/src="\/assets\/(store-runtime\.[0-9a-f]{12}\.js)"/)[1];
-  assert.notEqual(live,'store-runtime.4b6bbf46ca4c.js','a new versioned runtime (the old one is kept for cached pages)');
+  assert.notEqual(live,'store-runtime.4b6bbf46ca4c.js','a new versioned runtime (the old file is kept unchanged, Q-9; it cannot run under the new CSP)');
   for(const [name,launch] of ENGINES){const browser=await launch();
    try{for(const r of routes){
     const ctx=await browser.newContext({viewport:{width:390,height:844}});const page=await ctx.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));

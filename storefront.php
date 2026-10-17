@@ -15,6 +15,8 @@ function storefrontEsc(string $s): string{return htmlspecialchars($s,ENT_QUOTES|
 // The top spacer is the live header's height (stage 5.3 measurement: ≤860 px 134, 861–1279 px 110.5, ≥1280 px 114.5).
 function storefrontHomeFirstScreen(string $html): string{
     if(!preg_match('~<section class="rz-hero"[^>]*>.*?</section>~s',$html,$m))return '';
+    // Only the click bindings and viewBox are static-safe; a condition or loop (sc-if, sc-for …) would render every branch.
+    if(preg_match('~\ssc-(?!camel-on-click=|camel-view-box=)[a-z-]+=|<sc-~',$m[0]))return '';
     $hero=preg_replace('~\s(?:sc-[a-z-]+|id|aria-labelledby)="[^"]*"~','',str_replace(' sc-camel-view-box="',' viewBox="',$m[0]));
     if(!is_string($hero)||str_contains($hero,'{{')||str_contains($hero,'<sc-'))return '';
     return '<style>.rz-first-screen{min-height:100vh;background:var(--legacy-0b0d0b)}.rz-first-screen-top{height:134px}@media(min-width:861px){.rz-first-screen-top{height:110.5px}}@media(min-width:1280px){.rz-first-screen-top{height:114.5px}}</style>'
