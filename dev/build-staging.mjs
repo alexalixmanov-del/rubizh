@@ -70,6 +70,22 @@ return [
   'crm_refund_live' => false, 'crm_np_ttn_live' => false, 'crm_np_tracking_live' => false, 'crm_sms_live' => false, 'crm_email_live' => false,
 ];
 `,{mode:0o600});
+ // auth/config.php template: SMS login works with the code shown on screen, no e-mail, no Google, a new secret.
+ writeFileSync(path.join(out,'auth-config.staging.php.txt'),`<?php
+// auth/config.php для ЗАКРЫТОГО режима (стейджинг). Ничего не менять: SMS не отправляются (код показывается на экране), письма тоже.
+if (!defined('RUBIZH_AUTH')) { http_response_code(404); exit; }
+return [
+    'noreply_password' => '',
+    'google_enabled' => false,
+    'google_client_id' => '',
+    'google_client_secret' => '',
+    'sms_enabled' => true,
+    'turbosms_token' => '',
+    'turbosms_sender' => '',
+    'auth_secret' => '${secret(48)}',
+    'sms_daily_limit' => 100,
+];
+`,{mode:0o600});
  writeFileSync(path.join(out,'ПАРОЛИ-СТЕЙДЖИНГ.txt'),['Закрытый режим rubizh.shop (стейджинг). Только для стейджинга, не использовать на запуске. Не пересылать в мессенджерах.','',
   'Вход на сайт (окно браузера «Потрібен вхід»):','  логин:  '+gateUser,'  пароль: '+gatePassword,'',
   'CRM (https://rubizh.shop/crm/), при первом входе — привязка приложения-аутентификатора:',...users.map(u=>'  '+u.role.padEnd(10)+' '+u.email+'  пароль: '+u.password),'',
