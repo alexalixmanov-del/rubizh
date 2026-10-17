@@ -112,6 +112,16 @@ test('D-62: a direct /categories#ac-… address scrolls to its section',()=>with
  const top=await page.locator('#ac-vzuttia').evaluate(e=>e.getBoundingClientRect().top);
  assert.ok(top>=0&&top<500,'scrolled: '+top);
 },{width:390,height:844}));
+// Stage 5.4.1 (CI 39043056006, PHP 8.2 job): on a slow CPU the first-load history restore (two animation frames) ran after
+// the anchor scroll and put the page back to the top. The anchor now waits for that restore; checked with the CPU slowed 6×.
+test('D-62: a direct /categories#ac-… address scrolls to its section on a slow CPU too',()=>withPage(async page=>{
+ const cdp=await page.context().newCDPSession(page);await cdp.send('Emulation.setCPUThrottlingRate',{rate:6});
+ await page.goto(base+'/categories#ac-vzuttia');await page.locator('#ac-vzuttia').waitFor();
+ await page.waitForFunction(()=>{const t=document.getElementById('ac-vzuttia')?.getBoundingClientRect().top;return t>=0&&t<500;},null,{timeout:8000}).catch(()=>{});
+ await page.waitForTimeout(1500);
+ const top=await page.locator('#ac-vzuttia').evaluate(e=>e.getBoundingClientRect().top);
+ assert.ok(top>=0&&top<500,'scrolled and stays there: '+top);
+},{width:390,height:844}));
 test('D-62: old /catalog?roots=[…] addresses answer 301 to the clean address (group → /categories#ac-…, one root → /catalog/<url>)',async()=>{
  const {php}=await import('./helpers/site-fixture.mjs');const root=new URL('../',import.meta.url).pathname;
  const code=`require '${root}shop/catalog-lib.php';$c=[['name'=>'Бронезахист','path'=>'Бронезахист','url_path'=>'bronezakhyst'],['name'=>'Шоломи та захист голови','path'=>'Шоломи та захист голови','url_path'=>'shlomy'],['name'=>'Взуття','path'=>'Взуття','url_path'=>'vzuttia']];
