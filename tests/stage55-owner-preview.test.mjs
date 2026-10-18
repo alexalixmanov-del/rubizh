@@ -34,7 +34,9 @@ test('owner-preview: buyer path 390/1280 with the FOP invoice, card payment on t
  try{
   assert.equal(s.vat_note,true);assert.deepEqual(s.users.map(u=>u.role),['OWNER','MANAGER','WAREHOUSE','SUPPORT','ACCOUNTANT']);
   // PHP on the stand has no network functions at all.
-  const net=spawnSync(s.php,['-n','-r','echo json_encode([function_exists("curl_init"),function_exists("fsockopen"),function_exists("stream_socket_client"),ini_get("allow_url_fopen")]);'],{encoding:'utf8'});
+  // With the stand's own PHP arguments (curl is loaded as in the site), the network functions are disabled.
+  assert.ok(s.php_args.some(a=>/extension=.*curl|curl/.test(a))||process.platform==='darwin','curl is loaded for the check');
+  const net=spawnSync(s.php,[...s.php_args,'-r','echo json_encode([function_exists("curl_init"),function_exists("fsockopen"),function_exists("stream_socket_client"),ini_get("allow_url_fopen")]);'],{encoding:'utf8'});
   assert.equal(net.stdout,'[false,false,false,"0"]',net.stderr);
   // Buyer path at 390 and 1280 px through the storefront UI: home, catalogue, product, cart, checkout with the FOP invoice.
   const slug=(await (await fetch(s.site+'/shop/catalog.php?action=storefront')).json()).products.find(p=>p.id==='m-jacket').slug;

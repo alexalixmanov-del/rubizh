@@ -20,7 +20,7 @@ const stateFile=path.join(cache,'current.json');
 const say=(...a)=>{if(!flag('--ready-json'))console.log(...a);};
 // A failure after MariaDB or the temporary folder exist still stops and removes them (stage 5.5 review): nothing is left running.
 const fail=m=>{console.error('Не вдалося запустити перегляд: '+m);cleanupNow();process.exit(1);};
-let mariadb=null,site=null,work=null,stopping=false,ownDb=false;
+let mariadb=null,site=null,work=null,stopping=false,ownDb=false,fixturePhpArgs=null;
 function cleanupNow(){
  try{site?.stop();}catch(e){console.error('Сайт: '+e.message);}
  if(mariadb&&mariadb.exitCode===null){try{mariadb.kill('SIGKILL');}catch(e){console.error('MariaDB: '+e.message);}}
@@ -36,7 +36,7 @@ if(argv[0]==='ttn'){
  if(!/^\d{10,20}$/.test(number||'')||!/^\d{1,3}$/.test(code||''))fail('формат: npm run owner-preview -- ttn <номер ТТН> <код статусу НП>, наприклад 9 — отримано');
  if(!existsSync(stateFile))fail('перегляд не запущено');
  const s=JSON.parse(readFileSync(stateFile,'utf8'));
- const r=spawnSync(s.php,['-n','-r',`$db=new PDO('mysql:unix_socket=${s.socket};dbname=${s.schema};charset=utf8mb4','root','');$db->prepare('INSERT INTO meta(k,v) VALUES(?,?) ON DUPLICATE KEY UPDATE v=VALUES(v)')->execute(['np_mock_status_${number}','${code}']);`],{encoding:'utf8'});
+ const r=spawnSync(s.php,[...(s.phpArgs||['-n']),'-r',`$db=new PDO('mysql:unix_socket=${s.socket};dbname=${s.schema};charset=utf8mb4','root','');$db->prepare('INSERT INTO meta(k,v) VALUES(?,?) ON DUPLICATE KEY UPDATE v=VALUES(v)')->execute(['np_mock_status_${number}','${code}']);`],{encoding:'utf8'});
  if(r.status!==0)fail(r.stderr||r.stdout);
  console.log(`Заглушка НП: ТТН ${number} має статус ${code}. У CRM відкрийте замовлення й оновіть статус доставки.`);process.exit(0);
 }
@@ -46,7 +46,7 @@ async function stop(code=0){
  if(stopping)return;stopping=true;
  try{site?.stop();}catch(e){console.error('Сайт: '+e.message);}
  // On a shared MariaDB (tests) only this stand's schema is removed; an own server is stopped with its data directory.
- if(site&&!ownDb){const d=spawnSync(process.env.RUBIZH_PHP_RUNTIME+'/bin/php8.4',['-n','-r',`(new PDO('mysql:unix_socket=${process.env.RUBIZH_TEST_MYSQL_SOCKET}','root',''))->exec('DROP DATABASE IF EXISTS ${site.schema}');`],{encoding:'utf8'});if(d.status!==0)console.error('Схему стенду не видалено: '+(d.stderr||d.stdout).slice(-300));}
+ if(site&&!ownDb){const d=spawnSync(process.env.RUBIZH_PHP_RUNTIME+'/bin/php8.4',[...(fixturePhpArgs||['-n']),'-r',`(new PDO('mysql:unix_socket=${process.env.RUBIZH_TEST_MYSQL_SOCKET}','root',''))->exec('DROP DATABASE IF EXISTS ${site.schema}');`],{encoding:'utf8'});if(d.status!==0)console.error('Схему стенду не видалено: '+(d.stderr||d.stdout).slice(-300));}
  if(mariadb&&mariadb.exitCode===null){mariadb.kill('SIGTERM');await new Promise(r=>{const t=setTimeout(()=>{try{mariadb.kill('SIGKILL')}catch{}r();},15000);mariadb.once('exit',()=>{clearTimeout(t);r();});});}
  try{rmSync(work,{recursive:true,force:true});}catch{}
  try{rmSync(stateFile,{force:true});}catch{}
@@ -57,6 +57,8 @@ for(const ev of ['uncaughtException','unhandledRejection'])process.on(ev,e=>{con
 
 // 1. PHP: the tests' runtime layout (bin/php8.4 under RUBIZH_PHP_RUNTIME), wrapped so that the network stays off.
 {
+ // The tests' default runtime path (tests/helpers/site-fixture.mjs) when the variable is not set (CI).
+ if(!process.env.RUBIZH_PHP_RUNTIME&&existsSync('/workspace/php-runtime/root/usr/bin/php8.4'))process.env.RUBIZH_PHP_RUNTIME='/workspace/php-runtime/root/usr';
  const inner=process.env.RUBIZH_PHP_RUNTIME?process.env.RUBIZH_PHP_RUNTIME+'/bin/php8.4':firstFile([process.env.PHP_PATH,which('php'),'/opt/homebrew/opt/php@8.4/bin/php','/opt/homebrew/opt/php@8.2/bin/php','/opt/homebrew/bin/php']);
  if(!inner)fail('немає PHP. Встановіть: brew install php');
  const keepExtensions=!!process.env.RUBIZH_PHP_RUNTIME;
@@ -105,7 +107,7 @@ if(!process.env.RUBIZH_CRM_DIR||!existsSync(process.env.RUBIZH_CRM_DIR+'/dist/in
 
 // 4. Site + CRM: the same stand as the CRM E2E tests (staging mode, monobank mock, NP mock, five staff roles).
 const {startCrm,roles5,staffEmail,password}=await import('../tests/helpers/crm-fixture.mjs');
-const {freshWire,PIM_KEY,php}=await import('../tests/helpers/site-fixture.mjs');
+const {freshWire,PIM_KEY,php,phpArgs}=await import('../tests/helpers/site-fixture.mjs');fixturePhpArgs=phpArgs;
 const vat=flag('--without-vat-note')?",'invoice_vat_note'=>''":'';
 try{site=await startCrm({frontend:true,npMock:true,extraConfig:vat});}catch(e){console.error(e.message);await stop(1);}
 // SMS login with the code shown on screen (D-80: staging without a provider) — nothing is sent.
@@ -163,9 +165,9 @@ if(existsSync(chunksFile)){
 }
 const users=roles5.map(role=>({role,email:staffEmail(role)}));
 mkdirSync(cache,{recursive:true});
-writeFileSync(stateFile,JSON.stringify({php:process.env.RUBIZH_PHP_RUNTIME+'/bin/php8.4',socket:process.env.RUBIZH_TEST_MYSQL_SOCKET,schema:site.schema}));
+writeFileSync(stateFile,JSON.stringify({php:process.env.RUBIZH_PHP_RUNTIME+'/bin/php8.4',phpArgs,socket:process.env.RUBIZH_TEST_MYSQL_SOCKET,schema:site.schema}));
 const seconds=Math.round((Date.now()-started)/1000);
-if(flag('--ready-json'))console.log(JSON.stringify({site:site.base,crm:site.base+'/crm/',users,password,schema:site.schema,socket:process.env.RUBIZH_TEST_MYSQL_SOCKET,php:process.env.RUBIZH_PHP_RUNTIME+'/bin/php8.4',own_db:ownDb,products,vat_note:!vat,seconds}));
+if(flag('--ready-json'))console.log(JSON.stringify({site:site.base,crm:site.base+'/crm/',users,password,schema:site.schema,socket:process.env.RUBIZH_TEST_MYSQL_SOCKET,php:process.env.RUBIZH_PHP_RUNTIME+'/bin/php8.4',php_args:phpArgs,own_db:ownDb,products,vat_note:!vat,seconds}));
 else{
  console.log(`\nRUBIZH — локальний перегляд для власника (запуск ${seconds} с)\n`);
  console.log('  Сайт:  '+site.base+'/        ('+catalogue+')');
