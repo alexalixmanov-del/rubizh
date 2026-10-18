@@ -4,13 +4,13 @@
 
 <!-- STAGE55_HANDOFF_BEGIN -->
 
-## Этап 5.5 «ЗАПУСК-500» (2026-10-17/18) — в работе: финальная репетиция, RC2, CI, теги, отчёт
+## Этап 5.5 «ЗАПУСК-500» (2026-10-17/18) — ВЫПОЛНЕН (репетиция; production не трогался)
 
-Ветки: SITE `hardening/stage-5.5` (от `953d086`), PIM `hardening/stage-5.5-pim` (от `4fc592b`), CRM `hardening/stage-5.5` `70b9bfe` (от `c521889`, закреплён в ci.yml).
+Ветки: SITE `hardening/stage-5.5` (от `953d086`), PIM `hardening/stage-5.5-pim` (от `4fc592b`, финал `7d00955`), CRM `hardening/stage-5.5` `70b9bfe` (от `c521889`, закреплён в ci.yml). Теги: `pim-stage-5.5-verified`, `crm-stage-5.5-verified`, `rubizh-stage-5.5-verified` — после зелёного CI SITE.
 
-Сделано (все задачи 5.5-0…5.5-10 + ревью): D-80 закрытая выкладка (пакет у владельца), D-79 рахунок (`9a73914`), карты/чистка/автоприменение/D-71/названия/волна/сухой прогон (PIM `cc0396a`…`549c34d`), D-72 метрики (SITE `bad17b5`, CRM `70b9bfe`), owner-preview (`0da756e`, `f635808`, тест `stage55-owner-preview`), GO_LIVE_RC2 (`0da756e`, `c06daee`), KNOWN_ISSUES §10 (D-66…D-80, S55-01…16), PRE_LAUNCH PL-2 + план 5.6. Ревью 6 агентов — исправлено: SITE `d8da889` (обход пароля закрытого режима bearer/«..», Host, отчёт скорости, сборщик стейджинга, стенд), `7d7716b` (оплата a11y, бандл 2026101802); PIM `2345381` (время волны), `242b148` (название на сайт), `ce38b2a` (сохранение, волна, G2, a11y, кеши). gitleaks 0 во всех трёх (+ .gitleaksignore для фикстур).
+Итог: задачи 5.5-0…5.5-13 выполнены. Финальная репетиция run11 (`~/Projects/rubizh-supplier-files/out/run11`, прежняя — `run11-a`): каталог равен run10 (2883 / 8191 / 1723-1129-31), оригиналы побайтно, G1–G5 в волне 0, D-67 0, повторов и пустых разделов 0, волна 20 (стабильна до/после восстановления; ограничители — данные), применено описаний 357, названий 119. RC2: `downloads/Rubizh-rc2.zip` + CRM-архив, инструкция `docs/release/GO_LIVE_RC2.md`. Стенд владельца: `npm run owner-preview` + `out/ПРОВЕРКА-ВЛАДЕЛЬЦА.md`. Открытые записи — KNOWN_ISSUES §10 (S55-01…16), PL-2 OPEN + план 5.6.
 
-Дальше: финальная run11 (`out/run11`, прежняя — `out/run11-a`) → части волны для owner-preview (`RZ_WAVE_IDS=… RZ_CHUNKS_OUT=…/owner-preview-chunks.json.gz node audit/staging-dump-5-5.cjs BACKUP - - SUMMARY 500`) → RC2 (`python3 dev/package-release.py downloads/Rubizh-rc2.zip --release=rc2`, CRM-архив) → «Состав» в GO_LIVE_RC2 → CI зелёный → push CRM→PIM→SITE (уже запушены) → теги pim/crm/rubizh-stage-5.5-verified → отчёт по разделу 13.
+Следующее (решения владельца): проверка по `ПРОВЕРКА-ВЛАДЕЛЬЦА.md`; закрытая выкладка (пакет `out/staging-5.5` собран до D-79 и ревью — для закрытого режима пересобрать `node dev/build-staging.mjs` на финальном SHA); этап 5.6 (PL-2); этап 6 (живые проверки, merge по плану GO_LIVE_RC2).
 
 <!-- STAGE55_HANDOFF_END -->
 
