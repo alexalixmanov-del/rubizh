@@ -4,23 +4,13 @@
 
 <!-- STAGE55_HANDOFF_BEGIN -->
 
-## Этап 5.5 «ЗАПУСК-500» (2026-10-17/18) — В РАБОТЕ
+## Этап 5.5 «ЗАПУСК-500» (2026-10-17/18) — в работе: финальная репетиция, RC2, CI, теги, отчёт
 
-ТЗ — в разговоре владельца (три части); краткая карта — память `rubizh-stage55-scope`. Ветки: SITE `hardening/stage-5.5` от `953d086`, PIM `hardening/stage-5.5-pim` от `4fc592b`; CRM не менялась (в CI `c521889`).
+Ветки: SITE `hardening/stage-5.5` (от `953d086`), PIM `hardening/stage-5.5-pim` (от `4fc592b`), CRM `hardening/stage-5.5` `70b9bfe` (от `c521889`, закреплён в ci.yml).
 
-Сделано:
-- 5.5-0 D-80 стейджинг: закрытый режим (`shop/staging-gate.php`, тест `stage55-staging`), сборщик `dev/build-staging.mjs` + PIM `audit/staging-dump-5-5.cjs`, пакет `out/staging-5.5/` (сайт `4109240`, CRM `c521889`, дамп 370 товаров), инструкция `out/ЗАКРЫТАЯ-ВЫКЛАДКА-rubizh.shop.md`; сообщение владельцу отправлено. Найдено и исправлено: S55-03 (PIM не слал `version` в заголовке части — 409), S55-04 (сайт отклонял QUOTE-модели в наличии — схема проверяет QUOTE с флагами по наличию).
-- 5.5-8 D-79 (SITE `9a73914`): рахунок только при `invoice_vat_note`, настройка `invoice_payment`, бандл `shop-client.2026101801.js`, тест `stage55-invoice`; тестовая фикстура получила `invoice_vat_note` (изменённые тесты — в коммите).
-- 5.5-1 карта PIM → `reviews/STAGE55-PIM.md` §1.
-- 5.5-2 D-66…D-68 (PIM `cc0396a`): чистка по фрагментам G1–G6, инвариант D-67 (токены ⊆ текст ∪ вырезанное G1 ∪ отложенные на проверку), блок «Вилучено…», `ceCommercialSignals`, CE_VERSION 9; run10: инвариант 0, сигналов 0.
-- 5.5-3 D-69/D-70 (PIM `e878521`): пять условий автоприменения, «Застосувати всі чисті описи» + отмена, «Потребують рішення», нормализация форматов, `cfgForInstall`.
-- 5.5-4 D-71 (PIM `a267813`): `supplierTextChecks` (недоплата 22 строки / 20 товаров, под заказ 91 на run10).
+Сделано (все задачи 5.5-0…5.5-10 + ревью): D-80 закрытая выкладка (пакет у владельца), D-79 рахунок (`9a73914`), карты/чистка/автоприменение/D-71/названия/волна/сухой прогон (PIM `cc0396a`…`549c34d`), D-72 метрики (SITE `bad17b5`, CRM `70b9bfe`), owner-preview (`0da756e`, `f635808`, тест `stage55-owner-preview`), GO_LIVE_RC2 (`0da756e`, `c06daee`), KNOWN_ISSUES §10 (D-66…D-80, S55-01…16), PRE_LAUNCH PL-2 + план 5.6. Ревью 6 агентов — исправлено: SITE `d8da889` (обход пароля закрытого режима bearer/«..», Host, отчёт скорости, сборщик стейджинга, стенд), `7d7716b` (оплата a11y, бандл 2026101802); PIM `2345381` (время волны), `242b148` (название на сайт), `ce38b2a` (сохранение, волна, G2, a11y, кеши). gitleaks 0 во всех трёх (+ .gitleaksignore для фикстур).
 
-- 5.5-5 D-75 (PIM `a83cd8a`): `nameDraft/nameApply/nameUndo`, капс только в «кричащих» названиях, код поставщика удаляется только когда явно его; run10: правится 119, без бренда/типа 1743.
-- 5.5-6 D-74 (PIM `37950b8`): `launchWave` (15 условий, квоты 40/15 %, слоты, рейтинг, «Завжди/Ніколи», публикация + отмена); run10 со сдвигом свежести — 20 товаров (главные ограничители — данные: нет ключевых характеристик, описание не прошло D-69, нет бренда); время: 0,39 с прогретое, 2,4 с после изменения данных (2,0 с — finalDecision).
-- SITE `f94e165`: исправлен красный CI 39069690103 (порядок SMS-транспортов; тесты np-setup и R9 адаптированы — см. коммит).
-- 5.5-7 D-77 (PIM `549c34d`): `supplierDryRun` + панель импорта, `importPrice` («1.250» не принимается), `xlsxSerialToMs` в `classificationSourceTimestamp`, фото «//»→https:, `rows.ymlCurrency`, `needsDryRun` у новых поставщиков, блок импорта; 782/782.
-Дальше: 5.5-9 метрики D-72 (SITE `shop/analytics.php` + экран OWNER в CRM — CRM ветка `hardening/stage-5.5` от c521889, CRM пушится раньше, затем закрепление в ci.yml), 5.5-10 `npm run owner-preview` + `out/ПРОВЕРКА-ВЛАДЕЛЬЦА.md`, 5.5-11 run11 (скрипт: восстановить run10, сдвиг свежести в памяти, `ceApplyClean`-логика, `launchWave`, бэкап, восстановление, сравнение; критерии 1–8), 5.5-12 RC2 + upgrade/rollback + `docs/release/GO_LIVE_RC2.md` + план слияния, 5.5-13 документы (KNOWN_ISSUES D-66…D-80, S55-01…04; PRE_LAUNCH PL-2 план 5.6; GO_LIVE GTM D-73; инструкции в out/), ревью 6 агентами, CI, теги pim/rubizh-stage-5.5-verified (+crm если менялась), итоговый отчёт по разделу 13 ТЗ.
+Дальше: финальная run11 (`out/run11`, прежняя — `out/run11-a`) → части волны для owner-preview (`RZ_WAVE_IDS=… RZ_CHUNKS_OUT=…/owner-preview-chunks.json.gz node audit/staging-dump-5-5.cjs BACKUP - - SUMMARY 500`) → RC2 (`python3 dev/package-release.py downloads/Rubizh-rc2.zip --release=rc2`, CRM-архив) → «Состав» в GO_LIVE_RC2 → CI зелёный → push CRM→PIM→SITE (уже запушены) → теги pim/crm/rubizh-stage-5.5-verified → отчёт по разделу 13.
 
 <!-- STAGE55_HANDOFF_END -->
 
