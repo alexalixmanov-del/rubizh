@@ -5,7 +5,9 @@ from pathlib import Path
 root=Path(__file__).resolve().parents[1]
 # Stage 5.5 (D-80): --staging builds the closed-mode package for rubizh.shop: robots.txt forbids everything (the
 # closed mode also answers 401 and noindex); the opening-day release is a normal build.
-args=[a for a in sys.argv[1:] if a!='--staging'];staging='--staging' in sys.argv[1:]
+# Stage 5.5 (D-78): --release=NAME names the release in RELEASE-MANIFEST.json (rc2); without it the earlier name stays.
+release=next((a.split('=',1)[1] for a in sys.argv[1:] if a.startswith('--release=')),None)
+args=[a for a in sys.argv[1:] if a!='--staging' and not a.startswith('--release=')];staging='--staging' in sys.argv[1:]
 out=Path(args[0]) if args else root/'downloads/Rubizh-pim-v3-20261009.zip'
 STAGING_ROBOTS=b'User-agent: *\nDisallow: /\n'
 skip=('tests/','docs/','downloads/','preview/','.github/','.gitignore','package.json','package-lock.json')
@@ -26,7 +28,7 @@ while todo:
     a=todo.pop()
     if a not in reached:reached.add(a);todo|=mentions((root/a).read_text('utf-8','ignore'))-reached
 files=[f for f in files if f not in assets or f in reached]
-manifest={'release':'staging-closed-'+subprocess.run(['git','rev-parse','--short','HEAD'],cwd=root,capture_output=True,text=True,check=True).stdout.strip() if staging else 'pim-v3-site-20261009','commit':subprocess.run(['git','rev-parse','HEAD'],cwd=root,capture_output=True,text=True,check=True).stdout.strip(),'files':{}}
+manifest={'release':'staging-closed-'+subprocess.run(['git','rev-parse','--short','HEAD'],cwd=root,capture_output=True,text=True,check=True).stdout.strip() if staging else (release or 'pim-v3-site-20261009'),'commit':subprocess.run(['git','rev-parse','HEAD'],cwd=root,capture_output=True,text=True,check=True).stdout.strip(),'files':{}}
 out.parent.mkdir(parents=True,exist_ok=True)
 with zipfile.ZipFile(out,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
     for f in sorted(files):
