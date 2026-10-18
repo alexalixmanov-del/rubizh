@@ -25,7 +25,7 @@ SITE=/home/xk589064/rubizh.shop/www
 PHP=/usr/local/php82/bin/php
 PRIV=/home/xk589064/rubizh-private-backups      # вне webroot, chmod 700
 export PATH="$(dirname "$PHP"):$PATH"; set -o pipefail
-RC2_SHA256=<из downloads/Rubizh-rc2.zip.sha256>
+RC2_SHA256=99581aaf28dcc14fc54b660609e7563849b3ff11c5f897aee64d96f6b2d319ac
 ```
 
 ---
@@ -174,4 +174,10 @@ CRM: содержимое `Rubizh-crm-<SHA>.zip` → `$SITE/crm/` (прежню�
 
 ## Состав RC2
 
-Заполняется checkpoint-коммитом этапа 5.5.
+| Часть | Что | SHA-256 |
+|---|---|---|
+| Сайт | `downloads/Rubizh-rc2.zip` — собран с `b3b978ca2df0bc8171a072e20528e39b1b5d61df` (`python3 dev/package-release.py downloads/Rubizh-rc2.zip --release=rc2`; 431 файл; без тестов, документации, `.mjs`, приватных конфигов, `out/` и файлов поставщиков; robots.txt — обычный) | `99581aaf28dcc14fc54b660609e7563849b3ff11c5f897aee64d96f6b2d319ac` |
+| CRM | `downloads/Rubizh-crm-70b9bfe.zip` — `crm.rubizh@70b9bfe890c6f80d759a37c36d5c02ea0dd01190` (`npm ci` + `npm run build` из `git archive`, распаковать в `$SITE/crm/`) | `0c846185f25e4f9688ea673b3b143b112c8930cbd5ddee6ba3e5a19ccb0af756` |
+| PIM | `pim.rubizh@7d0095588b0fbf81a863651da88d33379c374f62` → `releases/pim-10.9.3/rubizh-pim-10.9.3-final-workflow.zip` | `6c07e77110ee9351b8a22b23b20a951defba285a67883f15da955b55f0f8394b` |
+
+`<RC2_COMMIT>` в шаге 2 — SHA коммита, который добавил `downloads/Rubizh-rc2.zip` (тег `rubizh-stage-5.5-verified` или новее). gitleaks по распакованным архивам: сайт — только SHA-256 файлов в `RELEASE-MANIFEST.json` (как в RC1), CRM — 0.
